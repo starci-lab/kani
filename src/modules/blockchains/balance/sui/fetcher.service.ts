@@ -28,7 +28,7 @@ import {
 } from "decimal.js"
 import {
     toDecimalAmount 
-} from "@modules/utils"
+} from "@modules/common"
 
 /**
  * Service responsible for fetching Sui balance information.

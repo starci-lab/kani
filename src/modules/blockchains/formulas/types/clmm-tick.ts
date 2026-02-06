@@ -3,7 +3,7 @@ import {
     Q128,
     Q64,
     Q96
-} from "@modules/utils"
+} from "@modules/common"
 
 /**
  * Parameters for tick -> sqrtPriceX64 conversion.

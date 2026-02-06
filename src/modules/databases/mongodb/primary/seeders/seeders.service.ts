@@ -20,6 +20,9 @@ import {
     ConfigService 
 } from "./config.service"
 
+/**
+ * The service for the Seeders.
+ */
 @Injectable()
 export class SeedersService implements OnModuleInit {
     constructor(
@@ -33,6 +36,10 @@ export class SeedersService implements OnModuleInit {
         private readonly asyncService: AsyncService
     ) { }
 
+    /**
+     * Process the seeding and dropping.
+     * @returns void.
+     */
     private async process() {
         await this.asyncService.allMustDone([
             (
@@ -74,6 +81,10 @@ export class SeedersService implements OnModuleInit {
         ])
     }
 
+    /**
+     * On module init.
+     * @returns void.
+     */
     async onModuleInit() {
         // if manual seed, do not seed
         if (this.options.manualSeed) {
@@ -82,6 +93,10 @@ export class SeedersService implements OnModuleInit {
         await this.process()
     }
 
+    /**
+     * Seed the data.
+     * @returns void.
+     */
     async seed() {
         await this.process()
     }

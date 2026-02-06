@@ -78,12 +78,12 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
         // init semaphore before any load/observe work uses it
         this.sema = this.semaService.sema(ExecutorsLoaderService.name,
             1)
-        this.executorCollection = await this.lokiJSService.createCollection<ExecutorSchema>(
-            "coordinator-executors",
-            {
+        this.executorCollection = await this.lokiJSService.createCollection<ExecutorSchema>({
+            name: "coordinator-executors",
+            options: {
                 indices: ["id"],
-            }
-        )
+            },
+        })
         // load executors
         await this.load()
         // set readiness

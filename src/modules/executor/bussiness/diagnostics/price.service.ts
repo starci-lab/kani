@@ -81,13 +81,12 @@ export class PriceDiagnosticService implements OnModuleInit, OnApplicationBootst
         // Snapshot the tokens set we want to diagnose into a local Loki collection.
         // This keeps the diagnostic input stable and avoids coupling to the primary
         // memory collection's internal metadata.
-        this.tokenCollection = await this.lokiJSService.createCollection<TokenSchema>(
-            "price-diagnostic-tokens",
-            {
-                indices: ["displayId",
-                    "id"],
-            }
-        )
+        this.tokenCollection = await this.lokiJSService.createCollection<TokenSchema>({
+            name: "price-diagnostic-tokens",
+            options: {
+                indices: ["displayId", "id"],
+            },
+        })
         const tokens = this.primaryMemoryStorageService
             .tokenCollection.chain()
             .find(
@@ -101,12 +100,12 @@ export class PriceDiagnosticService implements OnModuleInit, OnApplicationBootst
             })
         this.tokenCollection.insert(tokens)
         // Create the results collection used by `isReady()`.
-        this.results = await this.lokiJSService.createCollection<PriceDiagnosticReadinessResult>(
-            "price-diagnostic-results",
-            {
+        this.results = await this.lokiJSService.createCollection<PriceDiagnosticReadinessResult>({
+            name: "price-diagnostic-results",
+            options: {
                 indices: ["id"],
-            }
-        )
+            },
+        })
     }
 
     async diagnose(): Promise<Array<PriceDiagnosticReadinessResult>> {

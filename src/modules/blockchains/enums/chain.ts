@@ -3,7 +3,7 @@ import {
 } from "@nestjs/graphql"
 import {
     createEnumType 
-} from "@modules/utils"
+} from "@modules/common"
 
 /** Identifier for supported blockchain networks. */
 export enum ChainId {

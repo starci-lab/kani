@@ -24,7 +24,7 @@ import {
 } from "@nestjs/schedule"
 import {
     createObjectId 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     AsyncService, DayjsService, LokiJSService 
 } from "@modules/mixin"
@@ -80,13 +80,14 @@ export class RaydiumAnalyticsService implements OnModuleInit, OnApplicationBoots
             .data({
                 removeMeta: true 
             })
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
-            "raydium-analytics-liquidity-pools", 
-            {
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
+            name: "raydium-analytics-liquidity-pools",
+            options: {
                 indices: ["poolAddress",
                     "displayId",
                     "id"],
-            })
+            },
+        })
         this.liquidityPoolCollection.insert(liquidityPools)
     }
 

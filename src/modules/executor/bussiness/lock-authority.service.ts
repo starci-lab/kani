@@ -27,7 +27,7 @@ import {
 } from "@modules/winston"
 import {
     sleep 
-} from "@modules/utils"
+} from "@modules/common"
 
 const LOCK_AUTHORITY_KEY = "lock-authority"
 

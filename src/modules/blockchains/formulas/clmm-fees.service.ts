@@ -6,7 +6,7 @@ import {
     Q128,
     Q64, 
     toDecimalAmount
-} from "@modules/utils"
+} from "@modules/common"
 import {
     ClmmUtilsService 
 } from "./clmm-utils.service"

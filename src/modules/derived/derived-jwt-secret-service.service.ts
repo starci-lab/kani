@@ -52,9 +52,9 @@ export class DerivedJwtSecretService implements OnModuleInit {
 
     async onModuleInit(): Promise<void> {
         try {
-            const key = await this.gcpKmsService.decrypt(
-                this.mountStorageService.encryptedJwtSecretKey
-            )
+            const key = await this.gcpKmsService.decrypt({
+                ciphertext: this.mountStorageService.encryptedJwtSecretKey,
+            })
             this.key = crypto.pbkdf2Sync(
                 key,
                 envConfig().salt.jwt,

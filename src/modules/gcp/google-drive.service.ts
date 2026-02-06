@@ -1,47 +1,50 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    drive_v3,
+    drive_v3
 } from "googleapis/build/src/apis/drive/v3"
 import {
-    GoogleAuth 
+    GoogleAuth
 } from "google-auth-library"
 import {
-    GoogleDriveFolderName 
-} from "@modules/typedefs"
-import {
-    MountStorageService 
-} from "@modules/filesystem"
+    GoogleDriveFolderName,
+} from "./enums"
 import {
     GoogleDriveFileDownloadFailedException,
-    GoogleDriveFolderIdNotFoundException,
+    GoogleDriveFolderIdNotFoundException
 } from "@modules/exceptions"
+import {
+    MountStorageService
+} from "@modules/filesystem"
+import {
+    envConfig
+} from "@modules/env"
+import {
+    RetryService
+} from "@modules/mixin"
+import {
+    WinstonLog,
+    WinstonService
+} from "@modules/winston"
+import fs from "fs"
+import fsPromises from "fs/promises"
 import path from "path"
 import {
-    Readable 
+    Readable
 } from "stream"
 import {
-    pipeline,
+    pipeline
 } from "stream/promises"
-import {
-    WinstonService,
-    WinstonLog 
-} from "@modules/winston"
-import {
-    envConfig 
-} from "@modules/env"
-import fsPromises from "fs/promises"
-import fs from "fs"
-import {
-    RetryService,
-} from "@modules/mixin"
+import type {
+    DownloadFileParams,
+    DownloadFileResult,
+    UploadFilesParams
+} from "./types"
 
-export interface UploadFilesParams {
-    files: Array<Express.Multer.File>
-    folderName: GoogleDriveFolderName
-}
-
+/**
+ * Service for Google Drive operations.
+ */
 @Injectable()
 export class GoogleDriveService {
     public auth: GoogleAuth
@@ -51,16 +54,25 @@ export class GoogleDriveService {
         private readonly winstonService: WinstonService,
         private readonly retryService: RetryService,
     ) {
-        this.auth = new GoogleAuth({
-            keyFile: envConfig().mountPath.terraform.gcpGoogleDriveUdSa,
-            scopes: ["https://www.googleapis.com/auth/drive"],
-        })
+        this.auth = new GoogleAuth(
+            {
+                keyFile: envConfig().mountPath.terraform.gcpGoogleDriveUdSa,
+                scopes: ["https://www.googleapis.com/auth/drive"],
+            }
+        )
         this.drive = new drive_v3.Drive({
             auth: this.auth,
         })
     }
-
-    private folderNameToId(folderName: GoogleDriveFolderName): string | undefined {
+ 
+    /**
+     * Converts a folder name to a folder ID.
+     * @param folderName - The name of the folder.
+     * @returns The ID of the folder.
+     */
+    private folderNameToId(
+        folderName: GoogleDriveFolderName
+    ): string | undefined {
         switch (folderName) {
         case GoogleDriveFolderName.Db:
             return this.mountStorageService.appConfig.drive.folderIds.db
@@ -71,6 +83,11 @@ export class GoogleDriveService {
         }
     }
 
+    /**
+     * Uploads files to Google Drive.
+     * @param params - The parameters for the upload.
+     * @returns The result of the upload.
+     */
     public async uploadFiles(
         {
             files,
@@ -119,10 +136,14 @@ export class GoogleDriveService {
         })
     }
 
-    public async downloadFile(
-        id: string,
-        outputPath: string
-    ): Promise<void> {
+    /**
+     * Download a file from Google Drive by ID and write to outputPath.
+     *
+     * @param params - id (file ID), outputPath (local path)
+     * @returns Promise that resolves when the file is written
+     */
+    public async downloadFile(params: DownloadFileParams): Promise<DownloadFileResult> {
+        const { id, outputPath } = params
         return await this.retryService.retry({
             action: async () => {
                 try {

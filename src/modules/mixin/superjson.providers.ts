@@ -1,18 +1,27 @@
 import {
-    Inject, Provider 
+    Inject,
+    Provider
 } from "@nestjs/common"
 import SuperJSON from "superjson"
 import BN from "bn.js"
 import {
-    PublicKey 
+    PublicKey
 } from "@solana/web3.js"
 import Decimal from "decimal.js"
 import dayjs, {
     Dayjs
 } from "dayjs"
-export const SUPERJSON = "SUPERJSON"
+import {
+    SUPERJSON
+} from "./constants"
 
+/**
+ * Inject the SuperJSON service.
+ */
 export const InjectSuperJson = () => Inject(SUPERJSON)
+/**
+ * Create a provider for the SuperJSON service.
+ */
 
 export const createSuperJsonServiceProvider = (): Provider<SuperJSON> => ({
     provide: SUPERJSON,

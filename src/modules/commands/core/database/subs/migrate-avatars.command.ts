@@ -19,7 +19,7 @@ import {
 } from "@modules/winston"
 import {
     createObjectId,
-} from "@modules/utils"
+} from "@modules/common"
 import {
     AvatarsConfigNotFoundException 
 } from "@modules/exceptions"

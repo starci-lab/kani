@@ -2,7 +2,7 @@ import {
     Provider 
 } from "@nestjs/common"
 import {
-    PRIVY_CLIENT 
+    PRIVY_CLIENT
 } from "./constants"
 import {
     PrivyClient 

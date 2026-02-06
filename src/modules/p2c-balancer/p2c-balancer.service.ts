@@ -32,7 +32,7 @@ import {
 } from "mongoose"
 import {
     createObjectId 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     envConfig 
 } from "@modules/env"
@@ -50,41 +50,12 @@ import {
     WinstonLog, WinstonService 
 } from "@modules/winston"
 import {
-    NoAvailableRpcException 
+    NoAvailableRpcException
 } from "@modules/exceptions"
-
-/* =========================================================
- * Types & Enums
- * ======================================================= */
-
-/**
- * Supported RPC transport types.
- */
-export enum RpcTransport {
-    Http = "http",
-    Ws = "ws",
-}
-
-/**
- * Parameters for selecting an RPC.
- */
-export interface BalanceParams {
-    chainId: ChainId
-    accessType: RpcAccessType
-}
-
-/**
- * P2C balancer data holder.
- * rpcAccessConfigs is already expanded by weight.
- */
-export interface P2CBalancerData {
-    instance: P2cBalancer
-    rpcAccessConfigs: Array<RpcAccessConfig>
-}
-
-/* =========================================================
- * Service
- * ======================================================= */
+import type {
+    BalanceParams,
+    P2CBalancerData
+} from "./types"
 
 @Injectable()
 export class P2CBalancerService {

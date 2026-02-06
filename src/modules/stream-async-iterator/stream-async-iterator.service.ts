@@ -1,27 +1,25 @@
 import {
-    StreamConnection 
-} from "./types"
-import {
-    StreamConnectionAbortedException, StreamConnectionClosedException 
-} from "@modules/exceptions"
-import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
+import {
+    StreamConnectionAbortedException,
+    StreamConnectionClosedException
+} from "@modules/exceptions"
+import type {
+    CreateStreamParams,
+} from "./types"
 
 @Injectable()
 export class StreamAsyncIteratorService {
     constructor() {}
-    // create the stream
+
+    /**
+     * Create an async iterable from a stream connection (with optional abort signal and handlers).
+     */
     async createStream<TData>(
-        // define the parameters
-        { 
-            connection, 
-            signal, 
-            onOpen, 
-            onError, 
-            onClose 
-        }: CreateStreamParams<TData>
+        params: CreateStreamParams<TData>,
     ): Promise<AsyncIterable<TData>> {
+        const { connection, signal, onOpen, onError, onClose } = params
         // return the async iterable
         return {
             // define the async iterator
@@ -139,17 +137,4 @@ export class StreamAsyncIteratorService {
             }
         }
     }
-}
-
-export interface CreateStreamParams<TData> {
-    // define the connection
-    connection: StreamConnection<TData>,
-    // define the abort signal
-    signal?: AbortSignal
-    // on open handler
-    onOpen?: (connection: StreamConnection<TData>) => Promise<void> | void
-    // on error handler
-    onError?: (error: Error) => Promise<void> | void
-    // on close handler
-    onClose?: () => Promise<void> | void
 }

@@ -5,7 +5,7 @@ import {
     createRedisKey 
 } from "./constants"
 import {
-    RedisInstanceKey 
-} from "./types"
+    RedisInstanceKey
+} from "./enums"
 
 export const InjectRedis = (key: RedisInstanceKey) => Inject(createRedisKey(key))

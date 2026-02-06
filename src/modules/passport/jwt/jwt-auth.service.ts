@@ -11,29 +11,24 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    AuthCredentials, JwtRefreshTokenPayload, JwtAccessTokenPayload 
-} from "../types"
-import {
-    AsyncService 
+    AsyncService
 } from "@modules/mixin"
 import {
-    UserIdRequiredToGenerateAccessTokenException 
+    UserIdRequiredToGenerateAccessTokenException
 } from "@modules/exceptions"
 import {
-    EncryptedPayload 
-} from "@modules/typedefs"
-import {
-    DerivedJwtSecretService 
+    DerivedJwtSecretService
 } from "@modules/derived"
 import {
-    CacheService, CacheKey
+    CacheService,
+    CacheKey
 } from "@modules/cache"
-
-export interface GenerateParams {
-    id: string
-    mfaEnabled: boolean
-    encryptedTotpSecretPayload?: EncryptedPayload
-}
+import type {
+    AuthCredentials,
+    GenerateParams,
+    JwtAccessTokenPayload,
+    JwtRefreshTokenPayload
+} from "../types"
 
 @Injectable()
 export class JwtAuthService {

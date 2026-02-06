@@ -13,7 +13,7 @@ import {
 } from "@modules/api"
 import {
     createEnumType 
-} from "@modules/utils"
+} from "@modules/common"
 
 export enum LiquidityPoolsSortBy {
     Apr = "apr",

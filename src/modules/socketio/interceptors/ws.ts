@@ -1,6 +1,6 @@
 import {
-    SUCCESS_MESSAGE_METADATA 
-} from "../decorators"
+    SUCCESS_MESSAGE_METADATA
+} from "../constants"
 import {
     InjectSuperJson 
 } from "@modules/mixin"

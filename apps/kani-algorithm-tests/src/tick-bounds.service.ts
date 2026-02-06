@@ -18,7 +18,7 @@ import {
 import BN from "bn.js"
 import {
     sleep 
-} from "@utils"
+} from "@modules/common"
 import {
     Decimal 
 } from "decimal.js"

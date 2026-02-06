@@ -36,7 +36,7 @@ import BN from "bn.js"
 import {
     Q128,
     Q64,
-} from "@modules/utils"
+} from "@modules/common"
 import {
     DexId,
     OrcaLiquidityPoolMetadata,

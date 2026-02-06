@@ -27,7 +27,7 @@ import {
 } from "@modules/event"
 import {
     createObjectId
-} from "@modules/utils"
+} from "@modules/common"
 import {
     LbPair
 } from "./beets"
@@ -101,14 +101,14 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
             })
 
         // Create a new LokiJS collection for Meteora liquidity pools
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
-            "meteora-observer-liquidity-pools", 
-            {
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
+            name: "meteora-observer-liquidity-pools",
+            options: {
                 indices: ["poolAddress",
                     "displayId",
                     "dex"],
-            }
-        )
+            },
+        })
 
         // Insert the found liquidity pools into the new collection
         this.liquidityPoolCollection.insert(liquidityPools)

@@ -44,8 +44,8 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    GoogleDriveFolderName 
-} from "@modules/typedefs"
+    GoogleDriveFolderName,
+} from "@modules/gcp"
 
 @Injectable()
 export class CreateBotService {

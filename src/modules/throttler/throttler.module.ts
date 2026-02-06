@@ -18,7 +18,9 @@ import {
     RedisOrCluster
 } from "@modules/native"
 import Redis from "ioredis"
-// throttler config
+/**
+ * The module for the Throttler.
+ */
 @Module({
 })
 export class ThrottlerModule extends ConfigurableModuleClass {

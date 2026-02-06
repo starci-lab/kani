@@ -1,10 +1,14 @@
 import {
-    Inject, Provider 
+    Inject,
+    Provider
 } from "@nestjs/common"
 import {
-    Faker, faker 
+    Faker,
+    faker
 } from "@faker-js/faker"
-export const FAKER = "FAKER"
+import {
+    FAKER
+} from "./constants"
 
 export const InjectFaker = () => Inject(FAKER)
 

@@ -30,7 +30,6 @@ export class Send2FactorOtpMailService {
         })
     }
 }
-
 export interface Send2FactorOtpMailParams {
     email: string
     otp: string

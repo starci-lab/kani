@@ -7,8 +7,8 @@ import {
 import {
     MODULE_OPTIONS_TOKEN 
 } from "./terminus.module-definition"
-import {
-    TerminusOptions 
+import type {
+    TerminusOptions
 } from "./types"
 import {
     HealthCheck 

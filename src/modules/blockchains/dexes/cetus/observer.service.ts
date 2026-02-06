@@ -22,7 +22,7 @@ import {
 } from "@nestjs/schedule"
 import {
     createObjectId 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     parseCetusPool, CetusPool, CetusSuiObjectPoolFields 
 } from "./struct"
@@ -92,16 +92,12 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
             })
         
         // create local collection snapshot for efficient processing
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
-            "cetus-observer-liquidity-pools", 
-            {
-                indices: [
-                    "poolAddress",
-                    "displayId",
-                    "id"
-                ],
-            }
-        )
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
+            name: "cetus-observer-liquidity-pools",
+            options: {
+                indices: ["poolAddress", "displayId", "id"],
+            },
+        })
         
         // insert pools into snapshot collection
         this.liquidityPoolCollection.insert(liquidityPools)

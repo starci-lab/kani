@@ -16,7 +16,7 @@ import {
 import BN from "bn.js"
 import {
     toDecimalAmount 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     AsyncService,
     RetryService,

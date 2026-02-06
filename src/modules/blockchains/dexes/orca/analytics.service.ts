@@ -24,7 +24,7 @@ import {
 } from "@nestjs/schedule"
 import {
     createObjectId 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     AsyncService, DayjsService, LokiJSService 
 } from "@modules/mixin"
@@ -67,7 +67,9 @@ export class OrcaAnalyticsService implements OnModuleInit, OnApplicationBootstra
 
     async onModuleInit() {
         const key = "orca-analytics"
-        this.axios = this.axiosService.create({ key })
+        this.axios = this.axiosService.create({
+            key 
+        })
         const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection
             .chain()
             .find({
@@ -78,13 +80,14 @@ export class OrcaAnalyticsService implements OnModuleInit, OnApplicationBootstra
             .data({
                 removeMeta: true 
             })
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
-            "orca-analytics-liquidity-pools", 
-            {
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
+            name: "orca-analytics-liquidity-pools",
+            options: {
                 indices: ["poolAddress",
                     "displayId",
                     "id"],
-            })
+            },
+        })
         this.liquidityPoolCollection.insert(liquidityPools)
     }
 

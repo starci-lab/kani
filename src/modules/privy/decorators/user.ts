@@ -5,6 +5,9 @@ import {
     GqlExecutionContext 
 } from "@nestjs/graphql"
 
+/**
+ * The Privy response decorator.
+ */
 export const PrivyResponse = createParamDecorator(
     (_: unknown, context: ExecutionContext) => {
         const ctx = GqlExecutionContext.create(context).getContext()

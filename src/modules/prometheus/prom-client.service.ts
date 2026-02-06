@@ -1,10 +1,17 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    Registry, Histogram, Counter, collectDefaultMetrics, exponentialBuckets 
+    collectDefaultMetrics,
+    Counter,
+    exponentialBuckets,
+    Histogram,
+    Registry
 } from "prom-client"
 
+/**
+ * Prometheus metrics registry and built-in metrics (HTTP, swap, open/close position, active bots).
+ */
 @Injectable()
 export class PromClientService {
     public readonly register: Registry

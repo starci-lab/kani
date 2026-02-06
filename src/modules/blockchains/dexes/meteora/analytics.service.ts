@@ -23,7 +23,7 @@ import {
 } from "@nestjs/schedule"
 import {
     createObjectId 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     AsyncService 
 } from "@modules/mixin"
@@ -83,14 +83,14 @@ export class MeteoraAnalyticsService implements OnModuleInit, OnApplicationBoots
             .data({
                 removeMeta: true 
             })
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
-            "meteora-analytics-liquidity-pools", 
-            {
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
+            name: "meteora-analytics-liquidity-pools",
+            options: {
                 indices: ["poolAddress",
                     "displayId",
                     "dex"],
-            }
-        )
+            },
+        })
         this.liquidityPoolCollection.insert(liquidityPools)
     }
 

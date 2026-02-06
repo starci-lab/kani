@@ -22,7 +22,7 @@ import {
 } from "@nestjs/common"
 import {
     createObjectId 
-} from "@modules/utils"
+} from "@modules/common"
 
 @Injectable()
 export class TokensService implements Seeder {

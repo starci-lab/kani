@@ -24,7 +24,7 @@ import {
 } from "@nestjs/schedule"
 import {
     createObjectId 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     AsyncService,
     DayjsService,
@@ -94,15 +94,14 @@ export class CetusAnalyticsService implements OnModuleInit, OnApplicationBootstr
             })
         
         // create local collection for analytics processing
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
-            "cetus-analytics-liquidity-pools", 
-            {
-                indices: [
-                    "poolAddress",
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
+            name: "cetus-analytics-liquidity-pools",
+            options: {
+                indices: ["poolAddress",
                     "displayId",
-                    "id"
-                ],
-            })
+                    "id"],
+            },
+        })
         
         // insert pools into local collection
         this.liquidityPoolCollection.insert(liquidityPools)

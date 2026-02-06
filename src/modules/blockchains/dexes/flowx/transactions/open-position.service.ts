@@ -18,7 +18,7 @@ import {
 } from "@nestjs/common"
 import {
     adjustSlippage, decimalToBps 
-} from "@modules/utils"
+} from "@modules/common"
 import Decimal from "decimal.js"
 import BN from "bn.js"
 import {

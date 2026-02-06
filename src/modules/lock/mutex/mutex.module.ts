@@ -8,6 +8,9 @@ import {
     MutexService 
 } from "./mutex.service"
 
+/**
+ * Module for mutex locks.
+ */
 @Module({
     providers: [
         MutexService

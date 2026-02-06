@@ -2,8 +2,11 @@ import {
     DexId 
 } from "../enums"
 import {
-    ChainId, DeepPartial 
-} from "@modules/typedefs"
+    DeepPartial 
+} from "@modules/common"
+import {
+    ChainId 
+} from "@modules/blockchains"
 import {
     DexSchema 
 } from "../schemas"
@@ -21,8 +24,11 @@ import {
 } from "@nestjs/common"
 import {
     createObjectId 
-} from "@modules/utils"
+} from "@modules/common"
 
+/**
+ * The service for the Dexes.
+ */
 @Injectable()
 export class DexesService implements Seeder {
     constructor(
@@ -30,16 +36,27 @@ export class DexesService implements Seeder {
         private readonly connection: Connection,
     ) { }
 
+    /**
+     * Seed the Dexes.
+     * @returns void.
+     */
     async seed(): Promise<void> {
         await this.connection.model<DexSchema>(DexSchema.name).create(data)
     }
 
+    /**
+     * Drop the Dexes.
+     * @returns void.
+     */
     async drop(): Promise<void> {
         await this.connection.model<DexSchema>(DexSchema.name).deleteMany({
         })
     }
 }   
 
+/**
+ * The data for the Dexes.
+ */
 export const data: Array<DeepPartial<DexSchema>> 
 = [
     {

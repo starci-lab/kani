@@ -66,13 +66,12 @@ export class DynamicLiquidityPoolInfoDiagnosticService implements OnModuleInit, 
     async onModuleInit() {
         // Snapshot the pool set we want to diagnose into a local Loki collection.
         this.liquidityPoolCollection =
-            await this.lokiJSService.createCollection<LiquidityPoolSchema>(
-                "dynamic-liquidity-pool-info-diagnostic-pools",
-                {
-                    indices: ["displayId",
-                        "id"],
-                }
-            )
+            await this.lokiJSService.createCollection<LiquidityPoolSchema>({
+                name: "dynamic-liquidity-pool-info-diagnostic-pools",
+                options: {
+                    indices: ["displayId", "id"],
+                },
+            })
         const liquidityPools = this.primaryMemoryStorageService
             .liquidityPoolCollection.chain()
             .find(
@@ -87,12 +86,12 @@ export class DynamicLiquidityPoolInfoDiagnosticService implements OnModuleInit, 
         // Insert a clean copy (strip Loki metadata from the source collection).
         this.liquidityPoolCollection.insert(liquidityPools)
         // Create the results collection used by `isReady()`.
-        this.results = await this.lokiJSService.createCollection<DynamicLiquidityPoolInfoDiagnosticReadinessResult>(
-            "dynamic-liquidity-pool-info-diagnostic-results",
-            {
+        this.results = await this.lokiJSService.createCollection<DynamicLiquidityPoolInfoDiagnosticReadinessResult>({
+            name: "dynamic-liquidity-pool-info-diagnostic-results",
+            options: {
                 indices: ["id"],
-            }
-        )
+            },
+        })
     }
 
     async diagnose(): Promise<Array<DynamicLiquidityPoolInfoDiagnosticReadinessResult>> {

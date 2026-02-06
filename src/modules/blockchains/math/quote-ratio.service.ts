@@ -9,7 +9,7 @@ import {
 } from "./swap.service"
 import {
     toDecimalAmount
-} from "@modules/utils"
+} from "@modules/common"
 import {
     PriceService
 } from "./price.service"

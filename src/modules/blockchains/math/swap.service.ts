@@ -18,7 +18,7 @@ import {
     pow10, 
     toDecimalAmount, 
     toRawAmount, 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     TokenType 
 } from "@modules/typedefs"

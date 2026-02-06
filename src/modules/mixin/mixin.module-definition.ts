@@ -1,11 +1,13 @@
-
 import {
-    ConfigurableModuleBuilder 
+    ConfigurableModuleBuilder
 } from "@nestjs/common"
-import {
-    MixinOptions 
+import type {
+    MixinOptions
 } from "./types"
 
+/**
+ * The configurable module class for the Mixin module.
+ */
 export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } =
   new ConfigurableModuleBuilder<MixinOptions>().setExtras(
       {

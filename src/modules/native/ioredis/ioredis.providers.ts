@@ -10,8 +10,8 @@ import {
     createIoRedisKey 
 } from "./constants"
 import {
-    IoRedisInstanceKey 
-} from "./types"
+    IoRedisInstanceKey
+} from "./enums"
 
 export const createIoRedisProvider = (key: IoRedisInstanceKey): Provider => ({
     provide: createIoRedisKey(key),

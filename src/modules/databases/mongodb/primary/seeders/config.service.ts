@@ -3,8 +3,11 @@ import {
     ConfigId 
 } from "../enums"
 import {
-    ChainId, DeepPartial 
-} from "@modules/typedefs"
+    DeepPartial 
+} from "@modules/common"
+import {
+    ChainId 
+} from "@modules/blockchains"
 import {
     ConfigSchema 
 } from "../schemas"
@@ -22,8 +25,11 @@ import {
 } from "@nestjs/common"
 import {
     createObjectId 
-} from "@modules/utils"
+} from "@modules/common"
 
+/**
+ * The service for the Config.
+ */
 @Injectable()
 export class ConfigService implements Seeder {
     constructor(
@@ -31,16 +37,27 @@ export class ConfigService implements Seeder {
         private readonly connection: Connection,
     ) { }
 
+    /**
+     * Seed the Config.
+     * @returns void.
+     */
     async seed(): Promise<void> {
         await this.connection.model<ConfigSchema>(ConfigSchema.name).create(data)
     }
 
+    /**
+     * Drop the Config.
+     * @returns void.
+     */
     async drop(): Promise<void> {
         await this.connection.model<ConfigSchema>(ConfigSchema.name).deleteMany({
         })
     }
 }   
 
+/**
+ * The data for the Config.
+ */
 export const data: Array<DeepPartial<ConfigSchema>> = [
     {
         _id: createObjectId(ConfigId.Gas),

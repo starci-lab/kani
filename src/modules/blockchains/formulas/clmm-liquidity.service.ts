@@ -4,7 +4,7 @@ import {
 import BN from "bn.js"
 import {
     Q64
-} from "@modules/utils"
+} from "@modules/common"
 import {
     ClmmTickFormulaService 
 } from "./clmm-tick.service"

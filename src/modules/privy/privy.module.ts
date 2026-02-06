@@ -16,9 +16,18 @@ import {
 import {
     JwtPrivyStrategy 
 } from "./strategies"
+
+/**
+ * Module for the Privy service.
+ */
 @Module({
 })
 export class PrivyModule extends ConfigurableModuleClass {
+    /**
+     * Register the Privy module.
+     * @param options - The options for the Privy module.
+     * @returns The DynamicModule for the Privy module.
+     */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [

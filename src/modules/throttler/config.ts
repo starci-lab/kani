@@ -1,12 +1,9 @@
 import {
-    ThrottlerOptions 
+    ThrottlerOptions
 } from "@nestjs/throttler"
-
-export enum ThrottlerConfig {
-    Soft = "soft",
-    Medium = "medium",
-    Strict = "strict",
-}
+import {
+    ThrottlerConfig
+} from "./enums"
 
 export const throttlerConfig: Record<ThrottlerConfig, Array<ThrottlerOptions>> = {
     [ThrottlerConfig.Soft]: [

@@ -28,7 +28,7 @@ import {
 } from "@modules/event"
 import {
     createObjectId 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     Interval 
 } from "@nestjs/schedule"
@@ -94,9 +94,9 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
             })
 
         // Create a new LokiJS collection for Raydium liquidity pools
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
-            "raydium-observer-liquidity-pools", 
-        )
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
+            name: "raydium-observer-liquidity-pools",
+        })
 
         // Insert the found liquidity pools into the new collection
         this.liquidityPoolCollection.insert(liquidityPools)

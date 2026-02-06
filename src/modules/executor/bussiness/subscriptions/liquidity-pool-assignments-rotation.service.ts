@@ -34,12 +34,12 @@ export class LiquidityPoolAssignmentsRotationService implements OnModuleInit {
     async onModuleInit() {
         await this.readinessWatcherFactoryService.waitUntilReady(BotsLoaderService.name)
         this.readinessWatcherFactoryService.createWatcher(LiquidityPoolAssignmentsRotationService.name)
-        this.botAssignmentsCollection = await this.lokiJSService.createCollection<BotSchema>(
-            "executor-bot-assignments",
-            {
+        this.botAssignmentsCollection = await this.lokiJSService.createCollection<BotSchema>({
+            name: "executor-bot-assignments",
+            options: {
                 indices: ["id"],
-            }
-        )
+            },
+        })
         await this.rotate()
         this.readinessWatcherFactoryService.setReady(LiquidityPoolAssignmentsRotationService.name)
     }

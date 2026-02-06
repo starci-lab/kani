@@ -52,9 +52,9 @@ export class DerivedAesKeyService implements OnModuleInit {
 
     async onModuleInit(): Promise<void> {
         try {
-            const key = await this.gcpKmsService.decrypt(
-                this.mountStorageService.encryptedAesKey
-            )
+            const key = await this.gcpKmsService.decrypt({
+                ciphertext: this.mountStorageService.encryptedAesKey,
+            })
             this.key = crypto.pbkdf2Sync(
                 key,
                 envConfig().salt.aesCbc,

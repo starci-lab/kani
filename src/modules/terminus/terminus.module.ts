@@ -19,6 +19,9 @@ import {
     MemoryService
 } from "./dependencies"
 
+/**
+ * The module for the Terminus.
+ */
 @Module({
     imports: [
         NestTerminusModule.forRoot({

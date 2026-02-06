@@ -1,59 +1,55 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    InjectPrivyClient 
-} from "./privy.decorators"
-import {
-    AuthorizationContext, PrivyClient 
+    AuthorizationContext,
+    PrivyClient
 } from "@privy-io/node"
 import {
-    DerivedAesKeyService 
-} from "@modules/derived"
-import {
-    EncryptedPayload 
-} from "@modules/typedefs"
-import {
-    FullySolanaTransaction, SolanaTransaction 
-} from "./types"
-import { 
-    assertIsFullySignedTransaction, 
-    getBase64Encoder, 
-    getSignatureFromTransaction, 
-    getTransactionDecoder, 
-    getTransactionEncoder, 
-    TransactionBlockhashLifetime 
+    assertIsFullySignedTransaction,
+    assertIsSendableTransaction,
+    assertIsTransactionWithBlockhashLifetime,
+    getBase64Encoder,
+    getSignatureFromTransaction,
+    getTransactionDecoder,
+    getTransactionEncoder
 } from "@solana/kit"
 import {
-    addLifetimeConstraint 
-} from "./utils"
-import {
-    assertIsSendableTransaction 
-} from "@solana/kit"
-import {
-    assertIsTransactionWithBlockhashLifetime 
-} from "@solana/kit"
-import {
-    Transaction, TransactionDataBuilder 
+    TransactionDataBuilder
 } from "@mysten/sui/transactions"
 import {
-    SuiClient 
-} from "@mysten/sui/client"
-import {
-    messageWithIntent, 
-    SignatureWithBytes, 
-    toSerializedSignature 
+    messageWithIntent,
+    toSerializedSignature
 } from "@mysten/sui/cryptography"
 import {
-    fromHex, toBase64 
+    fromHex,
+    toBase64
 } from "@mysten/bcs"
 import {
-    publicKeyFromRawBytes 
+    publicKeyFromRawBytes
 } from "@mysten/sui/verify"
 import {
-    MountStorageService 
+    DerivedAesKeyService
+} from "@modules/derived"
+import {
+    MountStorageService
 } from "@modules/filesystem"
+import {
+    InjectPrivyClient
+} from "./privy.decorators"
+import {
+    addLifetimeConstraint
+} from "./utils"
+import type {
+    SignSolanaTransactionParams,
+    SignSolanaTransactionResult,
+    SignSuiTransactionParams,
+    SignSuiTransactionResult
+} from "./types"
 
+/**
+ * Signs Solana and Sui transactions via Privy wallet/signer.
+ */
 @Injectable()
 export class PrivySignService {
     constructor(
@@ -63,14 +59,20 @@ export class PrivySignService {
         private readonly mountStorageService: MountStorageService,
     ) {}
     
+    /**
+     * Sign a Solana transaction with the wallet and apply blockhash lifetime.
+     * @param params - The parameters for signing the Solana transaction.
+     * @returns The signed transaction and the transaction hash.
+     */ 
     async signSolanaTransaction(
-        {
+        params: SignSolanaTransactionParams,
+    ): Promise<SignSolanaTransactionResult> {
+        const {
             walletId,
             transaction,
             encryptedPrivySignerPrivateKey,
             lifetimeConstraint,
-        }: SignSolanaTransactionParams
-    ) {
+        } = params
         const transactionBytes = new Uint8Array(
             getTransactionEncoder().encode(transaction)
         )
@@ -90,8 +92,10 @@ export class PrivySignService {
         const decodedTransaction = getTransactionDecoder().decode(
             getBase64Encoder().encode(signedTransaction.signed_transaction),
         )
-        addLifetimeConstraint(decodedTransaction,
-            lifetimeConstraint)
+        addLifetimeConstraint({
+            transaction: decodedTransaction,
+            lifetimeConstraint,
+        })
         assertIsFullySignedTransaction(decodedTransaction)
         assertIsSendableTransaction(decodedTransaction)
         assertIsTransactionWithBlockhashLifetime(decodedTransaction)
@@ -102,15 +106,21 @@ export class PrivySignService {
         }
     }
 
+    /**
+     * Sign a Sui transaction (raw sign) and return txHash + signatureWithBytes.
+     * @param params - The parameters for signing the Sui transaction.
+     * @returns The transaction hash and the signature with bytes.
+     */
     async signSuiTransaction(
-        {
+        params: SignSuiTransactionParams,
+    ): Promise<SignSuiTransactionResult> {
+        const {
             walletId,
             transaction,
             publicKeyHex,
             client,
             encryptedPrivySignerPrivateKey,
-        }: SignSuiTransactionParams
-    ): Promise<SignSuiTransactionResult> {
+        } = params
         const publicKey = publicKeyFromRawBytes("ED25519",
             fromHex(publicKeyHex.slice(2) ?? ""))
         const accountAddress = publicKey.toSuiAddress()
@@ -155,28 +165,4 @@ export class PrivySignService {
             },
         }
     }
-}
-
-export interface SignTransactionParams<T> {
-    walletId: string
-    transaction: T
-    encryptedPrivySignerPrivateKey: EncryptedPayload
-}
-export interface SignSolanaTransactionParams extends SignTransactionParams<SolanaTransaction> {
-    lifetimeConstraint: TransactionBlockhashLifetime
-}
-
-export interface SignSuiTransactionParams extends SignTransactionParams<Transaction> {
-    publicKeyHex: string
-    client: SuiClient
-}
-
-export interface SignSuiTransactionResult {
-    txHash: string
-    signatureWithBytes: SignatureWithBytes
-}
-
-export interface SignSolanaTransactionResult {
-    signedTransaction: FullySolanaTransaction
-    txHash: string
 }

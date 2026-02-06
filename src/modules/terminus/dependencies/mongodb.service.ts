@@ -18,6 +18,10 @@ import {
 } from "@modules/databases"
 
 export type MongodbTarget = "primary"
+
+/**
+ * The service for the MongoDB.
+ */
 @Injectable()
 export class MongodbService {
     constructor(
@@ -26,7 +30,8 @@ export class MongodbService {
     ) {}
 
     /**
-     * Health check for Primary MongoDB
+     * Ping the Primary MongoDB.
+     * @returns The health check result.
      */
     async pingPrimaryMongodb(): Promise<HealthIndicatorResult> {
         const connection = this.moduleRef.get<Connection>(

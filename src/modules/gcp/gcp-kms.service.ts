@@ -1,37 +1,49 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    KeyManagementServiceClient 
+    KeyManagementServiceClient
 } from "@google-cloud/kms"
 import {
-    InjectGcpKmsClient 
-} from "./gpc.decorators"
-import {
-    KmsEncryptionKeyNotFoundException,
     KmsCiphertextNotFoundException,
     KmsDecryptionFailedException,
-    KmsEncryptionFailedException
+    KmsEncryptionFailedException,
+    KmsEncryptionKeyNotFoundException
 } from "@modules/exceptions"
 import {
-    MountStorageService 
+    MountStorageService
 } from "@modules/filesystem"
 import {
-    RetryService 
+    RetryService
 } from "@modules/mixin"
+import {
+    InjectGcpKmsClient
+} from "./gpc.decorators"
+import type {
+    DecryptParams,
+    DecryptResult,
+    EncryptParams,
+    EncryptResult
+} from "./types"
 
+/**
+ * Service for KMS encryption and decryption.
+ */
 @Injectable()
 export class GcpKmsService {
     constructor(
-    @InjectGcpKmsClient()
-    private readonly kmsClient: KeyManagementServiceClient,
-    private readonly mountStorageService: MountStorageService,
-    private readonly retryService: RetryService
+        @InjectGcpKmsClient()
+        private readonly kmsClient: KeyManagementServiceClient,
+        private readonly mountStorageService: MountStorageService,
+        private readonly retryService: RetryService
     ) {}
 
-    async encrypt(
-        plaintext: string
-    ): Promise<Buffer<ArrayBufferLike>> {
+    /**
+     * Encrypts plaintext using KMS.
+     * @param params - The parameters for the encryption.
+     * @returns The encrypted result.
+     */
+    async encrypt({ plaintext }: EncryptParams): Promise<EncryptResult> {
         try {
             return await this.retryService.retry({
                 action: async () => {
@@ -56,9 +68,12 @@ export class GcpKmsService {
         }
     }
 
-    async decrypt(
-        ciphertext: Buffer<ArrayBufferLike>
-    ): Promise<string> {
+    /**
+     * Decrypts ciphertext using KMS.
+     * @param params - The parameters for the decryption.
+     * @returns The decrypted result.
+     */
+    async decrypt({ ciphertext }: DecryptParams): Promise<DecryptResult> {
         try {
             return await this.retryService.retry({
                 action: async () => {

@@ -30,7 +30,7 @@ import {
 } from "@modules/blockchains"
 import {
     toDecimalAmount,
-} from "@modules/utils"
+} from "@modules/common"
 import {
     TokenType,
 } from "@modules/typedefs"

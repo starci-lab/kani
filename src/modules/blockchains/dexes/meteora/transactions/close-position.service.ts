@@ -41,7 +41,7 @@ import {
 } from "./sdk.service"
 import {
     convertWeb3MetaToKitMeta 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     SYSTEM_PROGRAM_ADDRESS 
 } from "@solana-program/system"

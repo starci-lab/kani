@@ -28,6 +28,9 @@ import {
     MemoryService 
 } from "./memory.service"
 
+/**
+ * The service for the dependencies.
+ */
 @Injectable()
 export class DependenciesService {
     constructor(
@@ -39,6 +42,11 @@ export class DependenciesService {
         private readonly healthCheckService: HealthCheckService,
     ) {}
 
+    /**
+     * Ping the dependencies.
+     * @param dependencyNames - The names of the dependencies to ping.
+     * @returns The health check result.
+     */
     async ping(dependencyNames: Array<DependencyName>): Promise<HealthCheckResult> {
         const promises: Array<HealthIndicatorFunction> = []
         for (const dependencyName of dependencyNames) {

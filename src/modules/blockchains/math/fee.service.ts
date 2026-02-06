@@ -1,6 +1,6 @@
 import {
     bnMulDecimal
-} from "@modules/utils"
+} from "@modules/common"
 import {
     Injectable 
 } from "@nestjs/common"

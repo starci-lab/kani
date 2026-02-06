@@ -25,7 +25,7 @@ import {
 } from "@mysten/sui/utils"
 import {
     MAX_UINT_64 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     deprecatedPoolRewards 
 } from "turbos-clmm-sdk"

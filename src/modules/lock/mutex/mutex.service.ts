@@ -1,49 +1,52 @@
 import {
-    sleep 
-} from "@modules/utils"
+    Mutex
+} from "async-mutex"
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    Mutex 
-} from "async-mutex"
+    sleep
+} from "@modules/common"
+import type {
+    RunWithCooldownParams,
+    RunWithCooldownResult
+} from "./types"
 
+/**
+ * Service for mutex locks.
+ */
 @Injectable()
 export class MutexService {
     private readonly mutexes = new Map<string, Mutex>()
 
-    mutex(key: string) {
+    /**
+     * Get a mutex for a given key (creates one if it does not exist).
+     * @param key - The key for the mutex.
+     * @returns The mutex.
+     */
+    mutex(key: string): Mutex {
         if (!this.mutexes.has(key)) {
             this.mutexes.set(key,
                 new Mutex())
         }
         return this.mutexes.get(key)!
     }
-    /**
-     * Run callback under mutex lock, then wait cooldown before next lock
-     */
-    async runWithCooldown<T>({
-        key,
-        callback,
-        onError,
-        timeout,
-    }: RunWithCooldownParams<T>): Promise<void> {
-        const mutex = this.mutex(key)
-        return mutex.runExclusive(
-            async () => {
-                try {
-                    await callback()
-                    await sleep(timeout)
-                } catch (error) {
-                    onError?.(error)
-                }
-            })
-    }
-}
 
-export interface RunWithCooldownParams<T> {
-    key: string
-    callback: () => Promise<T>
-    onError?: (error: Error) => void
-    timeout: number
+    /**
+     * Run callback under mutex lock, then wait cooldown before next lock.
+     */
+    async runWithCooldown<T>(
+        params: RunWithCooldownParams<T>,
+    ): Promise<RunWithCooldownResult> {
+        const { key, callback, onError, timeout } = params
+        const mutex = this.mutex(key)
+        return mutex.runExclusive(async () => {
+            try {
+                await callback()
+                await sleep(timeout)
+            } catch (error) {
+                onError?.(error as Error)
+            }
+        })
+    }
 }

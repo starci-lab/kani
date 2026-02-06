@@ -31,7 +31,7 @@ import {
 import BN from "bn.js"
 import {
     ZERO_BN 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     ClmmLiquidityPoolState 
 } from "../../types"

@@ -1,6 +1,6 @@
 import {
     createEnumType
-} from "@modules/utils"
+} from "@modules/common"
 import {
     registerEnumType
 } from "@nestjs/graphql"

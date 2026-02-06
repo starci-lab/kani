@@ -5,6 +5,9 @@ import {
     Sema 
 } from "async-sema"
 
+/**
+ * Service for semaphore locks.
+ */
 @Injectable()
 export class SemaService {
     /**

@@ -117,12 +117,12 @@ implements OnApplicationBootstrap, OnModuleInit {
 
         // Create LokiJS collection, indexed by `id` for fast findOne
         this.botCollection =
-        await this.lokiJSService.createCollection<BotSchema>(
-            "executor-bots",
-            {
+        await this.lokiJSService.createCollection<BotSchema>({
+            name: "executor-bots",
+            options: {
                 indices: ["id"],
             },
-        )
+        })
 
         // Initial load from MongoDB
         await this.load()

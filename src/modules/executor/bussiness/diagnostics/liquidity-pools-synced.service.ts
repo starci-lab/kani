@@ -61,13 +61,12 @@ implements OnModuleInit, OnApplicationBootstrap {
 
     async onModuleInit() {
         this.liquidityPoolCollection =
-            await this.lokiJSService.createCollection<LiquidityPoolSchema>(
-                "liquidity-pools-synced-diagnostic-pools",
-                {
-                    indices: ["displayId",
-                        "id"],
-                }
-            )
+            await this.lokiJSService.createCollection<LiquidityPoolSchema>({
+                name: "liquidity-pools-synced-diagnostic-pools",
+                options: {
+                    indices: ["displayId", "id"],
+                },
+            })
 
         const liquidityPools = this.primaryMemoryStorageService
             .liquidityPoolCollection.chain()

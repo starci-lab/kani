@@ -5,8 +5,8 @@ import {
     KeyManagementServiceClient 
 } from "@google-cloud/kms"
 import {
-    GCP_KMS_CLIENT 
-} from "./gcp.constants"
+    GCP_KMS_CLIENT
+} from "./constants"
 import {
     MountFilesystemService 
 } from "@modules/filesystem"

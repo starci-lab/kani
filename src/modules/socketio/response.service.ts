@@ -1,18 +1,15 @@
 import {
-    InjectSuperJson 
-} from "@modules/mixin"
-import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    SuperJSON 
+    SuperJSON
 } from "superjson"
 import {
-    TypedSocket 
+    InjectSuperJson
+} from "@modules/mixin"
+import type {
+    WsResponseParams,
 } from "./types"
-import {
-    AbstractException 
-} from "@exceptions"
 
 @Injectable()
 export class WsResponseService {
@@ -55,13 +52,4 @@ export class WsResponseService {
             },
         )
     }
-}
-
-export interface WsResponseParams<T = unknown> {
-    message: string
-    data?: T
-    client: TypedSocket
-    eventName: string
-    success: boolean
-    error?: AbstractException
 }

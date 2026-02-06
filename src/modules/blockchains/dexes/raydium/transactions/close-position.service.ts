@@ -23,14 +23,10 @@ import {
     WSOL_MINT_ADDRESS 
 } from "../../../tx-builder"
 import {
-    BotSchema,
     PrimaryMemoryStorageService, 
     RaydiumLiquidityPoolMetadata, 
     RaydiumPositionMetadata
 } from "@modules/databases"
-import {
-    ClmmLiquidityPoolState 
-} from "../../../types"
 import {
     ActivePositionNotFoundException, InvalidPoolTokensException, 
     LiquidityPoolClmmStateNotFoundException,
@@ -48,7 +44,9 @@ import {
 import {
     CreateCloseInstructionsParams
 } from "../types"
-
+import {
+    ClmmLiquidityPoolState 
+} from "../../types"
 /**
  * Service responsible for creating close position instructions for Raydium.
  * Handles instruction construction for closing liquidity positions.
@@ -274,10 +272,10 @@ export class ClosePositionInstructionService {
                 ...remainingAccounts,
             ],
             data:
-                this.anchorUtilsService.encodeAnchorIx(
-                    "decrease_liquidity_v2",
-                    closePositionArgs
-                ),
+                this.anchorUtilsService.encodeAnchorIx({
+                    ixName: "decrease_liquidity_v2",
+                    data: closePositionArgs,
+                }),
         }
         instructions.push(decreaseLiquidityV2Instruction)
         const closePositionInstruction: Instruction = {
@@ -308,7 +306,10 @@ export class ClosePositionInstructionService {
                     role: AccountRole.READONLY,
                 }
             ],
-            data: this.anchorUtilsService.encodeAnchorIx("close_position"),
+            data: this.anchorUtilsService.encodeAnchorIx({
+                ixName: "close_position",
+                data: closePositionArgs,
+            }),
         }
         instructions.push(closePositionInstruction)
         instructions.push(...endInstructions)

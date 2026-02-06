@@ -31,7 +31,7 @@ import {
 } from "axios"
 import {
     createObjectId 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     Collection 
 } from "lokijs"
@@ -80,13 +80,14 @@ export class MomentumAnalyticsService implements OnModuleInit, OnApplicationBoot
             .data({
                 removeMeta: true 
             })
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
-            "momentum-analytics-liquidity-pools", 
-            {
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
+            name: "momentum-analytics-liquidity-pools",
+            options: {
                 indices: ["poolAddress",
                     "displayId",
                     "id"],
-            })
+            },
+        })
         this.liquidityPoolCollection.insert(liquidityPools)
     }
 

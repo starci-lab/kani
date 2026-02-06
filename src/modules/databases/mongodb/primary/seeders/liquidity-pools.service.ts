@@ -8,14 +8,12 @@ import {
     LiquidityPoolSchema 
 } from "../schemas"
 import {
-    DeepPartial 
-} from "@modules/typedefs"
-import {
     ChainId 
 } from "@modules/blockchains"
 import {
+    DeepPartial,
     createObjectId 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     Seeder 
 } from "./types"
@@ -27,20 +25,34 @@ import {
 } from "@nestjs/common"
 import ms from "ms"
 
+/**
+ * The service for the LiquidityPools.
+ */
 @Injectable()
 export class LiquidityPoolsService implements Seeder {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
     ) { }
+    /**
+     * Seed the LiquidityPools.
+     * @returns void.
+     */
     async seed(): Promise<void> {
         await this.connection.model<LiquidityPoolSchema>(LiquidityPoolSchema.name).create(data)
     }
+    /**
+     * Drop the LiquidityPools.
+     * @returns void.
+     */
     async drop(): Promise<void> {
         await this.connection.model<LiquidityPoolSchema>(LiquidityPoolSchema.name).deleteMany({
         })
     }
 }
+/**
+ * The data for the LiquidityPools.
+ */
 export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
     {
         _id: createObjectId(LiquidityPoolId.CetusSuiIka02),

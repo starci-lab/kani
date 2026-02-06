@@ -27,7 +27,7 @@ import {
 } from "../enums"
 import {
     createObjectId
-} from "@modules/utils"
+} from "@modules/common"
 import {
     AccountLimitsConfigNotFoundException,
     AuthenticationConfigNotFoundException,
@@ -72,46 +72,41 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                 const tokens = await this.connection
                     .model<TokenSchema>(TokenSchema.name)
                     .find()
-                this.tokenCollection = await this.lokiJSService.createCollection<TokenSchema>(
-                    TokenSchema.name,
-                    {
-                        indices: [
-                            "tokenAddress",
+                this.tokenCollection = await this.lokiJSService.createCollection<TokenSchema>({
+                    name: "token-collection",
+                    options: {
+                        indices: ["tokenAddress",
                             "displayId",
-                            "id",
-                        ] 
+                            "id"],
                     },
-                )
+                })
                 this.tokenCollection.insert(tokens.map(token => token.toJSON()))
             })(),
             (async () => {
                 const liquidityPools = await this.connection
                     .model<LiquidityPoolSchema>(LiquidityPoolSchema.name)
                     .find()
-                this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
-                    LiquidityPoolSchema.name,
-                    {
-                        indices: [
+                this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
+                    name: "liquidity-pool-collection",
+                    options: {
+                        indices: ["poolAddress",
                             "displayId",
-                            "id",
-                        ] 
+                            "id"],
                     },
-                )
+                })
                 this.liquidityPoolCollection.insert(liquidityPools.map(liquidityPool => liquidityPool.toJSON()))
             })(),
             (async () => {
                 const dexes = await this.connection
                     .model<DexSchema>(DexSchema.name)
                     .find()
-                this.dexCollection = await this.lokiJSService.createCollection<DexSchema>(
-                    DexSchema.name,
-                    {
-                        indices: [
-                            "displayId",
-                            "id",
-                        ] 
+                this.dexCollection = await this.lokiJSService.createCollection<DexSchema>({ 
+                    name: "dex-collection",
+                    options: {
+                        indices: ["displayId",
+                            "id"],
                     },
-                )
+                })
                 this.dexCollection.insert(dexes.map(dex => dex.toJSON()))
             })(),
             (async () => {

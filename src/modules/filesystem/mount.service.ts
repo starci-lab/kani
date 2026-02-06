@@ -2,20 +2,20 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    AppConfig, RpcAccessConfigs 
+    AppConfig, RpcAccessConfigs
 } from "./types"
-import {  
-    getGcpCryptoKeyEdSa,  
-    getRpcAccessConfigs, 
-    getEncryptedJwtSecretKey,
-    getEncryptedAesKey,
+import {
     getAppConfig,
+    getCoinMarketCapApiKey,
+    getEncryptedAesKey,
+    getEncryptedJwtSecretKey,
     getGcpCloudKmsCryptoOperatorSa,
+    getGcpCryptoKeyEdSa,
     getGcpGoogleDriveUdSa,
-    getPrivySignerPrivateKey,
     getPrivyAppSecretKey,
-    getCoinMarketCapApiKey
-} from "./pure"
+    getPrivySignerPrivateKey,
+    getRpcAccessConfigs,
+} from "./utils"
 /**
  * Service responsible for reading secrets mounted into the container filesystem.
  *

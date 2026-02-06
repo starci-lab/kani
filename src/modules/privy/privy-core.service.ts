@@ -1,22 +1,23 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    P256KeyPair, PrivyClient, generateP256KeyPair 
+    PrivyClient,
+    generateP256KeyPair
 } from "@privy-io/node"
 import {
-    InjectPrivyClient 
+    WalletCreateParams
+} from "@privy-io/node/resources"
+import {
+    InjectPrivyClient
 } from "./privy.decorators"
 import {
-    ChainId 
-} from "@modules/typedefs"
-import {
-    MountStorageService 
+    MountStorageService
 } from "@modules/filesystem"
-import { 
-    KeyQuorum,
-    WalletCreateParams,
-} from "@privy-io/node/resources"
+import type {
+    CreateWalletParams,
+    PrivySignerResult
+} from "./types"
 
 @Injectable()
 export class PrivyCoreService {
@@ -82,21 +83,4 @@ export class PrivyCoreService {
             keyPair,
         }
     }
-}
-
-export interface PrivySignerResult {
-    keyQuorum: KeyQuorum
-    keyPair: P256KeyPair
-}
-
-export interface CreateWalletParams {
-    policyIds?: Array<string>
-    chainId: ChainId
-    additionalSigners: Array<AdditionalSigner>
-    userId?: string
-}
-
-export interface AdditionalSigner {
-    signerId: string
-    policyIds?: Array<string>
 }

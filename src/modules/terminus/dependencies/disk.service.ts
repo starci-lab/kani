@@ -11,12 +11,19 @@ import {
     envConfig 
 } from "@modules/env"
 
+/**
+ * The service for the disk.
+ */
 @Injectable()
 export class DiskService {
     constructor(
         private readonly diskHealthIndicator: DiskHealthIndicator,
     ) {}
 
+    /**
+     * Ping the disk.
+     * @returns The health check result.
+     */
     async pingDisk(): Promise<HealthIndicatorResult> {
         return this.diskHealthIndicator.checkStorage(
             DependencyName.Disk,

@@ -25,7 +25,9 @@ export class RedisService {
     ) {}
 
     /**
-     * Build Redis microservice options with retry + timeout
+     * Build Redis microservice options with retry + timeout.
+     * @param target - The target of the Redis.
+     * @returns The Redis options.
      */
     private buildRedisOptions(target: RedisTarget): MicroserviceHealthIndicatorOptions<MicroserviceOptions> {
         const cfg = this.redis[target]

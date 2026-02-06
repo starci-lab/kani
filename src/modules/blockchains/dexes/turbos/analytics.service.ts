@@ -31,7 +31,7 @@ import {
 } from "axios"
 import {
     createObjectId
-} from "@modules/utils"
+} from "@modules/common"
 import {
     Collection 
 } from "lokijs"
@@ -85,13 +85,14 @@ implements OnModuleInit, OnApplicationBootstrap {
             .data({
                 removeMeta: true 
             })
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
-            "turbos-analytics-liquidity-pools", 
-            {
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
+            name: "turbos-analytics-liquidity-pools",
+            options: {
                 indices: ["poolAddress",
                     "displayId",
                     "id"],
-            })
+            },
+        })
         this.liquidityPoolCollection.insert(liquidityPools)
     }
 

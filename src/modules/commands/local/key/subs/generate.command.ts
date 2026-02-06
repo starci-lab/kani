@@ -64,12 +64,16 @@ export class GenerateCommand extends CommandRunner {
             process.exit(1)
         }
         // we encrypt the data
-        const encryptedData = await this.gcpKmsService.encrypt(data.toString("utf8"))
+        const encryptedData = await this.gcpKmsService.encrypt({
+            plaintext: data.toString("utf8"),
+        })
         this.winstonService.log(WinstonLog.KeyEncryptedSuccess,
             {
             })
         // we decrypt the data
-        const decryptedData = await this.gcpKmsService.decrypt(encryptedData)
+        const decryptedData = await this.gcpKmsService.decrypt({
+            ciphertext: encryptedData,
+        })
         // we check if the decrypted data is the same as the original data
         if (decryptedData !== data.toString("utf8")) {
             this.winstonService.log(WinstonLog.KeyDecryptionCheckFailed, 

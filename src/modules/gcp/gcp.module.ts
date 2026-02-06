@@ -20,7 +20,9 @@ import {
         createGcpKmsClientProvider(),
         GoogleDriveService,
     ],
-    exports: [GcpKmsService,
-        GoogleDriveService],
+    exports: [
+        GcpKmsService,
+        GoogleDriveService
+    ],
 })
 export class GcpModule extends ConfigurableModuleClass {}

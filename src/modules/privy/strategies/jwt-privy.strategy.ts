@@ -27,7 +27,14 @@ import {
     JwtAccessTokenPayload 
 } from "@modules/passport"
 
+/**
+ * The name of the JWT Privy strategy.
+ */
 export const JWT_PRIVY_STRATEGY = "jwt-privy"
+
+/**
+ * The JWT Privy strategy for authenticating requests.
+ */
 @Injectable()
 export class JwtPrivyStrategy extends PassportStrategy(
     Strategy, 
@@ -40,6 +47,11 @@ export class JwtPrivyStrategy extends PassportStrategy(
         super()
     }
 
+    /**
+     * Authenticate a request.
+     * @param req - The request to authenticate.
+     * @returns The authenticated request.
+     */
     async authenticate(req: Request) {
         const extractor = ExtractJwt.fromAuthHeaderAsBearerToken()
         const token = extractor(req)

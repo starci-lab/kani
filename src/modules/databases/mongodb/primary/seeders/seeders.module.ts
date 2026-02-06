@@ -20,6 +20,9 @@ import {
     ConfigService 
 } from "./config.service"
 
+/**
+ * The module for the Seeders.
+ */
 @Module({
     providers: [
         TokensService,

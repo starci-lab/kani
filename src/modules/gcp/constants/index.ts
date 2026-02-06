@@ -1,0 +1,3 @@
+export const GCP_OPTIONS = "GCP_OPTIONS"
+export const GCP_KMS_CLIENT = "GCP_KMS_CLIENT"
+export const GCP_SECRET_CLIENT = "GCP_SECRET_CLIENT"

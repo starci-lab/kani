@@ -34,7 +34,7 @@ import {
 } from "@apollo/client"
 import {
     createObjectId 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     GraphQLDataNotFoundException 
 } from "@modules/exceptions"
@@ -87,13 +87,14 @@ export class FlowXAnalyticsService implements OnModuleInit, OnApplicationBootstr
             .data({
                 removeMeta: true 
             })
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
-            "flowx-analytics-liquidity-pools", 
-            {
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
+            name: "flowx-analytics-liquidity-pools",
+            options: {
                 indices: ["poolAddress",
                     "displayId",
                     "id"],
-            })
+            },
+        })
         this.liquidityPoolCollection.insert(liquidityPools)
     }
 

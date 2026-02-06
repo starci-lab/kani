@@ -45,8 +45,8 @@ import {
     Readable 
 } from "stream"
 import {
-    GoogleDriveFolderName 
-} from "@modules/typedefs"
+    GoogleDriveFolderName,
+} from "@modules/gcp"
 
 @Injectable()
 export class CreateBotV2Service {

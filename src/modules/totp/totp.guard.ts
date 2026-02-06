@@ -28,6 +28,9 @@ import {
     VerifyAccessTokenResponse 
 } from "@privy-io/node"
 
+/**
+ * The GraphQL TOTP guard.
+ */
 @Injectable()
 export class GraphQLTOTPGuard implements CanActivate {
     constructor(
@@ -37,6 +40,11 @@ export class GraphQLTOTPGuard implements CanActivate {
         private readonly connection: Connection,
     ) {}
 
+    /**
+     * Check if the request is authorized.
+     * @param context - The execution context.
+     * @returns True if the request is authorized, false otherwise.
+     */
     async canActivate(
         context: ExecutionContext): Promise<boolean> {
         try {

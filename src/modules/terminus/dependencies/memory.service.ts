@@ -17,6 +17,10 @@ export class MemoryService {
         private readonly memoryHealthIndicator: MemoryHealthIndicator,
     ) {}
 
+    /**
+     * Ping the memory.
+     * @returns The health check result.
+     */
     async pingMemory(): Promise<HealthIndicatorResult> {
         return this.memoryHealthIndicator.checkRSS(
             DependencyName.Memory,

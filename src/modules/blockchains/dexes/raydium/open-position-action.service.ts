@@ -77,7 +77,7 @@ import {
 } from "@modules/privy"
 import {
     adjustSlippage 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     envConfig 
 } from "@modules/env"

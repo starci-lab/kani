@@ -26,7 +26,7 @@ import {
 } from "@nestjs/schedule"
 import {
     createObjectId 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     CacheKey,
     DynamicClmmLiquidityPoolInfoCacheResult,
@@ -93,13 +93,14 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
             })
 
         // Create a new LokiJS collection for FlowX liquidity pools
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
-            "flowx-observer-liquidity-pools", 
-            {
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
+            name: "flowx-observer-liquidity-pools",
+            options: {
                 indices: ["poolAddress",
                     "displayId",
                     "id"],
-            })
+            },
+        })
 
         // Insert the found liquidity pools into the new collection
         this.liquidityPoolCollection.insert(liquidityPools)

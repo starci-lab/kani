@@ -19,15 +19,20 @@ import {
     InstanceIdService 
 } from "@modules/mixin"
 
+/**
+ * The service for the Kafka.
+ */
 @Injectable()
 export class KafkaService {
     constructor(
-        // Used by @nestjs/terminus to perform health checks
-        // for microservices (Kafka in this case)
         private readonly microserviceHealthIndicator: MicroserviceHealthIndicator,
         private readonly instanceIdService: InstanceIdService,
     ) {}
 
+    /**
+     * Build the Kafka options.
+     * @returns The Kafka options.
+     */
     private buildKafkaOptions(): MicroserviceHealthIndicatorOptions<MicroserviceOptions> {
         const cfg = envConfig().kafka
         const options: MicroserviceHealthIndicatorOptions<MicroserviceOptions> = {

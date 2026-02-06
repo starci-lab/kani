@@ -50,7 +50,7 @@ import {
     bnDivDecimal,
     Q64,
     Q128,
-} from "@modules/utils"
+} from "@modules/common"
 import {
     Decimal,
 } from "decimal.js"

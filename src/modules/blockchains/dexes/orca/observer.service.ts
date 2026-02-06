@@ -26,7 +26,7 @@ import {
 } from "@modules/event"
 import {
     createObjectId 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     Whirlpool 
 } from "./beets"
@@ -95,13 +95,14 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
             })
 
         // Create a new LokiJS collection for Orca liquidity pools
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
-            "orca-observer-liquidity-pools", 
-            {
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
+            name: "orca-observer-liquidity-pools",
+            options: {
                 indices: ["poolAddress",
                     "displayId",
                     "id"],
-            })
+            },
+        })
 
         // Insert the found liquidity pools into the new collection
         this.liquidityPoolCollection.insert(liquidityPools)

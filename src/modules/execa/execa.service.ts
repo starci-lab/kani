@@ -1,25 +1,40 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    execa 
+    ExecaExecutionFailedException
+} from "@exceptions"
+import {
+    execa
 } from "execa"
+import type {
+    ExecParams,
+    ExecResult
+} from "./types"
 
+/**
+ * Service to run shell commands via execa (no shell by default).
+ */
 @Injectable()
 export class ExecaService {
-
-    constructor() {
-    }
-    public async exec(command: string, args: Array<string> = []): Promise<string> {
+    /**
+     * Run a command and return stdout; throws if stderr is set.
+     */
+    async exec(
+        { command, args = [] }: ExecParams
+    ): Promise<ExecResult> {
         const subprocess = execa(command,
             args,
             {
-                shell: false,
+                shell: false 
             })
-        // Execute the command
         const { stdout, stderr } = await subprocess
         if (stderr) {
-            throw new Error(stderr)
+            throw new ExecaExecutionFailedException({
+                command,
+                args,
+                stderr,
+            })
         }
         return stdout
     }

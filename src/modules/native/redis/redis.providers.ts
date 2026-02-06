@@ -11,8 +11,8 @@ import {
     createRedisKey 
 } from "./constants"
 import {
-    RedisInstanceKey 
-} from "./types"
+    RedisInstanceKey
+} from "./enums"
 
 export const createRedisProvider = (key: RedisInstanceKey): Provider => ({
     provide: createRedisKey(key),

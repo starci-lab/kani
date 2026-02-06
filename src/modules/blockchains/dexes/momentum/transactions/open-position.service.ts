@@ -32,7 +32,7 @@ import {
 } from "@mysten/sui/utils"
 import {
     adjustSlippage 
-} from "@modules/utils"
+} from "@modules/common"
 import {
     TickMath 
 } from "@mmt-finance/clmm-sdk"

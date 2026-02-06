@@ -5,8 +5,8 @@ import speakeasy from "speakeasy"
 import {
     MODULE_OPTIONS_TOKEN 
 } from "./totp.module-definition"
-import {
-    TotpOptions 
+import type {
+    TotpOptions
 } from "./types"
 
 @Injectable()

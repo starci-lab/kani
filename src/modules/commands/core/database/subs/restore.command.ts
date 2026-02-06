@@ -96,8 +96,10 @@ export class RestoreCommand extends CommandRunner {
             // ================================
             // Download from Google Drive
             // ================================
-            await this.googleDriveService.downloadFile(fileId,
-                archivePath)
+            await this.googleDriveService.downloadFile({
+                id: fileId,
+                outputPath: archivePath,
+            })
             this.winstonService.log(WinstonLog.GoogleDriveFileDownloaded,
                 {
                     fileId, archiveName 
@@ -114,10 +116,7 @@ export class RestoreCommand extends CommandRunner {
                 sevenZArgs.push(`-p${aesPassword}`)
             }
             sevenZArgs.push("-y")
-            await this.execaService.exec(
-                "7z",
-                sevenZArgs
-            )
+            await this.execaService.exec({ command: "7z", args: sevenZArgs })
             this.winstonService.log(WinstonLog.SevenZExtractionCompleted,
                 {
                     archiveName 
@@ -136,10 +135,7 @@ export class RestoreCommand extends CommandRunner {
                 "--drop",
                 "--quiet"
             ]
-            await this.execaService.exec(
-                "mongorestore",
-                mongorestoreArgs
-            )
+            await this.execaService.exec({ command: "mongorestore", args: mongorestoreArgs })
             this.winstonService.log(WinstonLog.MongoDBRestoreCompleted,
                 {
                     dbName: this.connection.name, fileId 

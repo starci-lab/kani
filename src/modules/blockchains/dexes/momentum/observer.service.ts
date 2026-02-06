@@ -31,7 +31,7 @@ import {
 } from "@nestjs/schedule"
 import {
     createObjectId 
-} from "@modules/utils"
+} from "@modules/common"
 import { 
     DynamicClmmLiquidityPoolInfoCacheResult, 
     CacheService, 
@@ -99,15 +99,14 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
             })
 
         // Create a new LokiJS collection for Momentum liquidity pools
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
-            "momentum-observer-liquidity-pools", 
-            {
-                indices: [
-                    "poolAddress",
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
+            name: "momentum-observer-liquidity-pools",
+            options: {
+                indices: ["poolAddress",
                     "displayId",
-                    "id"
-                ],
-            })
+                    "id"],
+            },
+        })
 
         // Insert the found liquidity pools into the new collection
         this.liquidityPoolCollection.insert(liquidityPools)

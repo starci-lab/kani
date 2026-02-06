@@ -15,7 +15,7 @@ import {
 import {
     isSuiCoin,
     ZERO_BN
-} from "@modules/utils"
+} from "@modules/common"
 import {
     toCoinArgument
 } from "../../utils"

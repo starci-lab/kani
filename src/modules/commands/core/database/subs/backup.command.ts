@@ -28,8 +28,8 @@ import {
     Option 
 } from "nest-commander"
 import {
-    GoogleDriveFolderName 
-} from "@modules/typedefs"
+    GoogleDriveFolderName,
+} from "@modules/gcp"
 
 @SubCommand({
     name: "backup", description: "Backup MongoDB and upload to Google Drive" 
@@ -87,10 +87,7 @@ export class BackupCommand extends CommandRunner {
                 "--gzip",
                 "--quiet",
             ]
-            await this.execaService.exec(
-                "mongodump", 
-                mongodumpArgs
-            )
+            await this.execaService.exec({ command: "mongodump", args: mongodumpArgs })
             this.winstonService.log(WinstonLog.MongoDumpCompleted,
                 {
                     dumpDirName 
@@ -110,10 +107,7 @@ export class BackupCommand extends CommandRunner {
                 sevenZArgs.push(`-p${aesPassword}`)
             }
             sevenZArgs.push("-y")
-            await this.execaService.exec(
-                "7z",
-                sevenZArgs
-            )
+            await this.execaService.exec({ command: "7z", args: sevenZArgs })
             this.winstonService.log(
                 WinstonLog.SevenZCompressionCompleted,
                 {

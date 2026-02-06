@@ -3,8 +3,8 @@ import {
     AbstractExceptionMetadata,
 } from "../abstract"
 import {
-    GoogleDriveFolderName 
-} from "@modules/typedefs"
+    GoogleDriveFolderName,
+} from "@modules/gcp"
 /** Thrown when Google drive folder id not found */
 export interface GoogleDriveFolderIdNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     folderName: GoogleDriveFolderName

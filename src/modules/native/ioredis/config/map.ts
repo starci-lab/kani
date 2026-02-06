@@ -1,22 +1,17 @@
 import {
-    RedisOptions 
-} from "ioredis"
-import {
-    IoRedisInstanceKey 
-} from "../types"
-import {
-    envConfig 
+    envConfig
 } from "@modules/env"
+import {
+    IoRedisInstanceKey
+} from "../enums"
+import type {
+    IoRedisInstanceKeyOptions
+} from "../types"
 
-export interface IoRedisInstanceKeyOptions {
-    host: string
-    port: number
-    password: string
-    useCluster: boolean
-    additionalOptions?: RedisOptions
-}
-
-export const ioRedisInstanceKeyMap: Record<IoRedisInstanceKey, IoRedisInstanceKeyOptions> = {
+export const ioRedisInstanceKeyMap: Record<
+    IoRedisInstanceKey,
+    IoRedisInstanceKeyOptions
+> = {
     [IoRedisInstanceKey.BullMQ]: {
         host: envConfig().redis.bullmq.host,
         port: envConfig().redis.bullmq.port,

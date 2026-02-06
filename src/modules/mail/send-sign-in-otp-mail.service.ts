@@ -30,7 +30,6 @@ export class SendSignInOtpMailService {
         })
     }
 }
-
 export interface SendSignInOtpMailParams {
     email: string
     otp: string

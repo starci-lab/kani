@@ -38,7 +38,6 @@ export class KubernetesDeploymentService {
         })
     }
 }
-
 export interface CreateDeploymentParams {
     namespace: string
     deployment: V1Deployment

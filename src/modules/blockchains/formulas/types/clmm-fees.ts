@@ -3,7 +3,7 @@ import Decimal from "decimal.js"
 import {
     Q128,
     Q64
-} from "@modules/utils"
+} from "@modules/common"
 
 /**
  * Parameters for computing fee growth inside a position tick range.

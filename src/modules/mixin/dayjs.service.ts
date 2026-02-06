@@ -1,64 +1,72 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
-import dayjs, {
-    Dayjs 
-} from "dayjs"
+import dayjs from "dayjs"
 import ms from "ms"
 import utc from "dayjs/plugin/utc"
 import timezone from "dayjs/plugin/timezone"
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore"
 import Decimal from "decimal.js"
+import type {
+    AlignTimeToIntervalUtcParams
+} from "./types"
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
 dayjs.extend(isSameOrBefore)
 
+/**
+ * Service for working with dates and times.
+ */
 @Injectable()
 export class DayjsService {
+    /**
+     * Get the current date and time in UTC.
+     * @returns The current date and time in UTC.
+     */
     now() {
         return dayjs().utc()
-    } 
+    }
 
+    /**
+     * Create a date and time from a string of milliseconds.
+     * @param msString - The string of milliseconds.
+     * @returns The date and time.
+     */
     fromMs(msString: ms.StringValue) {
         return dayjs().utc().add(ms(msString),
             "millisecond")
     }
 
+    /**
+     * Create a date and time from a configuration.
+     * @param config - The configuration.
+     * @returns The date and time.
+     */
     from(config: dayjs.ConfigType) {
         return dayjs(config).utc()
     }
 
-    alignTimeToIntervalUtc(
-        {
-            timeZone,
-            intervalMs,
-            time,
-        }: AlignTimeToIntervalUtcOptions,
-    ) {
-        // 1. Apply timezone
+    /**
+     * Align a time to an interval boundary in UTC for a given timezone.
+     * @param params - The parameters for aligning the time to the interval.
+     * @returns The aligned time.
+     */
+    alignTimeToIntervalUtc(params: AlignTimeToIntervalUtcParams) {
+        const { timeZone, intervalMs, time } = params
         const local = dayjs.tz(time.toDate(),
             timeZone)
-        // 2. calculate the bucket date according to the local time
         const utcOffset = local.utcOffset()
-        // 3. calculate the nearest value of the minus offset
-        const nearestValueOfMinusOffset = new Decimal(local.add(utcOffset,
-            "minute")
-            .valueOf())
+        const nearestValueOfMinusOffset = new Decimal(
+            local.add(utcOffset,
+                "minute").valueOf(),
+        )
             .div(intervalMs)
             .floor()
             .mul(intervalMs)
-        // 4. return the nearest bucket date
-        return this.from(
-            nearestValueOfMinusOffset.toNumber())
-            .subtract(utcOffset,
-                "minute"
-            )
+        return this.from(nearestValueOfMinusOffset.toNumber()).subtract(
+            utcOffset,
+            "minute",
+        )
     }
-}
-
-export interface AlignTimeToIntervalUtcOptions {
-    timeZone: string
-    intervalMs: number
-    time: Dayjs
 }

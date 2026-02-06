@@ -8,7 +8,7 @@ import {
 } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import {
     Q64
-} from "@modules/utils"
+} from "@modules/common"
 import {
     TickToSqrtPriceParams,
     SqrtPriceToPriceParams,
