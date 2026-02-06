@@ -16,50 +16,58 @@ import {
     catchError,
 } from "rxjs/operators"
 
+/** Shape of the transformed GraphQL response (data, message, success, error). */
 interface GraphQLResponse<T = unknown> {
-  data?: T
-  message: string
-  success: boolean
-  error?: string
+    data?: T
+    message: string
+    success: boolean
+    error?: string
 }
 
 const SUCCESS_MESSAGE_METADATA = "graphqlSuccessMessage"
 
-export const GraphQLSuccessMessage = (message: string) => SetMetadata(SUCCESS_MESSAGE_METADATA,
-    message)
+/** Sets the success message for the next resolver/handler. */
+export const GraphQLSuccessMessage = (message: string) =>
+    SetMetadata(SUCCESS_MESSAGE_METADATA,
+        message)
 
+/**
+ * Interceptor that wraps resolver result in { data, message, success } and handles errors.
+ *
+ * @example
+ * Use @GraphQLSuccessMessage("Done") on a resolver; this interceptor adds it to the response.
+ */
 @Injectable()
 export class GraphQLTransformInterceptor<T = unknown>
-implements NestInterceptor<T, GraphQLResponse<T>>
-{
+implements NestInterceptor<T, GraphQLResponse<T>> {
     constructor(private readonly reflector: Reflector) {}
 
-    intercept(context: ExecutionContext, next: CallHandler<T>): Observable<GraphQLResponse<T>> {
-        // Get custom message from metadata (resolver/handler level)
+    intercept(
+        context: ExecutionContext,
+        next: CallHandler<T>,
+    ): Observable<GraphQLResponse<T>> {
+        // get custom message from metadata (resolver or class)
         const message =
-      this.reflector.get<string>(SUCCESS_MESSAGE_METADATA,
-          context.getHandler()) ??
-      this.reflector.get<string>(SUCCESS_MESSAGE_METADATA,
-          context.getClass())
+            this.reflector.get<string>(SUCCESS_MESSAGE_METADATA,
+                context.getHandler()) ??
+            this.reflector.get<string>(SUCCESS_MESSAGE_METADATA,
+                context.getClass())
         return next.handle().pipe(
-            map((data): GraphQLResponse<T> => {
-                return {
-                    data,
-                    message,
-                    success: true,
-                }
-            }),
-            catchError(
-                (err) => {
-                    return new Observable<GraphQLResponse<T>>((observer) => {
-                        observer.next({
-                            success: false,
-                            message: err.message,
-                            error: err.name,
-                        })
-                        observer.complete()
+            map((data): GraphQLResponse<T> => ({
+                data,
+                message,
+                success: true,
+            })),
+            catchError((err) => {
+                return new Observable<GraphQLResponse<T>>((observer) => {
+                    observer.next({
+                        success: false,
+                        message: err.message,
+                        error: err.name,
                     })
-                }),
+                    observer.complete()
+                })
+            }),
         )
     }
 }

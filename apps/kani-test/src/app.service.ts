@@ -1,7 +1,9 @@
 import {
     Injectable, OnModuleInit 
 } from "@nestjs/common"
-import { generateP256KeyPair } from "@privy-io/node"
+import {
+    generateP256KeyPair 
+} from "@privy-io/node"
 @Injectable()
 export class AppService implements OnModuleInit { 
     constructor() {}

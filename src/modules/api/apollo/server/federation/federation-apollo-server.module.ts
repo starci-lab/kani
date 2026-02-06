@@ -3,8 +3,9 @@ import {
 } from "@nestjs/common"
 import {
     ConfigurableModuleClass,
-    OPTIONS_TYPE 
+    OPTIONS_TYPE,
 } from "./federation-apollo-server.module-definition"
+
 @Module({
 })
 export class FederationApolloServerModule extends ConfigurableModuleClass {
@@ -12,8 +13,8 @@ export class FederationApolloServerModule extends ConfigurableModuleClass {
         const dynamicModule = super.register(options)
         return {
             ...dynamicModule,
-            imports: [
-            ],
+            imports: [],
         }
     }
 }
+

@@ -23,6 +23,8 @@ import {
     ActivePositionNotFoundException,
     TransactionNotPreparedException,
     TransactionValidationFailedException,
+    TransactionStimulatedFailedException,
+    TransactionExecutionFailedException,
     PrivyPublicKeyNotFoundException,
     ErrorTransactionType,
     EncryptedPrivySignerPrivateKeyNotFoundException,
@@ -138,13 +140,18 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                             }
                         )
                     }
-                    const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction({
-                        publicKeyHex: bot.privyMetadata.walletPublicKey,
-                        client: suiClient,
-                        walletId: bot.privyMetadata.walletId,
-                        transaction: closePositionTxb,
-                        encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
-                    })
+                    const { 
+                        txHash, 
+                        signatureWithBytes 
+                    } = await this.privySignService.signSuiTransaction(
+                        {
+                            publicKeyHex: bot.privyMetadata.walletPublicKey,
+                            client: suiClient,
+                            walletId: bot.privyMetadata.walletId,
+                            transaction: closePositionTxb,
+                            encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
+                        }
+                    )
                     return {
                         prepareTxs: [
                             {
@@ -186,11 +193,14 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                     callback: async ({ suiClient }) => {
                         return suiClient.getTransactionBlock({
                             digest: txHash,
+                            options: {
+                                showEffects: true,
+                            },
                         })
                     },
                 })
             )
-            if (txBlock !== null && !txBlock.errors) {
+            if (txBlock !== null && txBlock.effects?.status?.status === "success") {
                 this.winstonService.log(
                     WinstonLog.ClosePositionTransactionFound,
                     {
@@ -224,7 +234,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                         sender: bot.accountAddress,
                     })
                     if (devInspect.effects.status.status !== "success") {
-                        throw new TransactionValidationFailedException({
+                        throw new TransactionStimulatedFailedException({
                             botId: bot.id,
                             txHash: devInspect.effects.transactionDigest,
                             liquidityPoolId: _state.static.displayId,
@@ -243,10 +253,20 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                         txHashes: [txHash],
                     }
                 }
-                const { digest } = await suiClient.executeTransactionBlock({
+                const { digest, effects } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
-                    signature: signatureWithBytes.signature
+                    signature: signatureWithBytes.signature,
+                    options: {
+                        showEffects: true,
+                    },
                 })
+                if (effects?.status?.status !== "success") {
+                    throw new TransactionExecutionFailedException({
+                        botId: bot.id,
+                        txHash: digest,
+                        liquidityPoolId: _state.static.displayId,
+                    })
+                }
                 await suiClient.waitForTransaction({
                     digest,
                 })

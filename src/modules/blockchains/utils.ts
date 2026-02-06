@@ -1,5 +1,9 @@
-import { CoinArgument, CoinAsset } from "./types"
-import { Transaction } from "@mysten/sui/transactions"
+import {
+    CoinArgument, CoinAsset 
+} from "./types"
+import {
+    Transaction 
+} from "@mysten/sui/transactions"
 
 export const toCoinArgument = (
     coinAsset: CoinAsset,
@@ -16,5 +20,6 @@ export const toCoinArguments = (
     coinAssets: Array<CoinAsset>,
     txb: Transaction,
 ): Array<CoinArgument> => {
-    return coinAssets.map((coinAsset) => toCoinArgument(coinAsset, txb))
+    return coinAssets.map((coinAsset) => toCoinArgument(coinAsset,
+        txb))
 }

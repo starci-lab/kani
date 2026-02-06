@@ -20,9 +20,6 @@ import {
     WinstonService 
 } from "@modules/winston"
 import {
-    DayjsService 
-} from "@modules/mixin"
-import {
     ReadinessWatcherFactoryService 
 } from "@modules/mixin"
 import {
@@ -61,13 +58,6 @@ export class KafkaAdminService implements OnModuleInit {
          * Winston logger for structured logging.
          */
         private readonly winstonService: WinstonService,
-
-        /**
-         * Dayjs wrapper service.
-         *
-         * Used for timeout calculations in polling loops.
-         */
-        private readonly dayjsService: DayjsService,
 
         /**
          * Readiness watcher factory.
@@ -295,9 +285,11 @@ export class KafkaAdminService implements OnModuleInit {
          *
          * This call is asynchronous on the broker side.
          */
-        await this.admin.createTopics({
-            topics: topicConfigs,
-        })
+        await this.admin.createTopics(
+            {
+                topics: topicConfigs,
+            }
+        )
         this.winstonService.log(WinstonLog.KafkaTopicsCreated,
             {
                 topics: topicsToCreate.map(([topic]) => topic),

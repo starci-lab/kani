@@ -1,4 +1,6 @@
-import { ThrottlerOptions } from "@nestjs/throttler"
+import {
+    ThrottlerOptions 
+} from "@nestjs/throttler"
 
 export enum ThrottlerConfig {
     Soft = "soft",

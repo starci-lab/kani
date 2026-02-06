@@ -11,7 +11,7 @@ import {
     Consumer, Kafka 
 } from "kafkajs"
 import {
-    InstanceIdService, ReadinessWatcherFactoryService, RetryService 
+    ReadinessWatcherFactoryService, RetryService 
 } from "@modules/mixin"
 import {
     InjectKafka 
@@ -28,6 +28,12 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import {
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
+} from "./kafka.module-definition"
+import {
+    Inject 
+} from "@nestjs/common"
 
 @Injectable()
 export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown {
@@ -35,10 +41,11 @@ export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown
     constructor(
         @InjectKafka()
         private readonly kafka: Kafka,
-        private readonly instanceIdService: InstanceIdService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly winstonService: WinstonService,
         private readonly retryService: RetryService,
+        @Inject(MODULE_OPTIONS_TOKEN)
+        private readonly options: typeof OPTIONS_TYPE,
     ) {}
     
     async onModuleInit(): Promise<void> {
@@ -52,8 +59,8 @@ export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown
                     await this.readinessWatcherFactoryService.waitUntilReady(KafkaAdminService.name)
                     this.consumer = this.kafka.consumer(
                         { 
-                            groupId: this.instanceIdService.getId(),
-                            allowAutoTopicCreation: false,
+                            groupId: this.options?.clientId,
+                            allowAutoTopicCreation: true,
                             heartbeatInterval: envConfig().kafka.heartbeatInterval,
                             retry: {
                                 retries: envConfig().kafka.retry.retries,

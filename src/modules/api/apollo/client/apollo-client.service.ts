@@ -1,5 +1,5 @@
-import {
-    ApolloClient 
+import type {
+    ApolloClient,
 } from "@apollo/client"
 import {
     Injectable 
@@ -7,51 +7,55 @@ import {
 import {
     createApolloClient 
 } from "./clients"
+import type {
+    CreateClientParams, CreateClientResult 
+} from "./types"
+
+export type {
+    CreateClientParams, CreateClientResult 
+} from "./types"
 
 /**
- * The parameters to create an Apollo Client
+ * Service responsible for creating and caching Apollo Client instances by key.
+ *
+ * @example
+ * const client = apolloClientService.createClient({ key: "api", uri: "https://api.example.com/graphql" })
  */
-export interface CreateClientParams {
-    /**
-     * The key to identify the client
-     */
-    key: string
-    /**
-     * The URI of the Apollo Client
-     */
-    uri: string
-    /**
-     * Whether to enable cache
-     */
-    enableCache?: boolean
-    /**
-     * Whether to include credentials in the request
-     */
-    withCredentials?: boolean
-}
-
 @Injectable()
 export class ApolloClientService {
-    private readonly clients: Map<string, ApolloClient> = new Map()
+    private readonly clients: Map<string, ApolloClient> =
+        new Map()
+
     /**
-     * Create an Apollo Client
+     * Returns or creates an Apollo Client for the given key and options.
+     *
+     * @param param - Key, URI and client options (cache, credentials)
+     * @returns Apollo Client instance for the given key
+     *
+     * @example
+     * const client = apolloClientService.createClient({ key: "api", uri: "/graphql", withCredentials: true })
      */
-    createClient(
-        { 
-            key, 
-            uri, 
-            enableCache = true,
-            withCredentials = false,
-        }: CreateClientParams
-    ) {
-        if (this.clients.has(key)) {
-            return this.clients.get(key) as ApolloClient
+    createClient( {
+        key,
+        uri,
+        enableCache = true,
+        withCredentials = false,
+    } : CreateClientParams): CreateClientResult {
+        // return existing client if already registered
+        const existing = this.clients.get(key)
+        if (existing) {
+            return existing
         }
+
+        // create new client and store by key
         const client = createApolloClient({
-            uri, enableCache, withCredentials 
+            uri,
+            enableCache,
+            withCredentials,
         })
         this.clients.set(key,
             client)
+
         return client
     }
 }

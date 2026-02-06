@@ -1,6 +1,12 @@
-import { MountStorageService } from "@modules/filesystem"
-import { Injectable, OnModuleInit } from "@nestjs/common"
-import { getTransferSolInstruction } from "@solana-program/system"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
+import {
+    Injectable, OnModuleInit 
+} from "@nestjs/common"
+import {
+    getTransferSolInstruction 
+} from "@solana-program/system"
 import { 
     address, 
     pipe, 
@@ -25,11 +31,21 @@ import {
     TransactionWithinSizeLimit,
     FullySignedTransaction
 } from "@solana/kit"
-import { PrivyClient } from "@privy-io/node"
-import { InjectPrivyClient } from "@modules/privy"
-import { Connection } from "mongoose"
-import { BotSchema, InjectPrimaryMongoose } from "@modules/databases"
-import { DerivedAesKeyService } from "@modules/derived"
+import {
+    PrivyClient 
+} from "@privy-io/node"
+import {
+    InjectPrivyClient 
+} from "@modules/privy"
+import {
+    Connection 
+} from "mongoose"
+import {
+    BotSchema, InjectPrimaryMongoose 
+} from "@modules/databases"
+import {
+    DerivedAesKeyService 
+} from "@modules/derived"
 
 @Injectable()
 export class AppService implements OnModuleInit{
@@ -52,12 +68,16 @@ export class AppService implements OnModuleInit{
             amount: BigInt(1_000_000), // 0.001 SOL
         })
         const transactionMessage = pipe(
-            createTransactionMessage({ version: 0 }),
+            createTransactionMessage({
+                version: 0 
+            }),
             (tx) => setTransactionMessageFeePayerSigner(
                 createNoopSigner(address("GDJwFdAUvGXicYjmiXnnfsi5FpGg4Tw7AAXbffUZuDBs")), 
                 tx),
-            (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-            (tx) => appendTransactionMessageInstructions([transferSolInstruction], tx),
+            (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash,
+                tx),
+            (tx) => appendTransactionMessageInstructions([transferSolInstruction],
+                tx),
             (tx) => compileTransaction(tx),
             (tx) => new Uint8Array(getTransactionEncoder().encode(tx))
         )

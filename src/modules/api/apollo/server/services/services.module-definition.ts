@@ -2,6 +2,7 @@ import {
     ConfigurableModuleBuilder,
 } from "@nestjs/common"
 
+/** Dynamic module definition for ServicesModule. */
 export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } =
     new ConfigurableModuleBuilder()
         .setExtras(

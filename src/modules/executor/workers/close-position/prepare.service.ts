@@ -36,11 +36,11 @@ import {
     ToStringObject 
 } from "@modules/typedefs"
 import {
-    UnrecoverableError 
-} from "bullmq"
-import {
-    ClosePositionJobPreparedFailedException 
+    ClosePositionJobPreparedFailedException,
 } from "@exceptions"
+import {
+    FatalError,
+} from "../fatal"
 
 @Injectable()
 export class PrepareService {
@@ -120,15 +120,14 @@ export class PrepareService {
             )
         )
         if (error) {
-            throw new UnrecoverableError(
-                new ClosePositionJobPreparedFailedException(
-                    {
-                        originalError: error,
-                        botId: bot.id,
-                        jobId: job.id,
-                    }
-                ).toJSON()
-            )
+            const failedError = new ClosePositionJobPreparedFailedException({
+                originalError: error,
+                botId: bot.id,
+                jobId: job.id,
+                liquidityPoolId: liquidityPool.displayId,
+            })
+            // throw everything as a fatal error to stop the job
+            throw new FatalError(failedError.toJSON())
         }
         await this.connection.model<JobSchema>(JobSchema.name).updateOne(
             {

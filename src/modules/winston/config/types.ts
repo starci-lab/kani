@@ -716,6 +716,16 @@ export interface ReconcileBalanceJobFailedUnrecoverableMessage {
 }
 
 /**
+ * Reconcile Balance Job Failed Fatal Message
+ */
+export interface ReconcileBalanceJobFailedFatalMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
+}
+
+/**
  * Reconcile Balance Job Failed Permanent Failure Message
  */
 export interface ReconcileBalanceJobFailedPermanentFailureMessage {
@@ -740,6 +750,16 @@ export interface ReconcileBalanceJobFailedRetryableMessage {
  * Withdraw Job Failed Unrecoverable Message
  */
 export interface WithdrawJobFailedUnrecoverableMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
+}
+
+/**
+ * Withdraw Job Failed Fatal Message
+ */
+export interface WithdrawJobFailedFatalMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -913,18 +933,24 @@ export interface ReconcileBalanceJobRequeueFailedMessage {
 }
 
 /**
+ * Balance amounts (target / quote / gas) used in reconcile-balance and related logs.
+ */
+export interface BalanceAmounts {
+    targetBalanceAmount: string
+    quoteBalanceAmount: string
+    gasBalanceAmount: string
+}
+
+/**
  * Reconcile Balance Job Already Prepared Message
  */
 export interface ReconcileBalanceJobAlreadyPreparedMessage {
     botId: string
     jobId: string
     ageMs: number
-    quoteRatioResult: object
-    balanceAmounts: {
-        targetBalanceAmount: string
-        quoteBalanceAmount: string
-        gasBalanceAmount: string
-    }
+    quoteRatioResult?: object
+    balanceAmounts: BalanceAmounts
+    txHashes?: Array<string>
 }
 
 /**
@@ -1098,6 +1124,16 @@ export interface ClosePositionJobFailedUnrecoverableMessage {
 }
 
 /**
+ * Close Position Job Failed Fatal Message
+ */
+export interface ClosePositionJobFailedFatalMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
+}
+
+/**
  * Close Position Job Failed Permanent Failure Message
  */
 export interface ClosePositionJobFailedPermanentFailureMessage {
@@ -1146,6 +1182,16 @@ export interface OpenPositionJobFailedUnrecoverableMessage {
     bullmqJobId?: string
     error: string
     liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Open Position Job Failed Fatal Message
+ */
+export interface OpenPositionJobFailedFatalMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
 }
 
 /**
@@ -1546,6 +1592,16 @@ export interface CommandErrorMessage {
 }
 
 /**
+ * Eval Snapshot Message
+ */
+export interface EvalSnapshotMessage {
+    botId: string
+    totalBalanceAmountInUsd: string
+    minRequiredAmountInUsd: string
+    eligible: boolean
+}
+
+/**
  * Migration Avatars Completed Message
  */
 export interface MigrationAvatarsCompletedMessage {
@@ -1701,13 +1757,9 @@ export interface ReconcileBalanceTransactionStimulatedMessage {
 export interface ReconcileBalanceJobPreparedMessage {
     botId: string
     jobId: string
-    txHashes: Array<string>
-    quoteRatioResult: object
-    balanceAmounts: {
-        targetBalanceAmount: string
-        quoteBalanceAmount: string
-        gasBalanceAmount: string
-    }
+    txHashes?: Array<string>
+    quoteRatioResult?: object
+    balanceAmounts: BalanceAmounts
 }
 
 /**

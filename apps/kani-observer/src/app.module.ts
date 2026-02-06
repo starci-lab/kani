@@ -144,6 +144,7 @@ import {
                 topics: [
                     EventName.ReinitializeBalancers,
                 ],
+                clientId: "kani-observer",
             },
         }),
         TxBuilderModule.register({

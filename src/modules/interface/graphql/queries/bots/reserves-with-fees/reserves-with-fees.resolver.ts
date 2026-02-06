@@ -39,17 +39,20 @@ export class ReservesWithFeesResolver {
     @GraphQLSuccessMessage("Reserves and fees fetched successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseGuards(GraphQLJwtOnlyMFAEnabledAuthGuard)
-    @Query(() => ReservesWithFeesResponse, {
-        description: "Returns reserves and fees for a bot's active position (JWT/MFA auth).",
-        deprecationReason: "Use reservesWithFeesV2 instead",
-    })
+    @Query(() => ReservesWithFeesResponse,
+        {
+            description: "Returns reserves and fees for a bot's active position (JWT/MFA auth).",
+            deprecationReason: "Use reservesWithFeesV2 instead",
+        })
     async reservesWithFees(
         @GraphQLUser() user: UserJwtLike,
-        @Args("request", {
-            description: "Input parameters to identify which bot's reserves and fees to fetch.",
-        })
+        @Args("request",
+            {
+                description: "Input parameters to identify which bot's reserves and fees to fetch.",
+            })
             request: ReservesWithFeesRequest,
     ): Promise<ReservesWithFeesResponseData> {
-        return this.reservesWithFeesService.reservesWithFees(request, user)
+        return this.reservesWithFeesService.reservesWithFees(request,
+            user)
     }
 }

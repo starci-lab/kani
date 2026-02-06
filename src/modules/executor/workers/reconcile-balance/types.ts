@@ -23,9 +23,9 @@ export interface ReconcileBalanceBalanceAmounts {
     gasBalanceAmount: string
 }
 export interface ReconcileBalanceJobData {
-    reconcileBalanceTransaction: PrepareReconcileBalanceTransactionResult
+    reconcileBalanceTransaction?: PrepareReconcileBalanceTransactionResult
     transactionRecords?: Array<AddTransactionRecordParams>
-    quoteRatioResult: ComputeQuoteRatioResult
+    quoteRatioResult?: ComputeQuoteRatioResult
     balanceAmounts: ReconcileBalanceBalanceAmounts
 }
 
@@ -46,8 +46,9 @@ export interface ProcessParams {
     payload: ReconcileBalancePayload
 }
 
+
 export interface ProcessResult {
-    result: ReconcileBalanceJobData
+    result: Omit<ReconcileBalanceJobData, "balanceAmounts">
 }
 
 /** Parameters for the PREPARE phase (same shape as ProcessParams). */
@@ -55,7 +56,7 @@ export type PrepareParams = ProcessParams
 export type PrepareResult = ProcessResult
 export interface ExecuteParams extends ProcessParams {
     /** Output of prepare() (prepared swap transactions + optional metadata). */
-    prepareResult: ReconcileBalanceJobData
+    prepareResult: Omit<ReconcileBalanceJobData, "balanceAmounts">
 }
 export type ExecuteResult = ProcessResult
 
@@ -64,7 +65,7 @@ export type SendHeartbeatParams = ProcessParams
 
 export interface ConfirmParams extends ProcessParams {
     /** Output of execute() (includes transactionRecords for snapshotting). */
-    executeResult: ReconcileBalanceJobData
+    executeResult: Omit<ReconcileBalanceJobData, "balanceAmounts">
 }
 
 export interface OnFailedParams extends ProcessParams {

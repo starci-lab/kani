@@ -1,6 +1,12 @@
-import { UserGoogleLike } from "../types"
-import { createParamDecorator, ExecutionContext } from "@nestjs/common"
-import { GqlExecutionContext } from "@nestjs/graphql"
+import {
+    UserGoogleLike 
+} from "../types"
+import {
+    createParamDecorator, ExecutionContext 
+} from "@nestjs/common"
+import {
+    GqlExecutionContext 
+} from "@nestjs/graphql"
 
 export const GoogleUser = createParamDecorator(
     (_: unknown, context: ExecutionContext) => {

@@ -37,8 +37,21 @@ import {
     DayjsService
 } from "@modules/mixin"
 import {
+    AsyncService 
+} from "@modules/mixin"
+import {
     SuperJSON 
 } from "superjson"
+import {
+    AbstractException,
+    OpenPositionJobExecutedFailedException,
+} from "@exceptions"
+import {
+    FatalError 
+} from "../fatal"
+import {
+    UnrecoverableError 
+} from "bullmq"
 
 @Injectable()
 export class ExecuteService {
@@ -50,6 +63,7 @@ export class ExecuteService {
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         private readonly dayjsService: DayjsService,
+        private readonly asyncService: AsyncService,
     ) {}
 
     /**
@@ -104,26 +118,47 @@ export class ExecuteService {
         }
         const { openPositionTransaction } = prepareResult
         const stimulate = envConfig().executor.runtime.operation.openPosition.stimulate
-        const executeResult = await this.openPositionActionService.execute(
-            {
-                bot,
-                prepareTxs: openPositionTransaction.prepareTxs,
-                state: {
-                    static: liquidityPool,
-                    dynamic: dynamicLiquidityPoolInfo,
-                },
-                txCheck: isRetry || (payload.isRetry ?? false),
-                stimulate,
-            }
+        const [executeResult,
+            error] = await this.asyncService.resolveTuple(
+            this.openPositionActionService.execute(
+                {
+                    bot,
+                    prepareTxs: openPositionTransaction.prepareTxs,
+                    state: {
+                        static: liquidityPool,
+                        dynamic: dynamicLiquidityPoolInfo,
+                    },
+                    txCheck: isRetry || (payload.isRetry ?? false),
+                    stimulate,
+                }
+            )
         )
+        if (error) {
+            // create a failed error
+            const failedError = new OpenPositionJobExecutedFailedException({
+                originalError: error,
+                botId: bot.id,
+                jobId: job.id,
+                liquidityPoolId: liquidityPool.displayId,
+            }
+            )
+            // if the error is throw intentionally, throw a fatal error to stop the job
+            if (error instanceof AbstractException) {
+                throw new FatalError(failedError.toJSON())
+            }
+            // if the error is not throw intentionally, throw an unrecoverable error to let BullMQ handle the retry
+            throw new UnrecoverableError(failedError.toJSON())
+        }
         const txHashes = executeResult.txHashes ?? []
         const transactionRecords: Array<AddTransactionRecordParams> = txHashes.map(
-            (txHash) => ({
-                bot,
-                txHash,
-                chainId: bot.chainId,
-                type: TransactionType.OpenPosition,
-            }),
+            (txHash) => (
+                {
+                    bot,
+                    txHash,
+                    chainId: bot.chainId,
+                    type: TransactionType.OpenPosition,
+                }
+            ),
         )
         await this.connection
             .model<JobSchema>(JobSchema.name)

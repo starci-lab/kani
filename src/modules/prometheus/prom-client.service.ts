@@ -1,5 +1,9 @@
-import { Injectable } from "@nestjs/common"
-import { Registry, Histogram, Counter, collectDefaultMetrics, exponentialBuckets } from "prom-client"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    Registry, Histogram, Counter, collectDefaultMetrics, exponentialBuckets 
+} from "prom-client"
 
 @Injectable()
 export class PromClientService {
@@ -22,8 +26,12 @@ export class PromClientService {
         this.httpRequestHistogram = new Histogram({
             name: "kanibot_http_request_seconds",
             help: "HTTP request duration",
-            labelNames: ["method", "route", "statusCode"] as const,
-            buckets: exponentialBuckets(0.01, 2, 10),
+            labelNames: ["method",
+                "route",
+                "statusCode"] as const,
+            buckets: exponentialBuckets(0.01,
+                2,
+                10),
             registers: [this.register],
         })
 
@@ -31,7 +39,8 @@ export class PromClientService {
         this.swapSuccessCounter = new Counter({
             name: "kanibot_swap_success_total",
             help: "Number of successful swap tx",
-            labelNames: ["tokenIn", "tokenOut"] as const,
+            labelNames: ["tokenIn",
+                "tokenOut"] as const,
             registers: [this.register],
         })
 

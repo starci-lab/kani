@@ -10,6 +10,9 @@ import {
 import {
     Provider 
 } from "@nestjs/common"
+import {
+    EvalSnapshotService 
+} from "./snapshots.service"
 
 @Module({
 })
@@ -20,6 +23,7 @@ export class EvalModule extends ConfigurableModuleClass {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
             EvalBalanceService,
+            EvalSnapshotService,
         ]
         return {
             ...dynamicModule,

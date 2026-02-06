@@ -30,41 +30,37 @@ export class ClearService {
      */
     async process({ botId, jobId }: ClearServiceParams): Promise<void> {
         const session = await this.connection.startSession()
-        try {
-            await session.withTransaction(
-                async () => {
-                    await this.connection.model<BotSchema>(BotSchema.name).updateOne(
-                        {
-                            _id: botId,
+        await session.withTransaction(
+            async () => {
+                await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+                    {
+                        _id: botId,
+                    },
+                    {
+                        $unset: {
+                            activeJob: null,
                         },
-                        {
-                            $unset: {
-                                activeJob: null,
-                            },
-                        },
-                        {
-                            session,
-                        }
-                    )
-                    // clear the job
-                    await this.connection.model<JobSchema>(JobSchema.name).deleteOne(
-                        {
-                            _id: jobId,
-                        },
-                        {
-                            session,
-                        }
-                    )
-                    await this.lockAuthorityService.release(
-                        {
-                            botId,
-                        }
-                    )
-                }
-            )
-        } finally {
-            await session.endSession()
-        }
+                    },
+                    {
+                        session,
+                    }
+                )
+                // clear the job
+                await this.connection.model<JobSchema>(JobSchema.name).deleteOne(
+                    {
+                        _id: jobId,
+                    },
+                    {
+                        session,
+                    }
+                )
+                await this.lockAuthorityService.release(
+                    {
+                        botId,
+                    }
+                )
+            }
+        )
     }
 }
 

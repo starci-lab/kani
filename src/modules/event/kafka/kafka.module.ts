@@ -39,8 +39,7 @@ import {
 @Module({
 })
 export class KafkaModule extends ConfigurableModuleClass {
-    public static register(options: typeof OPTIONS_TYPE = {
-    }): DynamicModule {
+    public static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)   
         // Core providers
         const kafkaProvider = createKafkaProvider()

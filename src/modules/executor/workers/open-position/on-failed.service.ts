@@ -14,11 +14,25 @@ import {
 import {
     AbstractException 
 } from "@exceptions"
+import {
+    FatalError 
+} from "../fatal"
+import {
+    JobSchema, 
+    JobStatus, 
+    InjectPrimaryMongoose,
+    BotSchema
+} from "@modules/databases"
+import {
+    Connection 
+} from "mongoose"
 
 @Injectable()
 export class OnFailedService {
     constructor(
         private readonly winstonService: WinstonService,
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
     ) {}
 
     /**
@@ -44,6 +58,55 @@ export class OnFailedService {
         const maxAttempts = bullmqJob.opts.attempts ?? 1
         const isPermanentFailure = bullmqJob.attemptsMade >= maxAttempts
         const isUnrecoverable = error instanceof UnrecoverableError
+        const isFatal = error instanceof FatalError
+        // if the error is a fatal error, log the error and update the database to mark the job as failed
+        // and throw UnrecoverableError to stop the job
+        if (isFatal) {
+            const originalError = AbstractException.fromJSON(error.message)
+            this.winstonService.log(
+                WinstonLog.OpenPositionJobFailedFatal,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    bullmqJobId: bullmqJob.id,
+                    error: originalError.message,
+                }
+            )
+            // update the database to mark the job as failed
+            const session = await this.connection.startSession()
+            await session.withTransaction(
+                async () => {
+                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                        {
+                            _id: job.id,
+                        },
+                        {
+                            $set: {
+                                status: JobStatus.Failed 
+                            },
+                        },
+                        {
+                            session,
+                        }
+                    )
+                    await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+                        {
+                            _id: bot.id,
+                        },
+                        {
+                            $unset: {
+                                activeJob: null 
+                            },
+                        },
+                        {
+                            session,
+                        }
+                    )
+                }
+            )
+            throw new UnrecoverableError(error.message)
+        } 
+        // otherwise, based on the error type, log the error and update the database to mark the job as failed to retry next time
         if (isUnrecoverable) {
             const originalError = AbstractException.fromJSON(error.message)
             this.winstonService.log(

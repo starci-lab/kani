@@ -157,6 +157,7 @@ import {
                 topics: [
                     EventName.ReinitializeBalancers,
                 ],
+                clientId: "kani-interface",
             },
         }),
         SocketIoCoreModule.register({

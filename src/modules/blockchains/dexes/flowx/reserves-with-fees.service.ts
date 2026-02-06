@@ -93,8 +93,10 @@ export class FlowXReservesWithFeesService implements IReservesWithFeesService {
         const tickLower = new BN(bot.activePosition.associatedPosition.clmmState.tickLower)
         const tickUpper = new BN(bot.activePosition.associatedPosition.clmmState.tickUpper)
         const { i32Type, ticksId } = _state.static.metadata as FlowXLiquidityPoolMetadata
-        const tickLowerName = serializeSuiI32(new BN(tickLower.toString()), i32Type)
-        const tickUpperName = serializeSuiI32(new BN(tickUpper.toString()), i32Type)
+        const tickLowerName = serializeSuiI32(new BN(tickLower.toString()),
+            i32Type)
+        const tickUpperName = serializeSuiI32(new BN(tickUpper.toString()),
+            i32Type)
         // Stage: on-chain fetch (tick lower dynamic field)
         const { data: tickLowerDataRaw } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,

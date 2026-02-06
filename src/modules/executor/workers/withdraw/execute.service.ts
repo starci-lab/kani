@@ -31,6 +31,7 @@ import {
 import {
     DayjsService,
     InjectSuperJson,
+    AsyncService,
 } from "@modules/mixin"
 import {
     SuperJSON 
@@ -38,6 +39,16 @@ import {
 import {
     ToStringObject 
 } from "@modules/typedefs"
+import {
+    AbstractException,
+    WithdrawJobExecutedFailedException,
+} from "@exceptions"
+import {
+    FatalError,
+} from "../fatal"
+import {
+    UnrecoverableError,
+} from "bullmq"
 
 @Injectable()
 export class ExecuteService {
@@ -49,6 +60,7 @@ export class ExecuteService {
         private readonly dayjsService: DayjsService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
+        private readonly asyncService: AsyncService,
     ) {}
 
     /**
@@ -99,15 +111,30 @@ export class ExecuteService {
         const transactionRecords: Array<AddTransactionRecordParams> = []
         const { withdrawTransaction } = prepareResult
 
-        const { txHashes } = await this.balanceActionService.executeWithdrawTransaction(
-            {
-                bot,
-                prepareTxs: withdrawTransaction.prepareTxs,
-                isRetry: isRetry || (payload.isRetry ?? false),
-                stimulate: envConfig().executor.runtime.operation.withdraw.stimulate,
-            }
+        const [executeResult,
+            error] = await this.asyncService.resolveTuple(
+            this.balanceActionService.executeWithdrawTransaction(
+                {
+                    bot,
+                    prepareTxs: withdrawTransaction.prepareTxs,
+                    isRetry: isRetry || (payload.isRetry ?? false),
+                    stimulate: envConfig().executor.runtime.operation.withdraw.stimulate,
+                }
+            )
         )
+        if (error) {
+            const failedError = new WithdrawJobExecutedFailedException({
+                originalError: error,
+                botId: bot.id,
+                jobId: job.id,
+            })
+            if (error instanceof AbstractException) {
+                throw new FatalError(failedError.toJSON())
+            }
+            throw new UnrecoverableError(failedError.toJSON())
+        }
 
+        const txHashes = executeResult?.txHashes ?? []
         for (const txHash of txHashes) {
             transactionRecords.push(
                 {

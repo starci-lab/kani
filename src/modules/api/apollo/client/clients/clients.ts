@@ -1,6 +1,12 @@
 import {
-    ApolloClient, ApolloLink, InMemoryCache 
+    ApolloClient,
+    ApolloLink,
+    InMemoryCache,
 } from "@apollo/client"
+import type {
+    CreateApolloClientParams,
+    CreateApolloClientResult,
+} from "../types"
 import {
     createRetryLink 
 } from "./retry"
@@ -14,34 +20,35 @@ import {
     defaultOptions 
 } from "./options"
 
-export interface CreateApolloClientParams {
-    uri: string;
-    withCredentials?: boolean;
-    enableCache?: boolean;
-}
-
 /**
- * Create Apollo Client with configurable options
- * Retry and timeout configs are loaded from env config
- * Note: enableCache is reserved for future cache configuration
+ * Creates an Apollo Client with retry, timeout and HTTP link. Retry and timeout come from env config.
+ *
+ * @param param - URI, credentials and cache options
+ * @returns Configured Apollo Client instance
+ *
+ * @example
+ * const client = createApolloClient({ uri: "/graphql", withCredentials: true })
  */
 export const createApolloClient = ({
     uri,
     withCredentials = false,
     enableCache = true,
-}: CreateApolloClientParams) => {
+}: CreateApolloClientParams): CreateApolloClientResult => {
+    // build link chain: retry -> timeout -> http
+    const link = ApolloLink.from([
+        createRetryLink(),
+        createTimeoutLink(),
+        createHttpLink({
+            uri,
+            withCredentials,
+            headers: {
+            },
+        }),
+    ])
+
     return new ApolloClient({
         cache: new InMemoryCache(),
-        link: ApolloLink.from([
-            createRetryLink(),
-            createTimeoutLink(),
-            createHttpLink({
-                uri,
-                withCredentials,
-                headers: {
-                },
-            }),
-        ]),
+        link,
         defaultOptions: enableCache ? defaultOptions : undefined,
     })
 }

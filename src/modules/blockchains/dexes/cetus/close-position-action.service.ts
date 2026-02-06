@@ -22,12 +22,14 @@ import {
 import { 
     ActivePositionNotFoundException,
     TransactionNotPreparedException,
-    TransactionValidationFailedException,
+    TransactionStimulatedFailedException,
+    TransactionExecutionFailedException,
     PrivyPublicKeyNotFoundException,
     ErrorTransactionType,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     SuiSingleTransactionRequiredException,
     ErrorSuiSingleTransactionRequiredOperation,
+    TransactionValidationFailedException,
 } from "@modules/exceptions"
 import {
     RpcExecutorService 
@@ -194,7 +196,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                     },
                 })
             )
-            if (txBlock !== null && !txBlock.errors) {
+            if (txBlock !== null && txBlock.effects?.status?.status === "success") {
                 this.winstonService.log(
                     WinstonLog.ClosePositionTransactionFound,
                     {
@@ -228,7 +230,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                         sender: bot.accountAddress,
                     })
                     if (devInspect.effects.status.status !== "success") {
-                        throw new TransactionValidationFailedException({
+                        throw new TransactionStimulatedFailedException({
                             botId: bot.id,
                             txHash: devInspect.effects.transactionDigest,
                             liquidityPoolId: _state.static.displayId,
@@ -247,10 +249,20 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                         txHashes: [txHash],
                     }
                 }
-                const { digest } = await suiClient.executeTransactionBlock({
+                const { digest, effects } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
-                    signature: signatureWithBytes.signature
+                    signature: signatureWithBytes.signature,
+                    options: {
+                        showEffects: true,
+                    },
                 })
+                if (effects?.status?.status !== "success") {
+                    throw new TransactionExecutionFailedException({
+                        botId: bot.id,
+                        txHash: digest,
+                        liquidityPoolId: _state.static.displayId,
+                    })
+                }
                 await suiClient.waitForTransaction({
                     digest,
                 })

@@ -83,6 +83,7 @@ import {
     ReconcileBalanceJobCompletedMessage,
     ReconcileBalanceJobFailedPermanentFailureMessage,
     ReconcileBalanceJobFailedUnrecoverableMessage,
+    ReconcileBalanceJobFailedFatalMessage,
     ReconcileBalanceJobFailedRetryableMessage,
     WithdrawJobEnqueueFailedMessage,
     WithdrawJobScheduledMessage,
@@ -93,6 +94,7 @@ import {
     WithdrawJobCompletedMessage,
     WithdrawJobFailedPermanentFailureMessage,
     WithdrawJobFailedUnrecoverableMessage,
+    WithdrawJobFailedFatalMessage,
     WithdrawJobFailedRetryableMessage,
     PriceDiagnosticFailedMessage,
     PriceDiagnosticSuccessMessage,
@@ -126,11 +128,13 @@ import {
     ClosePositionJobConfirmedMessage,
     OpenPositionJobAlreadyPreparedMessage,
     ClosePositionJobFailedUnrecoverableMessage,
+    ClosePositionJobFailedFatalMessage,
     ClosePositionJobFailedPermanentFailureMessage,
     ClosePositionJobFailedRetryableMessage,
     ClosePositionJobCompletedMessage,
     ClosePositionRequeueFailedMessage,
     OpenPositionJobFailedUnrecoverableMessage,
+    OpenPositionJobFailedFatalMessage,
     OpenPositionJobFailedPermanentFailureMessage,
     OpenPositionJobFailedRetryableMessage,
     OpenPositionJobCompletedMessage,
@@ -182,6 +186,7 @@ import {
     KeyDecryptionCheckFailedMessage,
     KeyWrittenSuccessMessage,
     CommandErrorMessage,
+    EvalSnapshotMessage,
     ErrorGettingCacheMessage,
     ErrorSettingCacheMessage,
     ErrorDeletingCacheMessage,
@@ -1003,6 +1008,14 @@ export const configMap = {
         messageType: {
         } as ReconcileBalanceJobFailedUnrecoverableMessage,
     },
+    // Reconcile Balance Job Failed Fatal
+    [WinstonLog.ReconcileBalanceJobFailedFatal]: {
+        name: WinstonLog.ReconcileBalanceJobFailedFatal,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceJobFailedFatalMessage,
+    },
     // Reconcile Balance Job Failed Permanent Failure
     [WinstonLog.ReconcileBalanceJobFailedPermanentFailure]: {
         name: WinstonLog.ReconcileBalanceJobFailedPermanentFailure,
@@ -1026,6 +1039,14 @@ export const configMap = {
         loki: true,
         messageType: {
         } as WithdrawJobFailedUnrecoverableMessage,
+    },
+    // Withdraw Job Failed Fatal
+    [WinstonLog.WithdrawJobFailedFatal]: {
+        name: WinstonLog.WithdrawJobFailedFatal,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as WithdrawJobFailedFatalMessage,
     },
     // Withdraw Job Failed Permanent Failure
     [WinstonLog.WithdrawJobFailedPermanentFailure]: {
@@ -1299,6 +1320,14 @@ export const configMap = {
         messageType: {
         } as ClosePositionJobFailedUnrecoverableMessage,
     },
+    // Close Position Job Failed Fatal
+    [WinstonLog.ClosePositionJobFailedFatal]: {
+        name: WinstonLog.ClosePositionJobFailedFatal,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ClosePositionJobFailedFatalMessage,
+    },
     // Close Position Job Failed Permanent Failure
     [WinstonLog.ClosePositionJobFailedPermanentFailure]: {
         name: WinstonLog.ClosePositionJobFailedPermanentFailure,
@@ -1330,6 +1359,14 @@ export const configMap = {
         loki: true,
         messageType: {
         } as OpenPositionJobFailedUnrecoverableMessage,
+    },
+    // Open Position Job Failed Fatal
+    [WinstonLog.OpenPositionJobFailedFatal]: {
+        name: WinstonLog.OpenPositionJobFailedFatal,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as OpenPositionJobFailedFatalMessage,
     },
     // Open Position Job Failed Permanent Failure
     [WinstonLog.OpenPositionJobFailedPermanentFailure]: {
@@ -1794,6 +1831,14 @@ export const configMap = {
         loki: false,
         messageType: {
         } as CommandErrorMessage,
+    },
+    // Eval Snapshot
+    [WinstonLog.EvalSnapshotsChecked]: {
+        name: WinstonLog.EvalSnapshotsChecked,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as EvalSnapshotMessage,
     },
     // Error Getting Cache
     [WinstonLog.ErrorGettingCache]: {

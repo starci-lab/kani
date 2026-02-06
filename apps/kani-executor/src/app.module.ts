@@ -32,6 +32,7 @@ import {
     MathModule,
     FormulasModule,
     SettlementModule,
+    EvalModule,
 } from "@modules/blockchains"
 import {
     CacheModule 
@@ -195,7 +196,11 @@ import {
                     EventName.ClmmLiquidityPoolsSynced,
                     EventName.DlmmLiquidityPoolsSynced,
                 ],
+                clientId: `kani-executor-${envConfig().executor.id}`,
             },
+            isGlobal: true,
+        }),
+        EvalModule.register({
             isGlobal: true,
         }),
         SnapshotsModule.register({

@@ -12,16 +12,16 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    InstanceIdService 
-} from "@modules/mixin"
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
+} from "./kafka.module-definition"
 
 export const createKafkaProvider = (): Provider => ({
     provide: KAFKA,
-    inject: [InstanceIdService],
-    useFactory: (instanceIdService: InstanceIdService): Kafka => {
+    inject: [MODULE_OPTIONS_TOKEN],
+    useFactory: (options: typeof OPTIONS_TYPE): Kafka => {
         return new Kafka({
             brokers: [`${envConfig().kafka.host}:${envConfig().kafka.port}`],
-            clientId: instanceIdService.getId(),
+            clientId: options?.clientId,
             logLevel: logLevel.NOTHING,
             sasl: envConfig().kafka.sasl.enabled ? {
                 mechanism: "scram-sha-256",

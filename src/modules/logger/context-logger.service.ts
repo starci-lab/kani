@@ -1,4 +1,6 @@
-import { ConsoleLogger } from "@nestjs/common"
+import {
+    ConsoleLogger 
+} from "@nestjs/common"
 
 export class ContextLoggerService extends ConsoleLogger {
     log(...params: Parameters<ConsoleLogger["log"]>) {

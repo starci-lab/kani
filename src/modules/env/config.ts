@@ -233,7 +233,7 @@ export const envConfig = () => ({
             },
             openPosition: {
                 slippage: parseEnvFloat("DEXES_TURBOS_OPEN_POSITION_SLIPPAGE",
-                    0.05),
+                    0.1),
             },
         },
         meteora: {

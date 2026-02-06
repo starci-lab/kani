@@ -37,6 +37,8 @@ import {
     TransactionEventNotFoundException,
     TransactionNotPreparedException,
     TransactionValidationFailedException,
+    TransactionStimulatedFailedException,
+    TransactionExecutionFailedException,
     PrivyPublicKeyNotFoundException,
     SuiObjectInvalidTypeException,
     ErrorSuiObjectName,
@@ -286,13 +288,15 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                             botId: bot.id,
                         })
                     }
-                    const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction({
-                        publicKeyHex: bot.privyMetadata?.walletPublicKey,
-                        client: suiClient,
-                        walletId: bot.privyMetadata?.walletId,
-                        transaction: openPositionTxb,
-                        encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
-                    })
+                    const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction(
+                        {
+                            publicKeyHex: bot.privyMetadata?.walletPublicKey,
+                            client: suiClient,
+                            walletId: bot.privyMetadata?.walletId,
+                            transaction: openPositionTxb,
+                            encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
+                        }
+                    )
                     return {
                         prepareTxs: [
                             {
@@ -338,13 +342,14 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         return suiClient.getTransactionBlock({
                             digest: txHash,
                             options: {
+                                showEffects: true,
                                 showEvents: true,
                             }
                         })
                     },
                 })
             )
-            if (txBlock !== null && !txBlock.errors) {
+            if (txBlock !== null && txBlock.effects?.status?.status === "success") {
                 const { positionId } = this.parseMintEvents({
                     bot,
                     txHash,
@@ -383,7 +388,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         sender: bot.accountAddress,
                     })
                     if (devInspect.effects.status.status !== "success") {
-                        throw new TransactionValidationFailedException({
+                        throw new TransactionStimulatedFailedException({
                             botId: bot.id,
                             txHash: devInspect.effects.transactionDigest,
                             liquidityPoolId: _state.static.displayId,
@@ -409,13 +414,21 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         txHashes: [txHash],
                     }
                 }
-                const { digest, events } = await suiClient.executeTransactionBlock({
+                const { digest, events, effects } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
                     signature: signatureWithBytes.signature,
                     options: {
                         showEvents: true,
+                        showEffects: true,
                     }
                 })
+                if (effects?.status?.status !== "success") {
+                    throw new TransactionExecutionFailedException({
+                        botId: bot.id,
+                        txHash,
+                        liquidityPoolId: _state.static.displayId,
+                    })
+                }
                 await suiClient.waitForTransaction({
                     digest,
                 })

@@ -25,7 +25,9 @@ import {
     PrivyPublicKeyNotFoundException,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     ErrorTransactionType,
-    TransactionValidationFailedException,
+    TransactionValidationFailedException,   
+    TransactionStimulatedFailedException,
+    TransactionExecutionFailedException,
     SuiSingleTransactionRequiredException,
     ErrorSuiSingleTransactionRequiredOperation,
 } from "@modules/exceptions"
@@ -83,6 +85,18 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                         {
                             bot,
                             action: async (signer) => {
+                                const devInspect = await suiClient.devInspectTransactionBlock({
+                                    transactionBlock: closePositionTxb,
+                                    sender: bot.accountAddress,
+                                })
+                                if (devInspect.effects.status.status !== "success") {
+                                    throw new TransactionValidationFailedException({
+                                        botId: bot.id,
+                                        txHash: devInspect.effects.transactionDigest,
+                                        type: ErrorTransactionType.ClosePosition,
+                                        liquidityPoolId: _state.static.displayId,
+                                    })
+                                }
                                 const bytes = await closePositionTxb.build({
                                     client: suiClient,
                                 })
@@ -158,11 +172,14 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                     callback: async ({ suiClient }) => {
                         return suiClient.getTransactionBlock({
                             digest: txHash,
+                            options: {
+                                showEffects: true,
+                            },
                         })
                     },
                 })
             )
-            if (txBlock !== null && !txBlock.errors) {
+            if (txBlock !== null && txBlock.effects?.status?.status === "success") {
                 this.winstonService.log(
                     WinstonLog.ClosePositionTransactionFound,
                     {
@@ -194,12 +211,14 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                         sender: bot.accountAddress,
                     })
                     if (devInspect.effects.status.status !== "success") {
-                        throw new TransactionValidationFailedException({
-                            botId: bot.id,
-                            txHash: devInspect.effects.transactionDigest,
-                            liquidityPoolId: _state.static.displayId,
-                            type: ErrorTransactionType.ClosePosition,
-                        })
+                        throw new TransactionStimulatedFailedException(
+                            {
+                                botId: bot.id,
+                                txHash: devInspect.effects.transactionDigest,
+                                liquidityPoolId: _state.static.displayId,
+                                type: ErrorTransactionType.ClosePosition,
+                            }
+                        )
                     }
                     this.winstonService.log(
                         WinstonLog.ClosePositionTransactionStimulated,
@@ -213,10 +232,20 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                         txHashes: [txHash],
                     }
                 }
-                const { digest } = await suiClient.executeTransactionBlock({
+                const { digest, effects } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
                     signature: signatureWithBytes.signature,
+                    options: {
+                        showEffects: true,
+                    },
                 })
+                if (effects?.status?.status !== "success") {
+                    throw new TransactionExecutionFailedException({
+                        botId: bot.id,
+                        txHash: digest,
+                        liquidityPoolId: _state.static.displayId,
+                    })
+                }
                 await suiClient.waitForTransaction({
                     digest,
                 })

@@ -51,11 +51,11 @@ import {
 } from "@modules/typedefs"
 import BN from "bn.js"
 import {
-    UnrecoverableError 
-} from "bullmq"
-import {
-    WithdrawJobPreparedFailedException 
+    WithdrawJobPreparedFailedException,
 } from "@exceptions"
+import {
+    FatalError,
+} from "../fatal"
 
 @Injectable()
 export class PrepareService {
@@ -203,13 +203,13 @@ export class PrepareService {
             })
         )
         if (error) {
-            throw new UnrecoverableError(
-                new WithdrawJobPreparedFailedException({
-                    originalError: error,
-                    botId: bot.id,
-                    jobId: job.id,
-                }).toJSON()
-            )
+            const failedError = new WithdrawJobPreparedFailedException({
+                originalError: error,
+                botId: bot.id,
+                jobId: job.id,
+            })
+            // throw everything as a fatal error to stop the job
+            throw new FatalError(failedError.toJSON())
         }
         // Persist job state transition:
         // PENDING → PREPARED

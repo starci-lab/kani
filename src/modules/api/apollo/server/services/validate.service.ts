@@ -8,14 +8,23 @@ import {
 import {
     Decimal,
 } from "decimal.js"
+import type {
+    ValidateLimitParams,
+    ValidatePageNumberParams,
+} from "../types"
 
 /**
- * Service to validate the limit of the pagination
+ * Service to validate pagination limit and page number.
+ *
+ * @example
+ * validateService.validateLimit({ limit: 50, min: 1, max: 100 })
  */
 @Injectable()
 export class ValidateService {
     /**
-     * Validate the limit of the pagination
+     * Validates limit is within min/max; throws if out of range.
+     *
+     * @param param - limit, min and max
      */
     validateLimit(
         { limit, min, max }: ValidateLimitParams,
@@ -35,7 +44,9 @@ export class ValidateService {
     }
 
     /**
-     * Validate the page number of the pagination
+     * Validates page number is within 1..max; throws if out of range.
+     *
+     * @param param - pageNumber and max
      */
     validatePageNumber(
         { pageNumber, max }: ValidatePageNumberParams,
@@ -49,15 +60,4 @@ export class ValidateService {
             )
         }
     }
-}
-
-export interface ValidateLimitParams {
-    limit?: number
-    min: number
-    max: number
-}
-
-export interface ValidatePageNumberParams {
-    pageNumber: number
-    max: number
 }

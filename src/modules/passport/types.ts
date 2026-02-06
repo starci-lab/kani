@@ -1,4 +1,6 @@
-import { EncryptedPayload } from "@modules/typedefs"
+import {
+    EncryptedPayload 
+} from "@modules/typedefs"
 
 export interface UserGoogleLike {
     email: string

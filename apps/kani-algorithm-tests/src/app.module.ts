@@ -32,8 +32,12 @@ import {
 import {
     MathModule 
 } from "@modules/blockchains"
-import { FormulasModule } from "@modules/blockchains"
-import { MathService } from "./math.service"
+import {
+    FormulasModule 
+} from "@modules/blockchains"
+import {
+    MathService 
+} from "./math.service"
 
 @Module({
     imports: [

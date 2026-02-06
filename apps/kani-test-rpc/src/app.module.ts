@@ -1,20 +1,54 @@
-import { EnvModule } from "@modules/env"
-import { Module } from "@nestjs/common"
-import { WinstonLevel, WinstonModule } from "@modules/winston"
-import { MixinModule } from "@modules/mixin"
-import { P2CBalancerModule } from "@modules/p2c-balancer"
-import { FilesystemModule } from "@modules/filesystem"
-import { CacheModule } from "@modules/cache"
-import { EventEmitterModule } from "@nestjs/event-emitter"
-import { EventModule } from "@modules/event"
-import { PrimaryMongoDbModule } from "@modules/databases"
-import { ClientsModule } from "@modules/blockchains"
-import { ScheduleModule } from "@nestjs/schedule"
-import { PrivyModule } from "@modules/privy"
-import { AppService } from "./app.service"
-import { DerivedModule } from "@modules/derived"
-import { CryptoModule } from "@modules/crypto"
-import { GcpModule } from "@modules/gcp"
+import {
+    EnvModule 
+} from "@modules/env"
+import {
+    Module 
+} from "@nestjs/common"
+import {
+    WinstonLevel, WinstonModule 
+} from "@modules/winston"
+import {
+    MixinModule 
+} from "@modules/mixin"
+import {
+    P2CBalancerModule 
+} from "@modules/p2c-balancer"
+import {
+    FilesystemModule 
+} from "@modules/filesystem"
+import {
+    CacheModule 
+} from "@modules/cache"
+import {
+    EventEmitterModule 
+} from "@nestjs/event-emitter"
+import {
+    EventModule 
+} from "@modules/event"
+import {
+    PrimaryMongoDbModule 
+} from "@modules/databases"
+import {
+    ClientsModule 
+} from "@modules/blockchains"
+import {
+    ScheduleModule 
+} from "@nestjs/schedule"
+import {
+    PrivyModule 
+} from "@modules/privy"
+import {
+    AppService 
+} from "./app.service"
+import {
+    DerivedModule 
+} from "@modules/derived"
+import {
+    CryptoModule 
+} from "@modules/crypto"
+import {
+    GcpModule 
+} from "@modules/gcp"
 @Module({
     imports: [
         EnvModule.forRoot(),

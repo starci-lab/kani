@@ -16,7 +16,7 @@ import {
 import BN from "bn.js"
 import {
     TokenNotFoundException,
-    ReconcileBalanceJobPreparedFailedException
+    ReconcileBalanceJobPreparedFailedException,
 } from "@modules/exceptions"
 import {
     TokenType,
@@ -26,7 +26,8 @@ import {
     SwapDirection,
     BalanceFetcherService,
     PrepareReconcileBalanceTransactionResult,
-    ComputeQuoteRatioResult
+    ComputeQuoteRatioResult,
+    EvalSnapshotService,
 } from "@modules/blockchains"
 import {
     BalanceActionService,
@@ -49,8 +50,8 @@ import {
 } from "@modules/mixin"
 import SuperJson from "superjson"
 import {
-    UnrecoverableError
-} from "bullmq"
+    FatalError,
+} from "../fatal"
 
 @Injectable()
 export class PrepareService {
@@ -65,6 +66,7 @@ export class PrepareService {
         private readonly connection: Connection,
         private readonly dayjsService: DayjsService,
         private readonly asyncService: AsyncService,
+        private readonly evalSnapshotService: EvalSnapshotService,
     ) { }
 
     // Phase: PREPARE
@@ -105,8 +107,8 @@ export class PrepareService {
                 quoteRatioResult: stringifiedQuoteRatioResult, 
                 balanceAmounts: stringifiedBalanceAmounts, 
             } = jobData
-            const reconcileBalanceTransaction = this.superJson.parse<PrepareReconcileBalanceTransactionResult>(stringifiedReconcileBalanceTransaction)
-            const quoteRatioResult = this.superJson.parse<ComputeQuoteRatioResult>(stringifiedQuoteRatioResult)
+            const reconcileBalanceTransaction = stringifiedReconcileBalanceTransaction ? this.superJson.parse<PrepareReconcileBalanceTransactionResult>(stringifiedReconcileBalanceTransaction) : undefined
+            const quoteRatioResult = stringifiedQuoteRatioResult ? this.superJson.parse<ComputeQuoteRatioResult>(stringifiedQuoteRatioResult) : undefined
             const balanceAmounts = this.superJson.parse<ReconcileBalanceBalanceAmounts>(stringifiedBalanceAmounts)
             this.winstonService.log(
                 WinstonLog.ReconcileBalanceJobAlreadyPrepared,
@@ -117,13 +119,12 @@ export class PrepareService {
                         "millisecond"),
                     quoteRatioResult,
                     balanceAmounts,
+                    txHashes: reconcileBalanceTransaction?.prepareTxs.map((prepareTx) => prepareTx.txHash),
                 }
             )
             return {
                 result: {
                     reconcileBalanceTransaction,
-                    quoteRatioResult,
-                    balanceAmounts,
                 }
             }
         }
@@ -157,7 +158,32 @@ export class PrepareService {
             quoteBalanceAmountBN = quoteBalanceAmount
             targetBalanceAmountBN = targetBalanceAmount
         }
-
+        const { eligible } = await this.evalSnapshotService.eval(
+            {
+                bot,
+            }
+        )
+        if (!eligible) {
+            this.winstonService.log(
+                WinstonLog.ReconcileBalanceJobPrepared,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    txHashes: undefined,
+                    quoteRatioResult: undefined,
+                    balanceAmounts: {
+                        targetBalanceAmount: targetBalanceAmountBN.toString(),
+                        quoteBalanceAmount: quoteBalanceAmountBN.toString(),
+                        gasBalanceAmount: gasBalanceAmountBN.toString(),
+                    },
+                }
+            )
+            return {
+                result: {
+                    reconcileBalanceTransaction: undefined,
+                }
+            }
+        }
         // Compute reconcile plan:
         // - Determine required swaps
         // - No side effects (pure planning)
@@ -270,13 +296,13 @@ export class PrepareService {
             )
         )
         if (error) {
-            throw new UnrecoverableError(
-                new ReconcileBalanceJobPreparedFailedException({
-                    originalError: error,
-                    botId: bot.id,
-                    jobId: job.id,
-                }).toJSON()
-            )
+            const failedError = new ReconcileBalanceJobPreparedFailedException({
+                originalError: error,
+                botId: bot.id,
+                jobId: job.id,
+            })
+            // throw everything as a fatal error to stop the job
+            throw new FatalError(failedError.toJSON())
         }
 
         // Persist job state transition:
@@ -317,8 +343,6 @@ export class PrepareService {
         return {
             result: {
                 reconcileBalanceTransaction,
-                quoteRatioResult,
-                balanceAmounts,
             }
         }
     }

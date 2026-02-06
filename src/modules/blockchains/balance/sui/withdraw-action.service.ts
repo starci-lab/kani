@@ -52,9 +52,6 @@ import {
     WinstonService,
 } from "@modules/winston"
 import {
-    TokenType,
-} from "@modules/typedefs"
-import {
     AsyncService,
 } from "@modules/mixin"
 import {
@@ -366,6 +363,9 @@ export class SuiWithdrawActionService {
                     const { digest } = await suiClient.executeTransactionBlock({
                         transactionBlock: signatureWithBytes.bytes,
                         signature: signatureWithBytes.signature,
+                        options: {
+                            showEffects: true,
+                        },
                     })
                     await suiClient.waitForTransaction(
                         {
