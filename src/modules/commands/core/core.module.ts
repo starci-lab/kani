@@ -19,7 +19,7 @@ export class CoreModule extends ConfigurableModuleClass {
             imports: [
                 DatabaseModule.register(
                     {
-                    isGlobal: options.isGlobal,
+                        isGlobal: options.isGlobal,
                     }
                 )
             ]

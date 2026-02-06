@@ -44,7 +44,7 @@ export class RestoreCommand extends CommandRunner {
     ) {
         super()
     }
-  
+    
     @Option({
         flags: "-f, --fileId <fileId>",
         description: "Google Drive file ID (.7z backup)",

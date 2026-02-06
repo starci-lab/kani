@@ -34,14 +34,7 @@ export class MigrateBotExecutorCommand extends CommandRunner {
                 {
                 })
 
-            const ExecutorModel = this.connection.model<ExecutorSchema>(
-                ExecutorSchema.name
-            )
-            const BotModel = this.connection.model<BotSchema>(
-                BotSchema.name
-            )
-
-            const executors = await ExecutorModel.find({}).lean()
+            const executors = await this.connection.model<ExecutorSchema>(ExecutorSchema.name).find()
             let updatedCount = 0
 
             for (const executor of executors) {
@@ -49,7 +42,7 @@ export class MigrateBotExecutorCommand extends CommandRunner {
                 for (const assigned of assignedBots) {
                     const botId = assigned?.bot
                     if (!botId) continue
-                    const result = await BotModel.updateOne(
+                    const result = await this.connection.model<BotSchema>(BotSchema.name).updateOne(
                         {
                             _id: botId,
                         },
