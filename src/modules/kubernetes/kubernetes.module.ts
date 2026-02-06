@@ -1,6 +1,12 @@
-import { DynamicModule, Module, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./kubernetes.module-definition"
-import { createKubernetesApiProvider, createKubernetesClientProvider, createKubernetesCoreApiProvider } from "./kubernetes.providers"
+import {
+    DynamicModule, Module, Provider 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./kubernetes.module-definition"
+import {
+    createKubernetesApiProvider, createKubernetesClientProvider, createKubernetesCoreApiProvider 
+} from "./kubernetes.providers"
     
 @Module({
 })
@@ -16,7 +22,8 @@ export class KubernetesModule extends ConfigurableModuleClass {
         ]
         return {
             ...dynamicModule,
-            providers: [...dynamicModule.providers || [], ...providers],
+            providers: [...dynamicModule.providers || [],
+                ...providers],
             exports: [...providers],
         }
     }

@@ -1,5 +1,9 @@
-import { registerEnumType } from "@nestjs/graphql"
-import { createEnumType } from "@modules/utils"
+import {
+    registerEnumType 
+} from "@nestjs/graphql"
+import {
+    createEnumType 
+} from "@modules/utils"
 
 export enum ChainId {
   // Solana
@@ -10,18 +14,19 @@ export enum ChainId {
 
 export const GraphQLTypeChainId = createEnumType(ChainId)
 
-registerEnumType(GraphQLTypeChainId, {
-    name: "ChainId",
-    description: "The chain ID",
-    valuesMap: {
-        [ChainId.Solana]: {
-            description: "The chain is solana",
+registerEnumType(GraphQLTypeChainId,
+    {
+        name: "ChainId",
+        description: "The chain ID",
+        valuesMap: {
+            [ChainId.Solana]: {
+                description: "The chain is solana",
+            },
+            [ChainId.Sui]: {
+                description: "The chain is sui",
+            },
         },
-        [ChainId.Sui]: {
-            description: "The chain is sui",
-        },
-    },
-})
+    })
 
 export enum PlatformId {
   Evm = "evm",
@@ -31,15 +36,22 @@ export enum PlatformId {
 
 export const GraphQLTypePlatformId = createEnumType(PlatformId)
 
-registerEnumType(GraphQLTypePlatformId, {
-    name: "PlatformId",
-    description: "The platform ID",
-    valuesMap: {
-        [PlatformId.Evm]: { description: "Evm" },
-        [PlatformId.Solana]: { description: "Solana" },
-        [PlatformId.Sui]: { description: "Sui" },
-    },
-})
+registerEnumType(GraphQLTypePlatformId,
+    {
+        name: "PlatformId",
+        description: "The platform ID",
+        valuesMap: {
+            [PlatformId.Evm]: {
+                description: "Evm" 
+            },
+            [PlatformId.Solana]: {
+                description: "Solana" 
+            },
+            [PlatformId.Sui]: {
+                description: "Sui" 
+            },
+        },
+    })
 
 export const chainIdToPlatformId = (chainId: ChainId): PlatformId => {
     switch (chainId) {
@@ -65,27 +77,28 @@ export enum TokenType {
 
 export const GraphQLTypeTokenType = createEnumType(TokenType)
 
-registerEnumType(GraphQLTypeTokenType, {
-    name: "TokenType",
-    description: "The token type",
-    valuesMap: {
-        [TokenType.Native]: {
-            description: "The token is native",
+registerEnumType(GraphQLTypeTokenType,
+    {
+        name: "TokenType",
+        description: "The token type",
+        valuesMap: {
+            [TokenType.Native]: {
+                description: "The token is native",
+            },
+            [TokenType.StableUsdc]: {
+                description: "The token is stable",
+            },
+            [TokenType.Wrapper]: {
+                description: "The token is wrapper",
+            },
+            [TokenType.Regular]: {
+                description: "The token is regular",
+            },
+            [TokenType.LiquidStaking]: {
+                description: "The token is liquid staking",
+            },
         },
-        [TokenType.StableUsdc]: {
-            description: "The token is stable",
-        },
-        [TokenType.Wrapper]: {
-            description: "The token is wrapper",
-        },
-        [TokenType.Regular]: {
-            description: "The token is regular",
-        },
-        [TokenType.LiquidStaking]: {
-            description: "The token is liquid staking",
-        },
-    },
-})
+    })
 
 export enum Network {
   // mainnet, for production
@@ -96,14 +109,19 @@ export enum Network {
 
 export const GraphQLTypeNetwork = createEnumType(Network)
 
-registerEnumType(GraphQLTypeNetwork, {
-    name: "Network",
-    description: "The network",
-    valuesMap: {
-        [Network.Mainnet]: { description: "Mainnet" },
-        [Network.Testnet]: { description: "Testnet" },
-    },
-})
+registerEnumType(GraphQLTypeNetwork,
+    {
+        name: "Network",
+        description: "The network",
+        valuesMap: {
+            [Network.Mainnet]: {
+                description: "Mainnet" 
+            },
+            [Network.Testnet]: {
+                description: "Testnet" 
+            },
+        },
+    })
 
 export enum DexName {
     Cetus = "cetus",
@@ -111,10 +129,13 @@ export enum DexName {
 
 export const GraphQLTypeDexName = createEnumType(DexName)
 
-registerEnumType(GraphQLTypeDexName, {
-    name: "DexName",
-    description: "The name of the dex",
-    valuesMap: {
-        [DexName.Cetus]: { description: "Cetus" },
-    },
-})
+registerEnumType(GraphQLTypeDexName,
+    {
+        name: "DexName",
+        description: "The name of the dex",
+        valuesMap: {
+            [DexName.Cetus]: {
+                description: "Cetus" 
+            },
+        },
+    })

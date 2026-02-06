@@ -1,7 +1,15 @@
-import { Injectable } from "@nestjs/common"
-import { AppsV1Api } from "@kubernetes/client-node"
-import { InjectKubernetesApi } from "./kubernetes.decorators"
-import { V1Deployment } from "@kubernetes/client-node"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    AppsV1Api 
+} from "@kubernetes/client-node"
+import {
+    InjectKubernetesApi 
+} from "./kubernetes.decorators"
+import {
+    V1Deployment 
+} from "@kubernetes/client-node"
 
 @Injectable()
 export class KubernetesDeploymentService {

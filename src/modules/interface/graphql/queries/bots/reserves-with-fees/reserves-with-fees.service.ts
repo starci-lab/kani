@@ -95,7 +95,9 @@ export class ReservesWithFeesService {
             liquidityPool,
         })
         const rewardsAsNumbers = Object.fromEntries(
-            Object.entries(rewards).map(([k, v]) => [k, v.toNumber()]),
+            Object.entries(rewards).map(([k,
+                v]) => [k,
+                v.toNumber()]),
         )
         return {
             reserveA: reserveA.toNumber(),

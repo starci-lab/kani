@@ -1,6 +1,8 @@
 import Sentry from "@sentry/nestjs"
 import dotenv from "dotenv"
-import { getAppConfig } from "@modules/filesystem"
+import {
+    getAppConfig 
+} from "@modules/filesystem"
 // config dotenv
 dotenv.config()
 // init sentry

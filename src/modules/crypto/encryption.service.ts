@@ -1,6 +1,10 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import crypto from "crypto"
-import { EncryptedPayload } from "@modules/typedefs"
+import {
+    EncryptedPayload 
+} from "@modules/typedefs"
 
 @Injectable()
 export class EncryptionService {
@@ -22,11 +26,14 @@ export class EncryptionService {
         // Generate a random IV
         const iv = crypto.randomBytes(this.ivLength)
         // Create AES-GCM cipher
-        const cipher = crypto.createCipheriv("aes-256-gcm", key, iv)
+        const cipher = crypto.createCipheriv("aes-256-gcm",
+            key,
+            iv)
         // Encrypt data
         const encrypted = Buffer.concat(
             [
-                cipher.update(plainText, "utf8"),
+                cipher.update(plainText,
+                    "utf8"),
                 cipher.final(),
             ]
         )
@@ -52,15 +59,20 @@ export class EncryptionService {
         key: Buffer<ArrayBufferLike>
     ): string {
         try {
-            const ivBuffer = Buffer.from(iv, "base64")
-            const authTagBuffer = Buffer.from(authTag, "base64")
-            const encryptedBuffer = Buffer.from(ciphertext, "base64")
+            const ivBuffer = Buffer.from(iv,
+                "base64")
+            const authTagBuffer = Buffer.from(authTag,
+                "base64")
+            const encryptedBuffer = Buffer.from(ciphertext,
+                "base64")
 
             if (ivBuffer.length !== this.ivLength) {
                 throw new Error("Invalid IV length")
             }
             // Create AES-GCM decipher
-            const decipher = crypto.createDecipheriv("aes-256-gcm", key, ivBuffer)
+            const decipher = crypto.createDecipheriv("aes-256-gcm",
+                key,
+                ivBuffer)
             decipher.setAuthTag(authTagBuffer)
             // Decrypt and verify integrity
             const decryptedBuffer = Buffer.concat([
@@ -69,7 +81,8 @@ export class EncryptionService {
             ])
             return decryptedBuffer.toString("utf8")
         } catch (error) {
-            console.error("Error decrypting data", error)
+            console.error("Error decrypting data",
+                error)
             throw new Error("Failed to decrypt data")
         }
     }

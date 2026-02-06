@@ -1,0 +1,207 @@
+# Module Structure & Naming Conventions (Kani)
+
+## Module Folder Structure
+
+For every module, use the following folder layout:
+
+- **index.ts** at module root — public exports
+- **types/** — types and interfaces; one file per feature (group related types in one file to avoid many small files)
+- **enums/** — enums; one file per feature
+- **classes/** — classes; one file per feature (domain classes, not GraphQL)
+- **graphql-types/** — **inputs/** for `@InputType`, **object-types/** for `@ObjectType`
+
+**File naming rule (non-NestJS files):**  
+Name files by the **function or feature** they cover (e.g. **user.ts**, **auth.ts**, **client.ts**). Group related types in one file (e.g. all pagination types in `types/pagination.ts`). Types, enums, and classes each go in their folder with these feature-based filenames. All types, enums, and classes must have comments (JSDoc or inline as appropriate). Names like "abc", "cde" in docs are placeholders only; use real names by concern.
+
+Example:
+
+```
+user/
+  index.ts
+  types/user.ts
+  types/auth.ts
+  types/index.ts   // export * from ./user, ./auth
+  enums/role.ts
+  enums/status.ts
+  enums/index.ts   // export * from ./role, ./status
+  classes/user.ts
+  classes/session.ts
+  classes/index.ts // export * from ./user, ./session
+  graphql-types/
+    inputs/          // @InputType classes
+    object-types/    // @ObjectType classes
+    index.ts         // export * from ./inputs, ./object-types
+```
+
+## NestJS File Naming (Exception)
+
+Files that follow NestJS framework conventions must keep their original naming pattern:
+
+- `*.service.ts`
+- `*.controller.ts`
+- `*.resolver.ts`
+- `*.module.ts`
+- `*.guard.ts`
+- `*.interceptor.ts`
+- `*.pipe.ts`
+- `*.middleware.ts`
+
+Example:
+
+```
+user/
+  index.ts
+  user.service.ts
+  user.controller.ts
+  user.resolver.ts
+  user.module.ts
+  types/user.ts
+  types/auth.ts
+  types/index.ts   // export * from ./user, ./auth
+  enums/role.ts
+  enums/status.ts
+  enums/index.ts   // export * from ./role, ./status
+  classes/user.ts
+  classes/session.ts
+  classes/index.ts // export * from ./user, ./session
+```
+
+**Rule:** Framework-level files use NestJS naming; domain-level files (types/enums/classes) are named by **function/feature** (e.g. user.ts, auth.ts) and must be commented.
+
+**NestJS files must not define types, enums, or classes:**  
+Files like `*.service.ts`, `*.controller.ts`, `*.module.ts`, etc. must only **import** types, enums, and classes from `types/`, `enums/`, `classes/`, or `graphql-types/`. Do not declare interfaces, enums, or classes inside NestJS framework files; put them in the correct folder and import.
+
+**GraphQL schema:**  
+Put `@InputType` classes in **graphql-types/inputs/** and `@ObjectType` classes in **graphql-types/object-types/** (one file per feature). Use **graphql-types/index.ts** to re-export inputs and object-types. Keep `isAbstract: true` and a clear `description` in the decorator when the type is used as a base (e.g. extended by other DTOs). Do not add backward-compat folders that only re-export from graphql-types.
+
+---
+
+## Function Parameters & Result Naming
+
+### Type Naming
+
+- **Parameter type:** `{ActionName}Params`  
+  Example: `CreateUserParams`
+
+- **Result type:** `{ActionName}Result`  
+  Example: `CreateUserResult`
+
+### Function Signature Convention
+
+```ts
+actionName(param: ActionNameParams): Promise<ActionNameResult>
+```
+
+### Parameter Usage Rules
+
+- Use a **params object** when the function has **2 or more arguments**.
+- If the function has **only one primitive argument**, pass it directly.
+- The return type must always be `{ActionName}Result`.
+- **Destructuring when needed:** You may destructure the params object in the function signature if it keeps the code clear (e.g. `getUser({ id }: GetUserParams)`).
+
+---
+
+## Unified Comment Pattern (Types, Enums, Classes, Functions)
+
+Types, enums, and classes must have comments (JSDoc or brief description). Functions use the pattern below.
+
+### Function Comment Pattern
+
+```ts
+/**
+ * Short description of what the function does.
+ *
+ * @param param - Description of the parameter object or value
+ * @returns Description of the result
+ *
+ * @example
+ * const result = await createUser({ name: "Alice" })
+ */
+async function createUser(param: CreateUserParams): Promise<CreateUserResult> {
+  // validate input
+  validate(param)
+
+  // call repository layer
+  const user = await this.userRepo.create(param)
+
+  // map entity to result DTO
+  return {
+    id: user.id,
+  }
+}
+```
+
+### Type / Enum Comment
+
+```ts
+/** Params for creating a user. */
+export interface CreateUserParams { ... }
+
+/** Result of user creation. */
+export type CreateUserResult = { id: string }
+
+/** User role in the system. */
+export enum UserRole { Admin, Member }
+```
+
+### Class Comment Pattern
+
+```ts
+/**
+ * Service responsible for user-related business logic.
+ *
+ * @example
+ * const service = new UserService(repo)
+ * await service.createUser({ name: "Bob" })
+ */
+export class UserService {
+  constructor(private readonly userRepo: UserRepository) {}
+
+  /**
+   * Creates a new user.
+   *
+   * @param param - User creation parameters
+   * @returns Created user info
+   *
+   * @example
+   * await service.createUser({ name: "Charlie" })
+   */
+  async createUser(param: CreateUserParams): Promise<CreateUserResult> {
+    // persist user
+    const user = await this.userRepo.create(param)
+
+    // return mapped result
+    return { id: user.id }
+  }
+}
+```
+
+---
+
+## Inline Explanation Rule
+
+Use short `//` comments between logical steps to explain intent:
+
+```ts
+// build payload
+const payload = buildPayload(input)
+
+// send request to API
+const response = await this.http.post(url, payload)
+
+// transform response to result type
+return mapToResult(response)
+```
+
+Avoid writing code without explaining intent between major steps.
+
+---
+
+## ESLint
+
+When applying this convention or changing code:
+
+1. **Read the project ESLint config** (e.g. `eslint.config.mjs`) to know formatting and rule requirements.
+2. **Run ESLint** to verify and fix (e.g. `npm run lint` or `npx eslint .`) so changes satisfy the project's lint rules.
+
+Code must pass ESLint in addition to following the conventions above.

@@ -13,7 +13,18 @@ import {
     DayjsService,
 } from "@modules/mixin"
 import Decimal from "decimal.js"
+import type {
+    Performance24HRequest,
+    Performance24HResponse,
+    ProfitResult,
+} from "../types"
 
+/**
+ * Service for position/performance aggregates (e.g. 24h ROI, PnL).
+ *
+ * @example
+ * const result = await performanceService.performance24h({ botIds: ["id1"] })
+ */
 @Injectable()
 export class PerformanceService {
     constructor(
@@ -22,10 +33,16 @@ export class PerformanceService {
         private readonly dayjsService: DayjsService,
     ) {}
 
+    /**
+     * Computes 24h performance (ROI, PnL) for the given bots.
+     *
+     * @param param - botIds to aggregate
+     * @returns Array of performance data per bot
+     */
     async performance24h(
         { botIds }: Performance24HRequest,
     ): Promise<Performance24HResponse> {
-        const botObjectIds = botIds.map(id => new Types.ObjectId(id))
+        const botObjectIds = botIds.map((id) => new Types.ObjectId(id))
         const oneDayAgo = this.dayjsService
             .now()
             .subtract(1,
@@ -118,32 +135,3 @@ export class PerformanceService {
         })
     }
 }
-
-/* ================= TYPES ================= */
-
-export interface Performance24HRequest {
-    botIds: Array<string>
-}
-
-export interface ProfitPosition {
-    snapshotAt: Date
-    positionValue: number
-    positionValueInUsd: number
-}
-
-export interface ProfitResult {
-    _id: Types.ObjectId
-    latest: ProfitPosition
-    prev: ProfitPosition
-}
-
-export interface Performance24HResponseData {
-    id: string
-    roi: Decimal
-    roiInUsd: Decimal
-    pnl: Decimal
-    pnlInUsd: Decimal
-}
-
-export type Performance24HResponse =
-    Array<Performance24HResponseData>

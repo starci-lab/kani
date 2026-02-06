@@ -1,4 +1,6 @@
-import { TokenId } from "@modules/databases"
+import {
+    TokenId 
+} from "@modules/databases"
 
 export enum SocketIoEvent {
     PythPricesUpdated = "pyth_prices_updated",

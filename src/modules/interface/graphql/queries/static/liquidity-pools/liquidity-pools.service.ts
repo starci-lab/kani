@@ -139,11 +139,11 @@ export class LiquidityPoolsService {
                 }
                 count = liquidityPools.length
                 // pagination
-                liquidityPools = this.paginateService.paginate(
-                    liquidityPools,
+                liquidityPools = this.paginateService.paginate({
+                    items: liquidityPools,
                     pageNumber,
                     limit,
-                )
+                })
             }
         }
         const promises: Array<Promise<void>> = []

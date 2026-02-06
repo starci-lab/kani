@@ -1,4 +1,6 @@
-import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
+import {
+    Injectable, OnApplicationBootstrap 
+} from "@nestjs/common"
 
 @Injectable()
 export class MathService implements OnApplicationBootstrap {

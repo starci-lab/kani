@@ -1,7 +1,13 @@
-import { KUBERNETES_API, KUBERNETES_CLIENT, KUBERNETES_CORE_API } from "./constants"
+import {
+    KUBERNETES_API, KUBERNETES_CLIENT, KUBERNETES_CORE_API 
+} from "./constants"
 import * as k8s from "@kubernetes/client-node"
-import { KubeConfig } from "@kubernetes/client-node"
-import { Provider } from "@nestjs/common"
+import {
+    KubeConfig 
+} from "@kubernetes/client-node"
+import {
+    Provider 
+} from "@nestjs/common"
 
 export const createKubernetesClientProvider = (): Provider => ({
     provide: KUBERNETES_CLIENT,

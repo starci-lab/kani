@@ -15,9 +15,10 @@ import GraphQLJSON from "graphql-type-json"
     description: "Input parameters used to request reserves and fees for a bot position (v2).",
 })
 export class ReservesWithFeesV2Request {
-    @Field(() => ID, {
-        description: "Unique identifier of the bot whose reserves and fees are being queried.",
-    })
+    @Field(() => ID,
+        {
+            description: "Unique identifier of the bot whose reserves and fees are being queried.",
+        })
         botId: string
 }
 
@@ -25,34 +26,40 @@ export class ReservesWithFeesV2Request {
     description: "Reserve and fee amounts for a bot position, broken down by token (v2).",
 })
 export class ReservesWithFeesV2ResponseData {
-    @Field(() => Float, {
-        description: "Reserve amount for token A.",
-    })
+    @Field(() => Float,
+        {
+            description: "Reserve amount for token A.",
+        })
         reserveA: number
 
-    @Field(() => Float, {
-        description: "Reserve amount for token B.",
-    })
+    @Field(() => Float,
+        {
+            description: "Reserve amount for token B.",
+        })
         reserveB: number
 
-    @Field(() => Float, {
-        description: "Accrued fee amount for token A.",
-    })
+    @Field(() => Float,
+        {
+            description: "Accrued fee amount for token A.",
+        })
         feeA: number
 
-    @Field(() => Float, {
-        description: "Accrued fee amount for token B.",
-    })
+    @Field(() => Float,
+        {
+            description: "Accrued fee amount for token B.",
+        })
         feeB: number
 
-    @Field(() => GraphQLJSON, {
-        description: "Accrued rewards per reward token (key: token id).",
-    })
+    @Field(() => GraphQLJSON,
+        {
+            description: "Accrued rewards per reward token (key: token id).",
+        })
         rewards: unknown
 
-    @Field(() => Date, {
-        description: "Timestamp of the snapshot.",
-    })
+    @Field(() => Date,
+        {
+            description: "Timestamp of the snapshot.",
+        })
         snapshotAt: Date
 }
 
@@ -62,9 +69,10 @@ export class ReservesWithFeesV2ResponseData {
 export class ReservesWithFeesV2Response
     extends AbstractGraphQLResponse
     implements IAbstractGraphQLResponse<ReservesWithFeesV2ResponseData> {
-    @Field(() => ReservesWithFeesV2ResponseData, {
-        nullable: true,
-        description: "Reserves and fees data for the requested bot.",
-    })
+    @Field(() => ReservesWithFeesV2ResponseData,
+        {
+            nullable: true,
+            description: "Reserves and fees data for the requested bot.",
+        })
         data?: ReservesWithFeesV2ResponseData
 }

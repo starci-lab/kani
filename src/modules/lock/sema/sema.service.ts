@@ -1,5 +1,9 @@
-import { Injectable } from "@nestjs/common"
-import { Sema } from "async-sema"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    Sema 
+} from "async-sema"
 
 @Injectable()
 export class SemaService {
@@ -25,7 +29,8 @@ export class SemaService {
      */
     sema(key: string, maxConcurrency = 1): Sema {
         if (!this.semas.has(key)) {
-            this.semas.set(key, new Sema(maxConcurrency))
+            this.semas.set(key,
+                new Sema(maxConcurrency))
         }
         return this.semas.get(key)!
     }

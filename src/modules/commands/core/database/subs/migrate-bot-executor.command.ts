@@ -41,7 +41,8 @@ export class MigrateBotExecutorCommand extends CommandRunner {
                 BotSchema.name
             )
 
-            const executors = await ExecutorModel.find({}).lean()
+            const executors = await ExecutorModel.find({
+            }).lean()
             let updatedCount = 0
 
             for (const executor of executors) {

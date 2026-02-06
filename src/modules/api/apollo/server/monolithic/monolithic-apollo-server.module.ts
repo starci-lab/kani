@@ -3,23 +3,24 @@ import {
 } from "@nestjs/common"
 import {
     ConfigurableModuleClass,
-    OPTIONS_TYPE 
-} from "./monolithich-apollo-server.module-definition"
+    OPTIONS_TYPE,
+} from "./monolithic-apollo-server.module-definition"
 import {
-    GraphQLJSON 
+    GraphQLJSON,
 } from "graphql-type-json"
 import {
-    ApolloDriver 
+    ApolloDriver,
 } from "@nestjs/apollo"
 import {
-    ApolloDriverConfig 
-} from "@nestjs/apollo" 
+    ApolloDriverConfig,
+} from "@nestjs/apollo"
 import {
-    GraphQLModule 
+    GraphQLModule,
 } from "@nestjs/graphql"
 import {
-    ApolloServerPluginLandingPageLocalDefault 
+    ApolloServerPluginLandingPageLocalDefault,
 } from "@apollo/server/plugin/landingPage/default"
+
 @Module({
 })
 export class MonolithicApolloServerModule extends ConfigurableModuleClass {
@@ -34,13 +35,15 @@ export class MonolithicApolloServerModule extends ConfigurableModuleClass {
                     autoSchemaFile: true,
                     plugins: [ApolloServerPluginLandingPageLocalDefault()],
                     resolvers: {
-                        JSON: GraphQLJSON 
+                        JSON: GraphQLJSON,
                     },
                     context: ({ req, res }) => ({
-                        req, res 
+                        req,
+                        res,
                     }),
-                })  
+                }),
             ],
         }
     }
 }
+

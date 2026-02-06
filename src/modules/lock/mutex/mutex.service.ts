@@ -1,6 +1,12 @@
-import { sleep } from "@modules/utils"
-import { Injectable } from "@nestjs/common"
-import { Mutex } from "async-mutex"
+import {
+    sleep 
+} from "@modules/utils"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    Mutex 
+} from "async-mutex"
 
 @Injectable()
 export class MutexService {
@@ -8,7 +14,8 @@ export class MutexService {
 
     mutex(key: string) {
         if (!this.mutexes.has(key)) {
-            this.mutexes.set(key, new Mutex())
+            this.mutexes.set(key,
+                new Mutex())
         }
         return this.mutexes.get(key)!
     }

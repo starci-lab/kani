@@ -41,16 +41,19 @@ export class ReservesWithFeesV2Resolver {
     @GraphQLSuccessMessage("Reserves and fees v2 fetched successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseGuards(GraphQLJwtPrivyAuthGuard)
-    @Query(() => ReservesWithFeesV2Response, {
-        description: "Returns reserves and fees for a bot's active position (v2 with Privy auth).",
-    })
+    @Query(() => ReservesWithFeesV2Response,
+        {
+            description: "Returns reserves and fees for a bot's active position (v2 with Privy auth).",
+        })
     async reservesWithFeesV2(
         @PrivyResponse() response: VerifyAccessTokenResponse,
-        @Args("request", {
-            description: "Input parameters to identify which bot's reserves and fees to fetch.",
-        })
+        @Args("request",
+            {
+                description: "Input parameters to identify which bot's reserves and fees to fetch.",
+            })
             request: ReservesWithFeesV2Request,
     ): Promise<ReservesWithFeesV2ResponseData> {
-        return this.reservesWithFeesV2Service.reservesWithFeesV2(request, response)
+        return this.reservesWithFeesV2Service.reservesWithFeesV2(request,
+            response)
     }
 }

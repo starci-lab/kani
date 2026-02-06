@@ -1,8 +1,12 @@
-import { Module } from "@nestjs/common"
+import {
+    Module 
+} from "@nestjs/common"
 import {
     CodeGeneratorService,
 } from "./code-generator.service"
-import { ConfigurableModuleClass } from "./code.module-definition"
+import {
+    ConfigurableModuleClass 
+} from "./code.module-definition"
 
 @Module({
     imports: [

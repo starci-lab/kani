@@ -1,7 +1,13 @@
 
-import { Module } from "@nestjs/common"
-import { ConfigurableModuleClass } from "./keypairs.module-definition"
-import { KeypairsService } from "./keypairs.service"
+import {
+    Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass 
+} from "./keypairs.module-definition"
+import {
+    KeypairsService 
+} from "./keypairs.service"
 
 @Module({
     providers: [KeypairsService],

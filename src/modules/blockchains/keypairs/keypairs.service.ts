@@ -1,11 +1,25 @@
-import { Injectable } from "@nestjs/common"
-import { Wallet } from "ethers"
-import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    Wallet 
+} from "ethers"
+import {
+    Ed25519Keypair 
+} from "@mysten/sui/keypairs/ed25519"
 import base58 from "bs58"
-import { GeneratedKeypair } from "./types"
-import { EncryptedPayload, PlatformId } from "@modules/typedefs"
-import { Keypair as SolanaKeypair } from "@solana/web3.js"
-import { DerivedAesKeyService } from "@modules/derived"
+import {
+    GeneratedKeypair 
+} from "./types"
+import {
+    EncryptedPayload, PlatformId 
+} from "@modules/typedefs"
+import {
+    Keypair as SolanaKeypair 
+} from "@solana/web3.js"
+import {
+    DerivedAesKeyService 
+} from "@modules/derived"
 
 @Injectable()
 export class KeypairsService {

@@ -52,6 +52,7 @@ export class UpdateBotChartConfigV2Resolver {
             })
             request: UpdateBotChartConfigV2Request,
     ) {
-        return await this.updateBotChartConfigV2Service.updateBotChartConfigV2(response, request)
+        return await this.updateBotChartConfigV2Service.updateBotChartConfigV2(response,
+            request)
     }
 }

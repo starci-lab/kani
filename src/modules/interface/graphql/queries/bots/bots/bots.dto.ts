@@ -1,21 +1,28 @@
-import { Field, InputType, ObjectType } from "@nestjs/graphql"
-import { BotSchema } from "@modules/databases"
+import {
+    Field, InputType, ObjectType 
+} from "@nestjs/graphql"
+import {
+    BotSchema 
+} from "@modules/databases"
 import { 
     AbstractGraphQLResponse, 
     IAbstractGraphQLResponse, 
     IPaginationPageResponseData, 
     PaginationPageResponseData
 } from "@modules/api"
-import { PaginationPageFilters } from "@modules/api"
+import {
+    PaginationPageFilters 
+} from "@modules/api"
 
 @InputType({
     description: "The request for fetching bots.",
 })
 export class BotsPaginationFilters extends PaginationPageFilters {
-    @Field(() => Boolean, {
-        nullable: true,
-        description: "Whether to sort the bots by timestamp in ascending order.",
-    })
+    @Field(() => Boolean,
+        {
+            nullable: true,
+            description: "Whether to sort the bots by timestamp in ascending order.",
+        })
         asc?: boolean
 }
 
@@ -23,9 +30,10 @@ export class BotsPaginationFilters extends PaginationPageFilters {
     description: "The input type for fetching bots.",
 })
 export class BotsRequest {
-    @Field(() => BotsPaginationFilters, {
-        description: "The filters for pagination.",
-    })
+    @Field(() => BotsPaginationFilters,
+        {
+            description: "The filters for pagination.",
+        })
         filters: BotsPaginationFilters
 }
 
@@ -35,9 +43,10 @@ export class BotsRequest {
 export class BotsResponseData
     extends PaginationPageResponseData
     implements IPaginationPageResponseData<BotSchema> {
-    @Field(() => [BotSchema], {
-        description: "Bots.",
-    })
+    @Field(() => [BotSchema],
+        {
+            description: "Bots.",
+        })
         data: Array<BotSchema>
 }   
 
@@ -47,9 +56,10 @@ export class BotsResponseData
 export class BotsResponse
     extends AbstractGraphQLResponse
     implements IAbstractGraphQLResponse<BotsResponseData> {
-    @Field(() => BotsResponseData, {
-        description: "The data for the bots.",
-    })
+    @Field(() => BotsResponseData,
+        {
+            description: "The data for the bots.",
+        })
         data: BotsResponseData
 }
 

@@ -1,4 +1,3 @@
-
 import {
     RetryLink 
 } from "@apollo/client/link/retry"
@@ -6,19 +5,26 @@ import {
     envConfig 
 } from "@modules/env"
 
-// retry link
+/**
+ * Creates a retry link with delay and max attempts from env config.
+ *
+ * @returns RetryLink instance
+ *
+ * @example
+ * const link = createRetryLink()
+ */
 export const createRetryLink = () => {
+    const config = envConfig().client.apollo.retry
+
     return new RetryLink({
         delay: {
-            initial: envConfig().client.apollo.retry.initial,
-            max: envConfig().client.apollo.retry.max,
-            jitter: envConfig().client.apollo.retry.jitter
+            initial: config.initial,
+            max: config.max,
+            jitter: config.jitter,
         },
         attempts: {
-            max: envConfig().client.apollo.retry.maxRetries,
-            retryIf: (error) => {
-                return !!error
-            }
-        }
+            max: config.maxRetries,
+            retryIf: (error) => !!error,
+        },
     })
 }

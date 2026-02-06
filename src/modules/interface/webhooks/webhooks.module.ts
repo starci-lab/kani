@@ -1,5 +1,9 @@
-import { Module } from "@nestjs/common"
-import { ConfigurableModuleClass } from "./webhooks.module-definition"
+import {
+    Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass 
+} from "./webhooks.module-definition"
 
 @Module({
     imports: [

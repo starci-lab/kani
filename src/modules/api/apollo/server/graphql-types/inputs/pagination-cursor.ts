@@ -1,10 +1,13 @@
 import {
-    Field, InputType, Int, ObjectType 
+    Field,
+    InputType,
+    Int,
 } from "@nestjs/graphql"
 
+/** GraphQL input for cursor pagination request id. */
 @InputType({
     isAbstract: true,
-    description: "Input fields required to paginate results.",
+    description: "Input for cursor pagination request id.",
 })
 export class PaginationCursorRequest {
     @Field(() => String,
@@ -14,9 +17,10 @@ export class PaginationCursorRequest {
         requestId: string
 }
 
+/** GraphQL input for cursor + limit. */
 @InputType({
     isAbstract: true,
-    description: "Input fields required to paginate results.",
+    description: "Input for cursor pagination (cursor, limit).",
 })
 export class PaginationCursorFilters {
     @Field({
@@ -31,22 +35,4 @@ export class PaginationCursorFilters {
             description: "Number of items to fetch per page",
         })
         limit?: number
-}
-
-@ObjectType({
-    isAbstract: true,
-    description: "The response for pagination.",
-})
-export class PaginationCursorResponseData {
-    @Field(() => String,
-        {
-            nullable: true,
-            description: "The cursor of the last item from the previous page.",
-        })
-        cursor?: string
-}
-
-export interface IPaginationCursorResponseData<T = unknown> {
-    cursor?: string;
-    data: Array<T>;
 }

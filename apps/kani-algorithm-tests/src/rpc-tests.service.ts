@@ -1,6 +1,12 @@
-import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
-import { RpcExecutorService } from "@modules/blockchains"
-import { RpcAccessType } from "@modules/filesystem"
+import {
+    Injectable, OnApplicationBootstrap 
+} from "@nestjs/common"
+import {
+    RpcExecutorService 
+} from "@modules/blockchains"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
 
 @Injectable()
 export class RpcTestsService implements OnApplicationBootstrap {

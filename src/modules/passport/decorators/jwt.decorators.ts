@@ -1,5 +1,9 @@
-import { createParamDecorator, ExecutionContext } from "@nestjs/common"
-import { GqlExecutionContext } from "@nestjs/graphql"
+import {
+    createParamDecorator, ExecutionContext 
+} from "@nestjs/common"
+import {
+    GqlExecutionContext 
+} from "@nestjs/graphql"
 
 export const GraphQLJwtAccessToken = createParamDecorator(
     (_: unknown, context: ExecutionContext): string => {
@@ -12,7 +16,8 @@ export const GraphQLJwtAccessToken = createParamDecorator(
         if (!authorization) {
             throw new Error("Authorization header not found")
         }
-        const [type, token] = authorization.split(" ")
+        const [type,
+            token] = authorization.split(" ")
         if (type !== "Bearer") {
             throw new Error("Invalid authorization type")
         }

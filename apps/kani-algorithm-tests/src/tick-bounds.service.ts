@@ -16,8 +16,12 @@ import {
     Connection 
 } from "mongoose"
 import BN from "bn.js"
-import { sleep } from "@utils"
-import { Decimal } from "decimal.js"
+import {
+    sleep 
+} from "@utils"
+import {
+    Decimal 
+} from "decimal.js"
 
 @Injectable()
 export class TickBoundsService implements OnApplicationBootstrap {
