@@ -188,12 +188,13 @@ export class KafkaBridgeService implements OnApplicationBootstrap, OnModuleInit,
                         if (data.instanceId === this.instanceIdService.getId()) {
                             continue
                         }
-                        resetTimeout()
                         // emit event to local EventEmitter
                         this.eventEmitter.emit(
                             topic,
                             data.data
                         )
+                        // reset timeout to keep connection alive
+                        resetTimeout()
                     }
                 }  
             }
