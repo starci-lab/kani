@@ -89,6 +89,15 @@ import {
 import {
     ApolloClientModule,
 } from "@modules/api"
+import {
+    PrometheusModule, MetricName 
+} from "@modules/prometheus"
+import {
+    ConsulModule 
+} from "@modules/consul"
+import {
+    ServiceName 
+} from "@modules/common"
 
 @Module({
     imports: [
@@ -122,7 +131,8 @@ import {
         EventEmitterModule.forRoot(),
         WinstonModule.register({
             isGlobal: true,
-            appName: `Kani Executor ${envConfig().executor.id}`,
+            serviceName: ServiceName.KaniExecutor,
+            id: envConfig().executor.id,
             level: WinstonLevel.Verbose,
         }),
         FormulasModule.register({
@@ -196,7 +206,8 @@ import {
                     EventName.ClmmLiquidityPoolsSynced,
                     EventName.DlmmLiquidityPoolsSynced,
                 ],
-                clientId: `kani-executor-${envConfig().executor.id}`,
+                serviceName: ServiceName.KaniExecutor,
+                id: envConfig().executor.id,
             },
             isGlobal: true,
         }),
@@ -206,6 +217,23 @@ import {
         SnapshotsModule.register({
             isGlobal: true,
         }),
+        PrometheusModule.register(
+            {
+                isGlobal: true,
+                metricNames: [
+                    MetricName.BotCount,
+                ],
+            }
+        ),
+        ConsulModule.register(
+            {
+                isGlobal: true,
+                serviceName: ServiceName.KaniExecutor,
+                enablePrometheusDnsDiscovery: true,
+                id: envConfig().executor.id,
+                port: envConfig().ports.kaniExecutor,
+            }
+        ),
         MathModule.register({
             isGlobal: true,
         }),

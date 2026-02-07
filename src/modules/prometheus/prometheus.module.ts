@@ -1,19 +1,52 @@
 import {
-    Module 
+    DynamicModule,
+    Module,
+    Provider,
 } from "@nestjs/common"
 import {
-    ConfigurableModuleClass 
+    ConfigurableModuleClass,
+    OPTIONS_TYPE,
 } from "./prometheus.module-definition"
 import {
-    PromClientService 
-} from "./prom-client.service"
+    createPrometheusRegistryProvider,
+} from "./prometheus.providers"
+import {
+    PrometheusController,
+} from "./prometheus.controller"
+import {
+    BotCountMetricService,
+} from "./metrics"
+import {
+    MetricName,
+} from "./enums"
 
+/**
+ * Prometheus module.
+ * @module PrometheusModule
+ */
 @Module({
-    providers: [
-        PromClientService,
-    ],
-    exports: [
-        PromClientService,
-    ],
 })
-export class PrometheusModule extends ConfigurableModuleClass {}
+export class PrometheusModule extends ConfigurableModuleClass {
+    static register(options: typeof OPTIONS_TYPE): DynamicModule {
+        const dynamicModule = super.register(options)
+        const providers: Array<Provider> = [ 
+        ]
+        if (options.metricNames?.includes(MetricName.BotCount)) {
+            providers.push(BotCountMetricService)
+        }
+        return {
+            ...dynamicModule,
+            controllers: [
+                PrometheusController,
+            ],
+            providers: [
+                ...dynamicModule.providers || [],
+                createPrometheusRegistryProvider(),
+                ...providers,
+            ],
+            exports: [
+                ...providers,
+            ],
+        }
+    }
+}

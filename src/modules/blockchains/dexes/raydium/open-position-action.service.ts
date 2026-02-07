@@ -424,7 +424,6 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                             return
                         }
                     }
-
                     // Execute transaction on-chain
                     const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
                         rpc,
@@ -436,7 +435,6 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                             commitment: "confirmed",
                         }
                     )
-
                     // Log successful execution
                     this.winstonService.log(
                         WinstonLog.OpenPositionTransactionExecuted,

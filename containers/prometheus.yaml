@@ -1,0 +1,13 @@
+services:
+  alertmanager:
+    image: docker.io/bitnamilegacy/prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus-config.yaml:/opt/bitnami/prometheus/conf/prometheus.yml
+      - prometheus-persistence:/opt/bitnami/prometheus/data 
+    restart: unless-stopped
+volumes:
+  prometheus-persistence:
+    driver: local

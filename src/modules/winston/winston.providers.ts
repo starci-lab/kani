@@ -13,17 +13,21 @@ import {
 import LokiTransport from "winston-loki"
 import {
     envConfig 
-} from "@modules/env/config"
-
+} from "@modules/env"
+import {
+    buildAppName,
+} from "./utils"
 export const createConsoleTransport = (
     options: typeof OPTIONS_TYPE
 ) => {
+    const appName = buildAppName(options.serviceName,
+        options.id)
     return new transports.Console({
         format: format.combine(
             format.timestamp(),
             format.json(),
             utilities.format.nestLike(
-                options.appName,
+                appName,
                 {
                     colors: true,
                     prettyPrint: true,
@@ -38,22 +42,26 @@ export const createConsoleTransport = (
 export const createLokiTransport = (
     options: typeof OPTIONS_TYPE
 ) => {
-    return new LokiTransport({
-        host: envConfig().loki.host,
-        json: true,
-        format: winston.format.combine(
-            winston.format.timestamp(),
-            winston.format.ms(),
-            winston.format.json(),
-        ),
-        labels: {
-            environment: envConfig().isProduction,
-            application: options.appName,
-        },
-        basicAuth: envConfig().loki.requireAuth
-            ? `${envConfig().loki.username}:${envConfig().loki.password}`
-            : undefined,
-    })
+    const appName = buildAppName(options.serviceName,
+        options.id)
+    return new LokiTransport(
+        {
+            host: envConfig().loki.host,
+            json: true,
+            format: winston.format.combine(
+                winston.format.timestamp(),
+                winston.format.ms(),
+                winston.format.json(),
+            ),
+            labels: {
+                environment: envConfig().isProduction,
+                application: appName,
+            },
+            basicAuth: envConfig().loki.requireAuth
+                ? `${envConfig().loki.username}:${envConfig().loki.password}`
+                : undefined,
+        }
+    )
 }
 
 export const createConsoleWinstonProvider = () => {

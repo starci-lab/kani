@@ -8,6 +8,9 @@ import {
     EnvModule 
 } from "@modules/env"
 import {
+    ServiceName,
+} from "@modules/common"
+import {
     WinstonLevel, WinstonModule 
 } from "@modules/winston"
 import {
@@ -50,7 +53,7 @@ import {
         EnvModule.forRoot(),
         WinstonModule.register({
             isGlobal: true,
-            appName: "Kani CLI",
+            serviceName: ServiceName.KaniCLI,
             level: WinstonLevel.Info,
         }),
         MixinModule.register({

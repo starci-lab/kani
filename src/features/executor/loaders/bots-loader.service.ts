@@ -67,9 +67,12 @@ import {
     DayjsService,
 } from "@modules/mixin"
 import {
-    Dayjs 
+    Dayjs
 } from "dayjs"
-  
+import {
+    BotCountMetricService,
+} from "@modules/prometheus"
+
 /** Stream name used for logs when watching MongoDB Change Stream */
 const STREAM_NAME = "bots-loader"
 
@@ -88,20 +91,21 @@ implements OnApplicationBootstrap, OnModuleInit {
      * Other modules read from here instead of querying MongoDB on each request.
      */
     public botCollection: Collection<BotSchema>
-  
+
     constructor(
-      @InjectPrimaryMongoose()
-      private readonly connection: Connection,
-      private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
-      private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
-      private readonly retryService: RetryService,
-      private readonly eventEmitterService: EventEmitterService,
-      private readonly semaService: SemaService,
-      private readonly winstonService: WinstonService,
-      private readonly lokiJSService: LokiJSService,
-      private readonly dayjsService: DayjsService,
-    ) {}
-  
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
+        private readonly botCountMetricService: BotCountMetricService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
+        private readonly retryService: RetryService,
+        private readonly eventEmitterService: EventEmitterService,
+        private readonly semaService: SemaService,
+        private readonly winstonService: WinstonService,
+        private readonly lokiJSService: LokiJSService,
+        private readonly dayjsService: DayjsService,
+    ) { }
+
     /**
      * Initializes the service when the NestJS module is ready.
      * Order: wait for ExecutorLoaderService -> create watcher -> semaphore -> LokiJS collection -> load data -> mark ready.
@@ -124,22 +128,21 @@ implements OnApplicationBootstrap, OnModuleInit {
 
         // Create LokiJS collection, indexed by `id` for fast findOne
         this.botCollection =
-        await this.lokiJSService.createCollection<BotSchema>({
-            name: "executor-bots",
-            options: {
-                indices: ["id"],
-            },
-        })
+            await this.lokiJSService.createCollection<BotSchema>({
+                name: "executor-bots",
+                options: {
+                    indices: ["id"],
+                },
+            })
 
         // Initial load from MongoDB
         await this.load()
-
         // Mark BotsLoaderService as ready for other services
         this.readinessWatcherFactoryService.setReady(
             BotsLoaderService.name,
         )
     }
-  
+
     /**
      * Called after all modules have initialized.
      * Starts watching MongoDB Change Stream for real-time updates.
@@ -147,7 +150,7 @@ implements OnApplicationBootstrap, OnModuleInit {
     onApplicationBootstrap() {
         this.observe()
     }
-  
+
     /**
      * Loads full bot snapshot from MongoDB (full reload).
      * Called on init and on scheduled interval (reconciliation - keeps in sync with DB).
@@ -167,7 +170,10 @@ implements OnApplicationBootstrap, OnModuleInit {
                 .model<ExecutorSchema>(ExecutorSchema.name)
                 .findById(envConfig().executor.id)
 
-            if (!executor) return
+            if (!executor) {
+                this.botCountMetricService.set(0)
+                return
+            }
 
             // Get IDs of bots assigned to the executor
             const botIds = executor.assignedBots.map(
@@ -175,7 +181,7 @@ implements OnApplicationBootstrap, OnModuleInit {
             )
 
             const model =
-          this.connection.model<BotSchema>(BotSchema.name)
+                this.connection.model<BotSchema>(BotSchema.name)
 
             const bots = await model.find({
                 _id: {
@@ -184,26 +190,26 @@ implements OnApplicationBootstrap, OnModuleInit {
             })
 
             const newBots: BotSchema[] =
-          bots.map((bot) => bot.toJSON<BotSchema>()) ?? []
+                bots.map((bot) => bot.toJSON<BotSchema>()) ?? []
 
             // Compare old and new snapshots (field `running` only) to detect which bots changed
             const updatedBotIds = newBots
                 .map((bot) => {
                     const id = bot.id
                     if (!id) return null
-  
+
                     const old = this.botCollection.findOne({
                         id: {
-                            $eq: id 
+                            $eq: id
                         },
                     })
                     if (!old) return null
-  
+
                     const oldSnapshot = _.pick(old,
                         ["running"])
                     const newSnapshot = _.pick(bot,
                         ["running"])
-  
+
                     return _.isEqual(oldSnapshot,
                         newSnapshot)
                         ? null
@@ -216,10 +222,10 @@ implements OnApplicationBootstrap, OnModuleInit {
                 this.winstonService.log(
                     WinstonLog.ExecutorBotsUpdated,
                     {
-                        ids: updatedBotIds 
+                        ids: updatedBotIds
                     },
                 )
-  
+
                 const updatedRaws = await model
                     .find({
                         _id: {
@@ -230,11 +236,11 @@ implements OnApplicationBootstrap, OnModuleInit {
                     })
                     .lean()
                     .exec()
-  
+
                 for (const raw of updatedRaws) {
                     const data =
-              model.hydrate(raw).toJSON<BotSchema>()
-  
+                        model.hydrate(raw).toJSON<BotSchema>()
+
                     this.eventEmitterService.emit({
                         event: EventName.ExecutorBotUpdated,
                         payload: data,
@@ -245,11 +251,13 @@ implements OnApplicationBootstrap, OnModuleInit {
             // Replace entire snapshot with new data
             this.botCollection.clear()
             this.botCollection.insert(newBots)
+            // update prometheus bot count metric
+            this.botCountMetricService.set(newBots.length)
         } finally {
             this.sema.release(token)
         }
     }
-  
+
     /**
      * Watches MongoDB Change Stream for real-time bot updates.
      * Filters only operationType = "update". Uses resumeToken to resume after reconnect.
@@ -257,14 +265,14 @@ implements OnApplicationBootstrap, OnModuleInit {
      */
     private observe() {
         const model =
-        this.connection.model<BotSchema>(BotSchema.name)
+            this.connection.model<BotSchema>(BotSchema.name)
 
         /** Token to resume stream from last position on reconnect */
         let resumeToken: ResumeToken | null = null
 
         this.retryService.retry({
             options: {
-                retries: Infinity 
+                retries: Infinity
             },
             action: async () => {
                 const abortController = new AbortController()
@@ -279,81 +287,81 @@ implements OnApplicationBootstrap, OnModuleInit {
                         envConfig().executor.streams.mongoDbChangeStream.timeout,
                     )
                 }
-  
+
                 // create start time for duration calculation
                 let startTime: Dayjs | null = null
 
                 // Listen only for update operations, ignore insert/delete
                 const streamConnection =
-            new MongoDBChangeStreamConnection<BotSchema>({
-                model,
-                pipeline: [
-                    {
-                        $match: {
-                            operationType: {
-                                $in: ["update"]
+                    new MongoDBChangeStreamConnection<BotSchema>({
+                        model,
+                        pipeline: [
+                            {
+                                $match: {
+                                    operationType: {
+                                        $in: ["update"]
+                                    },
+                                },
                             },
+                        ],
+                        options: {
+                            fullDocument: "updateLookup", // Fetch full document after update
+                            resumeAfter: resumeToken ?? undefined,
                         },
-                    },
-                ],
-                options: {
-                    fullDocument: "updateLookup", // Fetch full document after update
-                    resumeAfter: resumeToken ?? undefined,
-                },
-            })
-  
+                    })
+
                 const stream =
-            await this.streamAsyncIteratorService.createStream({
-                connection: streamConnection,
-                signal: abortController.signal,
-                onError: async (error) => {
-                    this.winstonService.log(
-                        WinstonLog.ExecutorMongoDbChangeStreamError,
-                        {
-                            streamName: STREAM_NAME,
-                            error: error.message,
+                    await this.streamAsyncIteratorService.createStream({
+                        connection: streamConnection,
+                        signal: abortController.signal,
+                        onError: async (error) => {
+                            this.winstonService.log(
+                                WinstonLog.ExecutorMongoDbChangeStreamError,
+                                {
+                                    streamName: STREAM_NAME,
+                                    error: error.message,
+                                },
+                            )
                         },
-                    )
-                },
-                onClose: async () => {
-                    this.winstonService.log(
-                        WinstonLog.ExecutorMongoDbChangeStreamClose,
-                        {
-                            streamName: STREAM_NAME,
-                            durationMs: startTime
-                                ? this.dayjsService.now().diff(
-                                    startTime,
-                                    "millisecond"
-                                )
-                                : null,
+                        onClose: async () => {
+                            this.winstonService.log(
+                                WinstonLog.ExecutorMongoDbChangeStreamClose,
+                                {
+                                    streamName: STREAM_NAME,
+                                    durationMs: startTime
+                                        ? this.dayjsService.now().diff(
+                                            startTime,
+                                            "millisecond"
+                                        )
+                                        : null,
+                                },
+                            )
                         },
-                    )
-                },
-                onOpen: async () => {
-                    this.winstonService.log(
-                        WinstonLog.ExecutorMongoDbChangeStreamStarted,
-                        {
-                            streamName: STREAM_NAME 
+                        onOpen: async () => {
+                            this.winstonService.log(
+                                WinstonLog.ExecutorMongoDbChangeStreamStarted,
+                                {
+                                    streamName: STREAM_NAME
+                                },
+                            )
+                            startTime = this.dayjsService.now()
                         },
-                    )
-                    startTime = this.dayjsService.now()
-                },
-            })
-  
+                    })
+
                 resetTimeout()
-  
+
                 for await (const change of stream) {
                     const token = await this.sema.tryAcquire()
                     if (!token) continue
-  
+
                     try {
                         resumeToken = change._id
                         switch (change.operationType) {
                         case "update": {
                             const data =
-                    model
-                        .hydrate(change.fullDocument)
-                        .toJSON<BotSchema>()
+                                    model
+                                        .hydrate(change.fullDocument)
+                                        .toJSON<BotSchema>()
 
                             const props: Array<string> = [
                                 "running",
@@ -362,30 +370,30 @@ implements OnApplicationBootstrap, OnModuleInit {
                                 "isExitToUsdc",
                             ]
                             const old =
-                    this.botCollection.findOne({
-                        id: {
-                            $eq: data.id 
-                        },
-                    })
+                                    this.botCollection.findOne({
+                                        id: {
+                                            $eq: data.id
+                                        },
+                                    })
                             if (!old) break
-  
+
                             const oldSnapshot = _.pick(old,
                                 props)
                             const newSnapshot = _.pick(data,
                                 props)
-  
+
                             if (_.isEqual(oldSnapshot,
                                 newSnapshot)) break
-  
+
                             // Update only business fields (preserve $loki & meta)
                             for (const key of props) {
-                                ;(old)[key] = (data)[key]
+                                ; (old)[key] = (data)[key]
                             }
                             this.botCollection.update(old)
                             this.winstonService.log(
                                 WinstonLog.ExecutorMongoDbChangeStreamBotUpdated,
                                 {
-                                    id: data.id 
+                                    id: data.id
                                 },
                             )
                             this.eventEmitterService.emit({
@@ -403,7 +411,7 @@ implements OnApplicationBootstrap, OnModuleInit {
             },
         })
     }
-  
+
     /** Scheduled full reload - reconciles in-memory snapshot with MongoDB */
     @Interval(envConfig().executor.interval.load)
     async handleBotsLoaderInterval() {

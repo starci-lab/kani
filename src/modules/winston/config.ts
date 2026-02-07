@@ -5,6 +5,7 @@ import {
     WinstonLevel,
 } from "./types"
 import {
+    MetricInitializedMessage,
     ClosePositionTransactionExecutedMessage,
     ClosePositionTransactionFailedMessage,
     CoingeckoPricesFetchedMessage,
@@ -1881,5 +1882,13 @@ export const configMap = {
         loki: true,
         messageType: {
         } as WithdrawLockAuthorityReleasedMessage,
+    },
+    // Prometheus Metric Initialized
+    [WinstonLog.MetricInitialized]: {
+        name: WinstonLog.MetricInitialized,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as MetricInitializedMessage,
     },
 }

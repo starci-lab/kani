@@ -368,6 +368,13 @@ export const envConfig = () => ({
     },
     /** Executor: capacity, streams, subscriptions, diagnose intervals, runtime (requeue, stimulate), lock TTL, job retention. */
     executor: {
+        /** Consul service registration for DNS discovery. */
+        consul: {
+            /** Optional address for the executor (host/IP). Omit to use agent node address. */
+            address: parseEnvString({
+                key: "EXECUTOR_CONSUL_ADDRESS", defaultValue: "",
+            }),
+        },
         capacity: {
             maxBots: parseEnvInt({
                 key: "EXECUTOR_CAPACITY_MAX_BOTS", defaultValue: 1000 
@@ -811,6 +818,27 @@ export const envConfig = () => ({
                     key: "PRIMARY_MONGO_DB_NAME", defaultValue: "cicore" 
                 }),
             },
+        },
+    },
+    /** Consul HTTP API: base URL for KV, health, catalog, etc. */
+    consul: {
+        // Consul host
+        host: parseEnvString({
+            key: "CONSUL_HOST", defaultValue: "http://localhost:8500",
+        }),
+        // Service URL
+        serviceUrl: parseEnvString({
+            key: "CONSUL_SERVICE_URL",
+            defaultValue: "http://localhost:3000"
+        })
+    },
+    /** Prometheus: service registration for DNS discovery. */
+    prometheus: {
+        metrics: {
+            /** Interval for Prometheus metrics. */
+            interval: parseEnvString({
+                key: "PROMETHEUS_METRICS_INTERVAL", defaultValue: "10s" 
+            }),
         },
     },
     /** Loki log aggregation: host, optional auth (username, password). */

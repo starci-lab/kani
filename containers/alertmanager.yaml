@@ -1,0 +1,12 @@
+services:
+  alertmanager:
+    image: docker.io/bitnamilegacy/alertmanager
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - alertmanager-data:/opt/bitnami/alertmanager/data
+    restart: unless-stopped
+volumes:
+  alertmanager-data:
+    driver: local

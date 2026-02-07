@@ -2,9 +2,6 @@ import type {
     Provider 
 } from "@nestjs/common"
 import {
-    KAFKA, KAFKA_ADMIN 
-} from "./constants"
-import {
     Kafka, logLevel 
 } from "kafkajs"
 import {
@@ -13,6 +10,12 @@ import {
 import {
     MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
 } from "./kafka.module-definition"
+import {
+    buildKafkaClientId 
+} from "./utils"
+import {
+    KAFKA, KAFKA_ADMIN 
+} from "./constants"
 
 /**
  * Creates a provider for the Kafka client instance.
@@ -24,9 +27,13 @@ export const createKafkaProvider = (): Provider => ({
     inject: [MODULE_OPTIONS_TOKEN],
     useFactory: (options: typeof OPTIONS_TYPE): Kafka => {
         // create Kafka client with configuration
+        const clientId = buildKafkaClientId(
+            options.serviceName,
+            options.id,
+        )
         return new Kafka({
             brokers: [`${envConfig().kafka.host}:${envConfig().kafka.port}`],
-            clientId: options?.clientId,
+            clientId,
             logLevel: logLevel.NOTHING,
             sasl: envConfig().kafka.sasl.enabled ? {
                 mechanism: "scram-sha-256",

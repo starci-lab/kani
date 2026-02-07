@@ -8,6 +8,9 @@ import {
     EnvModule 
 } from "@modules/env"
 import {
+    ServiceName,
+} from "@modules/common"
+import {
     WinstonLevel, WinstonModule 
 } from "@modules/winston"
 import {
@@ -95,7 +98,7 @@ import {
         ScheduleModule.forRoot(),   
         WinstonModule.register({
             isGlobal: true,
-            appName: "Kani Observer",
+            serviceName: ServiceName.KaniObserver,
             level: WinstonLevel.Info,
         }),
         IoRedisModule.register({
@@ -151,7 +154,7 @@ import {
                 topics: [
                     EventName.ReinitializeBalancers,
                 ],
-                clientId: "kani-observer",
+                serviceName: ServiceName.KaniObserver,
             },
         }),
         TxBuilderModule.register({

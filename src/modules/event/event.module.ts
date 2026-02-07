@@ -2,6 +2,9 @@ import {
     DynamicModule, Module, Provider 
 } from "@nestjs/common"
 import {
+    ServiceName,
+} from "@modules/common"
+import {
     ConfigurableModuleClass, OPTIONS_TYPE 
 } from "./event.module-definition"
 import {
@@ -20,7 +23,7 @@ export class EventModule extends ConfigurableModuleClass {
         const dynamicModule = super.register(options)
         const imports: Array<DynamicModule> = []
         const kafkaOptions = options?.kafka || {
-            clientId: "kafka",
+            serviceName: ServiceName.KaniUnknown,
         }
         imports.push(
             KafkaModule.register({

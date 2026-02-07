@@ -23,6 +23,9 @@ import {
     KafkaAdminService 
 } from "./admin.service"
 import {
+    buildKafkaClientId,
+} from "./utils"
+import {
     envConfig 
 } from "@modules/env"
 import {
@@ -62,9 +65,13 @@ export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown
                     await this.readinessWatcherFactoryService.waitUntilReady(KafkaAdminService.name)
 
                     // create consumer with configuration
+                    const groupId = buildKafkaClientId(
+                        this.options.serviceName,
+                        this.options.id,
+                    )
                     this.consumer = this.kafka.consumer(
                         { 
-                            groupId: this.options?.clientId,
+                            groupId,
                             allowAutoTopicCreation: true,
                             heartbeatInterval: envConfig().kafka.heartbeatInterval,
                             retry: {

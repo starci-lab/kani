@@ -1,4 +1,7 @@
 import {
+    ServiceName,
+} from "@modules/common"
+import {
     EnvModule 
 } from "@modules/env"
 import {
@@ -54,7 +57,7 @@ import {
         EnvModule.forRoot(),
         WinstonModule.register({
             isGlobal: true,
-            appName: "kani-test-rpc",
+            serviceName: ServiceName.KaniTestRpc,
             level: WinstonLevel.Info,
         }),
         PrimaryMongoDbModule.register({

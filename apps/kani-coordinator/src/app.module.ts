@@ -8,6 +8,9 @@ import {
     EnvModule 
 } from "@modules/env"
 import {
+    ServiceName,
+} from "@modules/common"
+import {
     WinstonLevel, WinstonModule 
 } from "@modules/winston"
 import {
@@ -69,12 +72,12 @@ import {
                 createTopicsIfNotExists: true,
                 useConsume: false,
                 usePublish: true,
-                clientId: "kani-coordinator",
+                serviceName: ServiceName.KaniCoordinator,
             },
         }),
         WinstonModule.register({
             isGlobal: true,
-            appName: "Kani Coordinator",
+            serviceName: ServiceName.KaniCoordinator,
             level: WinstonLevel.Verbose,
         }),
         ScheduleModule.forRoot(),

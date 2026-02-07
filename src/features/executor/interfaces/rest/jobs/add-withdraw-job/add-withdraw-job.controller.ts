@@ -26,8 +26,8 @@ import {
     RestSuccessMessage 
 } from "@modules/api"
 import {
+    executorRestConfig,
     buildExecutorEndpointPath,
-    executorRestConfig
 } from "@modules/service-configs"
 
 @ApiTags(executorRestConfig().jobs().tags)

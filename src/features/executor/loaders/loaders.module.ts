@@ -24,6 +24,8 @@ export class LoadersModule extends ConfigurableModuleClass {
         ]
         return {
             ...dynamicModule,
+            imports: [
+            ],
             providers: [...dynamicModule.providers || [],
                 ...providers],
             exports: [...providers],

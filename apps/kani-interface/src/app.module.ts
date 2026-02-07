@@ -5,6 +5,9 @@ import {
     EnvModule 
 } from "@modules/env"
 import {
+    ServiceName,
+} from "@modules/common"
+import {
     WinstonLevel, WinstonModule 
 } from "@modules/winston"
 import {
@@ -156,7 +159,7 @@ import {
                 topics: [
                     EventName.ReinitializeBalancers,
                 ],
-                clientId: "kani-interface",
+                serviceName: ServiceName.KaniInterface,
             },
         }),
         SocketIoCoreModule.register({
@@ -203,7 +206,7 @@ import {
         }),
         WinstonModule.register({
             isGlobal: true,
-            appName: "Kani Interface",
+            serviceName: ServiceName.KaniInterface,
             level: WinstonLevel.Info,
         }),
         SentryModule.register({

@@ -1,0 +1,27 @@
+services:
+  consul:
+    image: bitnamilegacy/consul:latest
+    container_name: consul
+    ports:
+      - "8500:8500"     # UI + HTTP API
+      - "8600:8600/udp" # DNS
+    environment:
+      - CONSUL_BIND_INTERFACE=eth0
+      - CONSUL_CLIENT_INTERFACE=eth0
+      - CONSUL_LOCAL_CONFIG={"datacenter":"dc1","server":true,"bootstrap_expect":1,"ui":true}
+    volumes:
+      - consul-data:/bitnami
+
+  consul-exporter:
+    image: prom/consul-exporter:latest
+    container_name: consul-exporter
+    depends_on:
+      - consul
+    ports:
+      - "9107:9107"
+    command:
+      - "--consul.server=host.docker.internal:8500"
+
+volumes:
+  consul-data:
+    driver: local

@@ -42,7 +42,7 @@ import {
         }),
         WinstonModule.register({
             isGlobal: true,
-            appName: "Kani Observer",
+            serviceName: ServiceName.KaniObserver,
             level: WinstonLevel.Info,
         }),
         EventEmitterModule.forRoot(),

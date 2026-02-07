@@ -1,0 +1,15 @@
+scrape_configs:
+  - job_name: "consul-exporter"
+    static_configs:
+      - targets: ["host.docker.internal:9107"]
+
+  - job_name: "kani-executor"
+    metrics_path: /api/metrics
+    consul_sd_configs:
+      - server: "host.docker.internal:8500"
+        services: ["kani-executor"]
+
+    relabel_configs:
+      - source_labels: [__meta_consul_service_address, __meta_consul_service_port]
+        separator: ":"
+        target_label: __address__
