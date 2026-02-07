@@ -65,25 +65,22 @@ import {
     OnEvent 
 } from "@nestjs/event-emitter"
 import {
-    EventName, LockAuthorityTimeoutEventPayload 
+    EventName, 
+    LockAuthorityTimeoutEventPayload 
 } from "@modules/event"
 import {
     PrepareService 
 } from "./prepare.service"
 import {
     SendHeartbeatService 
-} from "./send-heartbeat.service"
+} from "../common"
 import {
-    OnCompletedService 
-} from "./on-completed.service"
-import {
-    OnFailedService 
-} from "./on-failed.service"
-import {
-    ClearService 
-} from "./clear.service"
-import {
-    ProcessParams 
+    ClearService,
+    OnCompletedService,
+    OnFailedService
+} from "../common"
+import type {
+    ProcessParams,
 } from "./types"
 import {
     ExecuteService 
@@ -156,7 +153,7 @@ export class OpenPositionWorker extends WorkerHost {
     ): Promise<void> {
         // Deserialize the job payload (SuperJSON) into a typed open-position payload.
         const payload = this.superJson.parse<OpenPositionPayload>(bullmqJob.data)
-        const { botId, jobId, liquidityPoolId, dynamicLiquidityPoolInfo } = payload
+        const { botId, jobId, liquidityPoolId, state } = payload
         const [result,
             error] = await this.asyncService.resolveTuple(
             (async () => {
@@ -258,7 +255,7 @@ export class OpenPositionWorker extends WorkerHost {
                     bot,
                     job,
                     liquidityPool,
-                    dynamicLiquidityPoolInfo,
+                    state,
                     targetToken,
                     quoteToken,
                     gasToken,
@@ -303,7 +300,7 @@ export class OpenPositionWorker extends WorkerHost {
             // Liquidity pool.
             liquidityPool,
             // Liquidity pool state.
-            dynamicLiquidityPoolInfo: dynamicLiquidityPoolInfo ?? await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool),
+            state: state ?? await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool),
             // Target token.
             targetToken,
             // Quote token.
@@ -315,15 +312,15 @@ export class OpenPositionWorker extends WorkerHost {
         try {
             // PREPARE phase
             // Prepare open-position transaction + persist Prepared status/metadata.
-            const { result: prepareResult } = await this.prepareService.process(baseParams)
+            const prepareResult = await this.prepareService.process(baseParams)
             // HEARTBEAT phase (before any side-effecting continuation)
             await this.sendHeartbeatService.process(baseParams)
             // EXECUTE phase
             // Execute open-position transaction + persist Executed status/metadata.
-            const { result: executeResult } = await this.executeService.process(
+            const executeResult = await this.executeService.process(
                 {
                     ...baseParams,
-                    prepareResult,
+                    prepareResult
                 }
             )
             // HEARTBEAT phase (before post-transaction persistence)
@@ -340,7 +337,13 @@ export class OpenPositionWorker extends WorkerHost {
             await this.sendHeartbeatService.process(baseParams)
             // ON COMPLETED phase
             // Mark job completed, clear bot activeJob, release lock authority.
-            this.onCompletedService.process(baseParams)
+            await this.onCompletedService.process({
+                job: baseParams.job,
+                bot: baseParams.bot,
+                bullmqJob: baseParams.bullmqJob,
+                queueName: BullQueueName.OpenPosition,
+                liquidityPool: baseParams.liquidityPool,
+            })
         } catch (error) {
             // ON FAILED phase
             // Persist failure status/logs (retryable vs permanent vs unrecoverable) and rethrow.
@@ -351,6 +354,7 @@ export class OpenPositionWorker extends WorkerHost {
                     ...baseParams,
                     // Attach error for classification + persistence.
                     error: error as Error,
+                    queueName: BullQueueName.OpenPosition,
                 }
             )
         }

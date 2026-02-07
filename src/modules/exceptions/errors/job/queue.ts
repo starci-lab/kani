@@ -10,7 +10,7 @@ import type {
     CannotClosePositionEnqueueJobReason,
 } from "../../enums"
 
-export interface CannotOpenPositionEnqueueJobExceptionMetadata {
+export interface CannotOpenPositionEnqueueJobExceptionMetadata extends AbstractException{
     jobId: string
     botId: string
     liquidityPoolId: LiquidityPoolId
@@ -21,18 +21,24 @@ export interface CannotOpenPositionEnqueueJobExceptionMetadata {
 /** Thrown when open position job cannot be enqueued. */
 export class CannotEnqueueOpenPositionJobException extends AbstractException {
     constructor(
-        { jobId, botId, liquidityPoolId, reason, error }: CannotOpenPositionEnqueueJobExceptionMetadata
+        {
+            jobId,
+            botId,
+            liquidityPoolId,
+            reason,
+            error,
+        }: CannotOpenPositionEnqueueJobExceptionMetadata,
     ) {
         super(
-            "Cannot enqueue open position job", 
-            "CANNOT_ENQUEUE_OPEN_POSITION_JOB", 
+            "Cannot enqueue open position job",
+            "CANNOT_ENQUEUE_OPEN_POSITION_JOB",
             {
                 jobId,
                 botId,
                 liquidityPoolId,
                 reason,
                 error,
-            }
+            },
         )
     }
 }
@@ -75,7 +81,7 @@ export class CannotEnqueueReconcileBalanceJobException extends AbstractException
     }
 }
 
-export interface CannotClosePositionEnqueueJobExceptionMetadata {
+export interface CannotClosePositionEnqueueJobExceptionMetadata extends AbstractException{
     jobId: string
     botId: string
     liquidityPoolId: LiquidityPoolId
@@ -87,11 +93,18 @@ export interface CannotClosePositionEnqueueJobExceptionMetadata {
 /** Thrown when close position job cannot be enqueued. */
 export class CannotEnqueueClosePositionJobException extends AbstractException {
     constructor(
-        { jobId, botId, liquidityPoolId, reason, error, settleReason }: CannotClosePositionEnqueueJobExceptionMetadata
+        {
+            jobId,
+            botId,
+            liquidityPoolId,
+            reason,
+            error,
+            settleReason,
+        }: CannotClosePositionEnqueueJobExceptionMetadata,
     ) {
         super(
-            "Cannot enqueue close position job", 
-            "CANNOT_ENQUEUE_CLOSE_POSITION_JOB", 
+            "Cannot enqueue close position job",
+            "CANNOT_ENQUEUE_CLOSE_POSITION_JOB",
             {
                 jobId,
                 botId,
@@ -99,7 +112,7 @@ export class CannotEnqueueClosePositionJobException extends AbstractException {
                 reason,
                 error,
                 settleReason,
-            }
+            },
         )
     }
 }

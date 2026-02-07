@@ -81,10 +81,6 @@ import {
     ExecutorNotFoundMessage,
     ReconcileBalanceProcessingStartedMessage,
     ReconcileBalanceJobCompletedMessage,
-    ReconcileBalanceJobFailedPermanentFailureMessage,
-    ReconcileBalanceJobFailedUnrecoverableMessage,
-    ReconcileBalanceJobFailedFatalMessage,
-    ReconcileBalanceJobFailedRetryableMessage,
     WithdrawJobEnqueueFailedMessage,
     WithdrawJobScheduledMessage,
     WithdrawJobEnqueuedMessage,
@@ -92,10 +88,6 @@ import {
     WithdrawJobRequeueFailedMessage,
     WithdrawJobStartedMessage,
     WithdrawJobCompletedMessage,
-    WithdrawJobFailedPermanentFailureMessage,
-    WithdrawJobFailedUnrecoverableMessage,
-    WithdrawJobFailedFatalMessage,
-    WithdrawJobFailedRetryableMessage,
     PriceDiagnosticFailedMessage,
     PriceDiagnosticSuccessMessage,
     PriceDiagnosticFailedNotFoundMessage,
@@ -127,16 +119,9 @@ import {
     ClosePositionJobAlreadyConfirmedMessage,
     ClosePositionJobConfirmedMessage,
     OpenPositionJobAlreadyPreparedMessage,
-    ClosePositionJobFailedUnrecoverableMessage,
-    ClosePositionJobFailedFatalMessage,
-    ClosePositionJobFailedPermanentFailureMessage,
-    ClosePositionJobFailedRetryableMessage,
     ClosePositionJobCompletedMessage,
     ClosePositionRequeueFailedMessage,
-    OpenPositionJobFailedUnrecoverableMessage,
-    OpenPositionJobFailedFatalMessage,
-    OpenPositionJobFailedPermanentFailureMessage,
-    OpenPositionJobFailedRetryableMessage,
+    JobFailedMessage,
     OpenPositionJobCompletedMessage,
     OpenPositionRequeueFailedMessage,
     OpenPositionJobStartedMessage,
@@ -1000,69 +985,21 @@ export const configMap = {
         messageType: {
         } as WithdrawJobStartedMessage,
     },
-    // Reconcile Balance Job Failed Unrecoverable
-    [WinstonLog.ReconcileBalanceJobFailedUnrecoverable]: {
-        name: WinstonLog.ReconcileBalanceJobFailedUnrecoverable,
+    // Reconcile Balance Job Failed
+    [WinstonLog.ReconcileBalanceJobFailed]: {
+        name: WinstonLog.ReconcileBalanceJobFailed,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as ReconcileBalanceJobFailedUnrecoverableMessage,
+        } as JobFailedMessage,
     },
-    // Reconcile Balance Job Failed Fatal
-    [WinstonLog.ReconcileBalanceJobFailedFatal]: {
-        name: WinstonLog.ReconcileBalanceJobFailedFatal,
+    // Withdraw Job Failed
+    [WinstonLog.WithdrawJobFailed]: {
+        name: WinstonLog.WithdrawJobFailed,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as ReconcileBalanceJobFailedFatalMessage,
-    },
-    // Reconcile Balance Job Failed Permanent Failure
-    [WinstonLog.ReconcileBalanceJobFailedPermanentFailure]: {
-        name: WinstonLog.ReconcileBalanceJobFailedPermanentFailure,
-        level: WinstonLevel.Error,
-        loki: true,
-        messageType: {
-        } as ReconcileBalanceJobFailedPermanentFailureMessage,
-    },
-    // Reconcile Balance Job Failed Retryable
-    [WinstonLog.ReconcileBalanceJobFailedRetryable]: {
-        name: WinstonLog.ReconcileBalanceJobFailedRetryable,
-        level: WinstonLevel.Error,
-        loki: true,
-        messageType: {
-        } as ReconcileBalanceJobFailedRetryableMessage,
-    },
-    // Withdraw Job Failed Unrecoverable
-    [WinstonLog.WithdrawJobFailedUnrecoverable]: {
-        name: WinstonLog.WithdrawJobFailedUnrecoverable,
-        level: WinstonLevel.Error,
-        loki: true,
-        messageType: {
-        } as WithdrawJobFailedUnrecoverableMessage,
-    },
-    // Withdraw Job Failed Fatal
-    [WinstonLog.WithdrawJobFailedFatal]: {
-        name: WinstonLog.WithdrawJobFailedFatal,
-        level: WinstonLevel.Error,
-        loki: true,
-        messageType: {
-        } as WithdrawJobFailedFatalMessage,
-    },
-    // Withdraw Job Failed Permanent Failure
-    [WinstonLog.WithdrawJobFailedPermanentFailure]: {
-        name: WinstonLog.WithdrawJobFailedPermanentFailure,
-        level: WinstonLevel.Error,
-        loki: true,
-        messageType: {
-        } as WithdrawJobFailedPermanentFailureMessage,
-    },
-    // Withdraw Job Failed Retryable
-    [WinstonLog.WithdrawJobFailedRetryable]: {
-        name: WinstonLog.WithdrawJobFailedRetryable,
-        level: WinstonLevel.Error,
-        loki: true,
-        messageType: {
-        } as WithdrawJobFailedRetryableMessage,
+        } as JobFailedMessage,
     },
     // Price Diagnostic Failed
     [WinstonLog.PriceDiagnosticFailed]: {
@@ -1312,37 +1249,13 @@ export const configMap = {
         messageType: {
         } as ClosePositionJobConfirmedMessage,
     },
-    // Close Position Job Failed Unrecoverable
-    [WinstonLog.ClosePositionJobFailedUnrecoverable]: {
-        name: WinstonLog.ClosePositionJobFailedUnrecoverable,
+    // Close Position Job Failed
+    [WinstonLog.ClosePositionJobFailed]: {
+        name: WinstonLog.ClosePositionJobFailed,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as ClosePositionJobFailedUnrecoverableMessage,
-    },
-    // Close Position Job Failed Fatal
-    [WinstonLog.ClosePositionJobFailedFatal]: {
-        name: WinstonLog.ClosePositionJobFailedFatal,
-        level: WinstonLevel.Error,
-        loki: true,
-        messageType: {
-        } as ClosePositionJobFailedFatalMessage,
-    },
-    // Close Position Job Failed Permanent Failure
-    [WinstonLog.ClosePositionJobFailedPermanentFailure]: {
-        name: WinstonLog.ClosePositionJobFailedPermanentFailure,
-        level: WinstonLevel.Error,
-        loki: true,
-        messageType: {
-        } as ClosePositionJobFailedPermanentFailureMessage,
-    },
-    // Close Position Job Failed Retryable
-    [WinstonLog.ClosePositionJobFailedRetryable]: {
-        name: WinstonLog.ClosePositionJobFailedRetryable,
-        level: WinstonLevel.Error,
-        loki: true,
-        messageType: {
-        } as ClosePositionJobFailedRetryableMessage,
+        } as JobFailedMessage,
     },
     // Close Position Job Completed
     [WinstonLog.ClosePositionJobCompleted]: {
@@ -1352,37 +1265,13 @@ export const configMap = {
         messageType: {
         } as ClosePositionJobCompletedMessage,
     },
-    // Open Position Job Failed Unrecoverable
-    [WinstonLog.OpenPositionJobFailedUnrecoverable]: {
-        name: WinstonLog.OpenPositionJobFailedUnrecoverable,
+    // Open Position Job Failed
+    [WinstonLog.OpenPositionJobFailed]: {
+        name: WinstonLog.OpenPositionJobFailed,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as OpenPositionJobFailedUnrecoverableMessage,
-    },
-    // Open Position Job Failed Fatal
-    [WinstonLog.OpenPositionJobFailedFatal]: {
-        name: WinstonLog.OpenPositionJobFailedFatal,
-        level: WinstonLevel.Error,
-        loki: true,
-        messageType: {
-        } as OpenPositionJobFailedFatalMessage,
-    },
-    // Open Position Job Failed Permanent Failure
-    [WinstonLog.OpenPositionJobFailedPermanentFailure]: {
-        name: WinstonLog.OpenPositionJobFailedPermanentFailure,
-        level: WinstonLevel.Error,
-        loki: true,
-        messageType: {
-        } as OpenPositionJobFailedPermanentFailureMessage,
-    },
-    // Open Position Job Failed Retryable
-    [WinstonLog.OpenPositionJobFailedRetryable]: {
-        name: WinstonLog.OpenPositionJobFailedRetryable,
-        level: WinstonLevel.Error,
-        loki: true,
-        messageType: {
-        } as OpenPositionJobFailedRetryableMessage,
+        } as JobFailedMessage,
     },
     // Open Position Job Completed
     [WinstonLog.OpenPositionJobCompleted]: {

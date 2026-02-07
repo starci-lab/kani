@@ -2,6 +2,7 @@ import {
     Injectable,
 } from "@nestjs/common"
 import {
+    AddTransactionRecordParams,
     BalanceFetcherService,
     BalanceSnapshotService,
     TransactionSnapshotService,
@@ -12,12 +13,14 @@ import {
     JobSchema,
     JobStatus,
     LiquidityPoolType,
+    TransactionType,
 } from "@modules/databases"
 import {
     Connection,
 } from "mongoose"
-import {
+import type {
     ConfirmParams,
+    ConfirmResult,
 } from "./types"
 import {
     WinstonLog,
@@ -38,6 +41,12 @@ import {
     DayjsService 
 } from "@modules/mixin"
 
+/**
+ * Service for the CONFIRM phase of open-position jobs.
+ *
+ * @example
+ * await confirmService.process(params)
+ */
 @Injectable()
 export class ConfirmService {
     constructor(
@@ -72,9 +81,9 @@ export class ConfirmService {
             targetToken,
             quoteToken,
             gasToken,
-            dynamicLiquidityPoolInfo
+            state,
         }: ConfirmParams
-    ) {
+    ): Promise<ConfirmResult> {
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Confirmed)
         ) {
@@ -91,18 +100,12 @@ export class ConfirmService {
             return
         }
         if (!envConfig().executor.runtime.operation.openPosition.stimulate) {
-            const { 
-                transactionRecords, 
-                openPositionTransaction, 
-                executeResult: _executeResult    
-            } = executeResult
+            const positionId = executeResult?.data?.executeResult?.positionId ?? ""
             // confirm the position
             const { liquidity } = await this.openPositionActionService.confirm({
-                positionId: _executeResult?.positionId ?? "",
-                state: {
-                    static: liquidityPool,
-                    dynamic: dynamicLiquidityPoolInfo,
-                },
+                positionId,
+                state,
+                liquidityPool,
                 bot,
             })
             // re-fetch balances post execution
@@ -127,13 +130,17 @@ export class ConfirmService {
                             }
                         )
                     }
-                    if (transactionRecords?.length) {
-                        for (const record of transactionRecords) {
+                    if (executeResult?.data?.executeResult?.txHashes?.length) {
+                        for (const txHash of executeResult?.data?.executeResult?.txHashes ?? []) {
+                            const params: AddTransactionRecordParams = {
+                                bot,
+                                txHash,
+                                chainId: liquidityPool.chainId,
+                                type: TransactionType.OpenPosition,
+                                session,
+                            }
                             await this.transactionSnapshotService.addTransactionRecord(
-                                {
-                                    ...record,
-                                    session,
-                                },
+                                params
                             )
                         }
                     }
@@ -160,23 +167,23 @@ export class ConfirmService {
                                 gasBalanceAmount,
                             },
                             liquidityPool,
-                            feeTargetAmount: targetIsA ? openPositionTransaction.feeAmountA : openPositionTransaction.feeAmountB,
-                            feeQuoteAmount: targetIsA ? openPositionTransaction.feeAmountB : openPositionTransaction.feeAmountA,
+                            feeTargetAmount: targetIsA ? executeResult?.data?.prepareResult?.feeAmountA ?? new BN(0) : executeResult?.data?.prepareResult?.feeAmountB ?? new BN(0),
+                            feeQuoteAmount: targetIsA ? executeResult?.data?.prepareResult?.feeAmountB ?? new BN(0) : executeResult?.data?.prepareResult?.feeAmountA ?? new BN(0),
                             targetToken,
                             quoteToken,
                             gasToken,
-                            positionId: _executeResult?.positionId ?? "",
-                            openTxHashes: transactionRecords?.map((record) => record.txHash) ?? [],
+                            positionId: positionId ?? "",
+                            openTxHashes: executeResult?.data?.executeResult?.txHashes ?? [],
                             clmmParams: liquidityPool.type === LiquidityPoolType.Clmm ? {
                                 liquidity: liquidity ?? new BN(0),
-                                tickLower: openPositionTransaction?.tickLower ?? new BN(0),
-                                tickUpper: openPositionTransaction?.tickUpper ?? new BN(0),
+                                tickLower: executeResult?.data?.prepareResult?.tickLower ?? new BN(0),
+                                tickUpper: executeResult?.data?.prepareResult?.tickUpper ?? new BN(0),
                             } : undefined,
                             dlmmParams: liquidityPool.type === LiquidityPoolType.Dlmm ? {
-                                minBinId: openPositionTransaction?.minBinId ?? new BN(0),
-                                maxBinId: openPositionTransaction?.maxBinId ?? new BN(0),
+                                minBinId: executeResult?.data?.prepareResult?.minBinId ?? new BN(0),
+                                maxBinId: executeResult?.data?.prepareResult?.maxBinId ?? new BN(0),
                             } : undefined,
-                            metadata: openPositionTransaction.metadata,
+                            metadata: executeResult?.data?.prepareResult?.metadata,
                             session,
                         }
                     )

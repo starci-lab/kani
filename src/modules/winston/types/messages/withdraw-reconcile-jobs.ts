@@ -1,9 +1,6 @@
-/** Balance amounts (target / quote / gas) used in reconcile-balance and related logs. */
-export interface BalanceAmounts {
-    targetBalanceAmount: string
-    quoteBalanceAmount: string
-    gasBalanceAmount: string
-}
+import type {
+    BalanceAmounts,
+} from "@modules/common"
 
 export interface ReconcileBalanceEnqueueFailedMessage {
     botId: string
@@ -57,41 +54,12 @@ export interface ReconcileBalanceProcessingStartedMessage {
     bullmqJobId?: string
 }
 
-export interface ReconcileBalanceJobFailedUnrecoverableMessage {
-    botId: string
-    jobId: string
-    bullmqJobId?: string
-    error: string
-}
-
-export interface ReconcileBalanceJobFailedFatalMessage {
-    botId: string
-    jobId: string
-    bullmqJobId?: string
-    error: string
-}
-
-export interface ReconcileBalanceJobFailedPermanentFailureMessage {
-    botId: string
-    jobId: string
-    bullmqJobId?: string
-    error: string
-}
-
-export interface ReconcileBalanceJobFailedRetryableMessage {
-    botId: string
-    jobId: string
-    bullmqJobId?: string
-    error: string
-    attemptsMade: number
-}
-
 export interface ReconcileBalanceJobAlreadyPreparedMessage {
     botId: string
     jobId: string
     ageMs: number
     quoteRatioResult?: object
-    balanceAmounts: BalanceAmounts
+    balanceAmounts?: BalanceAmounts
     txHashes?: Array<string>
 }
 
@@ -174,35 +142,6 @@ export interface WithdrawJobStartedMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
-}
-
-export interface WithdrawJobFailedUnrecoverableMessage {
-    botId: string
-    jobId: string
-    bullmqJobId?: string
-    error: string
-}
-
-export interface WithdrawJobFailedFatalMessage {
-    botId: string
-    jobId: string
-    bullmqJobId?: string
-    error: string
-}
-
-export interface WithdrawJobFailedPermanentFailureMessage {
-    botId: string
-    jobId: string
-    bullmqJobId?: string
-    error: string
-}
-
-export interface WithdrawJobFailedRetryableMessage {
-    botId: string
-    jobId: string
-    bullmqJobId?: string
-    error: string
-    attemptsMade: number
 }
 
 export interface WithdrawRequeueFailedMessage {

@@ -1,4 +1,6 @@
-import type { TokenId } from "../enums"
+import type {
+    TokenId 
+} from "../enums"
 
 /** Metadata for swap transaction. */
 export interface SwapTransactionMetadata {

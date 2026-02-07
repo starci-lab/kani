@@ -1,4 +1,6 @@
-import type { TokenId } from "../enums"
+import type {
+    TokenId 
+} from "../enums"
 
 /** Raydium CLMM liquidity pool metadata. */
 export interface RaydiumLiquidityPoolMetadata {

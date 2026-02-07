@@ -1,57 +1,52 @@
 import {
-    Injectable
+    Injectable,
 } from "@nestjs/common"
-import {
+import type {
     ExecuteParams,
     ExecuteResult,
-    ReconcileBalanceJobData
+    ReconcileBalanceJobData,
 } from "./types"
 import {
     BalanceActionService,
-    PrepareReconcileBalanceTransactionResult
 } from "@modules/blockchains/balance"
 import {
     getJobStatusOrder,
     InjectPrimaryMongoose,
     JobSchema,
     JobStatus,
-    TransactionType,
 } from "@modules/databases"
 import {
-    Connection
+    Connection,
 } from "mongoose"
 import {
     WinstonLog,
-    WinstonService 
+    WinstonService,
 } from "@modules/winston"
 import {
-    envConfig 
+    envConfig,
 } from "@modules/env"
 import {
     DayjsService,
     AsyncService,
-    InjectSuperJson,
 } from "@modules/mixin"
 import {
-    AbstractException,
-    ReconcileBalanceJobExecutedFailedException,
+    ExecuteReconcileBalanceTransactionResultNotFoundException,
+    JobFailureException,
+    JobFailureStrategy,
 } from "@modules/exceptions"
 import {
-    FatalError,
-} from "../fatal"
-import {
-    UnrecoverableError,
-} from "bullmq"
-import {
-    ToStringObject 
+    ToStringObject,
 } from "@modules/common"
 import {
-    SuperJSON 
-} from "superjson"
-import {
-    AddTransactionRecordParams 
-} from "@modules/blockchains"
+    SerializerService,
+} from "../common"
 
+/**
+ * Service for the EXECUTE phase of reconcile-balance jobs.
+ *
+ * @example
+ * const result = await executeService.process(params)
+ */
 @Injectable()
 export class ExecuteService {
     constructor(
@@ -61,17 +56,17 @@ export class ExecuteService {
         private readonly winstonService: WinstonService,
         private readonly dayjsService: DayjsService,
         private readonly asyncService: AsyncService,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
+        private readonly serializerService: SerializerService,
     ) {}
 
     /**
-     * EXECUTE phase.
+     * EXECUTE phase: executes prepared swaps, persists PREPARED → EXECUTED.
      *
-     * Executes prepared swap transactions and persists a state transition:
-     * PREPARED → EXECUTED. Also returns `transactionRecords` for the CONFIRM phase.
+     * @param params - Execute params (job, bot, prepareResult, payload, ...)
+     * @returns Execute result with executeResult data
      *
-     * Idempotency: if the job is already at/after EXECUTED, returns the existing metadata.
+     * @example
+     * const result = await executeService.process(params)
      */
     async process(
         {
@@ -83,16 +78,13 @@ export class ExecuteService {
         }: ExecuteParams
     ): Promise<ExecuteResult> {
         const isRetry = bullmqJob.attemptsMade > 0
-        // Guard: if job already passed EXECUTED phase, do nothing
+        // guard: idempotency (return persisted data if already executed)
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Executed)
         ) {
-            const { 
-                reconcileBalanceTransaction: stringifiedReconcileBalanceTransaction,
-                transactionRecords: stringifiedTransactionRecords,
-            } = job.data as ToStringObject<ReconcileBalanceJobData>
-            const reconcileBalanceTransaction = stringifiedReconcileBalanceTransaction ? this.superJson.parse<PrepareReconcileBalanceTransactionResult>(stringifiedReconcileBalanceTransaction) : undefined
-            const transactionRecords = stringifiedTransactionRecords ? this.superJson.parse<Array<AddTransactionRecordParams>>(stringifiedTransactionRecords) : undefined
+            const jobData = this.serializerService.deserialize<ReconcileBalanceJobData>(
+                job.data as Partial<ToStringObject<ReconcileBalanceJobData>>
+            )
             this.winstonService.log(
                 WinstonLog.ReconcileBalanceJobAlreadyExecuted,
                 {
@@ -103,14 +95,11 @@ export class ExecuteService {
                 }
             )
             return {
-                result: {
-                    reconcileBalanceTransaction,
-                    transactionRecords,
-                }
+                data: jobData,
             }
         }
 
-        const { reconcileBalanceTransaction } = prepareResult
+        const prepareTxs = prepareResult?.data?.prepareResult?.prepareTxs ?? []
         const [
             executeResult, 
             error,
@@ -118,46 +107,44 @@ export class ExecuteService {
             this.balanceActionService.executeReconcileBalanceTransaction(
                 {
                     bot,
-                    prepareTxs: reconcileBalanceTransaction?.prepareTxs ?? [],
+                    prepareTxs: prepareTxs ?? [],
                     isRetry: isRetry || (payload.isRetry ?? false),
                     stimulate: envConfig().executor.runtime.operation.reconcileBalance.stimulate,
                 }
             ),
         )
         if (error) {
-            const failedError = new ReconcileBalanceJobExecutedFailedException({
+            throw new JobFailureException({
+                strategy: JobFailureStrategy.Requeue,
                 originalError: error,
+            })
+        }
+        if (!executeResult) {
+            throw new ExecuteReconcileBalanceTransactionResultNotFoundException({
                 botId: bot.id,
                 jobId: job.id,
             })
-            if (error instanceof AbstractException) {
-                throw new FatalError(failedError.toJSON())
-            }
-            throw new UnrecoverableError(failedError.toJSON())
         }
-        const transactionRecords: Array<AddTransactionRecordParams> = executeResult?.txHashes?.map((txHash) => ({
-            bot,
-            txHash,
-            chainId: bot.chainId,
-            type: TransactionType.ReconcileBalance,
-        })) ?? []
-        await this.connection
-            .model<JobSchema>(JobSchema.name)
-            .updateOne(
-                {
-                    _id: job.id
+        const data = this.serializerService.serialize<Partial<ReconcileBalanceJobData>>({
+            executeResult,
+        })
+        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            {
+                _id: {
+                    $eq: job._id,
                 },
-                {
-                    $set: {
-                        status: JobStatus.Executed,
-                        "data.transactionRecords": this.superJson.stringify(transactionRecords),
-                    },
-                }
-            )
+            },
+            {
+                $set: {
+                    status: JobStatus.Executed,
+                    ...data,
+                },
+            }
+        )
         return {
-            result: {
-                reconcileBalanceTransaction,
-                transactionRecords,
+            data: {
+                prepareResult: prepareResult?.data?.prepareResult,
+                executeResult,
             }
         }
     }

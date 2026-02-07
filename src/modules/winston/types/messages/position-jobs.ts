@@ -119,36 +119,14 @@ export interface OpenPositionJobCompletedMessage {
     liquidityPoolId: LiquidityPoolId
 }
 
-export interface OpenPositionJobFailedUnrecoverableMessage {
+export interface JobFailedMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
     error: string
-    liquidityPoolId: LiquidityPoolId
-}
-
-export interface OpenPositionJobFailedFatalMessage {
-    botId: string
-    jobId: string
-    bullmqJobId?: string
-    error: string
-}
-
-export interface OpenPositionJobFailedPermanentFailureMessage {
-    botId: string
-    jobId: string
-    bullmqJobId?: string
-    error: string
-    liquidityPoolId: LiquidityPoolId
-}
-
-export interface OpenPositionJobFailedRetryableMessage {
-    botId: string
-    jobId: string
-    bullmqJobId?: string
-    error: string
-    attemptsMade: number
-    liquidityPoolId: LiquidityPoolId
+    liquidityPoolId?: string
+    attemptsMade?: number
+    strategy?: number
 }
 
 export interface OpenPositionRequeueFailedMessage {
@@ -201,38 +179,6 @@ export interface ClosePositionJobAlreadyConfirmedMessage {
 export interface ClosePositionJobConfirmedMessage {
     botId: string
     jobId: string
-    liquidityPoolId: LiquidityPoolId
-}
-
-export interface ClosePositionJobFailedUnrecoverableMessage {
-    botId: string
-    jobId: string
-    bullmqJobId?: string
-    error: string
-    liquidityPoolId: LiquidityPoolId
-}
-
-export interface ClosePositionJobFailedFatalMessage {
-    botId: string
-    jobId: string
-    bullmqJobId?: string
-    error: string
-}
-
-export interface ClosePositionJobFailedPermanentFailureMessage {
-    botId: string
-    jobId: string
-    bullmqJobId?: string
-    error: string
-    liquidityPoolId: LiquidityPoolId
-}
-
-export interface ClosePositionJobFailedRetryableMessage {
-    botId: string
-    jobId: string
-    bullmqJobId?: string
-    error: string
-    attemptsMade: number
     liquidityPoolId: LiquidityPoolId
 }
 

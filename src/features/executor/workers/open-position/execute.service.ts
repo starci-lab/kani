@@ -1,7 +1,7 @@
 import {
     Injectable
 } from "@nestjs/common"
-import {
+import type {
     ExecuteParams,
     ExecuteResult,
     OpenPositionJobData,
@@ -11,7 +11,6 @@ import {
     InjectPrimaryMongoose,
     JobSchema,
     JobStatus,
-    TransactionType,
 } from "@modules/databases"
 import {
     Connection
@@ -21,10 +20,7 @@ import {
     WinstonService 
 } from "@modules/winston"
 import {
-    AddTransactionRecordParams,
     OpenPositionActionService,
-    PrepareOpenPositionResult,
-    ExecuteOpenPositionResult,
 } from "@modules/blockchains"
 import {
     envConfig 
@@ -33,26 +29,27 @@ import {
     ToStringObject 
 } from "@modules/common"
 import {
-    InjectSuperJson,
     DayjsService
 } from "@modules/mixin"
 import {
     AsyncService 
 } from "@modules/mixin"
 import {
-    SuperJSON 
-} from "superjson"
-import {
     AbstractException,
-    OpenPositionJobExecutedFailedException,
+    ExecuteOpenPositionResultNotFoundException,
+    JobFailureException,
+    JobFailureStrategy,
 } from "@modules/exceptions"
 import {
-    FatalError 
-} from "../fatal"
-import {
-    UnrecoverableError 
-} from "bullmq"
+    SerializerService 
+} from "../common"
 
+/**
+ * Service for the EXECUTE phase of open-position jobs.
+ *
+ * @example
+ * const result = await executeService.process(params)
+ */
 @Injectable()
 export class ExecuteService {
     constructor(
@@ -60,10 +57,9 @@ export class ExecuteService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
         private readonly dayjsService: DayjsService,
         private readonly asyncService: AsyncService,
+        private readonly serializerService: SerializerService,
     ) {}
 
     /**
@@ -81,7 +77,7 @@ export class ExecuteService {
             bullmqJob,
             prepareResult,
             payload,
-            dynamicLiquidityPoolInfo,
+            state,
             liquidityPool,
         }: ExecuteParams
     ): Promise<ExecuteResult> {
@@ -90,14 +86,9 @@ export class ExecuteService {
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Executed)
         ) {
-            const { 
-                openPositionTransaction: stringifiedOpenPositionTransaction, 
-                executeResult: stringifiedExecuteResult, 
-                transactionRecords: stringifiedTransactionRecords 
-            } = job.data as ToStringObject<OpenPositionJobData>
-            const openPositionTransaction = this.superJson.parse<PrepareOpenPositionResult>(stringifiedOpenPositionTransaction)
-            const executeResult = stringifiedExecuteResult ? this.superJson.parse<ExecuteOpenPositionResult>(stringifiedExecuteResult) : undefined
-            const transactionRecords = stringifiedTransactionRecords ? this.superJson.parse<Array<AddTransactionRecordParams>>(stringifiedTransactionRecords) : undefined
+            const jobData = this.serializerService.deserialize<OpenPositionJobData>(
+                job.data as Partial<ToStringObject<OpenPositionJobData>>
+            )
             this.winstonService.log(
                 WinstonLog.OpenPositionJobAlreadyExecuted,
                 {
@@ -109,57 +100,49 @@ export class ExecuteService {
                 }
             )
             return {
-                result: {
-                    openPositionTransaction,
-                    executeResult,
-                    transactionRecords,
-                }
+                data: jobData,
             }
         }
-        const { openPositionTransaction } = prepareResult
         const stimulate = envConfig().executor.runtime.operation.openPosition.stimulate
         const [executeResult,
             error] = await this.asyncService.resolveTuple(
             this.openPositionActionService.execute(
                 {
                     bot,
-                    prepareTxs: openPositionTransaction.prepareTxs,
-                    state: {
-                        static: liquidityPool,
-                        dynamic: dynamicLiquidityPoolInfo,
-                    },
+                    prepareTxs: prepareResult?.data?.prepareResult?.prepareTxs ?? [],
+                    state,
+                    liquidityPool,
                     txCheck: isRetry || (payload.isRetry ?? false),
                     stimulate,
                 }
             )
         )
         if (error) {
-            // create a failed error
-            const failedError = new OpenPositionJobExecutedFailedException({
-                originalError: error,
-                botId: bot.id,
-                jobId: job.id,
-                liquidityPoolId: liquidityPool.displayId,
-            }
-            )
-            // if the error is throw intentionally, throw a fatal error to stop the job
+            // if the error is throw intentionally, throw a fatal error to let BullMQ handle the retry
             if (error instanceof AbstractException) {
-                throw new FatalError(failedError.toJSON())
+                throw new JobFailureException({
+                    strategy: JobFailureStrategy.Fatal,
+                    originalError: error,
+                })
             }
-            // if the error is not throw intentionally, throw an unrecoverable error to let BullMQ handle the retry
-            throw new UnrecoverableError(failedError.toJSON())
+            // if the error is not throw intentionally, throw a requeue error to let BullMQ handle the retry
+            throw new JobFailureException({
+                strategy: JobFailureStrategy.Requeue,
+                originalError: error,
+            })
         }
-        const txHashes = executeResult.txHashes ?? []
-        const transactionRecords: Array<AddTransactionRecordParams> = txHashes.map(
-            (txHash) => (
+        if (!executeResult) {
+            throw new ExecuteOpenPositionResultNotFoundException(
                 {
-                    bot,
-                    txHash,
-                    chainId: bot.chainId,
-                    type: TransactionType.OpenPosition,
+                    botId: bot.id,
+                    jobId: job.id,
+                    liquidityPoolId: liquidityPool.displayId,
                 }
-            ),
-        )
+            )
+        }
+        const data = this.serializerService.serialize<Partial<OpenPositionJobData>>({
+            executeResult,
+        })
         await this.connection
             .model<JobSchema>(JobSchema.name)
             .updateOne(
@@ -169,17 +152,15 @@ export class ExecuteService {
                 {
                     $set: {
                         status: JobStatus.Executed,
-                        "data.executeResult": this.superJson.stringify(executeResult),
-                        "data.transactionRecords": this.superJson.stringify(transactionRecords),
+                        ...data,
                     },
                 }
             )
         return {
-            result: {
-                ...prepareResult,
-                transactionRecords,
+            data: {
+                prepareResult: prepareResult?.data?.prepareResult,
                 executeResult,
-            }
+            },
         }
     }
 }

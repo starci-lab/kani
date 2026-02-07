@@ -1,7 +1,7 @@
 import {
     Injectable 
 } from "@nestjs/common"
-import {
+import type {
     PrepareParams,
     PrepareResult,
     WithdrawJobData,
@@ -57,6 +57,12 @@ import {
     FatalError,
 } from "../fatal"
 
+/**
+ * Service for the PREPARE phase of withdraw jobs.
+ *
+ * @example
+ * const result = await prepareService.process({ job, bot, payload })
+ */
 @Injectable()
 export class PrepareService {
     constructor(

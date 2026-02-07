@@ -1,8 +1,8 @@
-import type {
-    AbstractExceptionMetadata 
-} from "../abstract"
 import {
     AbstractException 
+} from "../abstract"
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
 import type {
     LiquidityPoolId 
@@ -11,7 +11,7 @@ import type {
 /**
  * Open Position Job Prepared Failed Exception Metadata
  */
-export interface OpenPositionJobPreparedFailedExceptionMetadata extends AbstractExceptionMetadata {
+export interface OpenPositionJobPreparedFailedExceptionMetadata extends AbstractExceptionMetadata{
     botId: string
     jobId: string
     liquidityPoolId: LiquidityPoolId
@@ -19,13 +19,14 @@ export interface OpenPositionJobPreparedFailedExceptionMetadata extends Abstract
 
 /** Thrown when open position job preparation fails. */
 export class OpenPositionJobPreparedFailedException extends AbstractException {
+
     constructor(
         {
             originalError,
             botId,
             jobId,
             liquidityPoolId,
-        }: OpenPositionJobPreparedFailedExceptionMetadata
+        }: OpenPositionJobPreparedFailedExceptionMetadata,
     ) {
         super(
             "Open position job prepared failed",
@@ -35,7 +36,7 @@ export class OpenPositionJobPreparedFailedException extends AbstractException {
                 botId,
                 jobId,
                 liquidityPoolId,
-            }
+            },
         )
     }
 }
@@ -43,19 +44,20 @@ export class OpenPositionJobPreparedFailedException extends AbstractException {
 /**
  * Reconcile Balance Job Prepared Failed Exception Metadata
  */
-export interface ReconcileBalanceJobPreparedFailedExceptionMetadata extends AbstractExceptionMetadata {
+export interface ReconcileBalanceJobPreparedFailedExceptionMetadata extends AbstractExceptionMetadata{
     botId: string
     jobId: string
 }
 
 /** Thrown when reconcile balance job preparation fails. */
 export class ReconcileBalanceJobPreparedFailedException extends AbstractException {
+
     constructor(
         {
             originalError,
             botId,
             jobId,
-        }: ReconcileBalanceJobPreparedFailedExceptionMetadata
+        }: ReconcileBalanceJobPreparedFailedExceptionMetadata,
     ) {
         super(
             "Reconcile balance job prepared failed",
@@ -64,7 +66,7 @@ export class ReconcileBalanceJobPreparedFailedException extends AbstractExceptio
                 originalError,
                 botId,
                 jobId,
-            }
+            },
         )
     }
 }
@@ -80,13 +82,14 @@ export interface ClosePositionJobPreparedFailedExceptionMetadata extends Abstrac
 
 /** Thrown when close position job preparation fails. */
 export class ClosePositionJobPreparedFailedException extends AbstractException {
+
     constructor(
         {
-            originalError, 
+            originalError,
             botId,
             jobId,
             liquidityPoolId,
-        }: ClosePositionJobPreparedFailedExceptionMetadata
+        }: ClosePositionJobPreparedFailedExceptionMetadata,
     ) {
         super(
             "Close position job prepared failed",
@@ -96,13 +99,13 @@ export class ClosePositionJobPreparedFailedException extends AbstractException {
                 botId,
                 jobId,
                 liquidityPoolId,
-            }   
+            },
         )
     }
 }
 
 /**
- * Close Position Job Prepared Failed Exception Metadata
+ * Withdraw Job Prepared Failed Exception Metadata
  */
 export interface WithdrawJobPreparedFailedExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
@@ -111,12 +114,13 @@ export interface WithdrawJobPreparedFailedExceptionMetadata extends AbstractExce
 
 /** Thrown when withdraw job preparation fails. */
 export class WithdrawJobPreparedFailedException extends AbstractException {
+
     constructor(
         {
             originalError,
             botId,
             jobId,
-        }: WithdrawJobPreparedFailedExceptionMetadata
+        }: WithdrawJobPreparedFailedExceptionMetadata,
     ) {
         super(
             "Withdraw job prepared failed",
@@ -125,7 +129,7 @@ export class WithdrawJobPreparedFailedException extends AbstractException {
                 originalError,
                 botId,
                 jobId,
-            }
+            },
         )
     }
 }

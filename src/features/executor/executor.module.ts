@@ -36,7 +36,6 @@ export class ExecutorModule extends ConfigurableModuleClass {
                 RuntimesModule.register({
                     isGlobal: true,
                 }),
-
                 BussinessModule.register({
                     isGlobal: true,
                 }),

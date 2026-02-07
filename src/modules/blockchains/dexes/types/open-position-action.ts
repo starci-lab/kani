@@ -56,7 +56,7 @@ export interface ExecuteOpenPositionParams {
 export interface ExecuteOpenPositionResult {
     positionId: string
     txHashes: Array<string>
-}
+} 
 
 /**
  * Service interface for open position actions.

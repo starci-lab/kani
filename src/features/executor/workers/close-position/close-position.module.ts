@@ -2,6 +2,12 @@ import {
     Module,
 } from "@nestjs/common"
 import {
+    ClearService,
+    OnCompletedService,
+    OnFailedService,
+    SendHeartbeatService,
+} from "../common"
+import {
     ConfigurableModuleClass,
 } from "./close-position.module-definition"
 import {
@@ -16,18 +22,6 @@ import {
 import {
     ConfirmService,
 } from "./confirm.service"
-import {
-    SendHeartbeatService,
-} from "./send-heartbeat.service"
-import {
-    OnCompletedService,
-} from "./on-completed.service"
-import {
-    OnFailedService,
-} from "./on-failed.service"
-import {
-    ClearService,
-} from "./clear.service"
 import {
     RequeueService,
 } from "./requeue.service"

@@ -64,27 +64,21 @@ import {
 } from "@modules/mixin"
 import SuperJSON from "superjson"
 import {
+    ClearService,
+    OnCompletedService,
+    OnFailedService,
+    SendHeartbeatService,
+} from "../common"
+import {
     PrepareService,
 } from "./prepare.service"
 import {
     ExecuteService,
 } from "./execute.service"
 import {
-    SendHeartbeatService,
-} from "./send-heartbeat.service"
-import {
     ConfirmService,
 } from "./confirm.service"
-import {
-    OnCompletedService,
-} from "./on-completed.service"
-import {
-    OnFailedService,
-} from "./on-failed.service"
-import {
-    ClearService,
-} from "./clear.service"
-import {
+import type {
     ProcessParams,
 } from "./types"
 import {
@@ -276,17 +270,20 @@ export class WithdrawWorker extends WorkerHost {
             await this.sendHeartbeatService.process(baseParams)
             // ON COMPLETED phase
             // Mark job completed, clear bot activeJob, release lock authority.
-            await this.onCompletedService.process(baseParams)
+            await this.onCompletedService.process({
+                job: baseParams.job,
+                bot: baseParams.bot,
+                bullmqJob: baseParams.bullmqJob,
+                queueName: BullQueueName.Withdraw,
+            })
         } catch (error) {
             // ON FAILED phase
             // Persist failure status/logs (retryable vs permanent vs unrecoverable) and rethrow.
             await this.onFailedService.process(
-                // Extend base params with the thrown error.
                 {
-                    // Carry base context forward.
                     ...baseParams,
-                    // Attach error for classification + persistence.
                     error: error as Error,
+                    queueName: BullQueueName.Withdraw,
                 }
             )
         }

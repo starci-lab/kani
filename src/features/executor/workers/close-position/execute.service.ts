@@ -1,7 +1,7 @@
 import {
     Injectable
 } from "@nestjs/common"
-import {
+import type {
     ExecuteParams,
     ExecuteResult,
     ClosePositionJobData,
@@ -50,6 +50,12 @@ import {
     UnrecoverableError,
 } from "bullmq"
 
+/**
+ * Service for the EXECUTE phase of close-position jobs.
+ *
+ * @example
+ * const result = await executeService.process(params)
+ */
 @Injectable()
 export class ExecuteService {
     constructor(

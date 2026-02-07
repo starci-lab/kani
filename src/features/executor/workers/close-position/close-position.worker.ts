@@ -55,32 +55,26 @@ import {
 } from "@modules/mixin"
 import SuperJSON from "superjson"
 import {
+    ClearService,
+    OnCompletedService,
+    OnFailedService,
+    SendHeartbeatService,
+} from "../common"
+import {
     PrepareService,
 } from "./prepare.service"
-import {
-    SendHeartbeatService,
-} from "./send-heartbeat.service"
-import {
-    OnCompletedService,
-} from "./on-completed.service"
-import {
-    OnFailedService,
-} from "./on-failed.service"
-import {
-    ClearService,
-} from "./clear.service"
-import {
-    ProcessParams,
-} from "./types"
 import {
     ExecuteService,
 } from "./execute.service"
 import {
-    TokenType,
-} from "@modules/common"
-import {
     ConfirmService,
 } from "./confirm.service"
+import type {
+    ProcessParams,
+} from "./types"
+import {
+    TokenType,
+} from "@modules/common"
 import {
     AsyncService,
 } from "@modules/mixin"
@@ -266,11 +260,18 @@ export class ClosePositionWorker extends WorkerHost {
                 }
             )
             await this.sendHeartbeatService.process(baseParams)
-            await this.onCompletedService.process(baseParams)
+            await this.onCompletedService.process({
+                job: baseParams.job,
+                bot: baseParams.bot,
+                bullmqJob: baseParams.bullmqJob,
+                queueName: BullQueueName.ClosePosition,
+                liquidityPool: baseParams.liquidityPool,
+            })
         } catch (error) {
             await this.onFailedService.process({
                 ...baseParams,
                 error: error as Error,
+                queueName: BullQueueName.ClosePosition,
             })
         }
     }

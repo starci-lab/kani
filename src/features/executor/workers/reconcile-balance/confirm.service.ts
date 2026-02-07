@@ -11,12 +11,14 @@ import {
     InjectPrimaryMongoose,
     JobSchema,
     JobStatus,
+    TransactionType,
 } from "@modules/databases"
 import {
     Connection,
 } from "mongoose"
-import {
+import type {
     ConfirmParams,
+    ConfirmResult,
 } from "./types"
 import {
     WinstonLog,
@@ -29,6 +31,12 @@ import {
     DayjsService 
 } from "@modules/mixin"
 
+/**
+ * Service for the CONFIRM phase of reconcile-balance jobs.
+ *
+ * @example
+ * await confirmService.process(params)
+ */
 @Injectable()
 export class ConfirmService {
     constructor(
@@ -42,15 +50,13 @@ export class ConfirmService {
     ) {}
 
     /**
-     * CONFIRM phase.
+     * CONFIRM phase: re-fetches balances, persists transaction records and bot snapshot.
      *
-     * Post-transaction bookkeeping after swaps have been executed:
-     * - re-fetch balances from chain
-     * - persist transaction snapshot records (if any)
-     * - persist updated bot balance snapshot
-     * - transition job status to CONFIRMED
+     * @param params - Confirm params (bot, job, executeResult)
+     * @returns void
      *
-     * Idempotency: if the job is already at/after CONFIRMED, returns early.
+     * @example
+     * await confirmService.process({ bot, job, executeResult })
      */
     async process(
         {
@@ -58,7 +64,7 @@ export class ConfirmService {
             job,
             executeResult,
         }: ConfirmParams
-    ) {
+    ): Promise<ConfirmResult> {
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Confirmed)
         ) {
@@ -74,8 +80,8 @@ export class ConfirmService {
             return
         }
         if (!envConfig().executor.runtime.operation.reconcileBalance.stimulate) {
-            const { transactionRecords } = executeResult
-            // re-fetch balances post execution
+            const txHashes = executeResult?.data?.executeResult?.txHashes ?? []
+            // fetch balances post execution
             const {
                 targetBalanceAmount,
                 quoteBalanceAmount,
@@ -88,19 +94,22 @@ export class ConfirmService {
             const session = await this.connection.startSession()
             await session.withTransaction(
                 async () => {
-                // no update when stimulate is enabled
+                // skip when stimulate is enabled
                     if (envConfig().executor.runtime.operation.reconcileBalance.stimulate) {
                         return
                     }
-                    for (const transactionRecord of transactionRecords || []) {
+                    for (const txHash of txHashes) {
                         await this.transactionSnapshotService.addTransactionRecord(
                             {
-                                ...transactionRecord,
+                                bot,
+                                txHash,
+                                chainId: bot.chainId,
+                                type: TransactionType.ReconcileBalance,
                                 session,
                             }
                         )
                     }
-                    // update the bot snapshot balances
+                    // update bot balance snapshot
                     await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
                         {
                             bot,
@@ -110,7 +119,7 @@ export class ConfirmService {
                             session,
                         }
                     )
-                    // update the job status to CONFIRMED
+                    // update job status to CONFIRMED
                     await this.connection
                         .model<JobSchema>(JobSchema.name)
                         .updateOne(

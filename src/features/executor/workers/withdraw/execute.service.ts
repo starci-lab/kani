@@ -1,10 +1,10 @@
 import {
     Injectable
 } from "@nestjs/common"
-import {
+import type {
     ExecuteParams,
     ExecuteResult,
-    WithdrawJobData
+    WithdrawJobData,
 } from "./types"
 import {
     AddTransactionRecordParams,
@@ -50,6 +50,12 @@ import {
     UnrecoverableError,
 } from "bullmq"
 
+/**
+ * Service for the EXECUTE phase of withdraw jobs.
+ *
+ * @example
+ * const result = await executeService.process(params)
+ */
 @Injectable()
 export class ExecuteService {
     constructor(

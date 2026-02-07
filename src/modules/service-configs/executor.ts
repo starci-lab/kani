@@ -41,4 +41,5 @@ export const buildExecutorFullEndpointPath = ({
     api,
     bot,
 }: BuildExecutorFullEndpointPathParams) =>
-    `${buildExecutorEndpoint(bot)}/api/${buildExecutorEndpointPath(tags, api)}`
+    `${buildExecutorEndpoint(bot)}/api/${buildExecutorEndpointPath(tags,
+        api)}`

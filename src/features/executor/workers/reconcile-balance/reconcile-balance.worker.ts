@@ -64,27 +64,21 @@ import {
 } from "@modules/mixin"
 import SuperJSON from "superjson"
 import {
+    ClearService,
+    OnCompletedService,
+    OnFailedService,
+    SendHeartbeatService,
+} from "../common"
+import {
     PrepareService,
 } from "./prepare.service"
 import {
     ExecuteService,
 } from "./execute.service"
 import {
-    SendHeartbeatService,
-} from "./send-heartbeat.service"
-import {
     ConfirmService,
 } from "./confirm.service"
-import {
-    OnCompletedService,
-} from "./on-completed.service"
-import {
-    OnFailedService,
-} from "./on-failed.service"
-import {
-    ClearService,
-} from "./clear.service"
-import {
+import type {
     ProcessParams,
 } from "./types"
 import {
@@ -142,63 +136,50 @@ export class ReconcileBalanceWorker extends WorkerHost {
         //this.worker.cancelJob(payload.botId)
     }
     /**
-     * BullMQ entrypoint for the `reconcile-balance` queue.
+     * BullMQ entrypoint for the reconcile-balance queue.
      *
-     * Execution pipeline (idempotent phases):
-     * PREPARE → HEARTBEAT → EXECUTE → HEARTBEAT → CONFIRM → HEARTBEAT → COMPLETED
+     * @param bullmqJob - Raw BullMQ job
+     * @returns void
      *
-     * On error: delegates to FAILED phase (which persists status/logs) and rethrows.
+     * @example
+     * await worker.process(bullmqJob)
      */
     async process(
         bullmqJob: Job<string>
     ): Promise<void> {
-        // Deserialize the job payload (SuperJSON) into a typed reconcile-balance payload.
+        // deserialize job payload
         const payload = this.superJson.parse<ReconcileBalancePayload>(bullmqJob.data)
         const { botId, jobId } = payload
         const [result,
             error] = await this.asyncService.resolveTuple(
             (async () => {
-                // Load the Bot document from MongoDB (required for all phases).
+                // load bot document
                 const bot = await this.connection
-                // Use the Bot model from the primary mongoose connection.
                     .model<BotSchema>(BotSchema.name)
-                // Find the bot by id provided by the payload.
                     .findById(payload.botId)
 
-                // If bot is missing, fail permanently (unrecoverable) because the job cannot proceed.
+                // fail unrecoverable if bot not found
                 if (!bot) {
                     // Wrap in UnrecoverableError so BullMQ won't keep retrying a job that can never succeed.
                     throw new UnrecoverableError(
-                        // Produce a structured error payload for consistent logging/handling.
-                        new BotNotFoundException(
-                            // Include the botId for diagnostics.
-                            {
-                                id: payload.botId,
-                            }
-                            // Serialize to JSON for UnrecoverableError consumption.
-                        ).toJSON()
+                        new BotNotFoundException({
+                            id: payload.botId,
+                        }).toJSON()
                     )
                 }
 
-                // Load the Job document from MongoDB (used for status transitions + stored metadata).
+                // load job document
                 const job = await this.connection
-                // Use the Job model from the primary mongoose connection.
                     .model<JobSchema>(JobSchema.name)
-                // Find the job by id provided by the payload.
                     .findById(payload.jobId)
 
-                // If job is missing, fail permanently (unrecoverable) because we cannot track status/metadata.
+                // fail unrecoverable if job not found
                 if (!job) {
                     // Wrap in UnrecoverableError so BullMQ won't keep retrying a job that can never succeed.
                     throw new UnrecoverableError(
-                        // Produce a structured error payload for consistent logging/handling.
-                        new JobNotFoundException(
-                            // Include the jobId for diagnostics.
-                            {
-                                jobId: payload.jobId,
-                            }
-                            // Serialize to JSON for UnrecoverableError consumption.
-                        ).toJSON()
+                        new JobNotFoundException({
+                            jobId: payload.jobId,
+                        }).toJSON()
                     )
                 }
                 return {
@@ -225,68 +206,53 @@ export class ReconcileBalanceWorker extends WorkerHost {
             return
         }
         const { bot, job } = result
-        // Assemble a shared parameter object passed to all phase services.
+        // assemble shared params for phase services
         const baseParams: ProcessParams = {
-            // BullMQ job context (attempts, progress, ids, etc.).
             bullmqJob,
-            // Loaded bot document.
             bot,
-            // Loaded job document.
             job,
-            // Parsed reconcile-balance payload.
             payload,
         }
 
-        // Execute the reconcile-balance pipeline; failures are delegated to the FAILED phase.
+        // execute pipeline (failures delegated to FAILED phase)
         try {
             // PREPARE phase
-            // Compute reconcile plan + prepare swap transactions + persist Prepared status/metadata.
-            const { result: prepareResult } = await this.prepareService.process(baseParams)
-            // HEARTBEAT phase (before executing on-chain transactions)
-            // Ensure the lock authority is still held before performing side effects.
+            const prepareResult = await this.prepareService.process(baseParams)
+            // HEARTBEAT phase
             await this.sendHeartbeatService.process(baseParams)
             // EXECUTE phase
-            // Execute prepared swaps; returns transaction records for snapshotting.
-            const { result: executeResult } = await this.executeService.process(
-                // Extend the base params with the PREPARE output.
+            const executeResult = await this.executeService.process(
                 {
-                    // Carry base context forward.
                     ...baseParams,
-                    // Provide prepared transactions/metadata to EXECUTE.
                     prepareResult,
                 }
             )
-            // HEARTBEAT phase (before post-transaction persistence)
-            // Ensure the lock authority is still held before persisting post-tx snapshots.
+            // HEARTBEAT phase
             await this.sendHeartbeatService.process(baseParams)
 
             // CONFIRM phase
-            // Persist transaction snapshots + updated balances snapshot + set Confirmed status.
             await this.confirmService.process(
-                // Extend the base params with the EXECUTE output.
                 {
-                    // Carry base context forward.
                     ...baseParams,
-                    // Provide executed transaction records/metadata to CONFIRM.
                     executeResult,
                 }
             )
-            // HEARTBEAT phase (before finalization + unlock)
-            // Ensure the lock authority is still held before finalizing and unlocking.
+            // HEARTBEAT phase
             await this.sendHeartbeatService.process(baseParams)
             // ON COMPLETED phase
-            // Mark job completed, clear bot activeJob, release lock authority.
-            await this.onCompletedService.process(baseParams)
+            await this.onCompletedService.process({
+                job: baseParams.job,
+                bot: baseParams.bot,
+                bullmqJob: baseParams.bullmqJob,
+                queueName: BullQueueName.ReconcileBalance,
+            })
         } catch (error) {
             // ON FAILED phase
-            // Persist failure status/logs (retryable vs permanent vs unrecoverable) and rethrow.
             await this.onFailedService.process(
-                // Extend base params with the thrown error.
                 {
-                    // Carry base context forward.
                     ...baseParams,
-                    // Attach error for classification + persistence.
                     error: error as Error,
+                    queueName: BullQueueName.ReconcileBalance,
                 }
             )
         }

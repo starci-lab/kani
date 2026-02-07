@@ -33,7 +33,7 @@ export interface ExecuteReconcileBalanceTransactionParams {
 }
 
 /** Result of executing a reconcile balance transaction. */
-export interface ExecuteReconcileBalanceTransactionResults {
+export interface ExecuteReconcileBalanceTransactionResult {
     txHashes: Array<string>
 }
 

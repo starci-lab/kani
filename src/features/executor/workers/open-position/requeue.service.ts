@@ -43,6 +43,13 @@ import {
     LockAuthorityService 
 } from "../../bussiness"
 
+/**
+ * Service for requeueing open-position jobs when active jobs exceed TTL.
+ *
+ * @example
+ * const requeueService = app.get(RequeueService)
+ * await requeueService.process()
+ */
 @Injectable()
 export class RequeueService implements OnApplicationBootstrap {
     constructor(
@@ -63,17 +70,15 @@ export class RequeueService implements OnApplicationBootstrap {
         this.process()
     }
     /**
-     * Requeue the open position for the bots that have an active job and the queuedAt is older than the ttl
+     * Requeues open-position jobs for bots whose active job exceeds TTL.
+     *
+     * @returns Promise that resolves when requeue pass completes.
      */
     async process() {
         try {
-            /**
-             * Get the ttl for the requeue interval
-             */
+            // get TTL from config
             const ttl = envConfig().executor.runtime.operation.openPosition.requeue.interval
-            /**
-             * Get the bots that have an active job and the queuedAt is older than the ttl
-             */
+            // find bots with stale active jobs
             const bots = this.botsLoaderService.botCollection.chain().find(
                 {
                     activeJob: {
@@ -91,9 +96,7 @@ export class RequeueService implements OnApplicationBootstrap {
                     },
                 }
             ).data()
-            /**
-             * Map the bots to the job ids
-             */
+            // requeue each stale bot
             const promises = bots.map(
                 async (bot) => {
                     const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({

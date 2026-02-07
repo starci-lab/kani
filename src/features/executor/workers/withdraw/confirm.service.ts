@@ -15,7 +15,7 @@ import {
 import {
     Connection,
 } from "mongoose"
-import {
+import type {
     ConfirmParams,
     WithdrawJobData,
 } from "./types"
@@ -43,6 +43,12 @@ import {
     envConfig 
 } from "@modules/env"
 
+/**
+ * Service for the CONFIRM phase of withdraw jobs.
+ *
+ * @example
+ * await confirmService.process(params)
+ */
 @Injectable()
 export class ConfirmService {
     constructor(

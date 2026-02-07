@@ -5,7 +5,7 @@ import {
     PrepareReconcileBalanceTransactionParams,
     PrepareReconcileBalanceTransactionResult,
     ExecuteReconcileBalanceTransactionParams,
-    ExecuteReconcileBalanceTransactionResults,
+    ExecuteReconcileBalanceTransactionResult,
 } from "../types"
 import {
     PrepareTx
@@ -220,7 +220,14 @@ export class SolanaReconcileBalanceActionService {
      * @example
      * const txHashes = await service.execute({ bot, prepareTxs })
      */
-    public async execute({ bot, prepareTxs, isRetry = false, stimulate = false }: ExecuteReconcileBalanceTransactionParams): Promise<ExecuteReconcileBalanceTransactionResults> {
+    public async execute(
+        { 
+            bot, 
+            prepareTxs, 
+            isRetry = false, 
+            stimulate = false 
+        }: ExecuteReconcileBalanceTransactionParams): 
+        Promise<ExecuteReconcileBalanceTransactionResult> {
         const txHashes: Array<string> = []
         for (const prepareTx of prepareTxs) {
             // check if transaction already exists on chain (for retries)

@@ -16,8 +16,16 @@ import {
 import {
     WithdrawModule,
 } from "./withdraw"
+import {
+    CommonModule 
+} from "./common"
 @Module({
     imports: [
+        CommonModule.register(
+            {
+                isGlobal: true,
+            }
+        ),
         ReconcileBalanceModule.register(
             {
                 isGlobal: true,

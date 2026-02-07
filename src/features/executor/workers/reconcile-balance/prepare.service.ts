@@ -1,58 +1,62 @@
 import {
-    Injectable
+    Injectable,
 } from "@nestjs/common"
-import {
+import type {
+    BalanceAmounts,
+} from "@modules/common"
+import type {
     PrepareParams,
     PrepareResult,
-    ReconcileBalanceBalanceAmounts,
     ReconcileBalanceJobData,
 } from "./types"
 import {
     getJobStatusOrder,
     InjectPrimaryMongoose,
+    JobSchema,
     JobStatus,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import BN from "bn.js"
 import {
+    JobFailureException,
+    JobFailureStrategy,
+    PrepareReconcileBalanceTransactionResultNotFoundException,
     TokenNotFoundException,
-    ReconcileBalanceJobPreparedFailedException,
 } from "@modules/exceptions"
 import {
     TokenType,
-    ToStringObject
+    ToStringObject,
 } from "@modules/common"
 import {
     SwapDirection,
     BalanceFetcherService,
-    PrepareReconcileBalanceTransactionResult,
-    ComputeQuoteRatioResult,
     EvalSnapshotService,
 } from "@modules/blockchains"
 import {
     BalanceActionService,
-    BalanceReconcileBalanceTokenInput
+    BalanceReconcileBalanceTokenInput,
 } from "@modules/blockchains"
 import {
-    JobSchema
-} from "@modules/databases"
-import {
     WinstonLog,
-    WinstonService
+    WinstonService,
 } from "@modules/winston"
 import {
-    Connection
+    Connection,
 } from "mongoose"
 import {
     DayjsService,
-    InjectSuperJson,
-    AsyncService
+    AsyncService,
 } from "@modules/mixin"
-import SuperJson from "superjson"
 import {
-    FatalError,
-} from "../fatal"
+    SerializerService,
+} from "../common"
 
+/**
+ * Service for the PREPARE phase of reconcile-balance jobs.
+ *
+ * @example
+ * const result = await prepareService.process({ job, bot, payload })
+ */
 @Injectable()
 export class PrepareService {
     constructor(
@@ -60,32 +64,22 @@ export class PrepareService {
         private readonly balanceFetcherService: BalanceFetcherService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly winstonService: WinstonService,
-        @InjectSuperJson()
-        private readonly superJson: SuperJson,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly dayjsService: DayjsService,
         private readonly asyncService: AsyncService,
         private readonly evalSnapshotService: EvalSnapshotService,
-    ) { }
+        private readonly serializerService: SerializerService,
+    ) {}
 
-    // Phase: PREPARE
-    // Responsibility:
-    // - Ensure balances are available (either from payload or fetched live)
-    // - Compute reconcile plan (swap steps)
-    // - Transition job state from PENDING → PREPARED
-    // Notes:
-    // - This phase must be idempotent
-    // - Safe to re-enter on retry
     /**
-     * PREPARE phase.
+     * PREPARE phase: ensures balances, computes reconcile plan, prepares swap transactions.
      *
-     * Ensures balances are available (payload or live fetch), computes the reconcile
-     * swap plan, pre-builds swap transactions, and persists a state transition:
-     * PENDING → PREPARED (including `metadata.swapTransactions`).
+     * @param params - Prepare params (job, bot, payload)
+     * @returns Prepare result with prepareResult data
      *
-     * Idempotency: if the job is already at/after PREPARED, returns the previously
-     * persisted metadata instead of recomputing.
+     * @example
+     * const result = await prepareService.process({ job, bot, payload })
      */
     async process({
         job,
@@ -96,20 +90,13 @@ export class PrepareService {
             targetBalanceAmount,
         }
     }: PrepareParams): Promise<PrepareResult> {
-        // Guard: if job already passed PENDING phase, do nothing
-        // This prevents duplicate preparation on retry or replay
+        // guard: idempotency (return persisted data if already prepared)
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Prepared)
         ) {
-            const jobData = job.data as unknown as ToStringObject<ReconcileBalanceJobData>
-            const { 
-                reconcileBalanceTransaction: stringifiedReconcileBalanceTransaction, 
-                quoteRatioResult: stringifiedQuoteRatioResult, 
-                balanceAmounts: stringifiedBalanceAmounts, 
-            } = jobData
-            const reconcileBalanceTransaction = stringifiedReconcileBalanceTransaction ? this.superJson.parse<PrepareReconcileBalanceTransactionResult>(stringifiedReconcileBalanceTransaction) : undefined
-            const quoteRatioResult = stringifiedQuoteRatioResult ? this.superJson.parse<ComputeQuoteRatioResult>(stringifiedQuoteRatioResult) : undefined
-            const balanceAmounts = this.superJson.parse<ReconcileBalanceBalanceAmounts>(stringifiedBalanceAmounts)
+            const jobData = this.serializerService.deserialize<ReconcileBalanceJobData>(
+                job.data as Partial<ToStringObject<ReconcileBalanceJobData>>
+            )
             this.winstonService.log(
                 WinstonLog.ReconcileBalanceJobAlreadyPrepared,
                 {
@@ -117,25 +104,21 @@ export class PrepareService {
                     jobId: job.id,
                     ageMs: this.dayjsService.now().diff(job.createdAt,
                         "millisecond"),
-                    quoteRatioResult,
-                    balanceAmounts,
-                    txHashes: reconcileBalanceTransaction?.prepareTxs.map((prepareTx) => prepareTx.txHash),
+                    quoteRatioResult: jobData?.logging?.quoteRatioResult,
+                    balanceAmounts: jobData?.logging?.balanceAmounts,
+                    txHashes: jobData?.prepareResult?.prepareTxs.map((prepareTx) => prepareTx.txHash),
                 }
             )
             return {
-                result: {
-                    reconcileBalanceTransaction,
-                }
+                data: jobData
             }
         }
-        // Local normalized balance values (BN)
-        // Initialized to zero to avoid accidental undefined usage
+        // init balance amounts (BN)
         let gasBalanceAmountBN = new BN(0)
         let quoteBalanceAmountBN = new BN(0)
         let targetBalanceAmountBN = new BN(0)
 
-        // If any balance is missing from payload,
-        // fetch live on-chain balances to ensure correctness
+        // fetch balances if missing from payload
         if (
             !gasBalanceAmount || !quoteBalanceAmount || !targetBalanceAmount
         ) {
@@ -152,8 +135,7 @@ export class PrepareService {
             quoteBalanceAmountBN = quoteBalanceAmount
             targetBalanceAmountBN = targetBalanceAmount
         } else {
-            // Use balances provided by upstream step
-            // (e.g. retry resume or pre-fetched context)
+            // use payload balances
             gasBalanceAmountBN = gasBalanceAmount
             quoteBalanceAmountBN = quoteBalanceAmount
             targetBalanceAmountBN = targetBalanceAmount
@@ -179,14 +161,11 @@ export class PrepareService {
                 }
             )
             return {
-                result: {
-                    reconcileBalanceTransaction: undefined,
+                data: {   
                 }
             }
         }
-        // Compute reconcile plan:
-        // - Determine required swaps
-        // - No side effects (pure planning)
+        // compute reconcile plan (swap steps)
         const { swapSteps, quoteRatioResult } =
             await this.balanceActionService.determineReconcileBalancePlan(
                 {
@@ -244,7 +223,7 @@ export class PrepareService {
                 }
             )
         }
-        // Convert swapSteps to tokenInputs for prepareReconcileBalanceTransaction
+        // convert swap steps to token inputs
         const tokenInputs: Array<BalanceReconcileBalanceTokenInput> = []
         for (const swapStep of swapSteps) {
             const { direction, usedAmount } = swapStep
@@ -283,9 +262,9 @@ export class PrepareService {
             }
             }
         }
-        // Prepare reconcile balance transactions
+        // prepare swap transactions
         const [
-            reconcileBalanceTransaction,
+            prepareResult,
             error
         ] = await this.asyncService.resolveTuple(
             this.balanceActionService.prepareReconcileBalanceTransaction(
@@ -296,53 +275,58 @@ export class PrepareService {
             )
         )
         if (error) {
-            const failedError = new ReconcileBalanceJobPreparedFailedException({
+            throw new JobFailureException({
                 originalError: error,
+                strategy: JobFailureStrategy.Fatal,
+            })
+        }
+        if (!prepareResult) {
+            throw new PrepareReconcileBalanceTransactionResultNotFoundException({
                 botId: bot.id,
                 jobId: job.id,
             })
-            // throw everything as a fatal error to stop the job
-            throw new FatalError(failedError.toJSON())
         }
-
-        // Persist job state transition:
-        // PENDING → PREPARED
-        // This marks preparation as completed and enables execution phase
-        const balanceAmounts: ReconcileBalanceBalanceAmounts = {
+        // persist job: PENDING → PREPARED
+        const balanceAmounts: BalanceAmounts = {
             targetBalanceAmount: targetBalanceAmountBN.toString(),
             quoteBalanceAmount: quoteBalanceAmountBN.toString(),
             gasBalanceAmount: gasBalanceAmountBN.toString(),
         }
-        await this.connection
-            .model<JobSchema>(JobSchema.name)
-            .updateOne(
-                {
-                    _id: job.id
+        const data = this.serializerService.serialize<Partial<ReconcileBalanceJobData>>({
+            prepareResult,
+            logging: {
+                quoteRatioResult,
+                balanceAmounts,
+            },
+        })
+        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            {
+                _id: {
+                    $eq: job._id,
                 },
-                {
-                    $set: {
-                        status: JobStatus.Prepared,
-                        "data.reconcileBalanceTransaction": this.superJson.stringify(reconcileBalanceTransaction),
-                        "data.quoteRatioResult": this.superJson.stringify(quoteRatioResult),
-                        "data.balanceAmounts": this.superJson.stringify(balanceAmounts),
-                    },
-                }
-            )
+            },
+            {
+                $set: {
+                    status: JobStatus.Prepared,
+                    ...data,
+                },
+            }
+        )
 
         this.winstonService.log(
             WinstonLog.ReconcileBalanceJobPrepared,
             {
                 botId: bot.id,
                 jobId: job.id,
-                txHashes: reconcileBalanceTransaction.prepareTxs.map((prepareTx) => prepareTx.txHash),
+                txHashes: prepareResult.prepareTxs.map((prepareTx) => prepareTx.txHash),
                 quoteRatioResult,
                 balanceAmounts,
             }
         )
-        // Return execution plan to next phase
+        // return execution plan to next phase
         return {
-            result: {
-                reconcileBalanceTransaction,
+            data: {
+                prepareResult,
             }
         }
     }

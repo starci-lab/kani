@@ -2,19 +2,16 @@ import {
     Module,
 } from "@nestjs/common"
 import {
+    ClearService,
+    OnCompletedService,
+    OnFailedService,
+    SendHeartbeatService,
+} from "../common"
+import {
     PrepareService,
 } from "./prepare.service"
 import {
-    SendHeartbeatService,
-} from "./send-heartbeat.service"
-import {
-    OnCompletedService,
-} from "./on-completed.service"
-import {
-    OnFailedService,
-} from "./on-failed.service"
-import {
-    OpenPositionWorker 
+    OpenPositionWorker,
 } from "./open-position.worker"
 import {
     ExecuteService,
@@ -22,9 +19,6 @@ import {
 import {
     ConfirmService,
 } from "./confirm.service"
-import {
-    ClearService,
-} from "./clear.service"
 import {
     ConfigurableModuleClass,
 } from "./open-position.module-definition"

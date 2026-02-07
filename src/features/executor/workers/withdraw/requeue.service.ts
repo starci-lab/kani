@@ -50,6 +50,13 @@ import {
     WithdrawCacheResult 
 } from "@modules/cache"
 
+/**
+ * Service for requeueing withdraw jobs when active jobs exceed TTL.
+ *
+ * @example
+ * const requeueService = app.get(RequeueService)
+ * await requeueService.process()
+ */
 @Injectable()
 export class RequeueService implements OnApplicationBootstrap {
     constructor(
@@ -70,13 +77,13 @@ export class RequeueService implements OnApplicationBootstrap {
         this.process()
     }
     /**
-     * Requeue the balance rebalancing for the bots that have an active job and the queuedAt is older than the ttl
+     * Requeues withdraw jobs for bots whose active job exceeds TTL.
+     *
+     * @returns Promise that resolves when requeue pass completes.
      */
     async process() {
         try {
-            /**
-             * Get the ttl for the requeue interval
-             */
+            // get TTL from config
             const ttl = envConfig().executor.runtime.operation.withdraw.requeue.interval
             /**
              * Get the bots that have an active job and the queuedAt is older than the ttl

@@ -1,5 +1,9 @@
-import type { ChainId } from "@modules/common"
-import type { AuthenticationFactor } from "../enums"
+import type {
+    ChainId 
+} from "@modules/common"
+import type {
+    AuthenticationFactor 
+} from "../enums"
 
 /** Gas config per chain. */
 export interface GasConfig {

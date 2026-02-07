@@ -20,6 +20,10 @@ export class AbstractException extends Error {
         this.metadata = metadata
     }
 
+    /**
+     * Convert the exception to a JSON string.
+     * @returns The JSON string.
+     */
     toJSON(): string {
         return JSON.stringify(
             {
@@ -29,7 +33,11 @@ export class AbstractException extends Error {
             }
         )
     }
-
+    /**
+     * Create an exception from a JSON string.
+     * @param json - The JSON string.
+     * @returns The exception.
+     */
     static fromJSON<T extends AbstractException>(
         this: new (
           message: string,
@@ -42,6 +50,13 @@ export class AbstractException extends Error {
         return new this(message,
             code,
             metadata)
+    }
+    /**
+     * Get the original error from the exception.
+     * @returns The original error.
+     */
+    getOriginalError(): Error {
+        return this.metadata?.originalError as Error
     }
 }
 

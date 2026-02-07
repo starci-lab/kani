@@ -1,18 +1,16 @@
 import {
     Injectable 
 } from "@nestjs/common"
-import {
+import type {
+    OpenPositionJobData,
     PrepareParams,
     PrepareResult,
-    OpenPositionJobData,
 } from "./types"
 import {
     getJobStatusOrder,
     InjectPrimaryMongoose,
     JobStatus,
-} from "@modules/databases"
-import {
-    JobSchema,
+    JobSchema
 } from "@modules/databases"
 import {
     WinstonLog, WinstonService
@@ -21,29 +19,31 @@ import {
     Connection 
 } from "mongoose"
 import {
-    OpenPositionActionService,
-    PrepareOpenPositionResult  
+    OpenPositionActionService, 
 } from "@modules/blockchains"
 import {
-    SuperJSON
-} from "superjson"
-import {
-    InjectSuperJson,
-    DayjsService
+    DayjsService,
+    AsyncService
 } from "@modules/mixin"
+import {
+    JobFailureException,
+    JobFailureStrategy,
+    OpenPositionJobPreparedFailedException,
+    PrepareOpenPositionResultNotFoundException,
+} from "@modules/exceptions"
+import {
+    SerializerService 
+} from "../common"
 import {
     ToStringObject 
 } from "@modules/common"
-import {
-    AsyncService 
-} from "@modules/mixin"
-import {
-    OpenPositionJobPreparedFailedException,
-} from "@modules/exceptions"
-import {
-    FatalError 
-} from "../fatal"
 
+/**
+ * Service for the PREPARE phase of open-position jobs.
+ *
+ * @example
+ * const result = await prepareService.process({ job, bot, liquidityPool, state })
+ */
 @Injectable()
 export class PrepareService {
     constructor(
@@ -51,10 +51,9 @@ export class PrepareService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly openPositionActionService: OpenPositionActionService,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
         private readonly dayjsService: DayjsService,
         private readonly asyncService: AsyncService,
+        private readonly serializerService: SerializerService,
     ) {}
 
     // Phase: PREPARE
@@ -79,7 +78,8 @@ export class PrepareService {
         {
             job,
             bot,
-            liquidityPool,
+            liquidityPool,  
+            state,
         }: PrepareParams
     ): Promise<PrepareResult> {
         // Guard: if job already passed PENDING phase, do nothing
@@ -87,28 +87,26 @@ export class PrepareService {
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Prepared)
         ) {
-            const { openPositionTransaction: stringifiedOpenPositionTransaction } = job.data as ToStringObject<OpenPositionJobData>
-            const openPositionTransaction = this.superJson.parse<PrepareOpenPositionResult>(stringifiedOpenPositionTransaction)
-
+            const jobData = this.serializerService.deserialize<OpenPositionJobData>(
+                job.data as Partial<ToStringObject<OpenPositionJobData>>
+            )
             this.winstonService.log(
                 WinstonLog.OpenPositionJobAlreadyPrepared,
                 {
                     botId: bot.id,
                     jobId: job.id,
                     liquidityPoolId: liquidityPool.displayId,  
-                    txHashes: openPositionTransaction.prepareTxs.map((prepareTx) => prepareTx.txHash),
+                    txHashes: jobData?.prepareResult?.prepareTxs.map((prepareTx) => prepareTx.txHash) || [],
                     ageMs: this.dayjsService.now().diff(job.createdAt,
                         "millisecond"),
                 }
             )
             return {
-                result: {
-                    openPositionTransaction,
-                }
+                data: jobData,
             }
         }
         const [
-            openPositionTransaction,
+            prepareResult,
             error
         ] =  await this.asyncService.resolveTuple(
             this.openPositionActionService.prepare(
@@ -120,17 +118,26 @@ export class PrepareService {
             )
         )
         if (error) {
-            // create a failed error
-            const failedError = new OpenPositionJobPreparedFailedException({
-                originalError: error,
+            throw new JobFailureException({
+                strategy: JobFailureStrategy.Fatal,
+                originalError: new OpenPositionJobPreparedFailedException({
+                    originalError: error,
+                    botId: bot.id,
+                    jobId: job.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                }),
+            })
+        }
+        if (!prepareResult) {
+            throw new PrepareOpenPositionResultNotFoundException({
                 botId: bot.id,
                 jobId: job.id,
                 liquidityPoolId: liquidityPool.displayId,
-            }
-            )
-            // throw everything as a fatal error to stop the job
-            throw new FatalError(failedError.toJSON())
+            })
         }
+        const data = this.serializerService.serialize<Partial<OpenPositionJobData>>({
+            prepareResult,
+        })
         await this.connection.model<JobSchema>(JobSchema.name).updateOne(
             {
                 _id: {
@@ -140,7 +147,7 @@ export class PrepareService {
             {
                 $set: {
                     status: JobStatus.Prepared,
-                    "data.openPositionTransaction": this.superJson.stringify(openPositionTransaction),
+                    ...data,
                 },
             }
         )
@@ -149,14 +156,16 @@ export class PrepareService {
             {
                 botId: bot.id,
                 jobId: job.id,
-                txHashes: openPositionTransaction.prepareTxs.map((prepareTx) => prepareTx.txHash),
+                txHashes: prepareResult.prepareTxs.map(
+                    (prepareTx) => prepareTx.txHash
+                ),
                 liquidityPoolId: liquidityPool.displayId,
             }
         )
         return {
-            result: {
-                openPositionTransaction,
-            }
+            data: {
+                prepareResult,
+            },
         }
     }
 }

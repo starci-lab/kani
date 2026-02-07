@@ -1,8 +1,10 @@
 import BN from "bn.js"
 import {
-    DynamicLiquidityPoolInfoCacheResult, 
     WithdrawCacheResult
 } from "@modules/cache"
+import {
+    LiquidityPoolState
+} from "./pool-state"
 
 /** Base payload for all job types. */
 export interface BasePayload {
@@ -14,13 +16,13 @@ export interface BasePayload {
 /** Payload for open position jobs. */
 export interface OpenPositionPayload extends BasePayload {
     liquidityPoolId: string
-    dynamicLiquidityPoolInfo?: DynamicLiquidityPoolInfoCacheResult
+    state?: LiquidityPoolState
 }
 
 /** Payload for close position jobs. */
 export interface ClosePositionPayload extends BasePayload {
     liquidityPoolId: string
-    dynamicLiquidityPoolInfo?: DynamicLiquidityPoolInfoCacheResult
+    state?: LiquidityPoolState
 }
 
 /** Payload for reconcile balance jobs. */

@@ -18,7 +18,7 @@ import {
 import {
     Connection,
 } from "mongoose"
-import {
+import type {
     ConfirmParams,
 } from "./types"
 import {
@@ -44,6 +44,12 @@ import {
     DayjsService 
 } from "@modules/mixin"
 
+/**
+ * Service for the CONFIRM phase of close-position jobs.
+ *
+ * @example
+ * await confirmService.process(params)
+ */
 @Injectable()
 export class ConfirmService {
     constructor(

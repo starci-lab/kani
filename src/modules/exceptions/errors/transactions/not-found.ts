@@ -53,6 +53,104 @@ export interface OutputCoinNotFoundExceptionMetadata extends AbstractExceptionMe
     type: TransactionType
 }
 
+/** Metadata for prepare open position result not found. */
+export interface PrepareOpenPositionResultNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    botId: string
+    jobId: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/** Thrown when prepare open position result is null or undefined after prepare. */
+export class PrepareOpenPositionResultNotFoundException extends AbstractException {
+    constructor({
+        botId,
+        jobId,
+        liquidityPoolId,
+    }: PrepareOpenPositionResultNotFoundExceptionMetadata) {
+        super(
+            "Prepare open position result not found",
+            "PREPARE_OPEN_POSITION_RESULT_NOT_FOUND_EXCEPTION",
+            {
+                botId,
+                jobId,
+                liquidityPoolId,
+            },
+        )
+    }
+}
+
+/** Metadata for execute open position result not found. */
+export interface ExecuteOpenPositionResultNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    botId: string
+    jobId: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/** Thrown when execute open position result is null or undefined after execute. */
+export class ExecuteOpenPositionResultNotFoundException extends AbstractException {
+    constructor({
+        botId,
+        jobId,
+        liquidityPoolId,
+    }: ExecuteOpenPositionResultNotFoundExceptionMetadata) {
+        super(
+            "Execute open position result not found",
+            "EXECUTE_OPEN_POSITION_RESULT_NOT_FOUND_EXCEPTION",
+            {
+                botId,
+                jobId,
+                liquidityPoolId,
+            },
+        )
+    }
+}
+
+/** Metadata for prepare reconcile balance transaction result not found. */
+export interface PrepareReconcileBalanceTransactionResultNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    botId: string
+    jobId: string
+}
+
+/** Thrown when prepare reconcile balance transaction result is null or undefined after prepare. */
+export class PrepareReconcileBalanceTransactionResultNotFoundException extends AbstractException {
+    constructor({
+        botId,
+        jobId,
+    }: PrepareReconcileBalanceTransactionResultNotFoundExceptionMetadata) {
+        super(
+            "Prepare reconcile balance transaction result not found",
+            "PREPARE_RECONCILE_BALANCE_TRANSACTION_RESULT_NOT_FOUND_EXCEPTION",
+            {
+                botId,
+                jobId,
+            },
+        )
+    }
+}
+
+/** Metadata for execute reconcile balance transaction result not found. */
+export interface ExecuteReconcileBalanceTransactionResultNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    botId: string
+    jobId: string
+}
+
+/** Thrown when execute reconcile balance transaction result is null or undefined after execute. */
+export class ExecuteReconcileBalanceTransactionResultNotFoundException extends AbstractException {
+    constructor({
+        botId,
+        jobId,
+    }: ExecuteReconcileBalanceTransactionResultNotFoundExceptionMetadata) {
+        super(
+            "Execute reconcile balance transaction result not found",
+            "EXECUTE_RECONCILE_BALANCE_TRANSACTION_RESULT_NOT_FOUND_EXCEPTION",
+            {
+                botId,
+                jobId,
+            },
+        )
+    }
+}
+
 /** Thrown when output coin is not found after swap. */
 export class OutputCoinNotFoundException extends AbstractException {
     constructor({
