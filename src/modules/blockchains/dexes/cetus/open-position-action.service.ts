@@ -171,12 +171,13 @@ export class CetusOpenPositionActionService implements IOpenActionService {
      *
      * @param param - Parameters for parsing add liquidity event
      * @param param.state - CLMM liquidity pool state
+     * @param param.liquidityPool - Liquidity pool
      * @param param.bot - Bot schema
      * @param param.txHash - Transaction hash
      * @param param.events - Array of Sui events
      * @returns Parsed event result with position ID
      */
-    private parseAddLiquidityEvent({ state, bot, txHash, events }: ParseAddLiquidityEventParams): ParseAddLiquidityEventResult {
+    private parseAddLiquidityEvent({ liquidityPool, bot, txHash, events }: ParseAddLiquidityEventParams): ParseAddLiquidityEventResult {
         // find add liquidity event
         const eventType = "::pool::AddLiquidityV2Event"
         const event = events?.find(event =>
@@ -189,7 +190,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                 botId: bot.id,
                 txHash,
                 eventType,
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         
@@ -421,6 +422,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     bot,
                     txHash,
                     events: txBlock?.events || [],
+                    liquidityPool,
                 })
                 
                 this.winstonService.log(
@@ -475,6 +477,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                         bot,
                         txHash,
                         events: devInspect.events || [],
+                        liquidityPool,
                     })
                     
                     // log successful simulation
@@ -532,6 +535,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     bot,
                     txHash,
                     events: events || [],
+                    liquidityPool,
                 })
                 return {
                     positionId,

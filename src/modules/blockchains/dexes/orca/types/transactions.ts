@@ -62,6 +62,8 @@ export interface CreateCloseInstructionsParams {
     bot: BotSchema
     /** Liquidity pool state. */
     state: ClmmLiquidityPoolState
+    /** Liquidity pool. */
+    liquidityPool: LiquidityPoolSchema
 }
 
 /**

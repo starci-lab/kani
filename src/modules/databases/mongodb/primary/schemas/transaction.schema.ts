@@ -17,7 +17,7 @@ import {
     ChainId, GraphQLTypeChainId
 } from "@modules/common"
 import {
-    GraphQLTypeTransactionType, TokenId, TransactionType, PrimaryMongoDbCollectionRef
+    GraphQLTypeTransactionType, TransactionType, PrimaryMongoDbCollectionRef
 } from "../enums"
 
 @ObjectType({
@@ -76,10 +76,3 @@ export class TransactionSchema extends AbstractSchema {
 }
 
 export const TransactionSchemaClass = SchemaFactory.createForClass(TransactionSchema)
-
-export interface SwapTransactionMetadata {
-    tokenIn: TokenId
-    tokenOut: TokenId
-    amountIn: string
-    amountOut?: string
-}

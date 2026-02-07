@@ -16,12 +16,9 @@ import {
 } from "../../../tx-builder"
 import {
     PrimaryMemoryStorageService,
-    RaydiumLiquidityPoolMetadata,
     OrcaPositionMetadata,
+    OrcaLiquidityPoolMetadata,
 } from "@modules/databases"
-import {
-    ClmmLiquidityPoolState 
-} from "../../types"
 import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
@@ -63,9 +60,8 @@ export class ClosePositionInstructionService {
    */
     async createCloseInstructions({
         bot,
-        state,
+        liquidityPool,
     }: CreateCloseInstructionsParams): Promise<Array<Instruction>> {
-        const _state = state as ClmmLiquidityPoolState
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
@@ -79,29 +75,28 @@ export class ClosePositionInstructionService {
                 botId: bot.id,
             })
         }
-        if (!_state.static.clmmState) {
+        if (!liquidityPool.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const { ataAddress, nftMintAddress } = bot.activePosition.associatedPosition.metadata as OrcaPositionMetadata
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: _state.static.tokenA.toString(),
+                $eq: liquidityPool.tokenA.toString(),
             },
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: _state.static.tokenB.toString(),
+                $eq: liquidityPool.tokenB.toString(),
             },
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
-        const { programAddress, tokenVault0, tokenVault1 } = _state.static
-            .metadata as RaydiumLiquidityPoolMetadata 
+        const { programAddress, tokenVault0, tokenVault1 } = liquidityPool.metadata as OrcaLiquidityPoolMetadata
         const { pda: positionPda } = await this.positionService.getPda({
             nftMintAddress: address(nftMintAddress),
             programAddress: address(programAddress),
@@ -137,17 +132,17 @@ export class ClosePositionInstructionService {
             endInstructions.push(...closeAtaBInstructions)
         }
         const { pda: tickArrayLowerPda } = await this.tickArrayService.getPda({
-            poolStateAddress: address(state.static.poolAddress),
+            poolStateAddress: address(liquidityPool.poolAddress),
             tickIndex: new BN(bot.activePosition.associatedPosition.clmmState.tickLower),
-            tickSpacing: new BN(_state.static.clmmState.tickSpacing),
+            tickSpacing: new BN(liquidityPool.clmmState.tickSpacing),
             programAddress: address(programAddress),
             bot,
             pdaOnly: true,
         })
         const { pda: tickArrayUpperPda } = await this.tickArrayService.getPda({
-            poolStateAddress: address(state.static.poolAddress),
+            poolStateAddress: address(liquidityPool.poolAddress),
             tickIndex: new BN(bot.activePosition.associatedPosition.clmmState.tickUpper),
-            tickSpacing: new BN(_state.static.clmmState.tickSpacing),
+            tickSpacing: new BN(liquidityPool.clmmState.tickSpacing),
             programAddress: address(programAddress),
             pdaOnly: true,
         })
@@ -160,7 +155,7 @@ export class ClosePositionInstructionService {
             programAddress: address(programAddress),
             accounts: [
                 {
-                    address: address(state.static.poolAddress),
+                    address: address(liquidityPool.poolAddress),
                     role: AccountRole.WRITABLE,
                 },
                 {
@@ -214,7 +209,7 @@ export class ClosePositionInstructionService {
             programAddress: address(programAddress),
             accounts: [
                 {
-                    address: address(state.static.poolAddress),
+                    address: address(liquidityPool.poolAddress),
                     role: AccountRole.WRITABLE,
                 },
                 {

@@ -32,7 +32,7 @@ import {
     AxiosInstance,
     AxiosResponse
 } from "axios"
-import {
+import type {
     AddWithdrawJobRequestDto
 } from "@modules/executor"
 

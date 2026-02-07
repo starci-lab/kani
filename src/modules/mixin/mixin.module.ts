@@ -4,11 +4,9 @@ import {
     Provider
 } from "@nestjs/common"
 import {
-    ConfigurableModuleClass
+    ConfigurableModuleClass,
+    OPTIONS_TYPE
 } from "./mixin.module-definition"
-import type {
-    MixinOptions
-} from "./types"
 import {
     RetryService
 } from "./retry.service"
@@ -51,7 +49,7 @@ export class MixinModule extends ConfigurableModuleClass {
      * @param options - The options for the Mixin module.
      * @returns The DynamicModule for the Mixin module.
      */
-    static register(options: MixinOptions): DynamicModule {
+    static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
             RetryService,

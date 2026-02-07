@@ -1,5 +1,6 @@
 import {
-    BotSchema 
+    BotSchema, 
+    LiquidityPoolSchema
 } from "@modules/databases"
 import {
     ClmmLiquidityPoolState,
@@ -42,6 +43,8 @@ export interface ParseAddLiquidityEventResult {
 export interface ParseAddLiquidityEventParams {
     /** CLMM liquidity pool state. */
     state: ClmmLiquidityPoolState
+    /** Liquidity pool. */
+    liquidityPool: LiquidityPoolSchema
     /** Array of Sui events. */
     events?: Array<SuiEvent>
     /** Bot schema. */

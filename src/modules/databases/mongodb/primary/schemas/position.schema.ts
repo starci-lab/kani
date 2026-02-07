@@ -335,20 +335,3 @@ export class PositionSchema extends AbstractSchema {
 
 export const PositionSchemaClass =
     SchemaFactory.createForClass(PositionSchema)
-
-/**
- * Protocol-specific metadata typings
- */
-export interface RaydiumPositionMetadata {
-    nftMintAddress: string
-    ataAddress: string
-}
-
-export interface OrcaPositionMetadata {
-    nftMintAddress: string
-    ataAddress: string
-}
-
-export interface MeteoraPositionMetadata {
-    ataAddress: string
-}

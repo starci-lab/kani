@@ -45,8 +45,4 @@ export class PositionSettlementSchema extends AbstractSchema {
         metadata?: unknown
 }
 
-export interface PositionSettlementReasonOutOfRangeMetadata {
-    tickAtClose: number
-}
-
 export const PositionSettlementSchemaClass = SchemaFactory.createForClass(PositionSettlementSchema)

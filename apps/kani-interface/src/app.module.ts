@@ -98,9 +98,6 @@ import {
 import {
     AxiosModule 
 } from "@modules/axios"
-import {
-    ExecutorModule 
-} from "@modules/executor"
 
 @Module({
     imports: [
@@ -162,10 +159,6 @@ import {
         }),
         SocketIoCoreModule.register({
             isGlobal: true,
-        }),
-        ExecutorModule.register({
-            isGlobal: true,
-            configOnly: true,
         }),
         EvalModule.register({
             isGlobal: true,

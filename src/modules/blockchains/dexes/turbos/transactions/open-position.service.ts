@@ -67,7 +67,7 @@ export class OpenPositionTxbService {
     async createOpenPositionTxb(
         {
             txb,
-            state,
+            liquidityPool,
             tickLower,
             tickUpper,
             amountAMax,
@@ -78,14 +78,14 @@ export class OpenPositionTxbService {
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenA.toString()
+            id: liquidityPool.tokenA.toString()
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenB.toString()
+            id: liquidityPool.tokenB.toString()
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.sui.feeToAddress
@@ -163,7 +163,7 @@ export class OpenPositionTxbService {
             feeType,
             positionsObject,
             versionObject 
-        } = state.static.metadata as TurbosLiquidityPoolMetadata
+        } = liquidityPool.metadata as TurbosLiquidityPoolMetadata
         const coinAVec = txb.makeMoveVec(
             {
                 elements: [
@@ -188,7 +188,7 @@ export class OpenPositionTxbService {
             ],
             arguments: [
                 // pool address
-                txb.object(state.static.poolAddress),
+                txb.object(liquidityPool.poolAddress),
                 // positions object
                 txb.object(positionsObject),
                 // coin A vec

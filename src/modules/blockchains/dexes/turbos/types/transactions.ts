@@ -6,7 +6,8 @@ import {
     ClmmLiquidityPoolState
 } from "../../../types"
 import {
-    BotSchema
+    BotSchema,
+    LiquidityPoolSchema
 } from "@modules/databases"
 
 /**
@@ -17,6 +18,8 @@ export interface CreateOpenPositionTxbParams {
     txb?: Transaction
     /** CLMM liquidity pool state. */
     state: ClmmLiquidityPoolState
+    /** Liquidity pool. */
+    liquidityPool: LiquidityPoolSchema
     /** Lower tick value. */
     tickLower: BN
     /** Upper tick value. */

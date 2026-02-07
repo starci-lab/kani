@@ -2,8 +2,11 @@ import {
     Inject, Injectable, OnModuleInit
 } from "@nestjs/common"
 import {
-    DexSchema, GasConfig, LiquidityPoolSchema, TokenSchema
+    DexSchema, LiquidityPoolSchema, TokenSchema
 } from "../schemas"
+import {
+    GasConfig
+} from "../types"
 import {
     InjectPrimaryMongoose
 } from "../mongodb.decorators"
@@ -20,7 +23,10 @@ import {
     MODULE_OPTIONS_TOKEN, OPTIONS_TYPE
 } from "./memory.module-definition"
 import {
-    AccountLimitsConfig, AuthenticationConfig, AvatarsConfig, BalanceConfig, ConfigRecord, ConfigSchema
+    AccountLimitsConfig, AuthenticationConfig, AvatarsConfig, BalanceConfig, ConfigRecord
+} from "../types"
+import {
+    ConfigSchema
 } from "../schemas"
 import {
     ConfigId

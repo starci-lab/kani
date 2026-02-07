@@ -27,6 +27,7 @@ import {
     UserNotFoundException,
 } from "@modules/exceptions"
 import {
+    LiquidityPoolStateService,
     ReservesWithFeesActionService,
 } from "@modules/blockchains"
 
@@ -38,6 +39,7 @@ export class ReservesWithFeesV2Service {
         private readonly reservesWithFeesActionService: ReservesWithFeesActionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly activePositionAssociateService: ActivePositionAssociateService,
+        private readonly liquidityPoolStateService: LiquidityPoolStateService,
     ) {}
 
     async reservesWithFeesV2(
@@ -99,6 +101,7 @@ export class ReservesWithFeesV2Service {
                 id: activePosition.liquidityPool.toString(),
             })
         }
+        const state = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
         const {
             reserveA,
             reserveB,
@@ -109,6 +112,7 @@ export class ReservesWithFeesV2Service {
         } = await this.reservesWithFeesActionService.reservesWithFees({
             bot,
             liquidityPool,
+            state,
         })
         const rewardsAsNumbers = Object.fromEntries(
             Object.entries(rewards).map(([k,
