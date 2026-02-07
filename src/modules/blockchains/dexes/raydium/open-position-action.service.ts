@@ -346,7 +346,6 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         prepareTxs,
         positionId,
         bot,
-        state,
         liquidityPool,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         // Stage: input validation (position ID must be provided)
