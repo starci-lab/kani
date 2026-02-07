@@ -65,6 +65,9 @@ export class ConfirmService {
     async process(
         params: ConfirmParams
     ): Promise<ConfirmResult> {
+        // HEARTBEAT phase
+        await this.sendHeartbeatService.process(params)
+        // CONFIRM phase
         const { job, bot, executeResult } = params
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Confirmed)
@@ -139,7 +142,6 @@ export class ConfirmService {
                 }
             )
         }
-        await this.sendHeartbeatService.process(params)
         this.winstonService.log(
             WinstonLog.ReconcileBalanceJobConfirmed,
             {

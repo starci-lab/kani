@@ -64,6 +64,9 @@ export class ConfirmService {
     async process(
         params: ConfirmParams
     ): Promise<void> {
+        // HEARTBEAT phase
+        await this.sendHeartbeatService.process(params)
+        // CONFIRM phase
         const { job, bot, executeResult } = params
         // guard: idempotency (return early if already confirmed)
         if (
@@ -133,7 +136,6 @@ export class ConfirmService {
                 }
             )
         }
-        await this.sendHeartbeatService.process(params)
         this.winstonService.log(
             WinstonLog.WithdrawJobConfirmed,
             {

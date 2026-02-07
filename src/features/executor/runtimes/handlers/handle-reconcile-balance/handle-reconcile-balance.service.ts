@@ -127,7 +127,7 @@ export class HandleReconcileBalanceService {
                     jobId,
                 }
             )
-            await this.lockAuthorityService.release(
+            this.lockAuthorityService.release(
                 {
                     botId: bot.id,
                 }

@@ -77,6 +77,14 @@ export class ExecuteService {
     async process(
         params: ExecuteParams
     ): Promise<ExecuteResult> {
+        // HEARTBEAT phase
+        await new Promise((resolve) => setTimeout(resolve,
+            12000))
+        await this.sendHeartbeatService.process({
+            ...params,
+            fatal: true,
+        })
+        // EXECUTE phase
         const { job, bot, bullmqJob, prepareResult, payload, state, liquidityPool } = params
         const isRetry = bullmqJob.attemptsMade > 0
         // Guard: if job already passed EXECUTED phase, do nothing
@@ -153,7 +161,6 @@ export class ExecuteService {
                     },
                 }
             )
-        await this.sendHeartbeatService.process(params)
         return {
             data: {
                 prepareResult: prepareResult?.data?.prepareResult,

@@ -200,6 +200,15 @@ export class LockAuthorityService implements OnApplicationBootstrap {
                 ttl,                            // ARGV[2]: TTL (ms)
                 expireAt                        // ARGV[3]: expire timestamp (ms)
             )
+            if (ok === 1) {
+                this.winstonService.log(
+                    WinstonLog.LockAuthorityAcquired,
+                    {
+                        botId,
+                        key,
+                    }
+                )
+            }
             return ok === 1
         } catch (error) {
             this.winstonService.log(
@@ -225,7 +234,7 @@ export class LockAuthorityService implements OnApplicationBootstrap {
      * await lockAuthorityService.release({ botId: "..." })
      */
     async release({ botId }: ReleaseParams): Promise<boolean> {
-        await sleep(100) // 0.1s to release the lock to avoid race condition
+        await sleep(1000) // 1s to release the lock to avoid race condition
         // create the key for the lock authority
         const key = this.getLockKey(botId)
         const lockSchedulerKey = this.getLockSchedulerKey()

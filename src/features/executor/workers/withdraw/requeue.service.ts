@@ -3,8 +3,9 @@ import {
     OnApplicationBootstrap
 } from "@nestjs/common"
 import {
-    ActiveJobSchema,
     JobType,
+    InjectPrimaryMongoose,
+    BotSchema
 } from "@modules/databases"
 import {
     DayjsService 
@@ -49,6 +50,9 @@ import {
 import {
     WithdrawCacheResult 
 } from "@modules/cache"
+import {
+    Connection 
+} from "mongoose"
 
 /**
  * Service for requeueing withdraw jobs when active jobs exceed TTL.
@@ -70,6 +74,8 @@ export class RequeueService implements OnApplicationBootstrap {
         private readonly lockAuthorityService: LockAuthorityService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
     ) {
     }
 
@@ -86,23 +92,22 @@ export class RequeueService implements OnApplicationBootstrap {
             // get TTL from config
             const ttl = envConfig().executor.runtime.operation.withdraw.requeue.interval
             // find bots with stale active jobs
-            const bots = this.botsLoaderService.botCollection.chain().find(
-                {
-                    activeJob: {
-                        $where: (activeJob: ActiveJobSchema) => {
-                            return (
-                                activeJob &&
-                                activeJob.jobType === JobType.Withdraw &&
-                                activeJob.queuedAt &&
-                                this.dayjsService.now().diff(
-                                    activeJob.queuedAt,
-                                    "millisecond"
-                                ) > ttl
-                            )
-                        }
-                    },
-                }
-            ).data()
+            // find bots with stale active jobs
+            const bots = await this.connection.model<BotSchema>(BotSchema.name).find({
+                executor: envConfig().executor.id,
+                activeJob: {
+                    $exists: true,
+                    $ne: null,
+                },
+                "activeJob.jobType": JobType.Withdraw,
+                "activeJob.queuedAt": {
+                    $exists: true,
+                    $lt: this.dayjsService.now()
+                        .subtract(ttl,
+                            "millisecond")
+                        .toDate(),
+                },
+            })
             // requeue each stale bot
             const promises = bots.map(
                 async (bot) => {

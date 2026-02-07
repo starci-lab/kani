@@ -32,7 +32,6 @@ import {
     PrepareOpenPositionResultNotFoundException,
 } from "@modules/exceptions"
 import {
-    SendHeartbeatService,
     SerializerService 
 } from "../common"
 import {
@@ -55,7 +54,6 @@ export class PrepareService {
         private readonly dayjsService: DayjsService,
         private readonly asyncService: AsyncService,
         private readonly serializerService: SerializerService,
-        private readonly sendHeartbeatService: SendHeartbeatService,
     ) {}
 
     // Phase: PREPARE
@@ -160,10 +158,6 @@ export class PrepareService {
                 liquidityPoolId: liquidityPool.displayId,
             }
         )
-        await this.sendHeartbeatService.process({
-            ...params,
-            fatal: true,
-        })
         return {
             data: {
                 prepareResult,

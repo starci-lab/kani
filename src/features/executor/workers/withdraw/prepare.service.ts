@@ -42,7 +42,6 @@ import {
 } from "@modules/mixin"
 import {
     SerializerService,
-    SendHeartbeatService,
 } from "../common"
 import {
     ToStringObject,
@@ -67,7 +66,6 @@ export class PrepareService {
         private readonly connection: Connection,
         private readonly dayjsService: DayjsService,
         private readonly serializerService: SerializerService,
-        private readonly sendHeartbeatService: SendHeartbeatService,
     ) {}
 
     /**
@@ -217,10 +215,6 @@ export class PrepareService {
                 txHashes: prepareResult.prepareTxs.map((prepareTx) => prepareTx.txHash),
             }
         )
-        await this.sendHeartbeatService.process({
-            ...params,
-            fatal: true,
-        })
         return {
             data: {
                 prepareResult,

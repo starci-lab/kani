@@ -128,7 +128,7 @@ export class OnFailedService {
                         },
                         {
                             $unset: {
-                                activeJob: null 
+                                activeJob: "" 
                             },
                         },
                         {
@@ -151,7 +151,7 @@ export class OnFailedService {
                 }
             )
             // release the lock
-            await this.lockAuthorityService.release({
+            this.lockAuthorityService.release({
                 botId: bot.id,
             })
             // throw the error

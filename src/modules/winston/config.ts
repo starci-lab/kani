@@ -178,6 +178,7 @@ import {
     CacheDebugOkRedisMessage,
     CacheDebugOkMemoryMessage,
     LockAuthorityReleaseFailedMessage,
+    LockAuthorityAcquiredMessage,
     LockAuthorityAcquireFailedMessage,
     LockAuthorityNotifyExpiredLocksFailedMessage,
     LockAuthoritySendHeartbeatFailedMessage,
@@ -1776,6 +1777,14 @@ export const configMap = {
         loki: true,
         messageType: {
         } as LockAuthorityNotifyExpiredLocksFailedMessage,
+    },
+    // Lock Authority Acquired
+    [WinstonLog.LockAuthorityAcquired]: {
+        name: WinstonLog.LockAuthorityAcquired,
+        level: WinstonLevel.Warn,
+        loki: true,
+        messageType: {
+        } as LockAuthorityAcquiredMessage,
     },
     // Lock Authority Acquire Failed
     [WinstonLog.LockAuthorityAcquireFailed]: {

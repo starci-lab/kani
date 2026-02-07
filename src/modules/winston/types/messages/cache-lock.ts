@@ -28,6 +28,11 @@ export interface LockAuthorityNotifyExpiredLocksFailedMessage {
     error: string
 }
 
+export interface LockAuthorityAcquiredMessage {
+    botId: string
+    key: string
+}
+
 export interface LockAuthorityAcquireFailedMessage {
     botId: string
     key: string

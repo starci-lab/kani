@@ -121,7 +121,7 @@ export class OnCompletedService {
                     },
                     {
                         $unset: {
-                            activeJob: null 
+                            activeJob: "" 
                         } 
                     },
                     {
@@ -130,9 +130,7 @@ export class OnCompletedService {
                 )
             },
         )
-        await this.lockAuthorityService.release({
-            botId: bot.id 
-        })
+        
         const logEvent = this.queueToLog(queueName)
         const logPayload: Record<string, unknown> = {
             botId: bot.id,
@@ -144,5 +142,8 @@ export class OnCompletedService {
         }
         this.winstonService.log(logEvent,
             logPayload)
+        this.lockAuthorityService.release({
+            botId: bot.id 
+        })
     }
 }

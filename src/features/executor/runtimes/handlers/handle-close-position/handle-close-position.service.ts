@@ -150,7 +150,7 @@ export class HandleClosePositionService {
                     error: error.message,
                 }
             )
-            await this.lockAuthorityService.release(
+            this.lockAuthorityService.release(
                 {
                     botId: bot.id,
                 }

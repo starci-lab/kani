@@ -3,8 +3,9 @@ import {
     OnApplicationBootstrap
 } from "@nestjs/common"
 import {
-    ActiveJobSchema,
     JobType,
+    BotSchema,
+    InjectPrimaryMongoose,
 } from "@modules/databases"
 import {
     DayjsService 
@@ -35,11 +36,11 @@ import {
     ReconcileBalanceEnqueueService 
 } from "@modules/blockchains/balance"
 import {
-    BotsLoaderService 
-} from "../../loaders"
-import {
     LockAuthorityService    
 } from "../../bussiness"
+import {
+    Connection 
+} from "mongoose"
 
 /**
  * Service for requeueing reconcile-balance jobs when active jobs exceed TTL.
@@ -55,10 +56,11 @@ export class RequeueService implements OnApplicationBootstrap {
         private readonly reconcileBalanceQueue: Queue<string>,
         private readonly dayjsService: DayjsService,
         private readonly winstonService: WinstonService,
-        private readonly botsLoaderService: BotsLoaderService,
         private readonly asyncService: AsyncService,
         private readonly reconcileBalanceEnqueueService: ReconcileBalanceEnqueueService,
         private readonly lockAuthorityService: LockAuthorityService,
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
     ) {
     }
 
@@ -75,23 +77,21 @@ export class RequeueService implements OnApplicationBootstrap {
             // get TTL from config
             const ttl = envConfig().executor.runtime.operation.reconcileBalance.requeue.interval
             // find bots with stale active jobs
-            const bots = this.botsLoaderService.botCollection.chain().find(
-                {
-                    activeJob: {
-                        $where: (activeJob: ActiveJobSchema) => {
-                            return (
-                                activeJob &&
-                                activeJob.jobType === JobType.ReconcileBalance &&
-                                activeJob.queuedAt &&
-                                this.dayjsService.now().diff(
-                                    activeJob.queuedAt,
-                                    "millisecond"
-                                ) > ttl
-                            )
-                        }
-                    },
-                }
-            ).data()
+            const bots = await this.connection.model<BotSchema>(BotSchema.name).find({
+                executor: envConfig().executor.id,
+                activeJob: {
+                    $exists: true,
+                    $ne: null,
+                },
+                "activeJob.jobType": JobType.ReconcileBalance,
+                "activeJob.queuedAt": {
+                    $exists: true,
+                    $lt: this.dayjsService.now()
+                        .subtract(ttl,
+                            "millisecond")
+                        .toDate(),
+                },
+            })
             // requeue each stale bot
             const promises = bots.map(
                 async (bot) => {

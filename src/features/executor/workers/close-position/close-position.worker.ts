@@ -224,7 +224,6 @@ export class ClosePositionWorker extends WorkerHost {
                 }
             })()
         )
-
         if (error) {
             this.winstonService.log(
                 WinstonLog.ClosePositionBootstrappingFailed,
@@ -265,13 +264,15 @@ export class ClosePositionWorker extends WorkerHost {
                     executeResult,
                 }
             )
-            await this.onCompletedService.process({
-                job: baseParams.job,
-                bot: baseParams.bot,
-                bullmqJob: baseParams.bullmqJob,
-                queueName: BullQueueName.ClosePosition,
-                liquidityPool: baseParams.liquidityPool,
-            })
+            await this.onCompletedService.process(
+                {
+                    job: baseParams.job,
+                    bot: baseParams.bot,
+                    bullmqJob: baseParams.bullmqJob,
+                    queueName: BullQueueName.ClosePosition,
+                    liquidityPool: baseParams.liquidityPool,
+                }
+            )
         } catch (error) {
             await this.onFailedService.process({
                 ...baseParams,

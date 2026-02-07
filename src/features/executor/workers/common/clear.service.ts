@@ -67,7 +67,7 @@ export class ClearService {
             }
         )
         // release the lock authority
-        await this.lockAuthorityService.release(
+        this.lockAuthorityService.release(
             {
                 botId,
             }

@@ -3,11 +3,15 @@ import {
     OnApplicationBootstrap
 } from "@nestjs/common"
 import {
-    ActiveJobSchema,
     JobType,
     PrimaryMemoryStorageService,
-    PositionAssociateService
+    PositionAssociateService,
+    BotSchema,
+    InjectPrimaryMongoose
 } from "@modules/databases"
+import {
+    Connection 
+} from "mongoose"
 import {
     DayjsService 
 } from "@modules/mixin"
@@ -67,6 +71,8 @@ export class RequeueService implements OnApplicationBootstrap {
         private readonly liquidityPoolStateService: LiquidityPoolStateService,
         private readonly settlementService: SettlementService,
         private readonly positionAssociateService: PositionAssociateService,
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
     ) {
     }
 
@@ -83,23 +89,22 @@ export class RequeueService implements OnApplicationBootstrap {
             // get TTL from config
             const ttl = envConfig().executor.runtime.operation.closePosition.requeue.interval
             // find bots with stale active jobs
-            const bots = this.botsLoaderService.botCollection.chain().find(
-                {
-                    activeJob: {
-                        $where: (activeJob: ActiveJobSchema) => {
-                            return (
-                                activeJob &&
-                                activeJob.jobType === JobType.ClosePosition &&
-                                activeJob.queuedAt &&
-                                this.dayjsService.now().diff(
-                                    activeJob.queuedAt,
-                                    "millisecond"
-                                ) > ttl
-                            )
-                        }
-                    },
-                }
-            ).data()
+            // find bots with stale active jobs
+            const bots = await this.connection.model<BotSchema>(BotSchema.name).find({
+                executor: envConfig().executor.id,
+                activeJob: {
+                    $exists: true,
+                    $ne: null,
+                },
+                "activeJob.jobType": JobType.ReconcileBalance,
+                "activeJob.queuedAt": {
+                    $exists: true,
+                    $lt: this.dayjsService.now()
+                        .subtract(ttl,
+                            "millisecond")
+                        .toDate(),
+                },
+            })
             // requeue each stale bot
             const promises = bots.map(
                 async (bot) => {

@@ -193,6 +193,7 @@ export enum WinstonLog {
     CacheDebugOkRedis = "Cache.Debug.Ok.Redis",
     CacheDebugOkMemory = "Cache.Debug.Ok.Memory",
     LockAuthorityNotifyExpiredLocksFailed = "Lock.Authority.Notify.Expired.Locks.Failed",
+    LockAuthorityAcquired = "Lock.Authority.Acquired",
     LockAuthorityAcquireFailed = "Lock.Authority.Acquire.Failed",
     LockAuthorityReleaseFailed = "Lock.Authority.Release.Failed",
     LockAuthoritySendHeartbeatFailed = "Lock.Authority.Send.Heartbeat.Failed",
