@@ -27,13 +27,13 @@ import {
 } from "@modules/api"
 import {
     buildExecutorEndpointPath,
-    restConfig 
-} from "../../config"
+    executorRestConfig
+} from "@modules/service-configs"
 
-@ApiTags(restConfig().jobs().tags)
+@ApiTags(executorRestConfig().jobs().tags)
 @Controller(buildExecutorEndpointPath(
-    restConfig().jobs().tags,
-    restConfig().jobs().api().addWithdrawJob.path)
+    executorRestConfig().jobs().tags,
+    executorRestConfig().jobs().api().addWithdrawJob.path)
 )
 export class AddWithdrawJobController {
     constructor(

@@ -968,16 +968,31 @@ export const envConfig = () => ({
         heartbeatInterval: parseEnvMs({
             key: "KAFKA_HEARTBEAT_INTERVAL", defaultValue: "3s" 
         }), // 3 seconds
-        retry: {
-            retries: parseEnvInt({
-                key: "KAFKA_RETRY_RETRIES", defaultValue: 10 
-            }), // 10 retries
-            restartOnFailure: parseEnvBoolean({
-                key: "KAFKA_RETRY_RESTART_ON_FAILURE", defaultValue: true 
-            }),
-            factor: parseEnvFloat({
-                key: "KAFKA_RETRY_FACTOR", defaultValue: 2.0 
-            }), // 2x exponential backoff
+        consumer: {
+            retry: {
+                retries: parseEnvInt({
+                    key: "KAFKA_RETRY_RETRIES", defaultValue: Infinity 
+                }), // 10 retries
+                restartOnFailure: parseEnvBoolean({
+                    key: "KAFKA_RETRY_RESTART_ON_FAILURE", defaultValue: true 
+                }),
+                factor: parseEnvFloat({
+                    key: "KAFKA_RETRY_FACTOR", defaultValue: 2.0 
+                }), // 2x exponential backoff
+            },
+        },
+        producer: {
+            retry: {
+                retries: parseEnvInt({
+                    key: "KAFKA_RETRY_RETRIES", defaultValue: Infinity 
+                }), // 10 retries
+                restartOnFailure: parseEnvBoolean({
+                    key: "KAFKA_RETRY_RESTART_ON_FAILURE", defaultValue: true 
+                }),
+                factor: parseEnvFloat({
+                    key: "KAFKA_RETRY_FACTOR", defaultValue: 2.0 
+                }), // 2x exponential backoff
+            },
         },
         numPartitions: parseEnvInt({
             key: "KAFKA_NUM_PARTITIONS", defaultValue: 1 

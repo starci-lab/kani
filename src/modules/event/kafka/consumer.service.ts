@@ -63,9 +63,9 @@ export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown
                             allowAutoTopicCreation: true,
                             heartbeatInterval: envConfig().kafka.heartbeatInterval,
                             retry: {
-                                retries: Infinity,
-                                restartOnFailure: async () => true,
-                                factor: envConfig().kafka.retry.factor,    
+                                retries: envConfig().kafka.consumer.retry.retries,
+                                restartOnFailure: () => Promise.resolve(envConfig().kafka.consumer.retry.restartOnFailure),
+                                factor: envConfig().kafka.consumer.retry.factor,    
                             },
                             readUncommitted: true,
                         })

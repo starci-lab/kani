@@ -26,15 +26,16 @@ import {
     AxiosService
 } from "@modules/axios"
 import {
-    restConfig, buildExecutorFullEndpointPath
-} from "@modules/executor"
+    executorRestConfig,
+    buildExecutorFullEndpointPath
+} from "@modules/service-configs"
 import {
     AxiosInstance,
     AxiosResponse
 } from "axios"
 import type {
     AddWithdrawJobRequestDto
-} from "@modules/executor"
+} from "@features/executor"
 
 @Injectable()
 export class WithdrawV2Service implements OnModuleInit {
@@ -95,8 +96,8 @@ export class WithdrawV2Service implements OnModuleInit {
         >(
             buildExecutorFullEndpointPath(
                 {
-                    tags: restConfig().jobs().tags,
-                    api: restConfig().jobs().api().addWithdrawJob.path,
+                    tags: executorRestConfig().jobs().tags,
+                    api: executorRestConfig().jobs().api().addWithdrawJob.path,
                     bot,
                 }
             ),

@@ -126,6 +126,7 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
         const instructions = await this.closePositionInstructionService.createCloseInstructions({
             bot,
             state: _state,
+            liquidityPool,
         })
 
         return await this.rpcExecutorService.withSolanaRpc({

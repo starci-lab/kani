@@ -47,9 +47,9 @@ export class KafkaProducerService implements OnModuleInit, OnApplicationShutdown
                 idempotent: false,
                 maxInFlightRequests: envConfig().kafka.maxInFlightRequests,
                 retry: {
-                    retries: envConfig().kafka.retry.retries,
-                    restartOnFailure: () => Promise.resolve(envConfig().kafka.retry.restartOnFailure),
-                    factor: envConfig().kafka.retry.factor,
+                    retries: envConfig().kafka.producer.retry.retries,
+                    restartOnFailure: () => Promise.resolve(envConfig().kafka.producer.retry.restartOnFailure),
+                    factor: envConfig().kafka.producer.retry.factor,
                 },
             }
         )
