@@ -31,6 +31,7 @@ export class SendHeartbeatService {
             bot,
             job,
             bullmqJob,
+            fatal = false,
         }: SendHeartbeatParams
     ): Promise<void> {
         const ok = await this.lockAuthorityService.sendHeartbeat(
@@ -49,7 +50,7 @@ export class SendHeartbeatService {
                             bullmqJobId: bullmqJob.id,
                         }
                     ),
-                    strategy: JobFailureStrategy.Requeue,
+                    strategy: fatal ? JobFailureStrategy.Fatal : JobFailureStrategy.Requeue,
                 }
             )
         }

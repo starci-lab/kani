@@ -36,6 +36,7 @@ import {
 } from "@modules/common"
 import {
     SerializerService,
+    SendHeartbeatService
 } from "../common"
 
 /**
@@ -54,6 +55,7 @@ export class PrepareService {
         private readonly dayjsService: DayjsService,
         private readonly asyncService: AsyncService,
         private readonly serializerService: SerializerService,
+        private readonly sendHeartbeatService: SendHeartbeatService,
     ) {}
 
     /**
@@ -66,13 +68,9 @@ export class PrepareService {
      * const result = await prepareService.process({ job, bot, liquidityPool, ... })
      */
     async process(
-        {
-            job,
-            bot,
-            state,
-            liquidityPool,
-        }: PrepareParams
+        params: PrepareParams
     ): Promise<PrepareResult> {
+        const { job, bot, state, liquidityPool } = params
         // guard: idempotency (return persisted data if already prepared)
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Prepared)
@@ -146,6 +144,12 @@ export class PrepareService {
                 jobId: job.id,
                 txHashes: prepareResult.prepareTxs.map((prepareTx) => prepareTx.txHash),
                 liquidityPoolId: liquidityPool.displayId,
+            }
+        )
+        await this.sendHeartbeatService.process(
+            {
+                ...params,
+                fatal: true,
             }
         )
         return {

@@ -32,6 +32,7 @@ import {
     PrepareOpenPositionResultNotFoundException,
 } from "@modules/exceptions"
 import {
+    SendHeartbeatService,
     SerializerService 
 } from "../common"
 import {
@@ -54,6 +55,7 @@ export class PrepareService {
         private readonly dayjsService: DayjsService,
         private readonly asyncService: AsyncService,
         private readonly serializerService: SerializerService,
+        private readonly sendHeartbeatService: SendHeartbeatService,
     ) {}
 
     // Phase: PREPARE
@@ -75,13 +77,9 @@ export class PrepareService {
      * persisted metadata instead of recomputing.
      */
     async process(
-        {
-            job,
-            bot,
-            liquidityPool,  
-            state,
-        }: PrepareParams
+        params: PrepareParams
     ): Promise<PrepareResult> {
+        const { job, bot, liquidityPool, state } = params
         // Guard: if job already passed PENDING phase, do nothing
         // This prevents duplicate preparation on retry or replay
         if (
@@ -162,6 +160,10 @@ export class PrepareService {
                 liquidityPoolId: liquidityPool.displayId,
             }
         )
+        await this.sendHeartbeatService.process({
+            ...params,
+            fatal: true,
+        })
         return {
             data: {
                 prepareResult,

@@ -67,7 +67,6 @@ import {
     ClearService,
     OnCompletedService,
     OnFailedService,
-    SendHeartbeatService,
 } from "../common"
 import {
     PrepareService,
@@ -112,7 +111,6 @@ export class WithdrawWorker extends WorkerHost {
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         private readonly prepareService: PrepareService,
-        private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly executeService: ExecuteService,
         private readonly confirmService: ConfirmService,
         private readonly onCompletedService: OnCompletedService,
@@ -218,21 +216,18 @@ export class WithdrawWorker extends WorkerHost {
 
         try {
             const prepareResult = await this.prepareService.process(baseParams)
-            await this.sendHeartbeatService.process(baseParams)
             const executeResult = await this.executeService.process(
                 {
                     ...baseParams,
                     prepareResult,
                 }
             )
-            await this.sendHeartbeatService.process(baseParams)
             await this.confirmService.process(
                 {
                     ...baseParams,
                     executeResult,
                 }
             )
-            await this.sendHeartbeatService.process(baseParams)
             await this.onCompletedService.process({
                 job: baseParams.job,
                 bot: baseParams.bot,

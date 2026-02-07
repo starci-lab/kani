@@ -43,6 +43,9 @@ import {
 import {
     SerializerService 
 } from "../common"
+import {
+    SendHeartbeatService,
+} from "../common"
 
 /**
  * Service for the EXECUTE phase of open-position jobs.
@@ -60,6 +63,7 @@ export class ExecuteService {
         private readonly dayjsService: DayjsService,
         private readonly asyncService: AsyncService,
         private readonly serializerService: SerializerService,
+        private readonly sendHeartbeatService: SendHeartbeatService,
     ) {}
 
     /**
@@ -71,16 +75,9 @@ export class ExecuteService {
      * Idempotency: if the job is already at/after EXECUTED, returns the existing metadata.
      */
     async process(
-        {
-            job,
-            bot,
-            bullmqJob,
-            prepareResult,
-            payload,
-            state,
-            liquidityPool,
-        }: ExecuteParams
+        params: ExecuteParams
     ): Promise<ExecuteResult> {
+        const { job, bot, bullmqJob, prepareResult, payload, state, liquidityPool } = params
         const isRetry = bullmqJob.attemptsMade > 0
         // Guard: if job already passed EXECUTED phase, do nothing
         if (
@@ -156,6 +153,7 @@ export class ExecuteService {
                     },
                 }
             )
+        await this.sendHeartbeatService.process(params)
         return {
             data: {
                 prepareResult: prepareResult?.data?.prepareResult,

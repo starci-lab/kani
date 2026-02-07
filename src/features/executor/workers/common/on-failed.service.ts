@@ -131,6 +131,9 @@ export class OnFailedService {
                                 activeJob: null 
                             },
                         },
+                        {
+                            session,
+                        }
                     )
                 }
             )

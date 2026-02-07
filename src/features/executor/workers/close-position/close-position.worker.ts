@@ -255,19 +255,16 @@ export class ClosePositionWorker extends WorkerHost {
         }
         try {
             const prepareResult = await this.prepareService.process(baseParams)
-            await this.sendHeartbeatService.process(baseParams)
             const executeResult = await this.executeService.process({
                 ...baseParams,
                 prepareResult,
             })
-            await this.sendHeartbeatService.process(baseParams)
             await this.confirmService.process(
                 {
                     ...baseParams,
                     executeResult,
                 }
             )
-            await this.sendHeartbeatService.process(baseParams)
             await this.onCompletedService.process({
                 job: baseParams.job,
                 bot: baseParams.bot,

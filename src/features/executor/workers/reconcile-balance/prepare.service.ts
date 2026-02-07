@@ -49,6 +49,7 @@ import {
 } from "@modules/mixin"
 import {
     SerializerService,
+    SendHeartbeatService,
 } from "../common"
 
 /**
@@ -70,6 +71,7 @@ export class PrepareService {
         private readonly asyncService: AsyncService,
         private readonly evalSnapshotService: EvalSnapshotService,
         private readonly serializerService: SerializerService,
+        private readonly sendHeartbeatService: SendHeartbeatService,
     ) {}
 
     /**
@@ -81,15 +83,8 @@ export class PrepareService {
      * @example
      * const result = await prepareService.process({ job, bot, payload })
      */
-    async process({
-        job,
-        bot,
-        payload: {
-            gasBalanceAmount,
-            quoteBalanceAmount,
-            targetBalanceAmount,
-        }
-    }: PrepareParams): Promise<PrepareResult> {
+    async process(params: PrepareParams): Promise<PrepareResult> {
+        const { job, bot, payload: { gasBalanceAmount, quoteBalanceAmount, targetBalanceAmount } } = params
         // guard: idempotency (return persisted data if already prepared)
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Prepared)
@@ -322,6 +317,10 @@ export class PrepareService {
                 balanceAmounts,
             }
         )
+        await this.sendHeartbeatService.process({
+            ...params,
+            fatal: true,
+        })
         // return execution plan to next phase
         return {
             data: {

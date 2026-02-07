@@ -42,6 +42,7 @@ import {
 } from "@modules/mixin"
 import {
     SerializerService,
+    SendHeartbeatService,
 } from "../common"
 import {
     ToStringObject,
@@ -66,6 +67,7 @@ export class PrepareService {
         private readonly connection: Connection,
         private readonly dayjsService: DayjsService,
         private readonly serializerService: SerializerService,
+        private readonly sendHeartbeatService: SendHeartbeatService,
     ) {}
 
     /**
@@ -77,13 +79,8 @@ export class PrepareService {
      * @example
      * const result = await prepareService.process({ job, bot, payload })
      */
-    async process({
-        job,
-        bot,
-        payload: {
-            payload: cacheResult,
-        },
-    }: PrepareParams): Promise<PrepareResult> {
+    async process(params: PrepareParams): Promise<PrepareResult> {
+        const { job, bot, payload: { payload: cacheResult } } = params
         // guard: idempotency (return persisted data if already prepared)
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Prepared)
@@ -220,6 +217,10 @@ export class PrepareService {
                 txHashes: prepareResult.prepareTxs.map((prepareTx) => prepareTx.txHash),
             }
         )
+        await this.sendHeartbeatService.process({
+            ...params,
+            fatal: true,
+        })
         return {
             data: {
                 prepareResult,

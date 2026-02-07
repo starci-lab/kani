@@ -39,6 +39,7 @@ import {
 } from "@modules/common"
 import {
     SerializerService,
+    SendHeartbeatService,
 } from "../common"
 
 /**
@@ -57,6 +58,7 @@ export class ExecuteService {
         private readonly dayjsService: DayjsService,
         private readonly asyncService: AsyncService,
         private readonly serializerService: SerializerService,
+        private readonly sendHeartbeatService: SendHeartbeatService,
     ) {}
 
     /**
@@ -69,14 +71,9 @@ export class ExecuteService {
      * const result = await executeService.process(params)
      */
     async process(
-        {
-            job,
-            bot,
-            bullmqJob,
-            prepareResult,
-            payload,
-        }: ExecuteParams
+        params: ExecuteParams
     ): Promise<ExecuteResult> {
+        const { job, bot, bullmqJob, prepareResult, payload } = params
         const isRetry = bullmqJob.attemptsMade > 0
         // guard: idempotency (return persisted data if already executed)
         if (
@@ -141,6 +138,7 @@ export class ExecuteService {
                 },
             }
         )
+        await this.sendHeartbeatService.process(params)
         return {
             data: {
                 prepareResult: prepareResult?.data?.prepareResult,
@@ -149,4 +147,3 @@ export class ExecuteService {
         }
     }
 }
-

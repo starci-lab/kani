@@ -67,7 +67,6 @@ import {
     ClearService,
     OnCompletedService,
     OnFailedService,
-    SendHeartbeatService,
 } from "../common"
 import {
     PrepareService,
@@ -111,7 +110,6 @@ export class ReconcileBalanceWorker extends WorkerHost {
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         private readonly prepareService: PrepareService,
-        private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly executeService: ExecuteService,
         private readonly confirmService: ConfirmService,
         private readonly onCompletedService: OnCompletedService,
@@ -218,8 +216,6 @@ export class ReconcileBalanceWorker extends WorkerHost {
         try {
             // PREPARE phase
             const prepareResult = await this.prepareService.process(baseParams)
-            // HEARTBEAT phase
-            await this.sendHeartbeatService.process(baseParams)
             // EXECUTE phase
             const executeResult = await this.executeService.process(
                 {
@@ -227,9 +223,6 @@ export class ReconcileBalanceWorker extends WorkerHost {
                     prepareResult,
                 }
             )
-            // HEARTBEAT phase
-            await this.sendHeartbeatService.process(baseParams)
-
             // CONFIRM phase
             await this.confirmService.process(
                 {
@@ -237,8 +230,6 @@ export class ReconcileBalanceWorker extends WorkerHost {
                     executeResult,
                 }
             )
-            // HEARTBEAT phase
-            await this.sendHeartbeatService.process(baseParams)
             // ON COMPLETED phase
             await this.onCompletedService.process({
                 job: baseParams.job,

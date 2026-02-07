@@ -27,7 +27,7 @@ import {
     DayjsService,
 } from "@modules/mixin"
 import {
-    SerializerService,
+    SendHeartbeatService,
 } from "../common"
 import {
     envConfig,
@@ -49,7 +49,7 @@ export class ConfirmService {
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
         private readonly dayjsService: DayjsService,
-        private readonly serializerService: SerializerService,
+        private readonly sendHeartbeatService: SendHeartbeatService,
     ) {}
 
     /**
@@ -62,12 +62,9 @@ export class ConfirmService {
      * await confirmService.process({ bot, job, executeResult })
      */
     async process(
-        {
-            bot,
-            job,
-            executeResult,
-        }: ConfirmParams
+        params: ConfirmParams
     ): Promise<void> {
+        const { job, bot, executeResult } = params
         // guard: idempotency (return early if already confirmed)
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Confirmed)
@@ -136,6 +133,7 @@ export class ConfirmService {
                 }
             )
         }
+        await this.sendHeartbeatService.process(params)
         this.winstonService.log(
             WinstonLog.WithdrawJobConfirmed,
             {

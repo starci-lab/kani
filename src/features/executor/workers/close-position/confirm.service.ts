@@ -44,6 +44,9 @@ import {
 import {
     DayjsService 
 } from "@modules/mixin"
+import {
+    SendHeartbeatService,
+} from "../common"
 
 /**
  * Service for the CONFIRM phase of close-position jobs.
@@ -64,6 +67,7 @@ export class ConfirmService {
         private readonly liquidityPoolStateService: LiquidityPoolStateService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly dayjsService: DayjsService,
+        private readonly sendHeartbeatService: SendHeartbeatService,
     ) {}
 
     /**
@@ -79,17 +83,9 @@ export class ConfirmService {
      *
      * Idempotency: if the job is already at/after CONFIRMED, returns early.
      */
-    async process(
-        {
-            bot,
-            job,
-            executeResult,
-            liquidityPool,
-            targetToken,
-            quoteToken,
-            gasToken,
-        }: ConfirmParams
+    async process(params: ConfirmParams
     ) {
+        const { job, bot, executeResult, liquidityPool, targetToken, quoteToken, gasToken } = params
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Confirmed)
         ) {
@@ -235,6 +231,7 @@ export class ConfirmService {
                 }
             )       
         }
+        await this.sendHeartbeatService.process(params)
         this.winstonService.log(
             WinstonLog.ClosePositionJobConfirmed,
             {

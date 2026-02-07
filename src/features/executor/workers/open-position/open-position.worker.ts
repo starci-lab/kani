@@ -72,9 +72,6 @@ import {
     PrepareService 
 } from "./prepare.service"
 import {
-    SendHeartbeatService 
-} from "../common"
-import {
     ClearService,
     OnCompletedService,
     OnFailedService
@@ -115,7 +112,6 @@ export class OpenPositionWorker extends WorkerHost {
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         private readonly prepareService: PrepareService,
-        private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly onCompletedService: OnCompletedService,
         private readonly onFailedService: OnFailedService,
         private readonly confirmService: ConfirmService,
@@ -313,8 +309,6 @@ export class OpenPositionWorker extends WorkerHost {
             // PREPARE phase
             // Prepare open-position transaction + persist Prepared status/metadata.
             const prepareResult = await this.prepareService.process(baseParams)
-            // HEARTBEAT phase (before any side-effecting continuation)
-            await this.sendHeartbeatService.process(baseParams)
             // EXECUTE phase
             // Execute open-position transaction + persist Executed status/metadata.
             const executeResult = await this.executeService.process(
@@ -323,8 +317,6 @@ export class OpenPositionWorker extends WorkerHost {
                     prepareResult
                 }
             )
-            // HEARTBEAT phase (before post-transaction persistence)
-            await this.sendHeartbeatService.process(baseParams)
             // CONFIRM phase
             // Confirm open-position transaction + persist Confirmed status/metadata.
             await this.confirmService.process(
@@ -333,8 +325,6 @@ export class OpenPositionWorker extends WorkerHost {
                     executeResult,
                 }
             )
-            // HEARTBEAT phase (before finalization + unlock)
-            await this.sendHeartbeatService.process(baseParams)
             // ON COMPLETED phase
             // Mark job completed, clear bot activeJob, release lock authority.
             await this.onCompletedService.process({

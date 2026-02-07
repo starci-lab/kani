@@ -40,6 +40,9 @@ import {
 import {
     DayjsService 
 } from "@modules/mixin"
+import {
+    SendHeartbeatService,
+} from "../common"
 
 /**
  * Service for the CONFIRM phase of open-position jobs.
@@ -59,6 +62,7 @@ export class ConfirmService {
         private readonly winstonService: WinstonService,
         private readonly openPositionActionService: OpenPositionActionService,
         private readonly dayjsService: DayjsService,
+        private readonly sendHeartbeatService: SendHeartbeatService,
     ) {}
 
     /**
@@ -73,17 +77,9 @@ export class ConfirmService {
      * Idempotency: if the job is already at/after CONFIRMED, returns early.
      */
     async process(
-        {
-            bot,
-            job,
-            executeResult,
-            liquidityPool,
-            targetToken,
-            quoteToken,
-            gasToken,
-            state,
-        }: ConfirmParams
+        params: ConfirmParams
     ): Promise<ConfirmResult> {
+        const { job, bot, executeResult, liquidityPool, targetToken, quoteToken, gasToken, state } = params
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Confirmed)
         ) {
@@ -205,6 +201,7 @@ export class ConfirmService {
                 }
             )
         }
+        await this.sendHeartbeatService.process(params)
         this.winstonService.log(
             WinstonLog.OpenPositionJobConfirmed,
             {

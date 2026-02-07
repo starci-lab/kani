@@ -30,6 +30,9 @@ import {
 import {
     DayjsService 
 } from "@modules/mixin"
+import {
+    SendHeartbeatService,
+} from "../common"
 
 /**
  * Service for the CONFIRM phase of reconcile-balance jobs.
@@ -47,6 +50,7 @@ export class ConfirmService {
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
         private readonly dayjsService: DayjsService,
+        private readonly sendHeartbeatService: SendHeartbeatService,
     ) {}
 
     /**
@@ -59,12 +63,9 @@ export class ConfirmService {
      * await confirmService.process({ bot, job, executeResult })
      */
     async process(
-        {
-            bot,
-            job,
-            executeResult,
-        }: ConfirmParams
+        params: ConfirmParams
     ): Promise<ConfirmResult> {
+        const { job, bot, executeResult } = params
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Confirmed)
         ) {
@@ -138,6 +139,7 @@ export class ConfirmService {
                 }
             )
         }
+        await this.sendHeartbeatService.process(params)
         this.winstonService.log(
             WinstonLog.ReconcileBalanceJobConfirmed,
             {

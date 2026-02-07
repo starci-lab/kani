@@ -166,6 +166,4 @@ export class RequeueService implements OnApplicationBootstrap {
     handleInterval() {
         this.process()
     }
-
-
 }

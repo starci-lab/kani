@@ -11,4 +11,5 @@ export interface SendHeartbeatParams {
     job: JobSchema
     bot: BotSchema
     bullmqJob: Job<string>
+    fatal?: boolean
 }
