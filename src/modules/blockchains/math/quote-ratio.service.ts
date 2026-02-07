@@ -5,8 +5,9 @@ import {
     Injectable
 } from "@nestjs/common"
 import {
-    ComputeQuoteRatioParams, ComputeQuoteRatioResult
-} from "./swap.service"
+    ComputeQuoteRatioParams, 
+    ComputeQuoteRatioResult
+} from "./types"
 import {
     toDecimalAmount
 } from "@modules/common"
@@ -19,6 +20,7 @@ import {
 import {
     CheckQuoteRatioStatusParams
 } from "./types/quote-ratio"
+import Decimal from "decimal.js"
 
 /**
  * Service responsible for quote ratio calculations.

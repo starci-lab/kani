@@ -1,16 +1,15 @@
 import BN from "bn.js"
 import {
     BotSchema,
+    LiquidityPoolSchema,
 } from "@modules/databases"
 import {
     Decimal 
 } from "decimal.js"
 import {
-    PrepareTx
-} from "../../types/transactions"
-import {
-    LiquidityPoolState 
-} from "../../types/pool-state"
+    PrepareTx,
+    LiquidityPoolState
+} from "../../types"
 
 /**
  * Parameters for preparing an open position transaction.
@@ -18,6 +17,7 @@ import {
 export interface PrepareOpenPositionParams {
     bot: BotSchema
     state: LiquidityPoolState
+    liquidityPool: LiquidityPoolSchema
 }
 
 /**
@@ -47,6 +47,7 @@ export interface ExecuteOpenPositionParams {
     prepareTxs: Array<PrepareTx>
     positionId?: string
     stimulate?: boolean
+    liquidityPool: LiquidityPoolSchema
 }
 
 /**
@@ -108,6 +109,7 @@ export interface ConfirmOpenPositionParams {
     bot: BotSchema
     positionId: string
     state: LiquidityPoolState
+    liquidityPool: LiquidityPoolSchema
 }
 
 /**

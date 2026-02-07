@@ -1,7 +1,10 @@
 import {
-    ClmmLiquidityPoolState,
-    BotSchema
+    ClmmLiquidityPoolState
 } from "../../../types"
+import {
+    BotSchema,
+    LiquidityPoolSchema
+} from "@modules/databases"
 import {
     SuiEvent
 } from "@mysten/sui/client"
@@ -38,6 +41,8 @@ export interface ParseIncreaseLiquidityEventResult {
 export interface ParseIncreaseLiquidityEventParams {
     /** CLMM liquidity pool state. */
     state: ClmmLiquidityPoolState
+    /** Liquidity pool. */
+    liquidityPool: LiquidityPoolSchema
     /** Array of Sui events. */
     events?: Array<SuiEvent>
     /** Bot schema. */

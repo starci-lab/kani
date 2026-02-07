@@ -5,12 +5,12 @@ import {
     AbstractException 
 } from "../abstract"
 import type {
-    ErrorSuiObjectName 
-} from "./types"
+    ErrorSuiObjectKind 
+} from "../../enums"
 
 /** Metadata when Sui object is not found. */
 export interface SuiObjectNotFoundExceptionMetadata extends AbstractExceptionMetadata {
-    name: ErrorSuiObjectName
+    kind: ErrorSuiObjectKind
     parentId?: string
     id?: string
     dexId: string
@@ -20,13 +20,13 @@ export interface SuiObjectNotFoundExceptionMetadata extends AbstractExceptionMet
 /** Thrown when Sui object cannot be found. */
 export class SuiObjectNotFoundException extends AbstractException {
     constructor(
-        { name, parentId, id, originalError }: SuiObjectNotFoundExceptionMetadata
+        { kind, parentId, id, originalError }: SuiObjectNotFoundExceptionMetadata
     ) {
         super(
             "Sui object not found", 
             "SUI_OBJECT_NOT_FOUND_EXCEPTION", 
             {
-                name, parentId, id, originalError
+                kind, parentId, id, originalError
             }
         )
     }

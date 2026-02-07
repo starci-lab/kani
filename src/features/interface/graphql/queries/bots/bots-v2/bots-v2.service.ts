@@ -157,10 +157,14 @@ export class BotsV2Service {
             }
         })
         if (activePositionPositionAssociate) {
-            await this.activePositionAssociateService.attachAssociatedPositionsToBotActivePositions({ bots })
+            await this.activePositionAssociateService.attachAssociatedPositionsToBotActivePositions({
+                bots 
+            })
         }
         if (activePositionLiquidityPoolAssociate) {
-            await this.activePositionAssociateService.attachAssociatedLiquidityPoolToBotActivePositions({ bots })
+            await this.activePositionAssociateService.attachAssociatedLiquidityPoolToBotActivePositions({
+                bots 
+            })
         }
         if (statusAssociate) {
             // if the bot do not have an active position, set the status to idle

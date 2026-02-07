@@ -19,13 +19,13 @@ export class PortfolioValueV2Snapshot {
         {
             description: "Portfolio value excluding gas.",
         })
-    excludingGas: number
+        excludingGas: number
 
     @Field(() => Float,
         {
             description: "Portfolio value including gas.",
         })
-    includingGas: number
+        includingGas: number
 }
 
 /** Portfolio value of a bot. */
@@ -37,37 +37,37 @@ export class PortfolioValueV2ResponseData {
         {
             description: "The target balance amount of the bot.",
         })
-    targetBalanceAmount: number
+        targetBalanceAmount: number
 
     @Field(() => Float,
         {
             description: "The quote balance amount of the bot.",
         })
-    quoteBalanceAmount: number
+        quoteBalanceAmount: number
 
     @Field(() => Float,
         {
             description: "The gas balance amount of the bot.",
         })
-    gasBalanceAmount: number
+        gasBalanceAmount: number
 
     @Field(() => PortfolioValueV2Snapshot,
         {
             description: "Portfolio value denominated in the target token (from EvalBalanceService).",
         })
-    portfolioValue: PortfolioValueV2Snapshot
+        portfolioValue: PortfolioValueV2Snapshot
 
     @Field(() => PortfolioValueV2Snapshot,
         {
             description: "Portfolio value denominated in USD (from EvalBalanceService).",
         })
-    portfolioValueInUsd: PortfolioValueV2Snapshot
+        portfolioValueInUsd: PortfolioValueV2Snapshot
 
     @Field(() => GraphQLTypeBalanceEvalStatus,
         {
             description: "Eligibility status from EvalBalanceService.",
         })
-    status: BalanceEvalStatus
+        status: BalanceEvalStatus
 }
 
 /** GraphQL response wrapper for a portfolio value query v2. */
@@ -83,5 +83,5 @@ export class PortfolioValueV2Response
             nullable: true,
             description: "The portfolio value data returned for the requested bot.",
         })
-    data?: PortfolioValueV2ResponseData
+        data?: PortfolioValueV2ResponseData
 }

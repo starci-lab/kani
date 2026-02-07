@@ -72,6 +72,7 @@ export class ClosePositionInstructionService {
     async createCloseInstructions({
         bot,
         state,
+        liquidityPool,
     }: CreateCloseInstructionsParams)
     : Promise<Array<Instruction>>
     {
@@ -87,14 +88,14 @@ export class ClosePositionInstructionService {
             })
         }
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenA.toString(),
+            id: liquidityPool.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenB.toString(),
+            id: liquidityPool.tokenB.toString(),
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const instructions: Array<Instruction> = []
@@ -135,12 +136,12 @@ export class ClosePositionInstructionService {
             programAddress,
             reserveXAddress,
             reserveYAddress,
-        } = state.static.metadata as MeteoraLiquidityPoolMetadata
+        } = liquidityPool.metadata as MeteoraLiquidityPoolMetadata
         const { pda: eventAuthorityPda } = await this.eventAuthorityService.getPda({
             programAddress: address(programAddress),
         })
         const [binArrayTickmapExtensionPda] = deriveBinArrayBitmapExtension(
-            new PublicKey(state.static.poolAddress),
+            new PublicKey(liquidityPool.poolAddress),
             new PublicKey(programAddress),
         )
         const [removeLiquidityByRange2Args] = RemoveLiquidityByRange2Args.serialize({
@@ -154,7 +155,7 @@ export class ClosePositionInstructionService {
         const binArrayAccountsMeta = getBinArrayAccountMetasCoverage(
             new BN(bot.activePosition.associatedPosition.dlmmState.minBinId),
             new BN(bot.activePosition.associatedPosition.dlmmState.maxBinId),
-            new PublicKey(state.static.poolAddress),
+            new PublicKey(liquidityPool.poolAddress),
             new PublicKey(programAddress)
         )
         const removeLiquidityByRange2Instruction: Instruction = {
@@ -165,7 +166,7 @@ export class ClosePositionInstructionService {
                     role: AccountRole.WRITABLE,
                 },
                 {
-                    address: address(state.static.poolAddress),
+                    address: address(liquidityPool.poolAddress),
                     role: AccountRole.WRITABLE,
                 },
                 {
@@ -241,7 +242,7 @@ export class ClosePositionInstructionService {
             programAddress: address(programAddress),
             accounts: [
                 {
-                    address: address(state.static.poolAddress),
+                    address: address(liquidityPool.poolAddress),
                     role: AccountRole.WRITABLE,
                 },
                 {
@@ -315,7 +316,7 @@ export class ClosePositionInstructionService {
                     slices: [],
                 },
             })  
-            const rewardInfo = state.dynamic.rewards[i]
+            const rewardInfo = state.rewards[i]
             if (!rewardInfo || address(rewardInfo.tokenAddress.toString()) === address(SYSTEM_PROGRAM_ADDRESS))
                 continue
             const {
@@ -348,7 +349,7 @@ export class ClosePositionInstructionService {
                 programAddress: address(programAddress),
                 accounts: [
                     {
-                        address: address(state.static.poolAddress),
+                        address: address(liquidityPool.poolAddress),
                         role: AccountRole.WRITABLE,
                     },
                     {

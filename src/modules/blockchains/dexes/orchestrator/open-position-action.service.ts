@@ -22,17 +22,16 @@ import {
     MeteoraOpenPositionActionService 
 } from "../meteora"
 import {
-    ClmmLiquidityPoolState,
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResult,
-    DlmmLiquidityPoolState,
     ExecuteOpenPositionParams,
     ExecuteOpenPositionResult,
     PrepareOpenPositionParams,
     PrepareOpenPositionResult
 } from "../types"
 import {
-    LiquidityPoolState 
+    ClmmLiquidityPoolState,
+    DlmmLiquidityPoolState
 } from "../../types"
 import {
     CetusOpenPositionActionService 
@@ -115,7 +114,7 @@ export class OpenPositionActionService {
      * Delegates preparation logic to DEX-specific service based on pool configuration.
      *
      * @param param - Parameters for preparing open position
-     * @param param.state - The liquidity pool state (CLMM or DLMM)
+     * @param param.liquidityPool - Liquidity pool schema
      * @param param.bot - Bot schema
      * @returns Prepared transaction with position details
      * @throws {DexNotFoundException} If the DEX is not found in memory storage
@@ -124,13 +123,14 @@ export class OpenPositionActionService {
      *       Execution/confirmation do enforce it. This preserves existing behavior.
      */
     async prepare({
-        state,
+        liquidityPool,
         bot,
+        state,
     }: PrepareOpenPositionParams): Promise<PrepareOpenPositionResult> {
         // Stage: state validation (DEX must exist for this pool)
         const _state = state as ClmmLiquidityPoolState | DlmmLiquidityPoolState
 
-        const dexId = _state.static.dex.toString()
+        const dexId = liquidityPool.dex.toString()
         const dex = this.getDexOrThrow(dexId)
 
         // Route to DEX-specific prepare service
@@ -138,41 +138,48 @@ export class OpenPositionActionService {
         case DexId.Raydium:
             return this.raydiumOpenPositionActionService.prepare({
                 state: _state,
-                bot 
+                bot,
+                liquidityPool,
             })
         case DexId.Orca:
             return this.orcaOpenPositionActionService.prepare({
                 state: _state,
-                bot 
+                bot,
+                liquidityPool,
             })
         case DexId.Meteora:
             return this.meteoraOpenPositionActionService.prepare({
                 state: _state,
-                bot 
+                bot,
+                liquidityPool,
             })
         case DexId.FlowX:
             return this.flowxOpenPositionActionService.prepare({
                 state,
-                bot 
+                bot,
+                liquidityPool,
             })
         case DexId.Cetus:
             return this.cetusOpenPositionActionService.prepare({
                 state,
-                bot 
+                bot,
+                liquidityPool,
             })
         case DexId.Turbos:
             return this.turbosOpenPositionActionService.prepare({
                 state,
-                bot 
+                bot,
+                liquidityPool,
             })
         case DexId.Momentum:
             return this.momentumOpenPositionActionService.prepare({
                 state,
-                bot 
+                bot,
+                liquidityPool,
             })
         default:
             throw new DexNotImplementedException({
-                id: _state.static.dex.toString(),
+                id: liquidityPool.dex.toString(),
             })
         }
     }
@@ -189,10 +196,9 @@ export class OpenPositionActionService {
     async execute(
         params: ExecuteOpenPositionParams,
     ): Promise<ExecuteOpenPositionResult> {
-        const _state = params.state as ClmmLiquidityPoolState | DlmmLiquidityPoolState
-
+        const { liquidityPool } = params
         // Stage: state/config validation (DEX must exist and be enabled for execution)
-        const dexId = _state.static.dex.toString()
+        const dexId = liquidityPool.dex.toString()
         const dex = this.getDexOrThrow(dexId)
         this.assertDexEnabledOrThrow(dexId,
             dex.displayId)
@@ -215,7 +221,7 @@ export class OpenPositionActionService {
             return this.meteoraOpenPositionActionService.execute(params)
         default:
             throw new DexNotImplementedException({
-                id: _state.static.dex.toString(),
+                id: liquidityPool.dex.toString(),
             })
         }
     }
@@ -232,10 +238,9 @@ export class OpenPositionActionService {
     async confirm(
         params: ConfirmOpenPositionParams,
     ): Promise<ConfirmOpenPositionResult> {
-        const _state = params.state as LiquidityPoolState
-
+        const { liquidityPool } = params
         // Stage: state/config validation (DEX must exist and be enabled for confirmation)
-        const dexId = _state.static.dex.toString()
+        const dexId = liquidityPool.dex.toString()
         const dex = this.getDexOrThrow(dexId)
         this.assertDexEnabledOrThrow(dexId,
             dex.displayId)
@@ -258,7 +263,7 @@ export class OpenPositionActionService {
             return this.meteoraOpenPositionActionService.confirm(params)
         default:
             throw new DexNotImplementedException({
-                id: _state.static.dex.toString(),
+                id: liquidityPool.dex.toString(),
             })
         }
     }

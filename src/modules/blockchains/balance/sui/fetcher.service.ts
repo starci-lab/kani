@@ -22,7 +22,7 @@ import {
 } from "@modules/databases"
 import {
     TokenNotFoundException 
-} from "@modules/exceptions/classes"
+} from "@modules/exceptions/errors"
 import {
     Decimal 
 } from "decimal.js"

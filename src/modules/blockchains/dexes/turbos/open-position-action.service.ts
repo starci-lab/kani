@@ -43,8 +43,8 @@ import {
     TransactionExecutionFailedException,
     PrivyPublicKeyNotFoundException,
     SuiObjectInvalidTypeException,
-    ErrorSuiObjectName,
-    ErrorTransactionType,
+    ErrorSuiObjectKind,
+    TransactionType,
     SuiObjectNotFoundException,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
@@ -121,7 +121,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                 // Stage: on-chain fetch validation (Position NFT object must exist)
                 if (positionNftObjectInfo.error || !positionNftObjectInfo.data) {
                     throw new SuiObjectNotFoundException({
-                        name: ErrorSuiObjectName.PositionNFT,
+                        kind: ErrorSuiObjectKind.PositionNFT,
                         id: positionId,
                         dexId: DexId.Turbos,
                         liquidityPoolId: _state.static.displayId,
@@ -130,7 +130,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                 // Stage: on-chain fetch validation (object must be a Move object)
                 if (positionNftObjectInfo.data.content?.dataType !== "moveObject") {
                     throw new SuiObjectInvalidTypeException({
-                        name: ErrorSuiObjectName.PositionNFT,
+                        kind: ErrorSuiObjectKind.PositionNFT,
                         id: positionId,
                         dexId: DexId.Turbos,
                         liquidityPoolId: _state.static.displayId,
@@ -147,7 +147,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                 // Stage: on-chain fetch validation (Position object must exist)
                 if (clmmPosition.error || !clmmPosition.data) {
                     throw new SuiObjectNotFoundException({
-                        name: ErrorSuiObjectName.Position,
+                        kind: ErrorSuiObjectKind.Position,
                         id: turbosPositionNFT.positionId,
                         dexId: DexId.Turbos,
                         liquidityPoolId: _state.static.displayId,
@@ -156,7 +156,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                 // Stage: on-chain fetch validation (object must be a Move object)
                 if (clmmPosition.data.content?.dataType !== "moveObject") {
                     throw new SuiObjectInvalidTypeException({
-                        name: ErrorSuiObjectName.PositionNFT,
+                        kind: ErrorSuiObjectKind.PositionNFT,
                         id: turbosPositionNFT.positionId,
                         dexId: DexId.Turbos,
                         liquidityPoolId: _state.static.displayId,
@@ -257,7 +257,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                                     botId: bot.id,
                                     txHash: devInspect.effects.transactionDigest,
                                     liquidityPoolId: _state.static.displayId,
-                                    type: ErrorTransactionType.OpenPosition,
+                                    type: TransactionType.OpenPosition,
                                 })
                             }
                             const bytes = await openPositionTxb.build({
@@ -377,7 +377,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                 botId: bot.id,
                 txHash,
                 liquidityPoolId: _state.static.displayId,
-                type: ErrorTransactionType.OpenPosition,
+                type: TransactionType.OpenPosition,
             })
         }
         return await this.rpcExecutorService.withSuiClient({
@@ -394,7 +394,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                             botId: bot.id,
                             txHash: devInspect.effects.transactionDigest,
                             liquidityPoolId: _state.static.displayId,
-                            type: ErrorTransactionType.OpenPosition,
+                            type: TransactionType.OpenPosition,
                         })
                     }
                     this.winstonService.log(

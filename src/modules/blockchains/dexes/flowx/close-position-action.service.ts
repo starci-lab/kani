@@ -4,7 +4,6 @@ import {
 import {
     ExecuteClosePositionParams,
     IClosePositionActionService,
-    ClmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
     ExecuteClosePositionResult,
@@ -26,11 +25,14 @@ import {
     TransactionStimulatedFailedException,
     TransactionExecutionFailedException,
     PrivyPublicKeyNotFoundException,
-    ErrorTransactionType,
+    TransactionType,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     SuiSingleTransactionRequiredException,
     ErrorSuiSingleTransactionRequiredOperation,
 } from "@modules/exceptions"
+import {
+    ClmmLiquidityPoolState,
+} from "../../types"
 import {
     RpcExecutorService 
 } from "../../clients"
@@ -76,6 +78,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
      * @param param - Parameters for preparing close position
      * @param param.bot - Bot schema
      * @param param.state - CLMM liquidity pool state
+     * @param param.liquidityPool - Liquidity pool
      * @returns Prepared transaction with signature
      * @throws {ActivePositionNotFoundException} If no active position is found for the bot
      * @throws {TransactionValidationFailedException} If transaction dev inspect fails
@@ -83,7 +86,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
      * @throws {EncryptedPrivySignerPrivateKeyNotFoundException} If encrypted Privy signer private key is not found for V2 bots
      */
     async prepare(
-        { bot, state }: PrepareClosePositionParams
+        { bot, state, liquidityPool }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
         // Stage: state validation (close requires an active position)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
@@ -99,6 +102,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
         } = await this.closePositionTxbService.createClosePositionTxb({
             bot,
             state: _state,
+            liquidityPool,
         })
 
         return await this.rpcExecutorService.withSuiClient({
@@ -118,8 +122,8 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                                 throw new TransactionValidationFailedException({
                                     botId: bot.id,
                                     txHash: devInspect.effects.transactionDigest,
-                                    liquidityPoolId: _state.static.displayId,
-                                    type: ErrorTransactionType.ClosePosition,
+                                    liquidityPoolId: liquidityPool.displayId,
+                                    type: TransactionType.ClosePosition,
                                 })
                             }
                             // Build and sign the transaction
@@ -180,6 +184,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
      * @param param.txCheck - Whether to check if transaction already exists
      * @param param.prepareTxs - Array of prepared transactions
      * @param param.stimulate - Whether to simulate transaction execution
+     * @param param.liquidityPool - Liquidity pool
      * @returns Execution result with transaction hashes
      * @throws {SuiSingleTransactionRequiredException} If more than one transaction is provided for Sui
      * @throws {TransactionNotPreparedException} If the transaction signature is missing
@@ -188,10 +193,10 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
      */
     async execute({
         bot,
-        state,
         txCheck,
         stimulate,
         prepareTxs,
+        liquidityPool,
     }: ExecuteClosePositionParams): Promise<ExecuteClosePositionResult> {
         // Sui requires exactly 1 transaction per execution
         if (prepareTxs.length !== 1) {
@@ -207,8 +212,6 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
             txHash,
             signatureWithBytes
         } = prepareTx
-        const _state = state as ClmmLiquidityPoolState
-
         // Stage: transaction checking (if txCheck is enabled and not stimulating)
         if (txCheck && !stimulate) {
             const [txBlock] = await this.asyncService.resolveTuple(
@@ -232,7 +235,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                     {
                         botId: bot.id,
                         txHash,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     }
                 )
                 return {
@@ -246,8 +249,8 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
             throw new TransactionNotPreparedException({
                 botId: bot.id,
                 txHash,
-                liquidityPoolId: _state.static.displayId,
-                type: ErrorTransactionType.ClosePosition,
+                liquidityPoolId: liquidityPool.displayId,
+                type: TransactionType.ClosePosition,
             })
         }
 
@@ -267,8 +270,8 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                         throw new TransactionStimulatedFailedException({
                             botId: bot.id,
                             txHash: devInspect.effects.transactionDigest,
-                            liquidityPoolId: _state.static.displayId,
-                            type: ErrorTransactionType.ClosePosition,
+                            liquidityPoolId: liquidityPool.displayId,
+                            type: TransactionType.ClosePosition,
                         })
                     }
 
@@ -278,7 +281,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                         {
                             botId: bot.id,
                             txHash,
-                            liquidityPoolId: _state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         }
                     )
                     return {
@@ -303,7 +306,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                     throw new TransactionExecutionFailedException({
                         botId: bot.id,
                         txHash: digest,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
 
@@ -318,7 +321,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                     {
                         botId: bot.id,
                         txHash: digest,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     }
                 )
                 return {

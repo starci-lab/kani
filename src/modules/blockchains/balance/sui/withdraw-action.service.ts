@@ -14,7 +14,7 @@ import {
     PrivyPublicKeyNotFoundException,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     MissingSuiMessageWithBytesParamException,
-    ErrorTransactionType,
+    TransactionType,
     TransactionValidationFailedException,
     TokenNotFoundException,
     TransactionNotFoundException,
@@ -157,7 +157,7 @@ export class SuiWithdrawActionService {
                             if (!outputCoin) {
                                 throw new OutputCoinNotFoundException({
                                     botId: bot.id,
-                                    type: ErrorTransactionType.Withdraw,
+                                    type: TransactionType.Withdraw,
                                 })
                             }
                             
@@ -236,7 +236,7 @@ export class SuiWithdrawActionService {
                         if (!outputCoin) {
                             throw new OutputCoinNotFoundException({
                                 botId: bot.id,
-                                type: ErrorTransactionType.Withdraw,
+                                type: TransactionType.Withdraw,
                             })
                         }
                         
@@ -370,7 +370,7 @@ export class SuiWithdrawActionService {
             if (!signatureWithBytes) {
                 throw new MissingSuiMessageWithBytesParamException({
                     botId: bot.id,
-                    type: ErrorTransactionType.Withdraw,
+                    type: TransactionType.Withdraw,
                 })
             }
 
@@ -389,7 +389,7 @@ export class SuiWithdrawActionService {
                             throw new TransactionValidationFailedException({
                                 botId: bot.id,
                                 txHash: devInspect.effects.transactionDigest,
-                                type: ErrorTransactionType.Withdraw,
+                                type: TransactionType.Withdraw,
                             })
                         }
                         this.winstonService.log(

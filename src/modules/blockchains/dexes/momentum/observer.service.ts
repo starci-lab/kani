@@ -1,5 +1,5 @@
 import {
-    ErrorSuiObjectName,
+    ErrorSuiObjectKind,
     SuiObjectInvalidTypeException, 
     SuiObjectNotFoundException 
 } from "@modules/exceptions"
@@ -165,7 +165,7 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
             // Validate if object info exists
             if (objectInfo.error || !objectInfo.data) { 
                 throw new SuiObjectNotFoundException({
-                    name: ErrorSuiObjectName.Pool,
+                    kind: ErrorSuiObjectKind.Pool,
                     id: liquidityPool.poolAddress,
                     dexId: DexId.Momentum,
                     liquidityPoolId: liquidityPool.displayId,
@@ -175,7 +175,7 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
             // Validate object data type
             if (objectInfo.data.content?.dataType !== "moveObject") {
                 throw new SuiObjectInvalidTypeException({
-                    name: ErrorSuiObjectName.Pool,
+                    kind: ErrorSuiObjectKind.Pool,
                     id: liquidityPool.poolAddress,
                     dexId: DexId.Momentum,
                     liquidityPoolId: liquidityPool.displayId,

@@ -15,7 +15,7 @@ export class PositionsPaginationFilters extends PaginationPageFilters {
             defaultValue: false,
             description: "Whether to sort the positions in ascending order.",
         })
-    asc?: boolean
+        asc?: boolean
 }
 
 /** The input type for the cursor for fetching positions. */
@@ -27,10 +27,10 @@ export class PositionsRequest {
         {
             description: "The filters for pagination.",
         })
-    filters: PositionsPaginationFilters
+        filters: PositionsPaginationFilters
     @Field(() => ID,
         {
             description: "The ID of the bot to fetch positions for.",
         })
-    botId: string
+        botId: string
 }

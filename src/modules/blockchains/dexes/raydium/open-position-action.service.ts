@@ -23,9 +23,9 @@ import {
     InvalidPoolTokensException, 
     BalanceSnapshotsNotFoundException,
     MissingPositionIdParamException,
-    ErrorTransactionType,
+    TransactionType,
     SolanaAccountNotFoundException,
-    ErrorSolanaAccountName,
+    ErrorSolanaAccountKind,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     PrivyMetadataNotFoundException,
     ActivePositionNotFoundException,
@@ -393,7 +393,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             if (!solanaTx) {
                 throw new MissingSolanaTxParamException({
                     botId: bot.id,
-                    type: ErrorTransactionType.OpenPosition,
+                    type: TransactionType.OpenPosition,
                 })
             }
 
@@ -482,7 +482,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                 // Stage: on-chain fetch validation (position account must exist)
                 if (!positionInfo || !positionInfo.exists) {
                     throw new SolanaAccountNotFoundException({
-                        name: ErrorSolanaAccountName.PersonalPosition,
+                        kind: ErrorSolanaAccountKind.PersonalPosition,
                         address: positionId.toString(),
                         dexId: DexId.Raydium,
                         liquidityPoolId: state.static.displayId,

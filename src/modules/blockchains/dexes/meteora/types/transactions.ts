@@ -1,5 +1,6 @@
 import {
-    BotSchema
+    BotSchema,
+    LiquidityPoolSchema
 } from "@modules/databases"
 import {
     DlmmLiquidityPoolState
@@ -20,6 +21,8 @@ export interface CreateOpenPositionInstructionsParams {
     bot: BotSchema
     /** DLMM liquidity pool state. */
     state: DlmmLiquidityPoolState
+    /** Liquidity pool. */
+    liquidityPool: LiquidityPoolSchema
     /** Amount of token A. */
     amountA: BN
     /** Amount of token B. */
@@ -52,4 +55,6 @@ export interface CreateCloseInstructionsParams {
     bot: BotSchema
     /** DLMM liquidity pool state. */
     state: DlmmLiquidityPoolState
+    /** Liquidity pool. */
+    liquidityPool: LiquidityPoolSchema
 }

@@ -4,7 +4,6 @@ import {
 import {
     ExecuteClosePositionParams,
     IClosePositionActionService,
-    ClmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
     ExecuteClosePositionResult,
@@ -25,7 +24,7 @@ import {
     TransactionStimulatedFailedException,
     TransactionExecutionFailedException,
     PrivyPublicKeyNotFoundException,
-    ErrorTransactionType,
+    TransactionType,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     SuiSingleTransactionRequiredException,
     ErrorSuiSingleTransactionRequiredOperation,
@@ -49,6 +48,9 @@ import {
 import {
     PrivySignService 
 } from "@modules/privy"
+import {
+    ClmmLiquidityPoolState 
+} from "../../types"
 
 /**
  * Service responsible for closing positions on Cetus DEX.
@@ -76,12 +78,13 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
      * @param param - Parameters for preparing close position
      * @param param.bot - Bot schema
      * @param param.state - CLMM liquidity pool state
+     * @param param.liquidityPool - Liquidity pool schema
      * @returns Prepared transaction with signature
      *
      * @example
      * const result = await service.prepare({ bot, state })
      */
-    async prepare({ bot, state }: PrepareClosePositionParams): Promise<PrepareClosePositionResult> {
+    async prepare({ bot, state, liquidityPool }: PrepareClosePositionParams): Promise<PrepareClosePositionResult> {
         const _state = state as ClmmLiquidityPoolState
         // Stage: state validation (close requires an active position)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
@@ -112,10 +115,10 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                             if (devInspect.effects.status.status !== "success") {
                                 throw new TransactionValidationFailedException(
                                     {
-                                        type: ErrorTransactionType.ClosePosition,
+                                        type: TransactionType.ClosePosition,
                                         botId: bot.id,
                                         txHash: devInspect.effects.transactionDigest,
-                                        liquidityPoolId: _state.static.displayId,
+                                        liquidityPoolId: liquidityPool.displayId,
                                     }
                                 )
                             }
@@ -183,7 +186,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
      * @example
      * const result = await service.execute({ bot, state, prepareTxs, txCheck, stimulate })
      */
-    async execute({ bot, state, txCheck, prepareTxs, stimulate }: ExecuteClosePositionParams): Promise<ExecuteClosePositionResult> {
+    async execute({ bot, txCheck, prepareTxs, stimulate, liquidityPool }: ExecuteClosePositionParams): Promise<ExecuteClosePositionResult> {
         // Sui requires exactly 1 transaction
         if (prepareTxs.length !== 1) {
             throw new SuiSingleTransactionRequiredException({
@@ -191,11 +194,9 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                 numTxs: prepareTxs.length,
             })
         }
-        
         // extract transaction details
         const [prepareTx] = prepareTxs
         const { txHash, signatureWithBytes } = prepareTx
-        const _state = state as ClmmLiquidityPoolState
         
         // check if transaction already exists on-chain
         if (txCheck && !stimulate) {
@@ -220,7 +221,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                     {
                         botId: bot.id,
                         txHash,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     }
                 )
                 return {
@@ -234,8 +235,8 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
             throw new TransactionNotPreparedException({
                 botId: bot.id,
                 txHash,
-                liquidityPoolId: _state.static.displayId,
-                type: ErrorTransactionType.ClosePosition,
+                liquidityPoolId: liquidityPool.displayId,
+                type: TransactionType.ClosePosition,
             })
         }
         
@@ -255,8 +256,8 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                         throw new TransactionStimulatedFailedException({
                             botId: bot.id,
                             txHash: devInspect.effects.transactionDigest,
-                            liquidityPoolId: _state.static.displayId,
-                            type: ErrorTransactionType.ClosePosition,
+                            liquidityPoolId: liquidityPool.displayId,
+                            type: TransactionType.ClosePosition,
                         })
                     }
                     
@@ -266,7 +267,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                         {
                             botId: bot.id,
                             txHash,
-                            liquidityPoolId: _state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         }
                     )
                     return {
@@ -288,7 +289,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                     throw new TransactionExecutionFailedException({
                         botId: bot.id,
                         txHash: digest,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
                 
@@ -303,7 +304,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                     {
                         botId: bot.id,
                         txHash: digest,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     }
                 )
                 return {

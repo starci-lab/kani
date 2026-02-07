@@ -1,5 +1,6 @@
 import {
-    BotSchema
+    BotSchema,
+    LiquidityPoolSchema
 } from "@modules/databases"
 import {
     Decimal 
@@ -43,6 +44,7 @@ export interface IReservesService {
 export interface ReservesWithFeesParams {
     bot: BotSchema
     state: LiquidityPoolState
+    liquidityPool: LiquidityPoolSchema
 }
 
 /**

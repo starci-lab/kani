@@ -23,7 +23,7 @@ export class BotsV2ResponseData
         {
             description: "Bots.",
         })
-    data: Array<BotSchema>
+        data: Array<BotSchema>
 }
 
 /** The response for fetching bots v2. */
@@ -39,5 +39,5 @@ export class BotsV2Response
             description: "The data for the bots.",
             nullable: true,
         })
-    data?: BotsV2ResponseData
+        data?: BotsV2ResponseData
 }

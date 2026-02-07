@@ -14,19 +14,19 @@ export class TokenBalanceV2 {
         {
             description: "The ID of the token.",
         })
-    id: string
+        id: string
 
     @Field(() => String,
         {
             description: "The balance amount of the token.",
         })
-    balanceAmount: string
+        balanceAmount: string
 
     @Field(() => Float,
         {
             description: "The balance amount of the token in decimal format.",
         })
-    balanceAmountDecimal: number
+        balanceAmountDecimal: number
 }
 
 /** The GraphQL response for fetching balances of a bot v2. */
@@ -42,5 +42,5 @@ export class BalancesV2Response
             nullable: true,
             description: "The token balances of the bot.",
         })
-    data?: Array<TokenBalanceV2>
+        data?: Array<TokenBalanceV2>
 }

@@ -16,7 +16,7 @@ import {
     LokiJSService,
 } from "@modules/mixin"
 import {
-    LiquidityPoolNoWsIdleTimeoutException, SolanaAccountNotFoundException, ErrorSolanaAccountName
+    LiquidityPoolNoWsIdleTimeoutException, SolanaAccountNotFoundException, ErrorSolanaAccountKind
 } from "@modules/exceptions"
 import {
     WinstonLog, WinstonService
@@ -228,7 +228,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
             // Validate if account info exists
             if (!accountInfo || !accountInfo.exists) {
                 throw new SolanaAccountNotFoundException({
-                    name: ErrorSolanaAccountName.Pool,
+                    kind: ErrorSolanaAccountKind.Pool,
                     address: liquidityPool.poolAddress,
                     dexId: DexId.Meteora,
                     liquidityPoolId: liquidityPool.displayId,

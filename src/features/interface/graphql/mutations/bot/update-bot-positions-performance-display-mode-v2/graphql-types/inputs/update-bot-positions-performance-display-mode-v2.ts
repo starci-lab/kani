@@ -13,11 +13,11 @@ export class UpdateBotPositionsPerformanceDisplayModeV2Request {
         {
             description: "Unique identifier of the bot whose positions performance display mode will be updated.",
         })
-    id: string
+        id: string
 
     @Field(() => GraphQLTypePerformanceDisplayMode,
         {
             description: "Desired positions performance display mode of the bot. `target` to display in target units, `usd` to display in USD units.",
         })
-    positionsPerformanceDisplayMode: PerformanceDisplayMode
+        positionsPerformanceDisplayMode: PerformanceDisplayMode
 }

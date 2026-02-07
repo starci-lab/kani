@@ -15,7 +15,7 @@ export class TransactionsV2PaginationFilters extends PaginationPageFilters {
             nullable: true,
             description: "Whether to sort the transactions by createdAt in ascending order.",
         })
-    asc?: boolean
+        asc?: boolean
 }
 
 /** Input fields required to fetch transactions v2. */
@@ -27,10 +27,10 @@ export class TransactionsV2Request {
         {
             description: "The filters for pagination.",
         })
-    filters: TransactionsV2PaginationFilters
+        filters: TransactionsV2PaginationFilters
     @Field(() => ID,
         {
             description: "The ID of the bot to fetch transactions for.",
         })
-    botId: string
+        botId: string
 }

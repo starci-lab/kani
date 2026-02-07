@@ -2,8 +2,10 @@ import {
     ReservesWithFeesParams,
     ReservesWithFeesResult,
     IReservesWithFeesService,
-    DlmmLiquidityPoolState,
 } from "../types"
+import {
+    DlmmLiquidityPoolState,
+} from "../../types"
 import {
     Injectable,
 } from "@nestjs/common"
@@ -28,7 +30,7 @@ import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
     SolanaAccountNotFoundException,
-    ErrorSolanaAccountName,
+    ErrorSolanaAccountKind,
     PositionDlmmStateNotFoundException,
 } from "@modules/exceptions"
 import BN from "bn.js"
@@ -89,9 +91,9 @@ export class MeteoraReservesWithFeesService implements IReservesWithFeesService 
     async reservesWithFees({
         bot,
         state,
+        liquidityPool,  
     }: ReservesWithFeesParams): Promise<ReservesWithFeesResult> {
         const _state = state as DlmmLiquidityPoolState
-
         // Stage: state validation (requires an active position with associated position data)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
@@ -106,14 +108,14 @@ export class MeteoraReservesWithFeesService implements IReservesWithFeesService 
             })
         }
         // Stage: state validation (pool must have DLMM static state)
-        if (!_state.static.dlmmState) {
+        if (!liquidityPool.dlmmState) {
             throw new Error("Pool must have DLMM static state")
         }
 
         // Extract position and pool state information
         const {
             activeId: activeBinId
-        } = _state.dynamic
+        } = _state
         const {
             positionId,
             dlmmState: {
@@ -129,13 +131,13 @@ export class MeteoraReservesWithFeesService implements IReservesWithFeesService 
         )
         const {
             programAddress,
-        } = _state.static.metadata as MeteoraLiquidityPoolMetadata
+        } = liquidityPool.metadata as MeteoraLiquidityPoolMetadata
 
         // Derive bin array public keys
         const binArrayPubkeys = binArrayIndexes.map(
             (index) =>
                 deriveBinArray(
-                    new PublicKey(_state.static.poolAddress),
+                    new PublicKey(liquidityPool.poolAddress),
                     index,
                     new PublicKey(programAddress),
                 )[0],
@@ -160,20 +162,20 @@ export class MeteoraReservesWithFeesService implements IReservesWithFeesService 
         // Stage: on-chain fetch validation (position account must exist)
         if (!positionAccount || !positionAccount.exists) {
             throw new SolanaAccountNotFoundException({
-                name: ErrorSolanaAccountName.PositionATA,
+                kind: ErrorSolanaAccountKind.PositionATA,
                 address: positionId,
                 dexId: DexId.Meteora,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         // Stage: on-chain fetch validation (bin array accounts must exist)
         for (const binArrayAccount of binArrayAccounts) {
             if (!binArrayAccount || !binArrayAccount.exists) {
                 throw new SolanaAccountNotFoundException({
-                    name: ErrorSolanaAccountName.BinArray,
+                    kind: ErrorSolanaAccountKind.BinArray,
                     address: binArrayAccount.address,
                     dexId: DexId.Meteora,
-                    liquidityPoolId: _state.static.displayId,
+                    liquidityPoolId: liquidityPool.displayId,
                 })
             }
         }
@@ -190,10 +192,10 @@ export class MeteoraReservesWithFeesService implements IReservesWithFeesService 
             (binArrayAccount) => {
                 if (!binArrayAccount.exists) {
                     throw new SolanaAccountNotFoundException({
-                        name: ErrorSolanaAccountName.BinArray,
+                        kind: ErrorSolanaAccountKind.BinArray,
                         address: binArrayAccount.address,
                         dexId: DexId.Meteora,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
                 return decodeAccount<BinArray>(
@@ -206,14 +208,14 @@ export class MeteoraReservesWithFeesService implements IReservesWithFeesService 
 
         // Stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenA.toString(),
+            id: liquidityPool.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenB.toString(),
+            id: liquidityPool.tokenB.toString(),
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const {
@@ -227,7 +229,7 @@ export class MeteoraReservesWithFeesService implements IReservesWithFeesService 
         const binLowerAndUpperBinIdsArray = binArrays.map(
             binArray => getBinArrayLowerUpperBinId(binArray.index),
         )
-        const binStep = new Decimal(_state.static.dlmmState.binStep)
+        const binStep = new Decimal(liquidityPool.dlmmState.binStep)
         const {
             liquidityShares
         } = position
@@ -253,7 +255,7 @@ export class MeteoraReservesWithFeesService implements IReservesWithFeesService 
             const { price } = this.dlmmBinFormulaService.activeIdToPriceRaw({
                 activeId: binIdCurrent,
                 binStep: binStep.toNumber(),
-                basisPointMax: _state.static.dlmmState.basisPointMax,
+                basisPointMax: liquidityPool.dlmmState?.basisPointMax ?? 0,
             })
 
             // Calculate reserves based on bin position relative to active bin
@@ -277,10 +279,10 @@ export class MeteoraReservesWithFeesService implements IReservesWithFeesService 
                 )
                 if (correspondingBinArrayIndex === -1) {
                     throw new SolanaAccountNotFoundException({
-                        name: ErrorSolanaAccountName.BinArray,
+                        kind: ErrorSolanaAccountKind.BinArray,
                         address: binArrayAccounts[correspondingBinArrayIndex].address,
                         dexId: DexId.Meteora,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
                 const correspondingBinArray = binArrays[correspondingBinArrayIndex]
@@ -333,10 +335,10 @@ export class MeteoraReservesWithFeesService implements IReservesWithFeesService 
             )
             if (correspondingBinArrayIndex === -1) {
                 throw new SolanaAccountNotFoundException({
-                    name: ErrorSolanaAccountName.BinArray,
+                    kind: ErrorSolanaAccountKind.BinArray,
                     address: binArrayAccounts[correspondingBinArrayIndex].address,
                     dexId: DexId.Meteora,
-                    liquidityPoolId: _state.static.displayId,
+                    liquidityPoolId: liquidityPool.displayId,
                 })
             }
             const correspondingBinArray = binArrays[correspondingBinArrayIndex]
@@ -374,7 +376,7 @@ export class MeteoraReservesWithFeesService implements IReservesWithFeesService 
             }),
             rewards: {
             },
-            snapshotAt: _state.dynamic.snapshotAt,
+            snapshotAt: _state.snapshotAt,
         }
     }
 }

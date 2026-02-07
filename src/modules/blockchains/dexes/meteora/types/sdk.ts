@@ -8,7 +8,8 @@ import {
     RemainingAccountsInfoSlice
 } from "@meteora-ag/dlmm"
 import {
-    BotSchema
+    BotSchema,
+    LiquidityPoolSchema
 } from "@modules/databases"
 import {
     DlmmLiquidityPoolState
@@ -20,12 +21,6 @@ import {
     StrategyParameters,
     LiquidityStrategyParameters
 } from "@meteora-ag/dlmm"
-import {
-    bignum
-} from "@metaplex-foundation/beet"
-import {
-    RemainingAccountsInfoType
-} from "./close-position"
 
 /**
  * Parameters for getting potential Token2022 instruction data and accounts.
@@ -55,6 +50,8 @@ export interface DepositWithRebalanceEndpointParams {
     bot: BotSchema
     /** DLMM liquidity pool state. */
     state: DlmmLiquidityPoolState
+    /** Liquidity pool. */
+    liquidityPool: LiquidityPoolSchema
     /** Strategy parameters. */
     strategy: StrategyParameters
     /** Slippage percentage. */

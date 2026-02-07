@@ -3,10 +3,13 @@ import {
 } from "@modules/databases"
 import {
     LiquidityPoolState 
-} from "../../types/pool-state"
+} from "../../types"
+import {
+    LiquidityPoolSchema
+} from "@modules/databases"
 import {
     PrepareTx
-} from "../../types/transactions"
+} from "../../types"
 
 /**
  * Parameters for preparing a close position transaction.
@@ -14,6 +17,7 @@ import {
 export interface PrepareClosePositionParams {
     bot: BotSchema
     state: LiquidityPoolState
+    liquidityPool: LiquidityPoolSchema
 }
 
 /**
@@ -39,6 +43,7 @@ export interface ExecuteClosePositionParams {
     txCheck: boolean
     prepareTxs: Array<PrepareTx>
     stimulate?: boolean
+    liquidityPool: LiquidityPoolSchema
 }
 
 /**

@@ -15,7 +15,7 @@ export class BotsPaginationFilters extends PaginationPageFilters {
             nullable: true,
             description: "Whether to sort the bots by timestamp in ascending order.",
         })
-    asc?: boolean
+        asc?: boolean
 }
 
 /** The input type for fetching bots. */
@@ -27,5 +27,5 @@ export class BotsRequest {
         {
             description: "The filters for pagination.",
         })
-    filters: BotsPaginationFilters
+        filters: BotsPaginationFilters
 }

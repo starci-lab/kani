@@ -15,14 +15,14 @@ export class BotsV2PaginationFilters extends PaginationPageFilters {
             nullable: true,
             description: "Whether to sort the bots by timestamp in ascending order.",
         })
-    asc?: boolean
+        asc?: boolean
 
     @Field(() => String,
         {
             nullable: true,
             description: "The search string to filter the bots by.",
         })
-    searchString?: string
+        searchString?: string
 }
 
 /** Options to specify which related entities should be associated with bots v2 active positions. */
@@ -35,14 +35,14 @@ export class BotsV2ActivePositionAssociateOptions {
             nullable: true,
             description: "Whether to associate the liquidity pool data with each active position.",
         })
-    liquidityPool?: boolean
+        liquidityPool?: boolean
 
     @Field(() => Boolean,
         {
             nullable: true,
             description: "Whether to associate the position data with each active position.",
         })
-    position?: boolean
+        position?: boolean
 }
 
 /** Options to specify which related entities should be associated with bots v2. */
@@ -55,14 +55,14 @@ export class BotsV2AssociateOptions {
             nullable: true,
             description: "Options to associate related entities with each active position.",
         })
-    activePosition?: BotsV2ActivePositionAssociateOptions
+        activePosition?: BotsV2ActivePositionAssociateOptions
 
     @Field(() => Boolean,
         {
             nullable: true,
             description: "Whether to associate the status of the bots.",
         })
-    status?: boolean
+        status?: boolean
 }
 
 /** The input type for fetching bots v2. */
@@ -75,12 +75,12 @@ export class BotsV2Request {
             nullable: true,
             description: "The filters for pagination.",
         })
-    filters?: BotsV2PaginationFilters
+        filters?: BotsV2PaginationFilters
 
     @Field(() => BotsV2AssociateOptions,
         {
             description: "The options to associate with the bots.",
             nullable: true,
         })
-    associate?: BotsV2AssociateOptions
+        associate?: BotsV2AssociateOptions
 }

@@ -1,7 +1,7 @@
 import BN from "bn.js"
 import {
     ChainId
-} from "../../enums"
+} from "@modules/common"
 
 /** Parameters for splitting amount into fee and remaining. */
 export interface SplitAmountParams {

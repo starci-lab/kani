@@ -58,7 +58,11 @@ import {
     EventAuthorityService 
 } from "./event-authority.service"
 import {
-    DepositWithRebalanceEndpointParams
+    DepositWithRebalanceEndpointParams,
+    RemoveLiquidityByRange2ArgsType,
+    ClaimFee2ArgsType,
+    ClaimReward2ArgsType,
+    RemainingAccountsInfoType,
 } from "../types"
 
 export const DEFAULT_INIT_BIN_ARRAY_CU = 350_000
@@ -76,6 +80,7 @@ export class MeteoraSdkService {
     async depositWithRebalanceEndpoint({
         bot,
         state,
+        liquidityPool,
         positionMinBinId,
         positionMaxBinId,
         strategy,
@@ -87,9 +92,9 @@ export class MeteoraSdkService {
         ataAddressB,
     }: DepositWithRebalanceEndpointParams): Promise<Array<Instruction>> {
         const instructions: Array<Instruction> = []
-        if (!state.static.dlmmState) {
+        if (!liquidityPool.dlmmState) {
             throw new LiquidityPoolDlmmStateNotFoundException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
@@ -103,13 +108,13 @@ export class MeteoraSdkService {
             },
         })
         if (!tokenA || !tokenB) throw new InvalidPoolTokensException({
-            liquidityPoolId: state.static.displayId,
+            liquidityPoolId: liquidityPool.displayId,
         })
         const {
             programAddress,
             reserveXAddress,
             reserveYAddress,
-        } = state.static.metadata as MeteoraLiquidityPoolMetadata
+        } = liquidityPool.metadata as MeteoraLiquidityPoolMetadata
     
         const binArrayIndexes = getBinArrayIndexesCoverage(
             new BN(positionMinBinId),
@@ -131,7 +136,7 @@ export class MeteoraSdkService {
         const binArrayPubkeys = binArrayIndexes.map(
             (index) =>
                 deriveBinArray(
-                    new PublicKey(state.static.poolAddress),
+                    new PublicKey(liquidityPool.poolAddress),
                     index,
                     new PublicKey(programAddress)
                 )[0]
@@ -145,7 +150,7 @@ export class MeteoraSdkService {
                 programAddress: address(programAddress),
                 accounts: [
                     {
-                        address: address(state.static.poolAddress), role: AccountRole.READONLY 
+                        address: address(liquidityPool.poolAddress), role: AccountRole.READONLY 
                     },
                     {
                         address: address(binArrayPubkey.toString()), role: AccountRole.WRITABLE 
@@ -170,8 +175,8 @@ export class MeteoraSdkService {
         }
     
         // build add parameters
-        const minDeltaId = new BN(positionMinBinId).sub(new BN(state.dynamic.activeId))
-        const maxDeltaId = new BN(positionMaxBinId).sub(new BN(state.dynamic.activeId))
+        const minDeltaId = new BN(positionMinBinId).sub(new BN(state.activeId))
+        const maxDeltaId = new BN(positionMaxBinId).sub(new BN(state.activeId))
         const { deltaX, deltaY, x0, y0 } = resetUninvolvedLiquidityParams(
             minDeltaId,
             maxDeltaId,
@@ -200,14 +205,14 @@ export class MeteoraSdkService {
         }
         // compute deposit amounts (total)
         const { totalAAmount, totalBAmount } = toAmountIntoBins(
-            new BN(state.dynamic.activeId),
+            new BN(state.activeId),
             minDeltaId,
             maxDeltaId,
             deltaX,
             deltaY,
             x0,
             y0,
-            new BN(state.static.dlmmState.binStep),
+            new BN(liquidityPool.dlmmState.binStep),
             strategy.singleSidedX ?? false
         ).reduce(
             (acc, bin) => ({
@@ -239,7 +244,7 @@ export class MeteoraSdkService {
                     role: AccountRole.WRITABLE 
                 },
                 { 
-                    address: address(state.static.poolAddress), 
+                    address: address(liquidityPool.poolAddress), 
                     role: AccountRole.WRITABLE 
                 },
                 {
@@ -311,7 +316,7 @@ export class MeteoraSdkService {
                 ixName: "rebalance_liquidity",
                 data: RebalanceLiquidityArgs.serialize({
                     params: {
-                        activeId: state.dynamic.activeId.toNumber(),
+                        activeId: state.activeId.toNumber(),
                         maxActiveBinSlippage,
                         shouldClaimFee: false,
                         shouldClaimReward: false,
@@ -465,14 +470,6 @@ export const RemainingAccountsInfoArgs =
             array(u8)]],
         "remainingAccountsInfo"
     )
-
-// Export Beet structs for close position operations
-import {
-    RemoveLiquidityByRange2ArgsType,
-    ClaimFee2ArgsType,
-    ClaimReward2ArgsType,
-    RemainingAccountsInfoType
-} from "../types/close-position"
 
 export const RemoveLiquidityByRange2Args = new FixableBeetArgsStruct<RemoveLiquidityByRange2ArgsType>(
     [

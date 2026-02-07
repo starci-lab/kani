@@ -6,10 +6,12 @@ import {
     ConfirmOpenPositionResult,
     ExecuteOpenPositionResult,
     IOpenActionService,
-    ClmmLiquidityPoolState,
     PrepareOpenPositionParams,
     PrepareOpenPositionResult,
 } from "../types"
+import {
+    ClmmLiquidityPoolState,
+} from "../../types"
 import {
     Transaction,
     TransactionDataBuilder 
@@ -37,9 +39,9 @@ import {
     TransactionExecutionFailedException,
     PrivyPublicKeyNotFoundException,
     SuiObjectNotFoundException,
-    ErrorSuiObjectName,
+    ErrorSuiObjectKind,
     SuiObjectInvalidTypeException,
-    ErrorTransactionType,
+    TransactionType,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
     SlippageToleranceExceededException,
@@ -123,9 +125,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
      * @example
      * const result = await service.confirm({ positionId, state })
      */
-    async confirm({ positionId, state }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
-        const _state = state as ClmmLiquidityPoolState
-        
+    async confirm({ positionId, liquidityPool }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -140,20 +140,20 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                 // validate position object exists
                 if (objectInfo.error || !objectInfo.data) {
                     throw new SuiObjectNotFoundException({
-                        name: ErrorSuiObjectName.Position,
+                        kind: ErrorSuiObjectKind.Position,
                         id: positionId,
                         dexId: DexId.Cetus,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
                 
                 // validate object is a Move object
                 if (objectInfo.data.content?.dataType !== "moveObject") {
                     throw new SuiObjectInvalidTypeException({
-                        name: ErrorSuiObjectName.Position,
+                        kind: ErrorSuiObjectKind.Position,
                         id: positionId,
                         dexId: DexId.Cetus,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
                 
@@ -207,12 +207,13 @@ export class CetusOpenPositionActionService implements IOpenActionService {
      * @param param - Parameters for preparing open position
      * @param param.bot - Bot schema
      * @param param.state - CLMM liquidity pool state
+     * @param param.liquidityPool - Liquidity pool schema
      * @returns Prepared transaction with signature and fee amounts
      *
      * @example
      * const result = await service.prepare({ bot, state })
      */
-    async prepare({ bot, state }: PrepareOpenPositionParams): Promise<PrepareOpenPositionResult> {
+    async prepare({ bot, state, liquidityPool }: PrepareOpenPositionParams): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
         
         // validate balance snapshots exist
@@ -223,9 +224,9 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         }
         
         // validate CLMM state exists
-        if (!_state.static.clmmState) {
+        if (!liquidityPool.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         
@@ -236,30 +237,30 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         // fetch pool token metadata
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: _state.static.tokenA.toString(),
+                $eq: liquidityPool.tokenA.toString(),
             }
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: _state.static.tokenB.toString(),
+                $eq: liquidityPool.tokenB.toString(),
             }
         })
         
         // validate tokens exist
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         
         // determine if target token is token A
-        const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
+        const targetIsA = bot.targetToken.toString() === liquidityPool.tokenA.toString()
         
         // find optimal tick range
         const { tickLower, tickUpper, utilizationPercentage } = await this.tickMathService.findOptimalTickRange({
-            tickCurrent: _state.dynamic.tickCurrent,
-            tickSpacing: new Decimal(_state.static.clmmState.tickSpacing),
-            tickMultiplier: new Decimal(_state.static.clmmState.tickMultiplier),
+            tickCurrent: _state.tickCurrent,
+            tickSpacing: new Decimal(liquidityPool.clmmState.tickSpacing),
+            tickMultiplier: new Decimal(liquidityPool.clmmState.tickMultiplier),
             targetBalanceAmount: new BN(snapshotTargetBalanceAmount),
             quoteBalanceAmount: new BN(snapshotQuoteBalanceAmount),
             targetIsA,
@@ -303,10 +304,10 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                             // validate transaction effects
                             if (devInspect.effects.status.status !== "success") {
                                 throw new TransactionValidationFailedException({
-                                    type: ErrorTransactionType.OpenPosition,
+                                    type: TransactionType.OpenPosition,
                                     botId: bot.id,
                                     txHash: devInspect.effects.transactionDigest,
-                                    liquidityPoolId: _state.static.displayId,
+                                    liquidityPoolId: liquidityPool.displayId,
                                 })
                             }
                             
@@ -381,7 +382,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
      * @example
      * const result = await service.execute({ bot, state, prepareTxs, txCheck, stimulate })
      */
-    async execute({ bot, state, txCheck, stimulate, prepareTxs }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
+    async execute({ bot, txCheck, stimulate, prepareTxs, state, liquidityPool }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         // Sui requires exactly 1 transaction
         if (prepareTxs.length !== 1) {
             throw new SuiSingleTransactionRequiredException({
@@ -426,7 +427,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     {
                         botId: bot.id,
                         txHash,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     }
                 )
                 return {
@@ -439,10 +440,10 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         // validate signature exists
         if (!signatureWithBytes) {
             throw new TransactionNotPreparedException({
-                type: ErrorTransactionType.OpenPosition,
+                type: TransactionType.OpenPosition,
                 botId: bot.id,
                 txHash,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         
@@ -462,8 +463,8 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                         throw new TransactionStimulatedFailedException({
                             botId: bot.id,
                             txHash: devInspect.effects.transactionDigest,
-                            liquidityPoolId: _state.static.displayId,
-                            type: ErrorTransactionType.OpenPosition,
+                            liquidityPoolId: liquidityPool.displayId,
+                            type: TransactionType.OpenPosition,
                         })
                     }
                     
@@ -481,7 +482,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                         {
                             botId: bot.id,
                             txHash,
-                            liquidityPoolId: _state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         }
                     )
                     return {
@@ -505,7 +506,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     throw new TransactionExecutionFailedException({
                         botId: bot.id,
                         txHash,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
                 
@@ -520,7 +521,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     {
                         botId: bot.id,
                         txHash: digest,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     }
                 )
                 

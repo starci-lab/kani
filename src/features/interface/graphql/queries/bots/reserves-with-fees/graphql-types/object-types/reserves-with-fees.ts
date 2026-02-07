@@ -16,37 +16,37 @@ export class ReservesWithFeesResponseData {
         {
             description: "Reserve amount for token A.",
         })
-    reserveA: number
+        reserveA: number
 
     @Field(() => Float,
         {
             description: "Reserve amount for token B.",
         })
-    reserveB: number
+        reserveB: number
 
     @Field(() => Float,
         {
             description: "Accrued fee amount for token A.",
         })
-    feeA: number
+        feeA: number
 
     @Field(() => Float,
         {
             description: "Accrued fee amount for token B.",
         })
-    feeB: number
+        feeB: number
 
     @Field(() => GraphQLJSON,
         {
             description: "Accrued rewards per reward token (key: token id).",
         })
-    rewards: unknown
+        rewards: unknown
 
     @Field(() => Date,
         {
             description: "Timestamp of the snapshot.",
         })
-    snapshotAt: Date
+        snapshotAt: Date
 }
 
 /** GraphQL response wrapper for reserves-with-fees query. */
@@ -62,5 +62,5 @@ export class ReservesWithFeesResponse
             nullable: true,
             description: "Reserves and fees data for the requested bot.",
         })
-    data?: ReservesWithFeesResponseData
+        data?: ReservesWithFeesResponseData
 }

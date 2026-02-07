@@ -32,12 +32,6 @@ import {
     RpcAccessType 
 } from "@modules/filesystem"
 import BN from "bn.js"
-import {
-    GetTickArrayPdaByStartIndexParams,
-    GetTickArrayPdaParams,
-    GetTickArrayPdaResult
-} from "../types"
-
 /**
  * Service responsible for deriving tick array PDAs for Orca.
  * Handles program derived address generation for tick arrays.

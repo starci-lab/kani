@@ -14,13 +14,13 @@ export class CreateBotV2ResponseData {
         {
             description: "The ID of the bot",
         })
-    id: string
+        id: string
 
     @Field(() => String,
         {
             description: "The account address of the wallet",
         })
-    accountAddress: string
+        accountAddress: string
 }
 
 @ObjectType({
@@ -35,5 +35,5 @@ export class CreateBotV2Response
             nullable: true,
             description: "The response data from the createBotV2 mutation",
         })
-    data?: CreateBotV2ResponseData
+        data?: CreateBotV2ResponseData
 }

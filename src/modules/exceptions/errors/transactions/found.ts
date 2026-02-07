@@ -8,15 +8,15 @@ import type {
     LiquidityPoolId 
 } from "@modules/databases"
 import type {
-    ErrorTransactionType 
-} from "./types"
+    TransactionType 
+} from "../../enums"
 
 /** Metadata when transaction is not found in blockchain. */
 export interface TransactionNotFoundInBlockchainExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
     txHash: string
     liquidityPoolId?: LiquidityPoolId
-    type: ErrorTransactionType
+    type: TransactionType
 }
 
 /** Thrown when transaction is not found in blockchain. */

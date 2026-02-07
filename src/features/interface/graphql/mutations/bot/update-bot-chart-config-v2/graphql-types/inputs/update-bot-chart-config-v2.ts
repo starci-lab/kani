@@ -16,19 +16,19 @@ export class UpdateBotChartConfigV2Request {
         {
             description: "The ID of the bot whose chart config will be updated.",
         })
-    id: string
+        id: string
 
     @Field(() => GraphQLTypeChartUnit,
         {
             description: "The unit of the chart (usd or target).",
             nullable: true,
         })
-    chartUnit?: ChartUnit
+        chartUnit?: ChartUnit
 
     @Field(() => GraphQLTypeChartInterval,
         {
             description: "The interval of the chart.",
             nullable: true,
         })
-    chartInterval?: ChartInterval
+        chartInterval?: ChartInterval
 }

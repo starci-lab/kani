@@ -9,7 +9,7 @@ import {
 } from "@modules/derived"
 import {
     BotEncryptedPrivateKeyNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     SuiSignerService 
 } from "./sui.service"

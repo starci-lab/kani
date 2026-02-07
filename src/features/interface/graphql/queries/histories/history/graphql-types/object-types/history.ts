@@ -22,7 +22,7 @@ export class HistoryChartSerie
         {
             description: "Aggregated position value snapshot at the series timestamp.",
         })
-    value: number
+        value: number
 }
 
 /** Time-series response payload representing the historical performance of a bot. */
@@ -37,7 +37,7 @@ export class HistoryResponseData
         {
             description: "Chronologically ordered time-series data points covering the requested range.",
         })
-    series: Array<HistoryChartSerie>
+        series: Array<HistoryChartSerie>
 }
 
 /** GraphQL response wrapper for bot history queries. */
@@ -53,5 +53,5 @@ export class HistoryResponse
             description: "Time-series history data of the bot.",
             nullable: true,
         })
-    data?: HistoryResponseData
+        data?: HistoryResponseData
 }

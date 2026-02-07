@@ -68,8 +68,12 @@ export class ReservesWithFeesV2Service {
                 userId: user.id,
             })
         }
-        await this.activePositionAssociateService.attachAssociatedPositionsToBotActivePositions({ bots: [bot] })
-        await this.activePositionAssociateService.attachAssociatedLiquidityPoolToBotActivePositions({ bots: [bot] })
+        await this.activePositionAssociateService.attachAssociatedPositionsToBotActivePositions({
+            bots: [bot] 
+        })
+        await this.activePositionAssociateService.attachAssociatedLiquidityPoolToBotActivePositions({
+            bots: [bot] 
+        })
         const activePosition = await this.connection
             .model<PositionSchema>(PositionSchema.name)
             .findOne({

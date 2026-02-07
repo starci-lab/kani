@@ -23,7 +23,7 @@ export class LiquidityPoolsResponseData
         {
             description: "Liquidity pools.",
         })
-    data: Array<LiquidityPoolSchema>
+        data: Array<LiquidityPoolSchema>
 }
 
 /** GraphQL response type for the liquidity pools query. */
@@ -39,5 +39,5 @@ export class LiquidityPoolsResponse
             description: "The data for the liquidity pools.",
             nullable: true,
         })
-    data: LiquidityPoolsResponseData
+        data: LiquidityPoolsResponseData
 }

@@ -4,7 +4,6 @@ import {
 import {
     ExecuteClosePositionParams,
     IClosePositionActionService,
-    DlmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
     ExecuteClosePositionResult,
@@ -24,7 +23,7 @@ import {
     EncryptedPrivySignerPrivateKeyNotFoundException,
     PrivyMetadataNotFoundException,
     InvalidPoolTokensException,
-    ErrorTransactionType,
+    TransactionType,
     MissingSolanaTxParamException,
     TransactionValidationFailedException,
 } from "@modules/exceptions"
@@ -57,6 +56,9 @@ import {
 import {
     PrivySignService 
 } from "@modules/privy"
+import {
+    DlmmLiquidityPoolState
+} from "../../types"
 
 /**
  * Service responsible for closing positions on Meteora DEX.
@@ -84,6 +86,7 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
      * @param param - Parameters for preparing close position
      * @param param.bot - Bot schema
      * @param param.state - DLMM liquidity pool state
+     * @param param.liquidityPool - Liquidity pool
      * @returns Prepared transaction with signature
      * @throws {ActivePositionNotFoundException} If no active position is found for the bot
      * @throws {InvalidPoolTokensException} If pool token metadata is missing
@@ -91,10 +94,9 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
      * @throws {EncryptedPrivySignerPrivateKeyNotFoundException} If encrypted Privy signer private key is not found for V2 bots
      */
     async prepare(
-        { bot, state }: PrepareClosePositionParams
+        { bot, state, liquidityPool }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
         const _state = state as DlmmLiquidityPoolState
-
         // Stage: state validation (close requires an active position)
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException({
@@ -104,14 +106,14 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
 
         // Stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenA.toString(),
+            id: liquidityPool.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenB.toString(),
+            id: liquidityPool.tokenB.toString(),
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -119,6 +121,7 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
         const instructions = await this.closePositionInstructionService.createCloseInstructions({
             bot,
             state: _state,
+            liquidityPool,
         })
 
         return await this.rpcExecutorService.withSolanaRpc({
@@ -202,7 +205,8 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
      *
      * @param param - Parameters for executing close position
      * @param param.bot - Bot schema
-     * @param param.state - DLMM liquidity pool state
+     * @param param.state - Dynamic CLMM liquidity pool state
+     * @param param.liquidityPool - Liquidity pool
      * @param param.txCheck - Whether to check if transaction already exists
      * @param param.prepareTxs - Array of prepared transactions
      * @param param.stimulate - Whether to simulate transaction execution
@@ -212,10 +216,10 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
      */
     async execute({
         bot,
-        state,
         txCheck,
         stimulate,
         prepareTxs,
+        liquidityPool,
     }: ExecuteClosePositionParams): Promise<ExecuteClosePositionResult> {
         const txHashes: Array<string> = []
 
@@ -243,7 +247,7 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                         {
                             botId: bot.id,
                             txHash: prepareTx.txHash,
-                            liquidityPoolId: state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         },
                     )
                     txHashes.push(prepareTx.txHash)
@@ -256,7 +260,7 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
             if (!solanaTx) {
                 throw new MissingSolanaTxParamException({
                     botId: bot.id,
-                    type: ErrorTransactionType.ClosePosition,
+                    type: TransactionType.ClosePosition,
                 })
             }
 
@@ -278,7 +282,7 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                             throw new TransactionValidationFailedException({
                                 botId: bot.id,
                                 txHash: prepareTx.txHash,
-                                type: ErrorTransactionType.ClosePosition,
+                                type: TransactionType.ClosePosition,
                             })
                         }
 
@@ -288,7 +292,7 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                             {
                                 botId: bot.id,
                                 txHash: prepareTx.txHash,
-                                liquidityPoolId: state.static.displayId,
+                                liquidityPoolId: liquidityPool.displayId,
                             },
                         )
                         txHashes.push(prepareTx.txHash)
@@ -313,7 +317,7 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                         {
                             botId: bot.id,
                             txHash: prepareTx.txHash,
-                            liquidityPoolId: state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         },
                     )
                     txHashes.push(prepareTx.txHash)

@@ -10,23 +10,23 @@ export class UpdateBotSettingsV2Request {
         {
             description: "The ID of the bot whose settings will be updated.",
         })
-    id: string
+        id: string
     @Field(() => String,
         {
             description: "The new name of the bot.",
             nullable: true,
         })
-    name?: string
+        name?: string
     @Field(() => Boolean,
         {
             description: "Whether the bot is exiting to USDC",
             nullable: true,
         })
-    isExitToUsdc?: boolean
+        isExitToUsdc?: boolean
     @Field(() => String,
         {
             description: "The withdrawal address of the bot",
             nullable: true,
         })
-    withdrawalAddress?: string
+        withdrawalAddress?: string
 }

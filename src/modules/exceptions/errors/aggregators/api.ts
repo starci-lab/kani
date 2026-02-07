@@ -6,7 +6,7 @@ import {
 } from "../abstract"
 import type {
     AggregatorId 
-} from "@modules/common"
+} from "@modules/blockchains"
 
 /** Metadata when an aggregator quote error occurs. */
 export interface AggregatorQuoteFailedExceptionMetadata extends AbstractExceptionMetadata {

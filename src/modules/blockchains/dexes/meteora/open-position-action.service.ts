@@ -3,7 +3,6 @@ import {
 } from "@nestjs/common"
 import {
     IOpenActionService,
-    DlmmLiquidityPoolState,
     PrepareOpenPositionParams,
     PrepareOpenPositionResult,
     ExecuteOpenPositionParams,
@@ -11,6 +10,9 @@ import {
     ConfirmOpenPositionResult,
     ConfirmOpenPositionParams,
 } from "../types"
+import {
+    DlmmLiquidityPoolState,
+} from "../../types"
 import {
     SignerService 
 } from "../../signers"
@@ -23,10 +25,10 @@ import {
     MissingPositionIdParamException, 
     PrivyMetadataNotFoundException, 
     BalanceSnapshotsNotFoundException,
-    ErrorTransactionType,
+    TransactionType,
     MissingSolanaTxParamException,
     SolanaAccountNotFoundException,
-    ErrorSolanaAccountName,
+    ErrorSolanaAccountKind,
     ActivePositionNotFoundException,
     TransactionValidationFailedException,
 } from "@modules/exceptions"
@@ -101,10 +103,11 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
      */
     async prepare({
         state,
+        liquidityPool,
         bot,
     }: PrepareOpenPositionParams): Promise<PrepareOpenPositionResult> {
         const _state = state as DlmmLiquidityPoolState
-        const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
+        const targetIsA = bot.targetToken.toString() === liquidityPool.tokenA.toString()
 
         // Stage: state validation (open-position requires an active position context)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
@@ -130,18 +133,18 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         // Find token metadata
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: _state.static.tokenA.toString(),
+                $eq: liquidityPool.tokenA.toString(),
             },
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: _state.static.tokenB.toString(),
+                $eq: liquidityPool.tokenB.toString(),
             },
         })
         // Stage: state validation (pool token metadata must exist)
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -162,6 +165,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
             state: _state,
             amountA,
             amountB,
+            liquidityPool,
         })
 
         return await this.rpcExecutorService.withSolanaRpc({
@@ -276,20 +280,19 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
      */
     async execute({
         bot,
-        state,
         txCheck,
         positionId,
         stimulate,
         prepareTxs,
+        liquidityPool,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         // Stage: input validation (position ID must be provided)
         if (!positionId) {
             throw new MissingPositionIdParamException({
                 botId: bot.id,
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
-        const _state = state as DlmmLiquidityPoolState
         const txHashes: Array<string> = []
 
         // Process each prepared transaction
@@ -316,7 +319,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                         {
                             botId: bot.id,
                             txHash: prepareTx.txHash,
-                            liquidityPoolId: _state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         },
                     )
                     txHashes.push(prepareTx.txHash)
@@ -329,7 +332,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
             if (!solanaTx) {
                 throw new MissingSolanaTxParamException({
                     botId: bot.id,
-                    type: ErrorTransactionType.OpenPosition,
+                    type: TransactionType.OpenPosition,
                 })
             }
 
@@ -351,7 +354,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                             throw new TransactionValidationFailedException({
                                 botId: bot.id,
                                 txHash: prepareTx.txHash,
-                                type: ErrorTransactionType.OpenPosition,
+                                type: TransactionType.OpenPosition,
                             })
                         }
 
@@ -361,7 +364,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                             {
                                 botId: bot.id,
                                 txHash: prepareTx.txHash,
-                                liquidityPoolId: _state.static.displayId,
+                                liquidityPoolId: liquidityPool.displayId,
                             },
                         )
                         txHashes.push(prepareTx.txHash)
@@ -386,7 +389,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                         {
                             botId: bot.id,
                             txHash: prepareTx.txHash,
-                            liquidityPoolId: _state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         },
                     )
                     txHashes.push(prepareTx.txHash)
@@ -410,8 +413,8 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
      * @throws {SolanaAccountNotFoundException} If position account is not found on-chain
      */
     async confirm({
-        state,
         positionId,
+        liquidityPool,
     }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
@@ -427,10 +430,10 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                 // Stage: on-chain fetch validation (position account must exist)
                 if (!positionInfo || !positionInfo.exists) {
                     throw new SolanaAccountNotFoundException({
-                        name: ErrorSolanaAccountName.PersonalPosition,
+                        kind: ErrorSolanaAccountKind.PersonalPosition,
                         address: positionId,
                         dexId: DexId.Meteora,
-                        liquidityPoolId: state.static.displayId,    
+                        liquidityPoolId: liquidityPool.displayId,    
                     })
                 }
                 return {

@@ -1,4 +1,5 @@
-export enum ErrorSolanaAccountName {
+/** Solana account kind for error reporting. */
+export enum ErrorSolanaAccountKind {
     Pool = "pool",
     TickArrayLower = "tickArrayLower",
     TickArrayUpper = "tickArrayUpper",

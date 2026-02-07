@@ -20,5 +20,5 @@ export class UserV2Response
         {
             description: "The user data, if the request is successful.",
         })
-    data?: UserSchema
+        data?: UserSchema
 }

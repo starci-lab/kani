@@ -8,13 +8,13 @@ import type {
     LiquidityPoolId 
 } from "@modules/databases"
 import type {
-    ErrorTransactionType 
-} from "./types"
+    TransactionType 
+} from "../../enums"
 
 /** Thrown when transaction is not found in params */
 export interface MissingSolanaTxParamExceptionMetadata
   extends AbstractExceptionMetadata {
-  type: ErrorTransactionType
+  type: TransactionType
   botId: string
 }
 
@@ -40,7 +40,7 @@ export class MissingSolanaTxParamException extends AbstractException {
 /** Thrown when transaction is not found in params */
 export interface MissingSuiMessageWithBytesParamExceptionMetadata
   extends AbstractExceptionMetadata {
-  type: ErrorTransactionType
+  type: TransactionType
   botId: string
 }
 

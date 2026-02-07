@@ -130,34 +130,24 @@ export class ClosePositionActionService {
      */
     async prepare(params: PrepareClosePositionParams): Promise<PrepareClosePositionResult> {
         const {
-            bot,
-            state
+            liquidityPool,
         } = params
 
         // Stage: state/config validation (DEX must exist and be enabled for transaction building)
-        const dexId = state.static.dex.toString()
+        const dexId = liquidityPool.dex.toString()
         const dex = this.getDexOrThrow(dexId)
         this.assertDexEnabledOrThrow(dex.displayId)
 
         // Route to DEX-specific prepare service
         switch (dex.displayId) {
         case DexId.FlowX: {
-            return await this.flowXClosePositionActionService.prepare({
-                state,
-                bot,
-            })
+            return await this.flowXClosePositionActionService.prepare(params)
         }
         case DexId.Cetus: {
-            return await this.cetusClosePositionActionService.prepare({
-                state,
-                bot,
-            })
+            return await this.cetusClosePositionActionService.prepare(params)
         }
         case DexId.Turbos: {
-            return await this.turbosClosePositionActionService.prepare({
-                state,
-                bot,
-            })
+            return await this.turbosClosePositionActionService.prepare(params)
         }
         case DexId.Momentum: {
             return await this.momentumClosePositionActionService.prepare(params)
@@ -173,7 +163,7 @@ export class ClosePositionActionService {
         }
         default: {
             throw new DexNotImplementedException({
-                id: state.static.dex.toString(),
+                id: liquidityPool.dex.toString(),
             })
         }
         }
@@ -193,10 +183,10 @@ export class ClosePositionActionService {
     async execute(
         params: ExecuteClosePositionParams,
     ): Promise<ExecuteClosePositionResult> {
-        const { state } = params
+        const { liquidityPool } = params
 
         // Stage: state validation (DEX must exist for execution routing)
-        const dexId = state.static.dex.toString()
+        const dexId = liquidityPool.dex.toString()
         const dex = this.getDexOrThrow(dexId)
 
         // Route to DEX-specific execute service
@@ -224,7 +214,7 @@ export class ClosePositionActionService {
         }
         default: {
             throw new DexNotImplementedException({
-                id: state.static.dex.toString(),
+                id: liquidityPool.dex.toString(),
             })
         }
         }

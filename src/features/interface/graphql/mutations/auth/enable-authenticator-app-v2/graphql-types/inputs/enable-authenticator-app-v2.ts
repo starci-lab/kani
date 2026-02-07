@@ -11,5 +11,5 @@ export class EnableAuthenticatorAppV2Request {
         {
             description: "The TOTP code to verify before enabling authenticator app.",
         })
-    totpCode: string
+        totpCode: string
 }

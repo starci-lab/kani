@@ -1,3 +1,6 @@
+import {
+    ErrorSuiObjectKind 
+} from "../../enums"
 import type {
     AbstractExceptionMetadata 
 } from "../abstract"
@@ -10,7 +13,7 @@ import type {
 
 /** Metadata when Sui object is invalid type. */
 export interface SuiObjectInvalidTypeExceptionMetadata extends AbstractExceptionMetadata {
-    name: string
+    kind: ErrorSuiObjectKind
     id?: string
     dexId: DexId
     liquidityPoolId: LiquidityPoolId
@@ -19,13 +22,13 @@ export interface SuiObjectInvalidTypeExceptionMetadata extends AbstractException
 /** Thrown when Sui object type is invalid. */
 export class SuiObjectInvalidTypeException extends AbstractException {
     constructor(
-        { name, id, dexId, liquidityPoolId, originalError }: SuiObjectInvalidTypeExceptionMetadata
+        { kind, id, dexId, liquidityPoolId, originalError }: SuiObjectInvalidTypeExceptionMetadata
     ) {
         super(
             "Sui object invalid type exception", 
             "SUI_OBJECT_INVALID_TYPE_EXCEPTION", 
             {
-                name, id, dexId, liquidityPoolId, originalError
+                kind, id, dexId, liquidityPoolId, originalError
             }
         )
     }

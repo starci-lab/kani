@@ -20,5 +20,5 @@ export class DexesResponse
         {
             description: "List of dexes returned by the query.",
         })
-    data: Array<DexSchema>
+        data: Array<DexSchema>
 }

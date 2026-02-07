@@ -14,11 +14,11 @@ import {
     PrivyMetadataNotFoundException, 
     EncryptedPrivySignerPrivateKeyNotFoundException, 
     MissingSolanaTxParamException,
-    ErrorTransactionType,
     TransactionValidationFailedException,
 } from "@modules/exceptions"
 import {
-    AppVersion
+    AppVersion,
+    TransactionType
 } from "@modules/databases"
 import {
     RpcAccessType 
@@ -257,7 +257,7 @@ export class SolanaReconcileBalanceActionService {
             if (!solanaTx) {
                 throw new MissingSolanaTxParamException({
                     botId: bot.id,
-                    type: ErrorTransactionType.ReconcileBalance,
+                    type: TransactionType.ReconcileBalance,
                 })
             }
             
@@ -277,7 +277,7 @@ export class SolanaReconcileBalanceActionService {
                             throw new TransactionValidationFailedException({
                                 botId: bot.id,
                                 txHash: prepareTx.txHash,
-                                type: ErrorTransactionType.ReconcileBalance,
+                                type: TransactionType.ReconcileBalance,
                             })
                         }
                         this.winstonService.log(

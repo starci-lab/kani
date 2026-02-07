@@ -21,5 +21,5 @@ export class AuthenticationResponse
         {
             description: "Authentication config returned by the query.",
         })
-    data: AuthenticationConfig
+        data: AuthenticationConfig
 }

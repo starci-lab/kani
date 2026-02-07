@@ -18,7 +18,7 @@ export class RefreshResponseData {
         {
             description: "The newly generated short-lived JWT access token used to authenticate API requests.",
         })
-    accessToken: string
+        accessToken: string
     // non graphql field
     refreshToken?: string
 }
@@ -36,5 +36,5 @@ export class RefreshResponse
             nullable: true,
             description: "The payload containing the new access and refresh tokens.",
         })
-    data?: RefreshResponseData
+        data?: RefreshResponseData
 }

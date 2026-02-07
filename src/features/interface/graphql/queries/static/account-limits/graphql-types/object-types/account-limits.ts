@@ -21,5 +21,5 @@ export class AccountLimitsResponse
         {
             description: "Account limits returned by the query.",
         })
-    data: AccountLimitsConfig
+        data: AccountLimitsConfig
 }

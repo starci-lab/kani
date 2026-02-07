@@ -13,8 +13,8 @@ import type {
     LiquidityPoolId 
 } from "@modules/databases"
 import type {
-    ErrorTransactionType 
-} from "./types"
+    TransactionType 
+} from "../../enums"
 
 /** Thrown when transaction event is not found */
 export interface TransactionEventNotFoundExceptionMetadata extends AbstractExceptionMetadata {
@@ -50,7 +50,7 @@ export class TransactionEventNotFoundException extends AbstractException {
 /** Thrown when output coin is not found after swap */
 export interface OutputCoinNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
-    type: ErrorTransactionType
+    type: TransactionType
 }
 
 /** Thrown when output coin is not found after swap. */

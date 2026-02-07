@@ -12,6 +12,9 @@ import {
     AbstractException 
 } from "../abstract"
 import BN from "bn.js"
+import type {
+    ErrorSuiSingleTransactionRequiredOperation 
+} from "../../enums"
 
 /** Thrown when coin argument is not found in transaction */
 export interface CoinArgumentNotFoundExceptionMetadata extends AbstractExceptionMetadata {
@@ -204,10 +207,6 @@ export class SuiObjectPositionNotFoundException extends AbstractException {
     }
 }
 
-export enum ErrorSuiSingleTransactionRequiredOperation {
-    OpenPosition = "openPosition",
-    ClosePosition = "closePosition",
-}
 /** Thrown when Sui operation expects exactly one prepared transaction */
 export interface SuiSingleTransactionRequiredExceptionMetadata extends AbstractExceptionMetadata {
     operation: ErrorSuiSingleTransactionRequiredOperation

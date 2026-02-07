@@ -2,8 +2,10 @@ import {
     ReservesWithFeesParams,
     ReservesWithFeesResult,
     IReservesWithFeesService,
-    ClmmLiquidityPoolState,
 } from "../types"
+import {
+    ClmmLiquidityPoolState,
+} from "../../types"
 import {
     Injectable,
 } from "@nestjs/common"
@@ -14,7 +16,7 @@ import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
     SuiObjectNotFoundException,
-    ErrorSuiObjectName,
+    ErrorSuiObjectKind,
     InvalidTickScoreException,
     LiquidityPoolClmmStateNotFoundException,
     TokenNotFoundException,
@@ -82,7 +84,7 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
      * @example
      * const result = await service.reservesWithFees({ state, bot })
      */
-    async reservesWithFees({ state, bot }: ReservesWithFeesParams): Promise<ReservesWithFeesResult> {
+    async reservesWithFees({ state, bot, liquidityPool }: ReservesWithFeesParams): Promise<ReservesWithFeesResult> {
         const _state = state as ClmmLiquidityPoolState
         
         // validate active position exists
@@ -95,26 +97,26 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
         // validate position has CLMM state
         if (!bot.activePosition.associatedPosition.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         
         // fetch pool token metadata
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: _state.static.tokenA.toString(),
+                $eq: liquidityPool.tokenA.toString(),
             },
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: _state.static.tokenB.toString(),
+                $eq: liquidityPool.tokenB.toString(),
             },
         })
         
         // validate tokens exist
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         
@@ -128,7 +130,7 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
         const upperScore = this.tickScore({
             tick: tickUpper 
         })
-        const { tickManagerId, positionManagerId } = _state.static.metadata as CetusLiquidityPoolMetadata
+        const { tickManagerId, positionManagerId } = liquidityPool.metadata as CetusLiquidityPoolMetadata
         // fetch tick lower dynamic field from on-chain
         const { data: tickLowerDataRaw } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
@@ -146,10 +148,10 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
         // validate tick lower data exists
         if (!tickLowerDataRaw) {
             throw new SuiObjectNotFoundException({
-                name: ErrorSuiObjectName.TickLower,
+                kind: ErrorSuiObjectKind.TickLower,
                 parentId: tickManagerId,
                 dexId: DexId.Cetus,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         
@@ -176,10 +178,10 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
         // validate tick upper data exists
         if (!tickUpperDataRaw) {
             throw new SuiObjectNotFoundException({
-                name: ErrorSuiObjectName.TickUpper,
+                kind: ErrorSuiObjectKind.TickUpper,
                 parentId: tickManagerId,
                 dexId: DexId.Cetus,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         
@@ -206,10 +208,10 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
         // validate position info exists
         if (!positionInfoDataRaw) {
             throw new SuiObjectNotFoundException({
-                name: ErrorSuiObjectName.PositionInfo,
+                kind: ErrorSuiObjectKind.PositionInfo,
                 parentId: positionManagerId,
                 dexId: DexId.Cetus,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         
@@ -229,7 +231,7 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
         const { reserveA, reserveB } = this.clmmReservesFormulaService.computeReserves({
             tickLower: tickLowerBn,
             tickUpper: tickUpperBn,
-            tickCurrent: _state.dynamic.tickCurrent,
+            tickCurrent: _state.tickCurrent,
             liquidity: positionInfoData.liquidity,
             decimalsA: new Decimal(tokenA.decimals),
             decimalsB: new Decimal(tokenB.decimals),
@@ -238,13 +240,13 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
 
         // calculate fees
         const { feeA, feeB } = this.clmmFeesFormulaService.computeFees({
-            feeGrowthGlobalA: _state.dynamic.feeGrowthGlobalA,
-            feeGrowthGlobalB: _state.dynamic.feeGrowthGlobalB,
+            feeGrowthGlobalA: _state.feeGrowthGlobalA,
+            feeGrowthGlobalB: _state.feeGrowthGlobalB,
             feeGrowthOutsideLowerA: new BN(tickLowerData.feeGrowthOutsideA.toString()),
             feeGrowthOutsideUpperA: new BN(tickUpperData.feeGrowthOutsideA.toString()),
             feeGrowthOutsideLowerB: new BN(tickLowerData.feeGrowthOutsideB.toString()),
             feeGrowthOutsideUpperB: new BN(tickUpperData.feeGrowthOutsideB.toString()),
-            tickCurrent: _state.dynamic.tickCurrent,
+            tickCurrent: _state.tickCurrent,
             tickLower: tickLowerBn,
             tickUpper: tickUpperBn,
             feeGrowthInsideLastA: positionInfoData.feeGrowthInsideA,
@@ -260,7 +262,7 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
         })
 
         // calculate rewards (CLMM time-based)
-        const clmmRewards = _state.dynamic.rewards as Array<DynamicClmmRewardInfo>
+        const clmmRewards = _state.rewards as Array<DynamicClmmRewardInfo>
         const rewards = Object.fromEntries(
             clmmRewards.map((clmmReward, index) => {
                 // fetch token metadata for reward
@@ -284,7 +286,7 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
                     rewardGrowthGlobal: new BN(clmmReward.growthGlobal.toString()),
                     rewardGrowthOutsideLower: new BN(tickLowerData.rewardsGrowthOutside[index].toString()),
                     rewardGrowthOutsideUpper: new BN(tickUpperData.rewardsGrowthOutside[index].toString()),
-                    tickCurrent: _state.dynamic.tickCurrent,
+                    tickCurrent: _state.tickCurrent,
                     tickLower: tickLowerBn,
                     tickUpper: tickUpperBn,
                     rewardGrowthInsideLast: posReward.growthInside,
@@ -292,8 +294,8 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
                     decimals: new Decimal(token.decimals),
                     rewardOwned: posReward.amountOwned,
                     emissionsPerSecond: new BN(clmmReward.emissionPerSecond.toString()),
-                    lastUpdateMs: _state.dynamic.rewardLastUpdatedTimeMs ?? new BN(0),
-                    totalLiquidity: new BN(_state.dynamic.liquidity.toString()),
+                    lastUpdateMs: _state.rewardLastUpdatedTimeMs ?? new BN(0),
+                    totalLiquidity: new BN(_state.liquidity.toString()),
                 })
                 
                 return [
@@ -309,7 +311,7 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
             feeA,
             feeB,
             rewards,
-            snapshotAt: _state.dynamic.snapshotAt,
+            snapshotAt: _state.snapshotAt,
         }
     }
 

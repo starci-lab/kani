@@ -1,9 +1,10 @@
 import {
-    BotSchema
+    BotSchema,
+    LiquidityPoolSchema
 } from "@modules/databases"
 import {
     ClmmLiquidityPoolState
-} from "../../types"
+} from "../../../types"
 import BN from "bn.js"
 import {
     Instruction
@@ -19,6 +20,8 @@ import {
 export interface CreateOpenPositionInstructionsParams {
     /** Bot schema. */
     bot: BotSchema
+    /** Liquidity pool schema. */
+    liquidityPool: LiquidityPoolSchema
     /** CLMM liquidity pool state. */
     state: ClmmLiquidityPoolState
     /** Lower tick value. */

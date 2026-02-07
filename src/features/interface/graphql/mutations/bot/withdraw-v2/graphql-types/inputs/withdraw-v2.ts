@@ -12,13 +12,13 @@ export class WithdrawV2TokenInput {
         {
             description: "The ID of the token to withdraw.",
         })
-    id: string
+        id: string
 
     @Field(() => String,
         {
             description: "The amount of tokens to withdraw.",
         })
-    amount: string
+        amount: string
 }
 
 @InputType({
@@ -29,16 +29,16 @@ export class WithdrawV2Request {
         {
             description: "The ID of the bot to withdraw from.",
         })
-    id: string
+        id: string
 
     @Field(() => [WithdrawV2TokenInput],
         {
             description: "The tokens to withdraw.",
         })
-    tokenInputs: Array<WithdrawV2TokenInput>
+        tokenInputs: Array<WithdrawV2TokenInput>
     @Field(() => Boolean,
         {
             description: "Whether to withdraw to USDC.",
         })
-    toUsdc: boolean
+        toUsdc: boolean
 }

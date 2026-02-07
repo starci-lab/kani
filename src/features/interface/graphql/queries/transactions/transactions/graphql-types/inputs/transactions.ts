@@ -15,7 +15,7 @@ export class TransactionsPaginationFilters extends PaginationPageFilters {
             nullable: true,
             description: "Whether to sort the transactions by timestamp in ascending order.",
         })
-    asc?: boolean
+        asc?: boolean
 }
 
 /** Input fields required to fetch transactions. */
@@ -27,10 +27,10 @@ export class TransactionsRequest {
         {
             description: "The filters for pagination.",
         })
-    filters: TransactionsPaginationFilters
+        filters: TransactionsPaginationFilters
     @Field(() => ID,
         {
             description: "The ID of the user to fetch transactions for.",
         })
-    botId: string
+        botId: string
 }

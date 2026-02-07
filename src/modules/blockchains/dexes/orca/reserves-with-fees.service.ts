@@ -22,7 +22,7 @@ import {
 import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
-    ErrorSolanaAccountName,
+    ErrorSolanaAccountKind,
     SolanaAccountNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
     PositionClmmStateNotFoundException,
@@ -93,13 +93,13 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
      * @throws {SolanaAccountNotFoundException} If position or tick array accounts are not found on-chain
      * @throws {TokenNotFoundException} If a reward token's metadata is not found
      */
-    async reservesWithFees({ bot, state }: ReservesWithFeesParams): Promise<ReservesWithFeesResult> {
+    async reservesWithFees({ bot, liquidityPool, state }: ReservesWithFeesParams): Promise<ReservesWithFeesResult> {
         const _state = state as ClmmLiquidityPoolState
 
         // Stage: state validation (pool must have CLMM static state)
-        if (!_state.static.clmmState) {
+        if (!liquidityPool.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         // Stage: state validation (requires an active position)
@@ -137,25 +137,25 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
 
         const {
             programAddress
-        } = _state.static.metadata as OrcaLiquidityPoolMetadata
+        } = liquidityPool.metadata as OrcaLiquidityPoolMetadata
 
         // ----------------------------
         // Token validation
         // ----------------------------
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: _state.static.tokenA.toString(),
+                $eq: liquidityPool.tokenA.toString(),
             },
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: _state.static.tokenB.toString(),
+                $eq: liquidityPool.tokenB.toString(),
             },
         })
 
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -164,9 +164,9 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
         // ----------------------------
         const { pda: tickArrayLowerPda } =
             await this.tickArrayService.getPda({
-                poolStateAddress: address(_state.static.poolAddress),
+                poolStateAddress: address(liquidityPool.poolAddress),
                 tickIndex: tickLower,
-                tickSpacing: new BN(_state.static.clmmState.tickSpacing),
+                tickSpacing: new BN(liquidityPool.clmmState.tickSpacing),
                 bot,
                 pdaOnly: true,
                 programAddress: address(programAddress),
@@ -174,9 +174,9 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
 
         const { pda: tickArrayUpperPda } =
             await this.tickArrayService.getPda({
-                poolStateAddress: address(_state.static.poolAddress),
+                poolStateAddress: address(liquidityPool.poolAddress),
                 tickIndex: tickUpper,
-                tickSpacing: new BN(_state.static.clmmState.tickSpacing),
+                tickSpacing: new BN(liquidityPool.clmmState.tickSpacing),
                 bot,
                 pdaOnly: true,
                 programAddress: address(programAddress),
@@ -206,10 +206,10 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
         // ----------------------------
         if (!positionAccount || !positionAccount.exists) {
             throw new SolanaAccountNotFoundException({
-                name: ErrorSolanaAccountName.PersonalPosition,
+                kind: ErrorSolanaAccountKind.PersonalPosition,
                 address: positionId,
                 dexId: DexId.Orca,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -226,19 +226,19 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
         const tickArrayLower = decodeTickArray(tickArrayLowerAccount)
         if (!tickArrayLower.exists) {
             throw new SolanaAccountNotFoundException({
-                name: ErrorSolanaAccountName.TickArrayLower,
+                kind: ErrorSolanaAccountKind.TickArrayLower,
                 address: tickArrayLower.address,
                 dexId: DexId.Orca,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const tickArrayUpper = decodeTickArray(tickArrayUpperAccount)
         if (!tickArrayUpper.exists) {
             throw new SolanaAccountNotFoundException({
-                name: ErrorSolanaAccountName.TickArrayUpper,
+                kind: ErrorSolanaAccountKind.TickArrayUpper,
                 address: tickArrayUpper.address,
                 dexId: DexId.Orca,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -251,11 +251,11 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
         // Calculate tick indices within their respective tick arrays
         const tickLowerIndex = tickLower
             .sub(lowerStart)
-            .div(new BN(_state.static.clmmState.tickSpacing))
+            .div(new BN(liquidityPool.clmmState.tickSpacing))
 
         const tickUpperIndex = tickUpper
             .sub(upperStart)
-            .div(new BN(_state.static.clmmState.tickSpacing))
+            .div(new BN(liquidityPool.clmmState.tickSpacing))
 
         // Get tick data from arrays
         const tickLowerData = tickArrayLower.data.ticks[tickLowerIndex.toNumber()]
@@ -272,7 +272,7 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
         } = this.clmmReservesFormulaService.computeReserves({
             tickLower,
             tickUpper,
-            tickCurrent: _state.dynamic.tickCurrent,
+            tickCurrent: _state.tickCurrent,
             liquidity,
             decimalsA: new Decimal(tokenA.decimals),
             decimalsB: new Decimal(tokenB.decimals),
@@ -286,13 +286,13 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
             feeA,
             feeB
         } = this.clmmFeesFormulaService.computeFees({
-            feeGrowthGlobalA: _state.dynamic.feeGrowthGlobalA,
-            feeGrowthGlobalB: _state.dynamic.feeGrowthGlobalB,
+            feeGrowthGlobalA: _state.feeGrowthGlobalA,
+            feeGrowthGlobalB: _state.feeGrowthGlobalB,
             feeGrowthOutsideLowerA: new BN(tickLowerData.feeGrowthOutsideA.toString()),
             feeGrowthOutsideUpperA: new BN(tickUpperData.feeGrowthOutsideA.toString()),
             feeGrowthOutsideLowerB: new BN(tickLowerData.feeGrowthOutsideB.toString()),
             feeGrowthOutsideUpperB: new BN(tickUpperData.feeGrowthOutsideB.toString()),
-            tickCurrent: _state.dynamic.tickCurrent,
+            tickCurrent: _state.tickCurrent,
             tickLower,
             tickUpper,
             feeGrowthInsideLastA: new BN(positionState.feeGrowthCheckpointA.toString()),
@@ -310,7 +310,7 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
         // ----------------------------
         // Rewards (CLMM time-based)
         // ----------------------------
-        const clmmRewards = _state.dynamic.rewards as Array<DynamicClmmRewardInfo>
+        const clmmRewards = _state.rewards as Array<DynamicClmmRewardInfo>
         const rewards = Object.fromEntries(
             clmmRewards.map((clmmReward, index) => {
                 const {
@@ -331,7 +331,7 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
                     rewardGrowthGlobal: new BN(clmmReward.growthGlobal.toString()),
                     rewardGrowthOutsideLower: new BN(tickLowerData.rewardGrowthsOutside[index].toString()),
                     rewardGrowthOutsideUpper: new BN(tickUpperData.rewardGrowthsOutside[index].toString()),
-                    tickCurrent: _state.dynamic.tickCurrent,
+                    tickCurrent: _state.tickCurrent,
                     tickLower,
                     tickUpper,
                     rewardGrowthInsideLast: new BN(posReward.growthInsideCheckpoint.toString()),
@@ -339,8 +339,8 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
                     decimals: new Decimal(token.decimals),
                     rewardOwned: new BN(posReward.amountOwed.toString()),
                     emissionsPerSecond: new BN(clmmReward.emissionPerSecond.toString()),
-                    lastUpdateMs: _state.dynamic.rewardLastUpdatedTimeMs ?? new BN(0),
-                    totalLiquidity: new BN(_state.dynamic.liquidity.toString()),
+                    lastUpdateMs: _state.rewardLastUpdatedTimeMs ?? new BN(0),
+                    totalLiquidity: new BN(_state.liquidity.toString()),
                 })
                 return [
                     token.id,
@@ -355,7 +355,7 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
             feeA,
             feeB,
             rewards,
-            snapshotAt: _state.dynamic.snapshotAt,
+            snapshotAt: _state.snapshotAt,
         }
     }
 }

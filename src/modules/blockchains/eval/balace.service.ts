@@ -3,7 +3,7 @@ import {
     MinOperationalGasAmountNotFoundException,
     TargetOperationalGasAmountNotFoundException,
     TokenNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     PrimaryMemoryStorageService, 
     QuoteRatioStatus

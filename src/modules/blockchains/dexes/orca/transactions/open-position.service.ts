@@ -59,9 +59,6 @@ import {
 import {
     MountStorageService 
 } from "@modules/filesystem"
-import {
-    ClmmLiquidityPoolState 
-} from "../../types"
 import BN from "bn.js"
 import {
     CreateOpenPositionInstructionsParams,
@@ -90,31 +87,30 @@ export class OpenPositionInstructionService {
 
     async createOpenPositionInstructions({
         bot,
-        state,
+        liquidityPool,
         tickLower,
         tickUpper,
         liquidity,
         amountA,
         amountB,
     }: CreateOpenPositionInstructionsParams): Promise<CreateOpenPositionInstructionsResult> {
-        const _state = state as ClmmLiquidityPoolState
-        if (!_state.static.clmmState) {
+        if (!liquidityPool.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         const mintKeyPair = await generateKeyPairSigner()
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenA.toString(),
+            id: liquidityPool.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenB.toString(),
+            id: liquidityPool.tokenB.toString(),
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.solana.feeToAddress
@@ -149,19 +145,18 @@ export class OpenPositionInstructionService {
                 }),
             )
         }
-        const { programAddress, tokenVault0, tokenVault1 } = _state.static
-            .metadata as OrcaLiquidityPoolMetadata
+        const { programAddress, tokenVault0, tokenVault1 } = liquidityPool.metadata as OrcaLiquidityPoolMetadata
         const { pda: tickArrayLowerPda } = await this.tickArrayService.getPda({
-            poolStateAddress: address(_state.static.poolAddress),
+            poolStateAddress: address(liquidityPool.poolAddress),
             tickIndex: tickLower,
-            tickSpacing: new BN(_state.static.clmmState.tickSpacing),
+            tickSpacing: new BN(liquidityPool.clmmState.tickSpacing),
             programAddress: address(programAddress),
             bot,
         })
         const { pda: tickArrayUpperPda } = await this.tickArrayService.getPda({
-            poolStateAddress: address(_state.static.poolAddress),
+            poolStateAddress: address(liquidityPool.poolAddress),
             tickIndex: tickUpper,
-            tickSpacing: new BN(_state.static.clmmState.tickSpacing),
+            tickSpacing: new BN(liquidityPool.clmmState.tickSpacing),
             programAddress: address(programAddress),
             bot,
         })
@@ -299,7 +294,7 @@ export class OpenPositionInstructionService {
                 },
                 // state
                 {
-                    address: address(state.static.poolAddress),
+                    address: address(liquidityPool.poolAddress),
                     role: AccountRole.WRITABLE,
                 },
                 // token program
@@ -340,7 +335,7 @@ export class OpenPositionInstructionService {
             programAddress: address(programAddress),
             accounts: [
                 {
-                    address: address(state.static.poolAddress),
+                    address: address(liquidityPool.poolAddress),
                     role: AccountRole.WRITABLE,
                 },
                 {

@@ -18,7 +18,7 @@ import {
 } from "@modules/databases"
 import {
     EncryptedPrivySignerPrivateKeyNotFoundException,
-    ErrorTransactionType,
+    TransactionType,
     MissingSolanaTxParamException,
     PrivyMetadataNotFoundException,
     TokenNotFoundException,
@@ -216,8 +216,10 @@ export class SolanaWithdrawActionService {
                         (tx) => setTransactionMessageFeePayerSigner(
                             createNoopSigner(address(bot.accountAddress)),
                             tx),
-                        (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-                        (tx) => appendTransactionMessageInstructions(instructions, tx),
+                        (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash,
+                            tx),
+                        (tx) => appendTransactionMessageInstructions(instructions,
+                            tx),
                     )
                     const compiledTransaction = compileTransaction(transactionMessage)
                     
@@ -301,10 +303,11 @@ export class SolanaWithdrawActionService {
                 const transaction = await this.rpcExecutorService.withSolanaRpc({
                     accessType: RpcAccessType.Http,
                     callback: async ({ rpc }) => {
-                        return await rpc.getTransaction(signature(prepareTx.txHash), {
-                            commitment: "confirmed", 
-                            encoding: "base58" 
-                        }).send()
+                        return await rpc.getTransaction(signature(prepareTx.txHash),
+                            {
+                                commitment: "confirmed", 
+                                encoding: "base58" 
+                            }).send()
                     },
                 })
                 
@@ -327,7 +330,7 @@ export class SolanaWithdrawActionService {
             if (!solanaTx) {
                 throw new MissingSolanaTxParamException({
                     botId: bot.id,
-                    type: ErrorTransactionType.Withdraw,
+                    type: TransactionType.Withdraw,
                 })
             }
             
@@ -347,7 +350,7 @@ export class SolanaWithdrawActionService {
                             throw new TransactionValidationFailedException({
                                 botId: bot.id,
                                 txHash: prepareTx.txHash,
-                                type: ErrorTransactionType.Withdraw,
+                                type: TransactionType.Withdraw,
                             })
                         }
                         this.winstonService.log(
@@ -367,9 +370,10 @@ export class SolanaWithdrawActionService {
                         rpcSubscriptions,
                     })
                     const transactionSignature = getSignatureFromTransaction(solanaTx)
-                    await sendAndConfirmTransaction(solanaTx, {
-                        commitment: "confirmed",
-                    })
+                    await sendAndConfirmTransaction(solanaTx,
+                        {
+                            commitment: "confirmed",
+                        })
                     this.winstonService.log(
                         WinstonLog.WithdrawTransactionExecuted,
                         {

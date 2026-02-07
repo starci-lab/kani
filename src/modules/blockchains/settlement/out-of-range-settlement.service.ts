@@ -15,11 +15,10 @@ import {
     SettleParams,
     SettleStrategyResult
 } from "./settlement.interface"
-import {
-    DynamicClmmLiquidityPoolInfoCacheResult,
-    DynamicDlmmLiquidityPoolInfoCacheResult 
-} from "@modules/cache"
 import BN from "bn.js"
+import {
+    ClmmLiquidityPoolState, DlmmLiquidityPoolState 
+} from "../types"
 
 @Injectable()
 export class OutOfRangeSettlementService implements ISettlementStrategyService {
@@ -27,7 +26,8 @@ export class OutOfRangeSettlementService implements ISettlementStrategyService {
     async settle(
         { 
             bot, 
-            state 
+            state,
+            liquidityPool,
         }: SettleParams
     ): Promise<SettleStrategyResult> {
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
@@ -37,10 +37,10 @@ export class OutOfRangeSettlementService implements ISettlementStrategyService {
                 }
             )
         }
-        const isClmm = state.static.type === LiquidityPoolType.Clmm
+        const isClmm = liquidityPool.type === LiquidityPoolType.Clmm
         let settled = false
         if (isClmm) {
-            const _state = state.dynamic as DynamicClmmLiquidityPoolInfoCacheResult
+            const _state = state as ClmmLiquidityPoolState
             if (!bot.activePosition.associatedPosition.clmmState) {
                 throw new PositionClmmStateNotFoundException({
                     positionId: bot.activePosition.associatedPosition.id,
@@ -63,7 +63,7 @@ export class OutOfRangeSettlementService implements ISettlementStrategyService {
                 },
             }
         } else {
-            const _state = state.dynamic as DynamicDlmmLiquidityPoolInfoCacheResult
+            const _state = state as DlmmLiquidityPoolState
             if (!bot.activePosition.associatedPosition.dlmmState) {
                 throw new PositionDlmmStateNotFoundException({
                     positionId: bot.activePosition.associatedPosition.id,

@@ -1,5 +1,5 @@
 import {
-    ErrorSuiObjectName,
+    ErrorSuiObjectKind,
     LiquidityPoolNotFoundException, 
     SuiObjectInvalidTypeException, 
     SuiObjectNotFoundException
@@ -149,7 +149,7 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
             // validate object exists
             if (objectInfo.error || !objectInfo.data) {
                 throw new SuiObjectNotFoundException({
-                    name: ErrorSuiObjectName.Pool,
+                    kind: ErrorSuiObjectKind.Pool,
                     id: liquidityPool.poolAddress,
                     dexId: DexId.Turbos,
                     liquidityPoolId: liquidityPoolId,
@@ -159,7 +159,7 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
             // validate object type
             if (objectInfo.data.content?.dataType !== "moveObject") {
                 throw new SuiObjectInvalidTypeException({
-                    name: ErrorSuiObjectName.Pool,
+                    kind: ErrorSuiObjectKind.Pool,
                     id: liquidityPool.poolAddress,
                     dexId: DexId.Turbos,
                     liquidityPoolId: liquidityPoolId,

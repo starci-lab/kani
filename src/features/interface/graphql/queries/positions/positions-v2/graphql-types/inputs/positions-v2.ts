@@ -15,7 +15,7 @@ export class PositionsV2AssociateOptions {
             nullable: true,
             description: "Whether to associate the liquidity pool data with each position.",
         })
-    liquidityPool?: boolean
+        liquidityPool?: boolean
 }
 
 /** The request for fetching positions v2. */
@@ -28,7 +28,7 @@ export class PositionsV2PaginationFilters extends PaginationPageFilters {
             nullable: true,
             description: "Whether to sort the positions by createdAt in ascending order.",
         })
-    asc?: boolean
+        asc?: boolean
 }
 
 /** The input type for the cursor for fetching positions v2. */
@@ -40,16 +40,16 @@ export class PositionsV2Request {
         {
             description: "The filters for pagination.",
         })
-    filters: PositionsV2PaginationFilters
+        filters: PositionsV2PaginationFilters
     @Field(() => ID,
         {
             description: "The ID of the bot to fetch positions for.",
         })
-    botId: string
+        botId: string
     @Field(() => PositionsV2AssociateOptions,
         {
             description: "The options to associate with the positions.",
             nullable: true,
         })
-    associate?: PositionsV2AssociateOptions
+        associate?: PositionsV2AssociateOptions
 }

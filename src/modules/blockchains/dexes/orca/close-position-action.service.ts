@@ -7,14 +7,14 @@ import {
     PrepareClosePositionParams,
     PrepareClosePositionResult,
     ExecuteClosePositionResult,
-    ClmmLiquidityPoolState,
 } from "../types"
 import {
     SignerService 
 } from "../../signers"
 import { 
     AppVersion,
-    PrimaryMemoryStorageService
+    PrimaryMemoryStorageService,
+    TransactionType
 } from "@modules/databases"
 import { 
     ClosePositionInstructionService, 
@@ -25,7 +25,6 @@ import {
     InvalidPoolTokensException, 
     PrivyMetadataNotFoundException, 
     TransactionNotPreparedException,
-    ErrorTransactionType,
     MissingSolanaTxParamException,
     TransactionValidationFailedException,
 } from "@modules/exceptions"
@@ -58,6 +57,9 @@ import {
 import {
     PrivySignService 
 } from "@modules/privy"
+import {
+    ClmmLiquidityPoolState
+} from "../../types"
 
 /**
  * Service responsible for closing positions on Orca DEX.
@@ -85,6 +87,7 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
      * @param param - Parameters for preparing close position
      * @param param.bot - Bot schema
      * @param param.state - CLMM liquidity pool state
+     * @param param.liquidityPool - Liquidity pool schema
      * @returns Prepared transaction with signature
      * @throws {ActivePositionNotFoundException} If no active position is found for the bot
      * @throws {InvalidPoolTokensException} If pool token metadata is missing
@@ -92,7 +95,7 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
      * @throws {EncryptedPrivySignerPrivateKeyNotFoundException} If encrypted Privy signer private key is not found for V2 bots
      */
     async prepare(
-        { bot, state }: PrepareClosePositionParams
+        { bot, liquidityPool, state }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
         const _state = state as ClmmLiquidityPoolState
         // Stage: state validation (close requires an active position)
@@ -105,17 +108,17 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
         // Stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: _state.static.tokenA.toString(),
+                $eq: liquidityPool.tokenA.toString(),
             },
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: _state.static.tokenB.toString(),
+                $eq: liquidityPool.tokenB.toString(),
             },
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -217,10 +220,10 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
      */
     async execute({
         bot,
-        state,
         txCheck,
         stimulate,
-        prepareTxs
+        prepareTxs,
+        liquidityPool,
     }: ExecuteClosePositionParams): Promise<ExecuteClosePositionResult> {
         const txHashes: Array<string> = []
 
@@ -236,8 +239,8 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                 throw new TransactionNotPreparedException({
                     botId: bot.id,
                     txHash,
-                    liquidityPoolId: state.static.displayId,
-                    type: ErrorTransactionType.ClosePosition,
+                    liquidityPoolId: liquidityPool.displayId,
+                    type: TransactionType.ClosePosition,
                 })
             }
 
@@ -263,7 +266,7 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                         {
                             botId: bot.id,
                             txHash,
-                            liquidityPoolId: state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         },
                     )
                     txHashes.push(txHash)
@@ -275,7 +278,7 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
             if (!solanaTx) {
                 throw new MissingSolanaTxParamException({
                     botId: bot.id,
-                    type: ErrorTransactionType.ClosePosition,
+                    type: TransactionType.ClosePosition,
                 })
             }
 
@@ -297,7 +300,7 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                             throw new TransactionValidationFailedException({
                                 botId: bot.id,
                                 txHash,
-                                type: ErrorTransactionType.ClosePosition,
+                                type: TransactionType.ClosePosition,
                             })
                         }
 
@@ -307,7 +310,7 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                             {
                                 botId: bot.id,
                                 txHash,
-                                liquidityPoolId: state.static.displayId,
+                                liquidityPoolId: liquidityPool.displayId,
                             },
                         )
                         txHashes.push(txHash)
@@ -332,9 +335,9 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                         {
                             botId: bot.id,
                             txHash,
-                            liquidityPoolId: state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         },
-                    )
+                    )   
                     txHashes.push(txHash)
                 },
             })

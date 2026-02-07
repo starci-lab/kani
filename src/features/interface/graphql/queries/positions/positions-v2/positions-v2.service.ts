@@ -116,7 +116,9 @@ export class PositionsV2Service {
         // attach the associated liquidity pool to the positions
         if (liquidityPoolAssociate) {
             for (const position of positions) {
-                this.positionAssociateService.associateLiquidityPool({ position })
+                this.positionAssociateService.associateLiquidityPool({
+                    position 
+                })
             }
         }
         // return the positions

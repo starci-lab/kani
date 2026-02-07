@@ -4,11 +4,13 @@ import {
 import {
     ExecuteClosePositionParams,
     IClosePositionActionService,
-    ClmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
     ExecuteClosePositionResult,
 } from "../types"
+import {
+    ClmmLiquidityPoolState,
+} from "../../types"
 import {
     Transaction,
     TransactionDataBuilder 
@@ -24,7 +26,7 @@ import {
     TransactionNotPreparedException,
     PrivyPublicKeyNotFoundException,
     EncryptedPrivySignerPrivateKeyNotFoundException,
-    ErrorTransactionType,
+    TransactionType,
     TransactionStimulatedFailedException,
     TransactionValidationFailedException,
     TransactionExecutionFailedException,
@@ -83,7 +85,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
      * @throws {EncryptedPrivySignerPrivateKeyNotFoundException} If encrypted Privy signer private key is not found for V2 bots
      */
     async prepare(
-        { bot, state }: PrepareClosePositionParams
+        { bot, state, liquidityPool }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
         const _state = state as ClmmLiquidityPoolState
 
@@ -119,8 +121,8 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                                 throw new TransactionValidationFailedException({
                                     botId: bot.id,
                                     txHash: devInspect.effects.transactionDigest,
-                                    type: ErrorTransactionType.ClosePosition,
-                                    liquidityPoolId: _state.static.displayId,
+                                    type: TransactionType.ClosePosition,
+                                    liquidityPoolId: liquidityPool.displayId,
                                 })
                             }
                             // Build and sign the transaction
@@ -189,10 +191,10 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
      */
     async execute({
         bot,
-        state,
         txCheck,
         stimulate,
         prepareTxs,
+        liquidityPool,
     }: ExecuteClosePositionParams): Promise<ExecuteClosePositionResult> {
         // Sui requires exactly 1 transaction per execution
         if (prepareTxs.length !== 1) {
@@ -208,8 +210,6 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
             txHash,
             signatureWithBytes
         } = prepareTx
-        const _state = state as ClmmLiquidityPoolState
-
         // Stage: transaction checking (if txCheck is enabled and not stimulating)
         if (txCheck && !stimulate) {
             const [txBlock] = await this.asyncService.resolveTuple(
@@ -233,7 +233,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                     {
                         botId: bot.id,
                         txHash,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     }
                 )
                 return {
@@ -247,8 +247,8 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
             throw new TransactionNotPreparedException({
                 botId: bot.id,
                 txHash,
-                liquidityPoolId: _state.static.displayId,
-                type: ErrorTransactionType.ClosePosition,
+                liquidityPoolId: liquidityPool.displayId,
+                type: TransactionType.ClosePosition,
             })
         }
 
@@ -268,8 +268,8 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                         throw new TransactionStimulatedFailedException({
                             botId: bot.id,
                             txHash: devInspect.effects.transactionDigest,
-                            liquidityPoolId: _state.static.displayId,
-                            type: ErrorTransactionType.ClosePosition,
+                            liquidityPoolId: liquidityPool.displayId,
+                            type: TransactionType.ClosePosition,
                         })
                     }
 
@@ -279,7 +279,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                         {
                             botId: bot.id,
                             txHash,
-                            liquidityPoolId: _state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         }
                     )
                     return {
@@ -304,7 +304,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                     throw new TransactionExecutionFailedException({
                         botId: bot.id,
                         txHash: digest,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
 
@@ -319,7 +319,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                     {
                         botId: bot.id,
                         txHash: digest,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     }
                 )
                 return {

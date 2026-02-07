@@ -1,5 +1,5 @@
 import {
-    ErrorSuiObjectName, SuiObjectInvalidTypeException, SuiObjectNotFoundException 
+    ErrorSuiObjectKind, SuiObjectInvalidTypeException, SuiObjectNotFoundException 
 } from "@modules/exceptions"
 import {
     RpcExecutorService 
@@ -156,7 +156,7 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
             // validate object exists
             if (objectInfo.error || !objectInfo.data) {
                 throw new SuiObjectNotFoundException({
-                    name: ErrorSuiObjectName.Pool,
+                    kind: ErrorSuiObjectKind.Pool,
                     id: liquidityPool.poolAddress,
                     dexId: DexId.Cetus,
                     liquidityPoolId: liquidityPool.displayId,
@@ -166,7 +166,7 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
             // validate object type
             if (objectInfo.data.content?.dataType !== "moveObject") {
                 throw new SuiObjectInvalidTypeException({
-                    name: ErrorSuiObjectName.Pool,
+                    kind: ErrorSuiObjectKind.Pool,
                     id: liquidityPool.poolAddress,
                     dexId: DexId.Cetus,
                     liquidityPoolId: liquidityPool.displayId,

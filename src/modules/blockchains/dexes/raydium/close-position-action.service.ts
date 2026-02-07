@@ -4,17 +4,20 @@ import {
 import {
     ExecuteClosePositionParams,
     IClosePositionActionService,
-    ClmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
     ExecuteClosePositionResult,
 } from "../types"
 import {
+    ClmmLiquidityPoolState,
+} from "../../types"
+import {
     SignerService 
 } from "../../signers"
 import { 
     AppVersion,
-    PrimaryMemoryStorageService
+    PrimaryMemoryStorageService,
+    TransactionType
 } from "@modules/databases"
 import { 
     ClosePositionInstructionService, 
@@ -22,7 +25,6 @@ import {
 import { 
     ActivePositionNotFoundException,
     EncryptedPrivySignerPrivateKeyNotFoundException,
-    ErrorTransactionType,
     InvalidPoolTokensException, 
     MissingSolanaTxParamException, 
     PrivyMetadataNotFoundException, 
@@ -91,7 +93,7 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
      * @throws {EncryptedPrivySignerPrivateKeyNotFoundException} If encrypted Privy signer private key is not found for V2 bots
      */
     async prepare(
-        { bot, state }: PrepareClosePositionParams
+        { bot, liquidityPool, state }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
         const _state = state as ClmmLiquidityPoolState
 
@@ -105,17 +107,17 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
         // Stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: state.static.tokenA.toString(),
+                $eq: liquidityPool.tokenA.toString(),
             },
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: state.static.tokenB.toString(),
+                $eq: liquidityPool.tokenB.toString(),
             },
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -216,10 +218,10 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
      */
     async execute({
         bot,
-        state,
         txCheck,
         stimulate,
-        prepareTxs
+        prepareTxs,
+        liquidityPool,
     }: ExecuteClosePositionParams): Promise<ExecuteClosePositionResult> {
         const txHashes: Array<string> = []
 
@@ -247,7 +249,7 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                         {
                             botId: bot.id,
                             txHash: prepareTx.txHash,
-                            liquidityPoolId: state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         },
                     )
                     txHashes.push(prepareTx.txHash)
@@ -260,7 +262,7 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
             if (!solanaTx) {
                 throw new MissingSolanaTxParamException({
                     botId: bot.id,
-                    type: ErrorTransactionType.ClosePosition,
+                    type: TransactionType.ClosePosition,
                 })
             }
 
@@ -282,7 +284,7 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                             throw new TransactionValidationFailedException({
                                 botId: bot.id,
                                 txHash: prepareTx.txHash,
-                                type: ErrorTransactionType.ClosePosition,
+                                type: TransactionType.ClosePosition,
                             })
                         }
 
@@ -292,7 +294,7 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                             {
                                 botId: bot.id,
                                 txHash: prepareTx.txHash,
-                                liquidityPoolId: state.static.displayId,
+                                liquidityPoolId: liquidityPool.displayId,
                             },
                         )
                         txHashes.push(prepareTx.txHash)
@@ -317,7 +319,7 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                         {
                             botId: bot.id,
                             txHash: prepareTx.txHash,
-                            liquidityPoolId: state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         },
                     )
                     txHashes.push(prepareTx.txHash)

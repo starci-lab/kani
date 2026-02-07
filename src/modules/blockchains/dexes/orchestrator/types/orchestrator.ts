@@ -5,7 +5,9 @@ import {
 import {
     DynamicLiquidityPoolInfoCacheResult
 } from "@modules/cache"
-
+import {
+    LiquidityPoolState
+} from "../../../types"
 /**
  * Parameters for orchestrating reserves with fees.
  */
@@ -14,6 +16,8 @@ export interface OrchestrateReservesWithFeesParams {
     bot: BotSchema
     /** Liquidity pool schema. */
     liquidityPool: LiquidityPoolSchema
+    /** Dynamic liquidity pool info. */
+    state: LiquidityPoolState
 }
 
 /**

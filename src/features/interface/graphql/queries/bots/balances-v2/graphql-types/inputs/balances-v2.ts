@@ -11,5 +11,5 @@ export class BalancesV2Request {
         {
             description: "Unique identifier of the bot whose balances are being requested.",
         })
-    id: string
+        id: string
 }

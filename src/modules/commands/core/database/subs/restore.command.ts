@@ -116,7 +116,9 @@ export class RestoreCommand extends CommandRunner {
                 sevenZArgs.push(`-p${aesPassword}`)
             }
             sevenZArgs.push("-y")
-            await this.execaService.exec({ command: "7z", args: sevenZArgs })
+            await this.execaService.exec({
+                command: "7z", args: sevenZArgs 
+            })
             this.winstonService.log(WinstonLog.SevenZExtractionCompleted,
                 {
                     archiveName 
@@ -135,7 +137,9 @@ export class RestoreCommand extends CommandRunner {
                 "--drop",
                 "--quiet"
             ]
-            await this.execaService.exec({ command: "mongorestore", args: mongorestoreArgs })
+            await this.execaService.exec({
+                command: "mongorestore", args: mongorestoreArgs 
+            })
             this.winstonService.log(WinstonLog.MongoDBRestoreCompleted,
                 {
                     dbName: this.connection.name, fileId 

@@ -21,5 +21,5 @@ export class GasConfigResponse
         {
             description: "Gas config returned by the query.",
         })
-    data: GasConfig
+        data: GasConfig
 }

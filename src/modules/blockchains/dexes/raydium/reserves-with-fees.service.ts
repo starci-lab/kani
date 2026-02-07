@@ -21,7 +21,7 @@ import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
     SolanaAccountNotFoundException,
-    ErrorSolanaAccountName,
+    ErrorSolanaAccountKind,
     MissingActivePositionLiquidityException,
     LiquidityPoolClmmStateNotFoundException,
     TokenNotFoundException,
@@ -187,7 +187,7 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
 
         if (!positionAccount?.exists) {
             throw new SolanaAccountNotFoundException({
-                name: ErrorSolanaAccountName.PersonalPosition,
+                kind: ErrorSolanaAccountKind.PersonalPosition,
                 address: positionId,
                 dexId: DexId.Raydium,
                 liquidityPoolId: _state.static.displayId,
@@ -196,7 +196,7 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
 
         if (!tickArrayLowerAccount?.exists) {
             throw new SolanaAccountNotFoundException({
-                name: ErrorSolanaAccountName.TickArrayLower,
+                kind: ErrorSolanaAccountKind.TickArrayLower,
                 address: tickArrayLowerPda,
                 dexId: DexId.Raydium,
                 liquidityPoolId: _state.static.displayId,
@@ -205,7 +205,7 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
 
         if (!tickArrayUpperAccount?.exists) {
             throw new SolanaAccountNotFoundException({
-                name: ErrorSolanaAccountName.TickArrayUpper,
+                kind: ErrorSolanaAccountKind.TickArrayUpper,
                 address: tickArrayUpperPda,
                 dexId: DexId.Raydium,
                 liquidityPoolId: _state.static.displayId,

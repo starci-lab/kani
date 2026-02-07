@@ -3,7 +3,6 @@ import {
 } from "@nestjs/common"
 import {
     IOpenActionService,
-    ClmmLiquidityPoolState,
     PrepareOpenPositionParams,
     PrepareOpenPositionResult,
     ExecuteOpenPositionParams,
@@ -15,14 +14,13 @@ import {
     SignerService 
 } from "../../signers"
 import {
-    AppVersion, DexId, OrcaPositionMetadata, PrimaryMemoryStorageService 
+    AppVersion, DexId, OrcaPositionMetadata, PrimaryMemoryStorageService, TransactionType
 } from "@modules/databases"
 import { 
     InvalidPoolTokensException, 
     BalanceSnapshotsNotFoundException,
-    ErrorTransactionType,
     SolanaAccountNotFoundException,
-    ErrorSolanaAccountName,
+    ErrorSolanaAccountKind,
     MissingSolanaTxParamException,
     MissingPositionIdParamException,
     EncryptedPrivySignerPrivateKeyNotFoundException,
@@ -72,6 +70,9 @@ import {
 import {
     PrivySignService 
 } from "@modules/privy"
+import {
+    ClmmLiquidityPoolState
+} from "../../types"
 
 /**
  * Service responsible for opening positions on Orca DEX.
@@ -100,6 +101,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
      * @param param - Parameters for preparing open position
      * @param param.bot - Bot schema
      * @param param.state - CLMM liquidity pool state
+     * @param param.liquidityPool - Liquidity pool schema
      * @returns Prepared transaction with position details
      * @throws {BalanceSnapshotsNotFoundException} If balance snapshots are missing
      * @throws {LiquidityPoolClmmStateNotFoundException} If CLMM state is missing for the pool
@@ -111,6 +113,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         {
             state,
             bot,
+            liquidityPool,
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
@@ -122,9 +125,9 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             })
         }
         // Stage: state validation (pool must have CLMM static state)
-        if (!_state.static.clmmState) {
+        if (!liquidityPool.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -138,15 +141,15 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
 
         // Find token metadata
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenA.toString(),
+            id: liquidityPool.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenB.toString(),
+            id: liquidityPool.tokenB.toString(),
         })
         // Stage: state validation (pool token metadata must exist)
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -159,9 +162,9 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             tickUpper,
             liquidity,
         } = await this.tickMathService.findOptimalTickRange({
-            tickCurrent: _state.dynamic.tickCurrent,
-            tickSpacing: new Decimal(_state.static.clmmState.tickSpacing),
-            tickMultiplier: new Decimal(_state.static.clmmState.tickMultiplier),
+            tickCurrent: _state.tickCurrent,
+            tickSpacing: new Decimal(liquidityPool.clmmState.tickSpacing),
+            tickMultiplier: new Decimal(liquidityPool.clmmState.tickMultiplier),
             targetBalanceAmount: snapshotTargetBalanceAmountBN,
             quoteBalanceAmount: snapshotQuoteBalanceAmountBN,
             targetIsA,
@@ -182,6 +185,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         } = await this.openPositionInstructionService.createOpenPositionInstructions({
             bot,
             state: _state,
+            liquidityPool,
             liquidity,
             amountA,
             amountB,
@@ -315,20 +319,19 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
      */
     async execute({
         bot,
-        state,
         txCheck,
         positionId,
         stimulate,
         prepareTxs,
+        liquidityPool,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         // Stage: input validation (position ID must be provided)
         if (!positionId) {
             throw new MissingPositionIdParamException({
                 botId: bot.id,
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
-        const _state = state as ClmmLiquidityPoolState
         const txHashes: Array<string> = []
 
         // Process each prepared transaction
@@ -355,7 +358,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                         {
                             botId: bot.id,
                             txHash: prepareTx.txHash,
-                            liquidityPoolId: _state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         },
                     )
                     txHashes.push(prepareTx.txHash)
@@ -368,7 +371,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             if (!solanaTx) {
                 throw new MissingSolanaTxParamException({
                     botId: bot.id,
-                    type: ErrorTransactionType.OpenPosition,
+                    type: TransactionType.OpenPosition,
                 })
             }
 
@@ -390,7 +393,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                             throw new TransactionValidationFailedException({
                                 botId: bot.id,
                                 txHash: prepareTx.txHash,
-                                type: ErrorTransactionType.OpenPosition,
+                                type: TransactionType.OpenPosition,
                             })
                         }
 
@@ -400,7 +403,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                             {
                                 botId: bot.id,
                                 txHash: prepareTx.txHash,
-                                liquidityPoolId: _state.static.displayId,
+                                liquidityPoolId: liquidityPool.displayId,
                             },
                         )
                         txHashes.push(prepareTx.txHash)
@@ -425,7 +428,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                         {
                             botId: bot.id,
                             txHash: prepareTx.txHash,
-                            liquidityPoolId: _state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         },
                     )
                     txHashes.push(prepareTx.txHash)
@@ -448,8 +451,8 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
      * @throws {SolanaAccountNotFoundException} If position account is not found on-chain
      */
     async confirm({
-        state,
         positionId,
+        liquidityPool,
     }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
@@ -465,10 +468,10 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                 // Stage: on-chain fetch validation (position account must exist)
                 if (!positionInfo || !positionInfo.exists) {
                     throw new SolanaAccountNotFoundException({
-                        name: ErrorSolanaAccountName.PersonalPosition,
+                        kind: ErrorSolanaAccountKind.PersonalPosition,
                         address: positionId,
                         dexId: DexId.Orca,
-                        liquidityPoolId: state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
 

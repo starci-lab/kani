@@ -17,13 +17,13 @@ export class VerifySignInOtpResponseData {
         {
             description: "The user ID of the authenticated user.",
         })
-    id: string
+        id: string
     @IsJWT()
     @Field(() => String,
         {
             description: "The newly generated short-lived JWT access token used to authenticate API requests.",
         })
-    accessToken: string
+        accessToken: string
 }
 
 /** Response returned after successfully verifying a sign in OTP. */
@@ -39,5 +39,5 @@ export class VerifySignInOtpResponse
             nullable: true,
             description: "The data returned after successfully verifying a sign in OTP.",
         })
-    data?: VerifySignInOtpResponseData
+        data?: VerifySignInOtpResponseData
 }

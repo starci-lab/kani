@@ -7,6 +7,7 @@ import {
 } from "../../../types"
 import {
     BotSchema,
+    LiquidityPoolSchema,
 } from "@modules/databases"
 
 /**
@@ -53,6 +54,8 @@ export interface CreateClosePositionTxbParams {
     bot: BotSchema
     /** CLMM liquidity pool state. */
     state: ClmmLiquidityPoolState
+    /** Liquidity pool. */
+    liquidityPool: LiquidityPoolSchema
 }
 
 /**

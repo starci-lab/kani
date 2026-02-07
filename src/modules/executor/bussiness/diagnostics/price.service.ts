@@ -19,7 +19,7 @@ import {
 } from "@modules/mixin"
 import {
     AggregatedTokenPriceNotFoundException
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     Interval 
 } from "@nestjs/schedule"
@@ -84,7 +84,8 @@ export class PriceDiagnosticService implements OnModuleInit, OnApplicationBootst
         this.tokenCollection = await this.lokiJSService.createCollection<TokenSchema>({
             name: "price-diagnostic-tokens",
             options: {
-                indices: ["displayId", "id"],
+                indices: ["displayId",
+                    "id"],
             },
         })
         const tokens = this.primaryMemoryStorageService

@@ -21,5 +21,5 @@ export class BotResponse
             nullable: true,
             description: "The bot data, if the request is successful.",
         })
-    data?: BotSchema
+        data?: BotSchema
 }

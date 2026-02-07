@@ -13,15 +13,15 @@ import type {
     LiquidityPoolId 
 } from "@modules/databases"
 import type {
-    ErrorTransactionType 
-} from "./types"
+    TransactionType 
+} from "../../enums"
 
 /** Thrown when transaction validation fails */
 export interface TransactionValidationFailedExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
     txHash: string
     liquidityPoolId?: LiquidityPoolId
-    type: ErrorTransactionType
+    type: TransactionType
 }
 
 /** Thrown when transaction validation fails. */

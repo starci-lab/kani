@@ -11,7 +11,7 @@ import {
 } from "../abstract"
 import type {
     AggregatorId 
-} from "@modules/common"
+} from "@modules/blockchains"
 
 /** Metadata when an aggregator cannot be found or is not implemented. */
 export interface AggregatorAllQuotesFailedExceptionMetadata extends AbstractExceptionMetadata {

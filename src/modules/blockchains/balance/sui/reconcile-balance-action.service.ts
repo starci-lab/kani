@@ -11,7 +11,7 @@ import {
     PrivyPublicKeyNotFoundException,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     MissingSuiMessageWithBytesParamException,
-    ErrorTransactionType,
+    TransactionType,
     TransactionValidationFailedException,
     TransactionNotFoundException,
     OutputCoinNotFoundException,
@@ -127,7 +127,8 @@ export class SuiReconcileBalanceActionService {
             })
             // validate swap transaction was created
             if (!swapTxb) {
-                throw new TransactionNotFoundException({})
+                throw new TransactionNotFoundException({
+                })
             }
             txb = swapTxb
             
@@ -135,12 +136,13 @@ export class SuiReconcileBalanceActionService {
             if (!outputCoin) {
                 throw new OutputCoinNotFoundException({ 
                     botId: bot.id,
-                    type: ErrorTransactionType.ReconcileBalance,
+                    type: TransactionType.ReconcileBalance,
                 })
             }
             
             // transfer output coin to bot's account
-            txb.transferObjects([outputCoin], bot.accountAddress)
+            txb.transferObjects([outputCoin],
+                bot.accountAddress)
         }
         
         // build and sign transaction
@@ -248,7 +250,7 @@ export class SuiReconcileBalanceActionService {
             if (!signatureWithBytes) {
                 throw new MissingSuiMessageWithBytesParamException({
                     botId: bot.id,
-                    type: ErrorTransactionType.ReconcileBalance,
+                    type: TransactionType.ReconcileBalance,
                 })
             }
             
@@ -267,7 +269,7 @@ export class SuiReconcileBalanceActionService {
                             throw new TransactionValidationFailedException({
                                 botId: bot.id,
                                 txHash: devInspect.effects.transactionDigest,
-                                type: ErrorTransactionType.ReconcileBalance,
+                                type: TransactionType.ReconcileBalance,
                             })
                         }
                         this.winstonService.log(
@@ -289,7 +291,9 @@ export class SuiReconcileBalanceActionService {
                             showEffects: true,
                         },
                     })
-                    await suiClient.waitForTransaction({ digest })
+                    await suiClient.waitForTransaction({
+                        digest 
+                    })
                     this.winstonService.log(
                         WinstonLog.ReconcileBalanceTransactionExecuted,
                         {

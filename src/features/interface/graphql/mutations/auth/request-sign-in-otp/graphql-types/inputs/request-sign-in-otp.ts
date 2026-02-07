@@ -15,5 +15,5 @@ export class RequestSignInOtpRequest {
         {
             description: "The email of the user requesting a sign in OTP.",
         })
-    email: string
+        email: string
 }

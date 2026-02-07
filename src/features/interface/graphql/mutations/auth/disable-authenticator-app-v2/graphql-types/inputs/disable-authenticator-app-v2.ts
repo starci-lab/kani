@@ -11,5 +11,5 @@ export class DisableAuthenticatorAppV2Request {
         {
             description: "The TOTP code to verify before disabling authenticator app.",
         })
-    totpCode: string
+        totpCode: string
 }

@@ -23,7 +23,7 @@ export class TransactionsResponseData
         {
             description: "Transactions.",
         })
-    data: Array<TransactionSchema>
+        data: Array<TransactionSchema>
 }
 
 /** The response for fetching transactions. */
@@ -38,5 +38,5 @@ export class TransactionsResponse
         {
             description: "The data for the transactions.",
         })
-    data: TransactionsResponseData
+        data: TransactionsResponseData
 }

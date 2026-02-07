@@ -12,7 +12,7 @@ import {
 } from "@modules/exceptions"
 import {
     ChainId 
-} from "../enums"
+} from "@modules/common"
 import {
     AggregatorId 
 } from "./enums"

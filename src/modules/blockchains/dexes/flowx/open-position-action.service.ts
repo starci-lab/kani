@@ -9,8 +9,10 @@ import {
     ExecuteOpenPositionResult,
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResult,
-    ClmmLiquidityPoolState,
 } from "../types"
+import {
+    ClmmLiquidityPoolState,
+} from "../../types"
 import {
     Transaction, TransactionDataBuilder 
 } from "@mysten/sui/transactions"
@@ -36,9 +38,9 @@ import {
     TransactionExecutionFailedException,
     PrivyPublicKeyNotFoundException,
     SuiObjectNotFoundException,
-    ErrorSuiObjectName,
+    ErrorSuiObjectKind,
     SuiObjectInvalidTypeException,
-    ErrorTransactionType,
+    TransactionType,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
     SuiSingleTransactionRequiredException,
@@ -105,9 +107,8 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
      */
 
     async confirm(
-        { positionId, state }: ConfirmOpenPositionParams
+        { positionId, liquidityPool }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
-        const _state = state as ClmmLiquidityPoolState
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -121,10 +122,10 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                 if (objectInfo.error || !objectInfo.data) {
                     throw new SuiObjectNotFoundException(
                         {
-                            name: ErrorSuiObjectName.Position,
+                            kind: ErrorSuiObjectKind.Position,
                             id: positionId,
                             dexId: DexId.FlowX,
-                            liquidityPoolId: _state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         }
                     )
                 }
@@ -132,10 +133,10 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                 if (objectInfo.data.content?.dataType !== "moveObject") {
                     throw new SuiObjectInvalidTypeException(
                         {
-                            name: ErrorSuiObjectName.Position,
+                            kind: ErrorSuiObjectKind.Position,
                             id: positionId,
                             dexId: DexId.FlowX,
-                            liquidityPoolId: _state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         }
                     )
                 }
@@ -151,6 +152,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         {
             bot,
             state,
+            liquidityPool,
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
@@ -162,31 +164,31 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                 botId: bot.id,
             })
         }
-        if (!_state.static.clmmState) {
+        if (!liquidityPool.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const snapshotTargetBalanceAmount = new BN(bot.balanceSnapshots.targetBalanceAmount)
         const snapshotQuoteBalanceAmount = new BN(bot.balanceSnapshots.quoteBalanceAmount)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenA.toString(),
+            id: liquidityPool.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenB.toString(),
+            id: liquidityPool.tokenB.toString(),
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException(
                 {
-                    liquidityPoolId: _state.static.displayId,
+                    liquidityPoolId: liquidityPool.displayId,
                 }
             )
         }
-        const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
+        const targetIsA = bot.targetToken.toString() === liquidityPool.tokenA.toString()
         const { tickLower, tickUpper } = await this.tickMathService.findOptimalTickRange({
-            tickCurrent: _state.dynamic.tickCurrent,
-            tickSpacing: new Decimal(_state.static.clmmState.tickSpacing),
-            tickMultiplier: new Decimal(_state.static.clmmState.tickMultiplier),
+            tickCurrent: _state.tickCurrent,
+            tickSpacing: new Decimal(liquidityPool.clmmState.tickSpacing),
+            tickMultiplier: new Decimal(liquidityPool.clmmState.tickMultiplier),
             targetBalanceAmount: new BN(snapshotTargetBalanceAmount),
             quoteBalanceAmount: new BN(snapshotQuoteBalanceAmount),
             targetIsA,
@@ -221,8 +223,8 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                                 throw new TransactionStimulatedFailedException({
                                     botId: bot.id,
                                     txHash: devInspect.effects.transactionDigest,
-                                    liquidityPoolId: _state.static.displayId,
-                                    type: ErrorTransactionType.OpenPosition,
+                                    liquidityPoolId: liquidityPool.displayId,
+                                    type: TransactionType.OpenPosition,
                                 })
                             }
                             const bytes = await openPositionTxb.build({
@@ -285,6 +287,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         txCheck,
         stimulate,
         prepareTxs,
+        liquidityPool,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         // Sui requires exactly one transaction per execution
         if (prepareTxs.length !== 1) {
@@ -316,6 +319,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                 const { positionId } = this.parseIncreaseLiquidityEvent({
                     state: _state,
                     bot,
+                    liquidityPool,
                     txHash,
                     events: txBlock?.events || [],
                 })
@@ -324,7 +328,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                     {
                         botId: bot.id,
                         txHash,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     }
                 )
                 return {
@@ -337,8 +341,8 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
             throw new TransactionNotPreparedException({
                 botId: bot.id,
                 txHash,
-                liquidityPoolId: _state.static.displayId,
-                type: ErrorTransactionType.OpenPosition,
+                liquidityPoolId: liquidityPool.displayId,
+                type: TransactionType.OpenPosition,
             })
         }
         return await this.rpcExecutorService.withSuiClient({
@@ -354,13 +358,14 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                         throw new TransactionStimulatedFailedException({
                             botId: bot.id,
                             txHash: devInspect.effects.transactionDigest,
-                            liquidityPoolId: _state.static.displayId,
-                            type: ErrorTransactionType.OpenPosition,
+                            liquidityPoolId: liquidityPool.displayId,
+                            type: TransactionType.OpenPosition,
                         })
                     }
                     const { positionId } = this.parseIncreaseLiquidityEvent({
                         state: _state,
                         bot,
+                        liquidityPool,
                         txHash,
                         events: devInspect.events || [],
                     })
@@ -369,7 +374,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                         {
                             botId: bot.id,
                             txHash,
-                            liquidityPoolId: _state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         }
                     )
                     return {
@@ -389,7 +394,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                     throw new TransactionExecutionFailedException({
                         botId: bot.id,
                         txHash,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
                 await suiClient.waitForTransaction({
@@ -400,12 +405,13 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                     {
                         botId: bot.id,
                         txHash: digest,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     }
                 )
                 const { positionId } = this.parseIncreaseLiquidityEvent({
                     state: _state,
                     bot,
+                    liquidityPool,
                     txHash,
                     events: events || [],
                 })
@@ -419,10 +425,10 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
 
     private parseIncreaseLiquidityEvent(
         {
-            state,
             bot,
             txHash,
             events,
+            liquidityPool,
         }: ParseIncreaseLiquidityEventParams
     ): ParseIncreaseLiquidityEventResult {
         const eventType = "::position_manager::IncreaseLiquidity"
@@ -435,7 +441,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                     botId: bot.id,
                     txHash,
                     eventType,
-                    liquidityPoolId: state.static.displayId,
+                    liquidityPoolId: liquidityPool.displayId,
                 }
             )
         }

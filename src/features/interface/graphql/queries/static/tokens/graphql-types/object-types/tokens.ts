@@ -20,5 +20,5 @@ export class TokensResponse
         {
             description: "List of tokens returned by the query.",
         })
-    data: Array<TokenSchema>
+        data: Array<TokenSchema>
 }

@@ -23,7 +23,7 @@ export class PositionsV2ResponseData
         {
             description: "Positions.",
         })
-    data: Array<PositionSchema>
+        data: Array<PositionSchema>
 }
 
 /** The response for fetching positions v2. */
@@ -38,5 +38,5 @@ export class PositionsV2Response
         {
             description: "The data for the positions.",
         })
-    data: PositionsV2ResponseData
+        data: PositionsV2ResponseData
 }

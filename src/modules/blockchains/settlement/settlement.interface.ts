@@ -1,6 +1,7 @@
 import {
     BotSchema,
     PositionSettlementReason, 
+    LiquidityPoolSchema,
 } from "@modules/databases"
 import {
     LiquidityPoolState 
@@ -13,6 +14,7 @@ export interface ISettlementStrategyService {
 export interface SettleParams {
     bot: BotSchema
     state: LiquidityPoolState
+    liquidityPool: LiquidityPoolSchema
 }
 
 export interface SettleStrategyResult {

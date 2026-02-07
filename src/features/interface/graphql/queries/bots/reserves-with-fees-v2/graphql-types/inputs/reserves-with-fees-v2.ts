@@ -11,5 +11,5 @@ export class ReservesWithFeesV2Request {
         {
             description: "Unique identifier of the bot whose reserves and fees are being queried.",
         })
-    botId: string
+        botId: string
 }

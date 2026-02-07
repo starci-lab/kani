@@ -2,7 +2,8 @@ import {
     SuiEvent
 } from "@mysten/sui/client"
 import {
-    BotSchema
+    BotSchema,
+    LiquidityPoolSchema
 } from "@modules/databases"
 import {
     ClmmLiquidityPoolState
@@ -50,4 +51,6 @@ export interface ParseAddLiquidityEventParams {
     txHash: string
     /** The CLMM liquidity pool state. */
     state: ClmmLiquidityPoolState
+    /** The liquidity pool. */
+    liquidityPool: LiquidityPoolSchema
 }

@@ -78,8 +78,7 @@ export class PrepareService {
     async process(
         {
             job,
-            bot, 
-            dynamicLiquidityPoolInfo,
+            bot,
             liquidityPool,
         }: PrepareParams
     ): Promise<PrepareResult> {
@@ -115,10 +114,8 @@ export class PrepareService {
             this.openPositionActionService.prepare(
                 {
                     bot,
-                    state: {
-                        static: liquidityPool,
-                        dynamic: dynamicLiquidityPoolInfo,
-                    },
+                    liquidityPool,
+                    state,
                 }
             )
         )

@@ -1,6 +1,7 @@
 import { 
     BotSchema, 
     FlowXLiquidityPoolMetadata, 
+    LiquidityPoolSchema, 
     PrimaryMemoryStorageService
 } from "@modules/databases"
 import {
@@ -32,7 +33,7 @@ import {
 } from "@modules/common"
 import {
     ClmmLiquidityPoolState 
-} from "../../types"
+} from "../../../types"
 import {
     CreateClosePositionTxbParams,
     CreateClosePositionTxbResult
@@ -58,8 +59,10 @@ export class ClosePositionTxbService {
             txb,
             bot,
             state,
+            liquidityPool,
         }: CreateClosePositionTxbParams
     ): Promise<CreateClosePositionTxbResult> {
+        const _state = state as ClmmLiquidityPoolState
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
@@ -67,20 +70,20 @@ export class ClosePositionTxbService {
         }
         if (!bot.activePosition.associatedPosition.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenA.toString(),
+            id: liquidityPool.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenB.toString(),
+            id: liquidityPool.tokenB.toString(),
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const {
@@ -88,7 +91,7 @@ export class ClosePositionTxbService {
             poolRegistryObject,
             versionObject,
             positionRegistryObject
-        } = state.static.metadata as FlowXLiquidityPoolMetadata
+        } = liquidityPool.metadata as FlowXLiquidityPoolMetadata
         const deadline = this.dayjsService.now().add(5,
             "minute").utc().valueOf().toString()
         txb.moveCall({
@@ -101,10 +104,17 @@ export class ClosePositionTxbService {
                 txb.object(poolRegistryObject),
                 txb.object(bot.activePosition.associatedPosition.positionId),
                 txb.pure.u128(bot.activePosition.associatedPosition.clmmState.liquidity.toString()),
-                txb.pure.u64(this.computeAmountX(bot,
-                    state).toString()),
-                txb.pure.u64(this.computeAmountY(bot,
-                    state).toString()),
+                txb.pure.u64(
+                    this.computeAmountX(
+                        bot,
+                        _state,
+                        liquidityPool
+                    ).toString()),
+                txb.pure.u64(this.computeAmountY(
+                    bot,
+                    _state,
+                    liquidityPool
+                ).toString()),
                 txb.pure.u64(deadline),
                 txb.object(versionObject),
                 txb.object(SUI_CLOCK_OBJECT_ID),
@@ -132,7 +142,7 @@ export class ClosePositionTxbService {
             ], 
             bot.accountAddress
         )
-        const rewardTokens = state.dynamic.rewards
+        const rewardTokens = _state.rewards
         for (const rewardToken of rewardTokens) {
             const rewardTxResult = txb.moveCall({
                 target: `${packageId}::position_manager::collect_pool_reward`,
@@ -167,7 +177,8 @@ export class ClosePositionTxbService {
 
     public computeAmountX(
         bot: BotSchema, 
-        state: ClmmLiquidityPoolState
+        state: ClmmLiquidityPoolState,
+        liquidityPool: LiquidityPoolSchema,
     ): BN {
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
@@ -176,10 +187,10 @@ export class ClosePositionTxbService {
         }
         if (!bot.activePosition.associatedPosition.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
-        if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition.clmmState?.tickLower))) {
+        if (new Decimal(state.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition.clmmState?.tickLower))) {
             return ClmmSqrtPriceMath.getAmountXDelta(
                 ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition.clmmState.tickLower),
                 ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition.clmmState?.tickUpper),
@@ -187,10 +198,10 @@ export class ClosePositionTxbService {
                 false
             )
         } else if (
-            new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition.clmmState?.tickUpper))
+            new Decimal(state.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition.clmmState?.tickUpper))
         ) {
             return ClmmSqrtPriceMath.getAmountXDelta(
-                state.dynamic.sqrtPriceX64,
+                state.sqrtPriceX64,
                 ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition.clmmState.tickUpper),
                 new BN(bot.activePosition.associatedPosition.clmmState.liquidity),
                 false
@@ -202,7 +213,8 @@ export class ClosePositionTxbService {
 
     public computeAmountY(
         bot: BotSchema, 
-        state: ClmmLiquidityPoolState
+        state: ClmmLiquidityPoolState,
+        liquidityPool: LiquidityPoolSchema,
     ): BN {
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
@@ -211,15 +223,15 @@ export class ClosePositionTxbService {
         }
         if (!bot.activePosition.associatedPosition.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
-        if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition.clmmState.tickLower))) {
+        if (new Decimal(state.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition.clmmState.tickLower))) {
             return ZERO_BN
-        } else if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition.clmmState.tickUpper))) {
+        } else if (new Decimal(state.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition.clmmState.tickUpper))) {
             return ClmmSqrtPriceMath.getAmountYDelta(
                 ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition.clmmState.tickLower),
-                state.dynamic.sqrtPriceX64,
+                state.sqrtPriceX64,
                 new BN(bot.activePosition.associatedPosition.clmmState.liquidity),
                 false
             )

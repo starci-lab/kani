@@ -11,5 +11,5 @@ export class PortfolioValueV2Request {
         {
             description: "The unique identifier of the bot whose portfolio value is being requested.",
         })
-    botId: string
+        botId: string
 }

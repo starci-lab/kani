@@ -11,5 +11,5 @@ export class BotRequest {
         {
             description: "The unique ID of the bot.",
         })
-    id: string
+        id: string
 }

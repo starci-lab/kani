@@ -9,8 +9,10 @@ import {
     ExecuteOpenPositionResult,
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResult,
-    ClmmLiquidityPoolState,
 } from "../types"
+import {
+    ClmmLiquidityPoolState,
+} from "../../types"
 import {
     Transaction, TransactionDataBuilder 
 } from "@mysten/sui/transactions"
@@ -36,9 +38,9 @@ import {
     TransactionExecutionFailedException,
     PrivyPublicKeyNotFoundException,
     SuiObjectNotFoundException,
-    ErrorSuiObjectName,
+    ErrorSuiObjectKind,
     SuiObjectInvalidTypeException,
-    ErrorTransactionType,
+    TransactionType,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
     SuiSingleTransactionRequiredException,
@@ -104,9 +106,8 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
      * @throws {SuiObjectInvalidTypeException} If fetched object is not a Move object
      */
     async confirm(
-        { positionId, state }: ConfirmOpenPositionParams
+        { positionId, liquidityPool }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
-        const _state = state as ClmmLiquidityPoolState
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -121,19 +122,19 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                 // Stage: on-chain fetch validation (position object must exist)
                 if (objectInfo.error || !objectInfo.data) {
                     throw new SuiObjectNotFoundException({
-                        name: ErrorSuiObjectName.Position,
+                        kind: ErrorSuiObjectKind.Position,
                         id: positionId,
                         dexId: DexId.Momentum,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
                 // Stage: on-chain fetch validation (object must be a Move object)
                 if (objectInfo.data.content?.dataType !== "moveObject") {
                     throw new SuiObjectInvalidTypeException({
-                        name: ErrorSuiObjectName.Position,
+                        kind: ErrorSuiObjectKind.Position,
                         id: positionId,
                         dexId: DexId.Momentum,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
                 const fields = objectInfo.data.content.fields as unknown as MomentumClmmPosition
@@ -163,11 +164,11 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         {
             bot,
             state,
+            liquidityPool,
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
-        const _state = state as ClmmLiquidityPoolState
         const txb = new Transaction()
-
+        const _state = state as ClmmLiquidityPoolState
         // Stage: state validation (requires balance snapshots for sizing)
         if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
@@ -175,9 +176,9 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
             })
         }
         // Stage: state validation (pool must have CLMM static state)
-        if (!_state.static.clmmState) {
+        if (!liquidityPool.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -191,15 +192,15 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
 
         // Find token metadata
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenA.toString(),
+            id: liquidityPool.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenB.toString(),
+            id: liquidityPool.tokenB.toString(),
         })
         // Stage: state validation (pool token metadata must exist)
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -211,9 +212,9 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
             tickLower,
             tickUpper
         } = await this.tickMathService.findOptimalTickRange({
-            tickCurrent: _state.dynamic.tickCurrent,
-            tickSpacing: new Decimal(_state.static.clmmState.tickSpacing),
-            tickMultiplier: new Decimal(_state.static.clmmState.tickMultiplier),
+            tickCurrent: _state.tickCurrent,
+            tickSpacing: new Decimal(liquidityPool.clmmState.tickSpacing),
+            tickMultiplier: new Decimal(liquidityPool.clmmState.tickMultiplier),
             targetBalanceAmount: snapshotTargetBalanceAmountBN,
             quoteBalanceAmount: snapshotQuoteBalanceAmountBN,
             targetIsA,
@@ -256,8 +257,8 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                                 throw new TransactionStimulatedFailedException({
                                     botId: bot.id,
                                     txHash: devInspect.effects.transactionDigest,
-                                    liquidityPoolId: _state.static.displayId,
-                                    type: ErrorTransactionType.OpenPosition,
+                                    liquidityPoolId: liquidityPool.displayId,
+                                    type: TransactionType.OpenPosition,
                                 })
                             }
                             // Build and sign the transaction
@@ -326,10 +327,10 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
      *
      * @param param - Parameters for executing open position
      * @param param.bot - Bot schema
-     * @param param.state - CLMM liquidity pool state
      * @param param.txCheck - Whether to check if transaction already exists
      * @param param.prepareTxs - Array of prepared transactions
      * @param param.stimulate - Whether to simulate transaction execution
+     * @param param.liquidityPool - Liquidity pool
      * @returns Execution result with position ID and transaction hashes
      * @throws {SuiSingleTransactionRequiredException} If more than one transaction is provided for Sui
      * @throws {TransactionNotPreparedException} If the transaction signature is missing
@@ -343,6 +344,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         txCheck,
         stimulate,
         prepareTxs,
+        liquidityPool,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         // Sui requires exactly 1 transaction per execution
         if (prepareTxs.length !== 1) {
@@ -383,6 +385,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                     events: txBlock?.events || [],
                     bot,
                     txHash,
+                    liquidityPool,
                     state: _state,
                 })
                 this.winstonService.log(
@@ -390,7 +393,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                     {
                         botId: bot.id,
                         txHash,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     }
                 )
                 return {
@@ -405,8 +408,8 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
             throw new TransactionNotPreparedException({
                 botId: bot.id,
                 txHash,
-                liquidityPoolId: _state.static.displayId,
-                type: ErrorTransactionType.OpenPosition,
+                liquidityPoolId: liquidityPool.displayId,
+                type: TransactionType.OpenPosition,
             })
         }
 
@@ -426,14 +429,15 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                         throw new TransactionStimulatedFailedException({
                             botId: bot.id,
                             txHash: devInspect.effects.transactionDigest,
-                            liquidityPoolId: _state.static.displayId,
-                            type: ErrorTransactionType.OpenPosition,
+                            liquidityPoolId: liquidityPool.displayId,
+                            type: TransactionType.OpenPosition,
                         })
                     }
 
                     // Parse position ID from event
                     const { positionId } = this.parseAddLiquidityEvent({
                         state: _state,
+                        liquidityPool,
                         bot,
                         txHash,
                         events: devInspect.events || [],
@@ -445,7 +449,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                         {
                             botId: bot.id,
                             txHash,
-                            liquidityPoolId: _state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         }
                     )
                     return {
@@ -473,7 +477,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                     throw new TransactionExecutionFailedException({
                         botId: bot.id,
                         txHash,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
 
@@ -488,7 +492,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                     {
                         botId: bot.id,
                         txHash: digest,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     }
                 )
 
@@ -497,6 +501,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                     events: events || [],
                     bot,
                     txHash,
+                    liquidityPool,
                     state: _state,
                 })
                 return {
@@ -514,7 +519,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
      * @param param.events - Array of Sui events from the transaction
      * @param param.bot - Bot schema
      * @param param.txHash - Transaction hash
-     * @param param.state - CLMM liquidity pool state
+     * @param param.liquidityPool - Liquidity pool
      * @returns Parsed event result with position ID
      * @throws {TransactionEventNotFoundException} If AddLiquidity event is not found in the events array
      */
@@ -522,9 +527,8 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         events,
         bot,
         txHash,
-        state
+        liquidityPool,
     }: ParseAddLiquidityEventParams): ParseAddLiquidityEventResult {
-        const _state = state as ClmmLiquidityPoolState
         const eventType = "::liquidity::AddLiquidityEvent"
 
         // Find the AddLiquidity event in the events array
@@ -538,7 +542,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                 botId: bot.id,
                 txHash,
                 eventType,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 

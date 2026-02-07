@@ -24,7 +24,7 @@ import {
     TransactionNotPreparedException,
     PrivyPublicKeyNotFoundException,
     EncryptedPrivySignerPrivateKeyNotFoundException,
-    ErrorTransactionType,
+    TransactionType,
     TransactionValidationFailedException,   
     TransactionStimulatedFailedException,
     TransactionExecutionFailedException,
@@ -118,7 +118,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                                 throw new TransactionValidationFailedException({
                                     botId: bot.id,
                                     txHash: devInspect.effects.transactionDigest,
-                                    type: ErrorTransactionType.ClosePosition,
+                                    type: TransactionType.ClosePosition,
                                     liquidityPoolId: _state.static.displayId,
                                 })
                             }
@@ -244,7 +244,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                 botId: bot.id,
                 txHash,
                 liquidityPoolId: _state.static.displayId,
-                type: ErrorTransactionType.ClosePosition,
+                type: TransactionType.ClosePosition,
             })
         }
         
@@ -263,7 +263,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                             botId: bot.id,
                             txHash: devInspect.effects.transactionDigest,
                             liquidityPoolId: _state.static.displayId,
-                            type: ErrorTransactionType.ClosePosition,
+                            type: TransactionType.ClosePosition,
                         })
                     }
                     this.winstonService.log(

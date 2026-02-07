@@ -10,17 +10,16 @@ import {
     AbstractException 
 } from "../abstract"
 import type {
-    ErrorTransactionType 
-} from "./types"
-import type {
-    LiquidityPoolId 
+    LiquidityPoolId,
+    TransactionType 
 } from "@modules/databases"
+
 /** Thrown when transaction has not been executed */
 export interface TransactionNotExecutedExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
     txHash: string
     liquidityPoolId?: LiquidityPoolId
-    type: ErrorTransactionType
+    type: TransactionType
 }
 
 /** Thrown when transaction has not been executed. */
@@ -53,7 +52,7 @@ export interface TransactionNotPreparedExceptionMetadata extends AbstractExcepti
     botId: string
     txHash: string
     liquidityPoolId?: string
-    type: ErrorTransactionType
+    type: TransactionType
 }
 
 /** Thrown when transaction has not been prepared. */

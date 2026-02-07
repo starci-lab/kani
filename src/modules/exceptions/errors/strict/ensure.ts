@@ -6,13 +6,10 @@ import type {
 import {
     AbstractException 
 } from "../abstract"
+import type {
+    EnsureRangeType 
+} from "../../enums"
 
-/** Thrown when value is not in between expected */
-export enum EnsureRangeType {
-    LowerBound = "lowerBound",
-    UpperBound = "upperBound",
-    Between = "between",
-}
 export interface EnsureCalculationExceptionMetadata extends AbstractExceptionMetadata {
     expected: BN
     actual: BN

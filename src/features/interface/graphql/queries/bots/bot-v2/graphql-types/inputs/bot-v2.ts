@@ -12,14 +12,14 @@ export class BotV2ActivePositionAssociateOptions {
             nullable: true,
             description: "Whether to associate the liquidity pool data with each active position.",
         })
-    liquidityPool?: boolean
+        liquidityPool?: boolean
 
     @Field(() => Boolean,
         {
             nullable: true,
             description: "Whether to associate the position data with each active position.",
         })
-    position?: boolean
+        position?: boolean
 }
 
 /** Options to specify which related entities should be associated with bots v2. */
@@ -32,7 +32,7 @@ export class BotV2AssociateOptions {
             nullable: true,
             description: "Options to associate related entities with each active position.",
         })
-    activePosition?: BotV2ActivePositionAssociateOptions
+        activePosition?: BotV2ActivePositionAssociateOptions
 }
 
 /** Input fields required to fetch a bot v2. */
@@ -44,12 +44,12 @@ export class BotV2Request {
         {
             description: "The unique ID of the bot.",
         })
-    id: string
+        id: string
 
     @Field(() => BotV2AssociateOptions,
         {
             nullable: true,
             description: "Options to associate related entities with the bot.",
         })
-    associate?: BotV2AssociateOptions
+        associate?: BotV2AssociateOptions
 }

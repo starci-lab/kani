@@ -15,11 +15,11 @@ export class VerifySignInOtpRequest {
         {
             description: "The email of the user verifying a sign in OTP.",
         })
-    email: string
+        email: string
     @IsString()
     @Field(() => String,
         {
             description: "The sign in OTP to verify.",
         })
-    otp: string
+        otp: string
 }

@@ -20,11 +20,11 @@ export class HistoryV2Request {
         {
             description: "Time range and interval configuration for fetching history chart data.",
         })
-    filters: HistoryV2RequestFilters
+        filters: HistoryV2RequestFilters
 
     @Field(() => ID,
         {
             description: "Unique identifier of the bot whose history data is requested.",
         })
-    botId: string
+        botId: string
 }

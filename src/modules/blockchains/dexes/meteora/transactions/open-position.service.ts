@@ -22,9 +22,6 @@ import {
     getPositionCountByBinCount, 
     StrategyType
 } from "@meteora-ag/dlmm"
-import {
-    DlmmLiquidityPoolState 
-} from "../../types"
 import Decimal from "decimal.js"
 import BN from "bn.js"
 import {
@@ -100,14 +97,14 @@ export class OpenPositionInstructionService {
         bot,
         state,
         amountA,
+        liquidityPool,
         amountB,
     }: CreateOpenPositionInstructionsParams)
     : Promise<CreateOpenPositionInstructionsResult>
     {
-        const _state = state as DlmmLiquidityPoolState
-        if (!_state.static.dlmmState) {
+        if (!liquidityPool.dlmmState) {
             throw new LiquidityPoolDlmmStateNotFoundException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const {
@@ -124,16 +121,16 @@ export class OpenPositionInstructionService {
             amount: amountB,
             chainId: bot.chainId,
         })
-        const metadata = state.static.metadata as MeteoraLiquidityPoolMetadata
+        const metadata = liquidityPool.metadata as MeteoraLiquidityPoolMetadata
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenA.toString(),
+            id: liquidityPool.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenB.toString(),
+            id: liquidityPool.tokenB.toString(),
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         // transfer the fees to the fee address
@@ -157,15 +154,15 @@ export class OpenPositionInstructionService {
                 }))
         }
         const endInstructions: Array<Instruction> = []
-        const minBinId = _state.dynamic.activeId.sub(new BN(_state.static.dlmmState.binOffset))
-        const maxBinId = _state.dynamic.activeId.add(new BN(_state.static.dlmmState.binOffset))
+        const minBinId = state.activeId.sub(new BN(liquidityPool.dlmmState.binOffset))
+        const maxBinId = state.activeId.add(new BN(liquidityPool.dlmmState.binOffset))
         const binCount = getBinCount(minBinId.toNumber(),
             maxBinId.toNumber())
         const positionCount = getPositionCountByBinCount(binCount)
         if (positionCount > 1) {
             throw new MeteoraMultipleDlmmPositionsNotSupportedException({
                 positionCount,
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const positionKeyPairs = await this.keypairGeneratorsService.generateKeypairs(positionCount)
@@ -174,11 +171,11 @@ export class OpenPositionInstructionService {
         const liquidityStrategyParameters = buildLiquidityStrategyParameters(
             remainingAmountA,
             remainingAmountB,
-            minBinId.sub(state.dynamic.activeId),
-            maxBinId.sub(state.dynamic.activeId),
-            new BN(_state.static.dlmmState.binStep),
+            minBinId.sub(state.activeId),
+            maxBinId.sub(state.activeId),
+            new BN(liquidityPool.dlmmState.binStep),
             false,
-            _state.dynamic.activeId,
+            state.activeId,
             getLiquidityStrategyParameterBuilder(StrategyType.Curve)
         )
         const {
@@ -283,7 +280,7 @@ export class OpenPositionInstructionService {
                 },
                 // pool address
                 {
-                    address: address(state.static.poolAddress),
+                    address: address(liquidityPool.poolAddress),
                     role: AccountRole.WRITABLE,
                 },
                 // owner
@@ -325,6 +322,7 @@ export class OpenPositionInstructionService {
         = await this.meteoraSdkService.depositWithRebalanceEndpoint({
             bot,
             state,
+            liquidityPool,
             strategy: {
                 minBinId: minBinId.toNumber(),
                 maxBinId: maxBinId.toNumber(),

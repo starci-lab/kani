@@ -4,14 +4,12 @@ import {
 import type {
     LiquidityPoolId 
 } from "@modules/databases"
+import type {
+    CannotOpenPositionEnqueueJobReason,
+    CannotReconcileBalanceEnqueueJobReason,
+    CannotClosePositionEnqueueJobReason,
+} from "../../enums"
 
-/**
- * Cannot Enqueue Job Exception Metadata
- */
-export enum CannotOpenPositionEnqueueJobReason {
-    AlreadyInQueue = "alreadyInQueue",
-    RuntimeError = "runtimeError",
-}
 export interface CannotOpenPositionEnqueueJobExceptionMetadata {
     jobId: string
     botId: string
@@ -39,13 +37,6 @@ export class CannotEnqueueOpenPositionJobException extends AbstractException {
     }
 }
 
-/**
- * Cannot Enqueue Reconcile Balance Job Exception
- */
-export enum CannotReconcileBalanceEnqueueJobReason {
-    AlreadyInQueue = "alreadyInQueue",
-    RuntimeError = "runtimeError",
-}
 export interface CannotReconcileBalanceEnqueueJobExceptionMetadata {
     jobId: string
     botId: string
@@ -84,14 +75,6 @@ export class CannotEnqueueReconcileBalanceJobException extends AbstractException
     }
 }
 
-/**
- * Cannot Enqueue Close Position Job Exception
- */
-export enum CannotClosePositionEnqueueJobReason {
-    CannotSettlePosition = "cannotSettlePosition",
-    AlreadyInQueue = "alreadyInQueue",
-    RuntimeError = "runtimeError",
-}
 export interface CannotClosePositionEnqueueJobExceptionMetadata {
     jobId: string
     botId: string

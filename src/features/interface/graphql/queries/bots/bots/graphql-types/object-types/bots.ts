@@ -23,7 +23,7 @@ export class BotsResponseData
         {
             description: "Bots.",
         })
-    data: Array<BotSchema>
+        data: Array<BotSchema>
 }
 
 /** The response for fetching bots. */
@@ -38,5 +38,5 @@ export class BotsResponse
         {
             description: "The data for the bots.",
         })
-    data: BotsResponseData
+        data: BotsResponseData
 }

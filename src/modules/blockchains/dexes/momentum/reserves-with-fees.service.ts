@@ -2,8 +2,10 @@ import {
     ReservesWithFeesParams,
     ReservesWithFeesResult,
     IReservesWithFeesService,
-    ClmmLiquidityPoolState,
 } from "../types"
+import {
+    ClmmLiquidityPoolState,
+} from "../../types"
 import {
     Injectable,
 } from "@nestjs/common"
@@ -14,7 +16,7 @@ import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
     SuiObjectNotFoundException,
-    ErrorSuiObjectName,
+    ErrorSuiObjectKind,
     SuiObjectInvalidTypeException,
     LiquidityPoolClmmStateNotFoundException,
     TokenNotFoundException,
@@ -88,9 +90,8 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
      * @throws {SuiObjectInvalidTypeException} If fetched objects are not of the expected Move object type
      * @throws {TokenNotFoundException} If a reward token's metadata is not found
      */
-    async reservesWithFees({ state, bot }: ReservesWithFeesParams): Promise<ReservesWithFeesResult> {
+    async reservesWithFees({ state, bot, liquidityPool }: ReservesWithFeesParams): Promise<ReservesWithFeesResult> {
         const _state = state as ClmmLiquidityPoolState
-
         // Stage: state validation (requires an active position)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
@@ -100,24 +101,24 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
         // Stage: state validation (position must have CLMM state recorded)
         if (!bot.activePosition.associatedPosition.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
         // Stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: _state.static.tokenA.toString(),
+                $eq: liquidityPool.tokenA.toString(),
             },
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: _state.static.tokenB.toString(),
+                $eq: liquidityPool.tokenB.toString(),
             },
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -134,7 +135,7 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
         const {
             i32Type,
             ticksId
-        } = _state.static.metadata as MomentumLiquidityPoolMetadata
+        } = liquidityPool.metadata as MomentumLiquidityPoolMetadata
 
         // Serialize tick indices for dynamic field names
         const tickLowerName = serializeSuiI32(new BN(tickLower.toString()),
@@ -158,10 +159,10 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
         // Stage: on-chain fetch validation
         if (!tickLowerDataRaw) {
             throw new SuiObjectNotFoundException({
-                name: ErrorSuiObjectName.TickLower,
+                kind: ErrorSuiObjectKind.TickLower,
                 parentId: ticksId,
                 dexId: DexId.Momentum,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const _tickLowerData = tickLowerDataRaw as unknown as SuiMoveObjectData<
@@ -186,10 +187,10 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
         // Stage: on-chain fetch validation
         if (!tickUpperDataRaw) {
             throw new SuiObjectNotFoundException({
-                name: ErrorSuiObjectName.TickUpper,
+                kind: ErrorSuiObjectKind.TickUpper,
                 parentId: ticksId,
                 dexId: DexId.Momentum,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const _tickUpperData = tickUpperDataRaw as unknown as SuiMoveObjectData<
@@ -213,17 +214,17 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
         // Stage: on-chain fetch validation
         if (objectInfo.error || !objectInfo.data) {
             throw new SuiObjectNotFoundException({
-                name: ErrorSuiObjectName.Position,
+                kind: ErrorSuiObjectKind.Position,
                 id: positionId,
                 dexId: DexId.Momentum,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         if (objectInfo.data.content?.dataType !== "moveObject") {
             throw new SuiObjectInvalidTypeException({
-                name: ErrorSuiObjectName.Position,
+                kind: ErrorSuiObjectKind.Position,
                 id: positionId,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
                 dexId: DexId.Momentum,
             })
         }
@@ -239,7 +240,7 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
         } = this.clmmReservesFormulaService.computeReserves({
             tickLower,
             tickUpper,
-            tickCurrent: _state.dynamic.tickCurrent,
+            tickCurrent: _state.tickCurrent,
             liquidity: position.liquidity,
             decimalsA: new Decimal(tokenA.decimals),
             decimalsB: new Decimal(tokenB.decimals),
@@ -253,13 +254,13 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
             feeA,
             feeB
         } = this.clmmFeesFormulaService.computeFees({
-            feeGrowthGlobalA: _state.dynamic.feeGrowthGlobalA,
-            feeGrowthGlobalB: _state.dynamic.feeGrowthGlobalB,
+            feeGrowthGlobalA: _state.feeGrowthGlobalA,
+            feeGrowthGlobalB: _state.feeGrowthGlobalB,
             feeGrowthOutsideLowerA: new BN(tickLowerData.feeGrowthOutsideX.toString()),
             feeGrowthOutsideUpperA: new BN(tickUpperData.feeGrowthOutsideX.toString()),
             feeGrowthOutsideLowerB: new BN(tickLowerData.feeGrowthOutsideY.toString()),
             feeGrowthOutsideUpperB: new BN(tickUpperData.feeGrowthOutsideY.toString()),
-            tickCurrent: _state.dynamic.tickCurrent,
+            tickCurrent: _state.tickCurrent,
             tickLower,
             tickUpper,
             feeGrowthInsideLastA: position.feeGrowthInsideXLast,
@@ -277,7 +278,7 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
         // ----------------------------
         // Rewards (CLMM time-based)
         // ----------------------------
-        const clmmRewards = _state.dynamic.rewards as Array<DynamicClmmRewardInfo>
+        const clmmRewards = _state.rewards as Array<DynamicClmmRewardInfo>
         const rewards = Object.fromEntries(
             clmmRewards.map((clmmReward, index) => {
                 const {
@@ -294,12 +295,12 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
                     })
                 }
                 const posReward = position.rewardInfos[index]
-                const lastUpdateMs = clmmReward.lastUpdateTimeMs ?? _state.dynamic.rewardLastUpdatedTimeMs ?? new BN(0)
+                const lastUpdateMs = clmmReward.lastUpdateTimeMs ?? _state.rewardLastUpdatedTimeMs ?? new BN(0)
                 const rewardAmount = this.clmmRewardsFormulaService.computeReward({
                     rewardGrowthGlobal: new BN(clmmReward.growthGlobal.toString()),
                     rewardGrowthOutsideLower: new BN(tickLowerData.rewardGrowthsOutside[index].toString()),
                     rewardGrowthOutsideUpper: new BN(tickUpperData.rewardGrowthsOutside[index].toString()),
-                    tickCurrent: _state.dynamic.tickCurrent,
+                    tickCurrent: _state.tickCurrent,
                     tickLower,
                     tickUpper,
                     rewardGrowthInsideLast: posReward.rewardGrowthInsideLast,
@@ -308,7 +309,7 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
                     rewardOwned: posReward.coinsOwedReward,
                     emissionsPerSecond: new BN(clmmReward.emissionPerSecond.toString()),
                     lastUpdateMs,
-                    totalLiquidity: new BN(_state.dynamic.liquidity.toString()),
+                    totalLiquidity: new BN(_state.liquidity.toString()),
                 })
                 return [
                     token.id,
@@ -323,7 +324,7 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
             feeA,
             feeB,
             rewards,
-            snapshotAt: _state.dynamic.snapshotAt,
+            snapshotAt: _state.snapshotAt,
         }
     }
 }

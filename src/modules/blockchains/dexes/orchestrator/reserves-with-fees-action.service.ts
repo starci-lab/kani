@@ -13,7 +13,6 @@ import {
 } from "@modules/exceptions"
 import {
     ReservesWithFeesResult,
-    LiquidityPoolState,
 } from "../types"
 import {
     OrcaReservesWithFeesService,
@@ -75,35 +74,27 @@ export class ReservesWithFeesActionService {
      * Execute reserves and fees calculation.
      */
     async reservesWithFees(
-        {
-            bot,
-            liquidityPool,
-        }: OrchestrateReservesWithFeesParams,
+        params: OrchestrateReservesWithFeesParams,
     ): Promise<ReservesWithFeesResult> {
-        // Stage: on-chain/data fetch (load latest pool state from cache/on-chain sources)
-        const dynamicLiquidityPoolInfo = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
-        const state: LiquidityPoolState = {
-            static: liquidityPool,
-            dynamic: dynamicLiquidityPoolInfo,
-        }
         // Stage: state/config validation (DEX must exist and be enabled)
+        const { bot, liquidityPool, state } = params
         const dex =
             this.primaryMemoryStorageService.dexCollection.findOne(
                 {
                     id: {
-                        $eq: state.static.dex.toString(),
+                        $eq: liquidityPool.dex.toString(),
                     },
                 }
             )
         if (!dex) {
             throw new DexNotFoundException({
-                id: state.static.dex.toString(),
+                id: liquidityPool.dex.toString(),
             })
         }
         if (!this.options.dexIds?.includes(dex.displayId)) {
             throw new DexNotImplementedException(
                 {
-                    id: state.static.dex.toString(),
+                    id: liquidityPool.dex.toString(),
                 }
             )
         }
@@ -118,43 +109,50 @@ export class ReservesWithFeesActionService {
             return await this.flowxReservesWithFeesService.reservesWithFees({
                 bot,
                 state,
+                liquidityPool,
             })
         case DexId.Cetus:
             return await this.cetusReservesWithFeesService.reservesWithFees({
                 bot,
                 state,
+                liquidityPool,
             })
         case DexId.Turbos:
             return await this.turbosReservesWithFeesService.reservesWithFees({
                 bot,
                 state,
+                liquidityPool,
             })
         case DexId.Momentum:
             return await this.momentumReservesWithFeesService.reservesWithFees({
                 bot,
                 state,
+                liquidityPool,
             })
         case DexId.Raydium: {
             return await this.raydiumReservesWithFeesService.reservesWithFees({
                 bot,
                 state,
+                liquidityPool,
             })
         }
         case DexId.Orca: {
             return await this.orcaReservesWithFeesService.reservesWithFees({
                 bot,
                 state,
+                liquidityPool,
             })
         }
         case DexId.Meteora: {
             return await this.meteoraReservesWithFeesService.reservesWithFees({
                 bot,
                 state,
+                liquidityPool,
             })
         }
         default:
             throw new DexNotImplementedException({
-                id: state.static.dex.toString(),
+                id: liquidityPool.dex.toString(),
             })
         }
     }

@@ -3,7 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     TokenType
-} from "../../enums"
+} from "@modules/common"
 import {
     address,
     Instruction

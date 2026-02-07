@@ -21,5 +21,5 @@ export class BalanceConfigResponse
         {
             description: "Balance config returned by the query.",
         })
-    data: BalanceConfig
+        data: BalanceConfig
 }
