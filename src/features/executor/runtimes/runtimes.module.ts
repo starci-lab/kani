@@ -20,7 +20,20 @@ import {
     HandleReconcileBalanceService,
     HandleWithdrawService,
 } from "./handlers"
+import {
+    LockAuthorityService 
+} from "../bussiness"
 
+/**
+ * Runtimes Module
+ * 
+ * Provides runtime services for the executor.
+ * 
+ * @example
+ * RuntimesModule.register({
+ *   isGlobal: true,
+ * })
+ */
 @Module({
 })
 export class RuntimesModule extends ConfigurableModuleClass {
@@ -37,6 +50,7 @@ export class RuntimesModule extends ConfigurableModuleClass {
                 ...dynamicModule.providers || [], 
                 RuntimesFactoryService,
                 RuntimeContextService,
+                LockAuthorityService,
                 HandleClmmPositionOpenRequestedEventService,
                 HandleDlmmPositionOpenRequestedEventService,
                 HandleReconcileBalanceService,

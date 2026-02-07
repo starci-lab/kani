@@ -64,8 +64,10 @@ import {
     FilesystemModule 
 } from "@modules/filesystem"
 import {
-    IoRedisInstanceKey, IoRedisModule, 
-    RedisInstanceKey, RedisModule
+    IoRedisInstanceKey, 
+    IoRedisModule, 
+    RedisInstanceKey, 
+    RedisModule
 } from "@modules/native"
 import {
     APP_FILTER 

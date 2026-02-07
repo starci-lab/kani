@@ -3,9 +3,6 @@ import {
     LiquidityPoolSchema
 } from "@modules/databases"
 import {
-    DynamicLiquidityPoolInfoCacheResult
-} from "@modules/cache"
-import {
     LiquidityPoolState
 } from "../../../types"
 /**
@@ -32,8 +29,8 @@ export interface EnqueueOpenPositionParams {
     jobId: string
     /** Whether this is a retry. */
     isRetry?: boolean
-    /** Optional dynamic liquidity pool info. */
-    dynamicLiquidityPoolInfo?: DynamicLiquidityPoolInfoCacheResult
+    /** Optional liquidity pool state. */
+    state?: LiquidityPoolState
 }
 
 /**
@@ -48,6 +45,6 @@ export interface EnqueueClosePositionParams {
     jobId: string
     /** Whether this is a retry. */
     isRetry?: boolean
-    /** Optional dynamic liquidity pool info. */
-    dynamicLiquidityPoolInfo?: DynamicLiquidityPoolInfoCacheResult
+    /** Optional liquidity pool state. */
+    state?: LiquidityPoolState
 }

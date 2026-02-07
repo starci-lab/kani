@@ -46,3 +46,22 @@ export class PositionDlmmStateNotFoundException extends AbstractException {
         )
     }
 }
+
+/** Thrown when position is not found */
+export interface PositionNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    positionId: string
+}
+
+export class PositionNotFoundException extends AbstractException {
+    constructor(
+        { positionId, originalError }: PositionNotFoundExceptionMetadata
+    ) {
+        super("Position not found",
+            "POSITION_NOT_FOUND_EXCEPTION",
+            {
+                positionId,
+                originalError,
+            }
+        )
+    }
+}

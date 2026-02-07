@@ -19,18 +19,25 @@ import {
 import {
     WinstonLog, WinstonService 
 } from "@modules/winston"
-import {
+import type {
     PatchOperation 
 } from "../types"
 import {
     K8SLabelsService 
 } from "./k8s-labels.service"
 import {
-    ExecutorSchema 
-} from "@modules/databases"
-import {
     K8SAnnotationKey, K8SAnnotationsService 
 } from "./k8s-annotations.service"
+import type {
+    GetDeploymentParams,
+    GetDeploymentResult,
+    CreateDeploymentParams,
+    CreateDeploymentResult,
+    PatchDeploymentParams,
+    PatchDeploymentResult,
+    DeleteDeploymentParams,
+    DeleteDeploymentResult
+} from "../types"
 
 const escapeJsonPointerSegment = (value: string): string => {
     return value.replace(/~/g,
@@ -62,13 +69,19 @@ export class K8SDeploymentService  {
      * Gets a Kubernetes Deployment for an executor.
      * 
      * This method retrieves the Deployment resource from Kubernetes by name.
-     * 
-     * @param executor - The executor schema
+     *
+     * @param param - Parameters for getting deployment
      * @returns Promise that resolves with the Deployment object
      * @throws Error if the Deployment retrieval fails or the Deployment doesn't exist
+     *
+     * @example
+     * const deployment = await service.getDeployment({ executor })
      */
-    public async getDeployment(executor: ExecutorSchema) {
+    public async getDeployment({ executor }: GetDeploymentParams): Promise<GetDeploymentResult> {
+        // create deployment name from executor ID
         const name = createExecutorName(executor.id)
+        
+        // retrieve deployment from Kubernetes
         const [deployment] = await this.asyncService.resolveTuple(
             this.kubernetesApi.readNamespacedDeployment(
                 {
@@ -90,24 +103,35 @@ export class K8SDeploymentService  {
      * - Resource limits and requests
      * - Volume mounts for secrets and config maps
      * - Environment variables including the executor ID
-     * 
-     * @param executor - The executor schema
+     *
+     * @param param - Parameters for creating deployment
      * @returns Promise that resolves when the Deployment is created
      * @throws Error if the Deployment creation fails
+     *
+     * @example
+     * await service.createDeployment({ executor })
      */
-    public async createDeployment(executor: ExecutorSchema) {
+    public async createDeployment({ executor }: CreateDeploymentParams): Promise<CreateDeploymentResult> {
+        // create deployment name from executor ID
         const name = createExecutorName(executor.id)
     
-        // Stable selector labels (MUST NOT CHANGE)
-        const selector = this.k8sLabelsService.getSelector(executor)
+        // get stable selector labels (MUST NOT CHANGE)
+        const selector = this.k8sLabelsService.getSelector({
+            executor
+        })
     
-        // Metadata labels (can evolve), but MUST include selector keys.
+        // get metadata labels (can evolve), but MUST include selector keys
         const labels = {
-            ...this.k8sLabelsService.getLabels(executor),
+            ...this.k8sLabelsService.getLabels({
+                executor
+            }),
             ...selector,
         }
     
-        const annotations = this.k8sAnnotationsService.getAnnotations(executor)
+        // get annotations
+        const annotations = this.k8sAnnotationsService.getAnnotations({
+            executor
+        })
     
         await this.kubernetesApi.createNamespacedDeployment({
             namespace: envConfig().k8s.executor.podNamespace,
@@ -388,6 +412,8 @@ export class K8SDeploymentService  {
                 },
             },
         })
+        
+        // log deployment creation
         this.winstonService.log(
             WinstonLog.DeploymentCreated, 
             {
@@ -405,13 +431,20 @@ export class K8SDeploymentService  {
      * Note: this uses JSON Patch `replace`, so the annotation key must already exist.
      * It is seeded at creation time via `K8SAnnotationsService.getAnnotations()`.
      *
-     * @param executor - executor schema
+     * @param param - Parameters for patching deployment
+     * @returns Promise that resolves when deployment is patched
+     *
+     * @example
+     * await service.patchDeployment({ executor })
      */
-    public async patchDeployment(executor: ExecutorSchema) {
-        // create the deployment name
+    public async patchDeployment({ executor }: PatchDeploymentParams): Promise<PatchDeploymentResult> {
+        // create deployment name from executor ID
         const name = createExecutorName(executor.id)
+        
+        // escape JSON pointer segment for patch path
         const patchAtJsonPointer = escapeJsonPointerSegment(K8SAnnotationKey.PatchAt)
-        // we patch the deployment
+        
+        // build patch body
         const patchBody: Array<PatchOperation> = [
             {
                 op: "replace",
@@ -419,12 +452,16 @@ export class K8SDeploymentService  {
                 value: this.dayjsService.now().toISOString(),
             }
         ]
+        
+        // apply patch to deployment
         await this.kubernetesApi.patchNamespacedDeployment({
             name,
             namespace: envConfig().k8s.executor.podNamespace,
             body: patchBody,
         }
         )
+        
+        // log deployment patch
         this.winstonService.log(
             WinstonLog.DeploymentPatched,
             {
@@ -439,19 +476,26 @@ export class K8SDeploymentService  {
      * This method removes the Deployment and all associated resources (pods, replicasets)
      * from the Kubernetes cluster. This is typically called when an executor is
      * removed or decommissioned.
-     * 
-     * @param executor - executor schema
+     *
+     * @param param - Parameters for deleting deployment
+     * @returns Promise that resolves when deployment is deleted
+     *
+     * @example
+     * await service.deleteDeployment({ executorId })
      */
-    public async deleteDeployment(executorId: string) {
-        // create the deployment name
+    public async deleteDeployment({ executorId }: DeleteDeploymentParams): Promise<DeleteDeploymentResult> {
+        // create deployment name from executor ID
         const name = createExecutorName(executorId)
-        // we delete the deployment
+        
+        // delete deployment from Kubernetes
         await this.kubernetesApi.deleteNamespacedDeployment(
             {
                 name,
                 namespace: envConfig().k8s.executor.podNamespace,
             }
         )
+        
+        // log deployment deletion
         this.winstonService.log(
             WinstonLog.DeploymentDeleted,
             {
@@ -459,8 +503,4 @@ export class K8SDeploymentService  {
             }
         )
     }
-}
-
-export interface K8SDeploymentServiceRequest {
-    executor: ExecutorSchema
 }

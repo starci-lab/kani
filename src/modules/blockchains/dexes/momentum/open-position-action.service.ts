@@ -238,6 +238,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
             tickLower,
             state: _state,
             tickUpper,
+            liquidityPool,
         })
 
         return await this.rpcExecutorService.withSuiClient({

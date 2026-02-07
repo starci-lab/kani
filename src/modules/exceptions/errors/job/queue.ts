@@ -9,8 +9,11 @@ import type {
     CannotReconcileBalanceEnqueueJobReason,
     CannotClosePositionEnqueueJobReason,
 } from "../../enums"
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 
-export interface CannotOpenPositionEnqueueJobExceptionMetadata extends AbstractException{
+export interface CannotOpenPositionEnqueueJobExceptionMetadata extends AbstractExceptionMetadata {
     jobId: string
     botId: string
     liquidityPoolId: LiquidityPoolId
@@ -43,7 +46,7 @@ export class CannotEnqueueOpenPositionJobException extends AbstractException {
     }
 }
 
-export interface CannotReconcileBalanceEnqueueJobExceptionMetadata {
+export interface CannotReconcileBalanceEnqueueJobExceptionMetadata extends AbstractExceptionMetadata {
     jobId: string
     botId: string
     reason: CannotReconcileBalanceEnqueueJobReason
@@ -81,7 +84,7 @@ export class CannotEnqueueReconcileBalanceJobException extends AbstractException
     }
 }
 
-export interface CannotClosePositionEnqueueJobExceptionMetadata extends AbstractException{
+export interface CannotClosePositionEnqueueJobExceptionMetadata extends AbstractExceptionMetadata {
     jobId: string
     botId: string
     liquidityPoolId: LiquidityPoolId

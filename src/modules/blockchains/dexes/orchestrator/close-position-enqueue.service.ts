@@ -82,7 +82,7 @@ export class ClosePositionEnqueueService {
             bot,
             jobId,
             isRetry,
-            dynamicLiquidityPoolInfo,
+            state,
         }: EnqueueClosePositionParams,
     ): Promise<Job<string>> {
         if (!isRetry) {
@@ -154,7 +154,7 @@ export class ClosePositionEnqueueService {
             botId: bot.id,
             liquidityPoolId: liquidityPool.id,
             isRetry,
-            dynamicLiquidityPoolInfo,
+            state,
         }
         return await this.closePositionQueue.add(
             v4(),

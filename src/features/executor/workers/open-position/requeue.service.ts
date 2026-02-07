@@ -119,13 +119,14 @@ export class RequeueService implements OnApplicationBootstrap {
                     )
                     if (!acquired) return
                     try {
+                        const state = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
                         const bullmqJob = await this.openPositionEnqueueService.enqueue(
                             {
                                 bot,
                                 liquidityPool,
                                 jobId: bot.activeJob?.job?.toString() ?? "",
                                 isRetry: true,
-                                dynamicLiquidityPoolInfo: await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool),
+                                state,
                             }
                         )
                         this.winstonService.log(

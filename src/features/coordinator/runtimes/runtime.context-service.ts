@@ -1,6 +1,13 @@
-import {
-    ExecutorSchema, InjectPrimaryMongoose 
+import type {
+    ExecutorSchema
 } from "@modules/databases"
+import {
+    InjectPrimaryMongoose 
+} from "@modules/databases"
+import type {
+    DisposeParams,
+    DisposeResult
+} from "../types"
 import {
     envConfig 
 } from "@modules/env"
@@ -152,18 +159,26 @@ export class RuntimeContextService {
         }
 
         const deployment = await this.k8sDeploymentService.getDeployment(
-            this.executor,
+            {
+                executor: this.executor 
+            },
         )
 
         if (!deployment) {
-            await this.k8sDeploymentService.createDeployment(this.executor)
+            await this.k8sDeploymentService.createDeployment({
+                executor: this.executor 
+            })
             return
         }
 
         const annotations = deployment.metadata?.annotations
         if (!annotations) {
-            await this.k8sDeploymentService.deleteDeployment(this.executor.id)
-            await this.k8sDeploymentService.createDeployment(this.executor)
+            await this.k8sDeploymentService.deleteDeployment({
+                executorId: this.executor.id 
+            })
+            await this.k8sDeploymentService.createDeployment({
+                executor: this.executor 
+            })
             return
         }
         const executorVersion =
@@ -175,8 +190,12 @@ export class RuntimeContextService {
             executorVersion !== this.executor.version.toString() ||
             coordinatorVersion !== envConfig().coordinator.version
         ) {
-            await this.k8sDeploymentService.deleteDeployment(this.executor.id)
-            await this.k8sDeploymentService.createDeployment(this.executor)
+            await this.k8sDeploymentService.deleteDeployment({
+                executorId: this.executor.id 
+            })
+            await this.k8sDeploymentService.createDeployment({
+                executor: this.executor 
+            })
         }
     }
 
@@ -193,17 +212,25 @@ export class RuntimeContextService {
             return
         }
 
-        const service = await this.k8sServiceService.getService(this.executor)
+        const service = await this.k8sServiceService.getService({
+            executor: this.executor 
+        })
 
         if (!service) {
-            await this.k8sServiceService.createService(this.executor)
+            await this.k8sServiceService.createService({
+                executor: this.executor 
+            })
             return
         }
 
         const annotations = service.metadata?.annotations
         if (!annotations) {
-            await this.k8sServiceService.deleteService(this.executor.id)
-            await this.k8sServiceService.createService(this.executor)
+            await this.k8sServiceService.deleteService({
+                executorId: this.executor.id 
+            })
+            await this.k8sServiceService.createService({
+                executor: this.executor 
+            })
             return
         }
 
@@ -216,8 +243,12 @@ export class RuntimeContextService {
             executorVersion !== this.executor.version.toString() ||
             coordinatorVersion !== envConfig().coordinator.version
         ) {
-            await this.k8sServiceService.deleteService(this.executor.id)
-            await this.k8sServiceService.createService(this.executor)
+            await this.k8sServiceService.deleteService({
+                executorId: this.executor.id 
+            })
+            await this.k8sServiceService.createService({
+                executor: this.executor 
+            })
         }
     }
 
@@ -225,8 +256,15 @@ export class RuntimeContextService {
      * Dispose the runtime request lifecycle.
      *
      * Called when the request scope is destroyed.
+     *
+     * @param param - Parameters for disposing runtime context
+     * @returns Promise that resolves when disposal is complete
+     *
+     * @example
+     * await service.dispose({ withDestroy: true })
      */
-    async dispose(withDestroy: boolean = false) {
+    async dispose({ withDestroy = false }: DisposeParams = {
+    }): Promise<DisposeResult> {
         if (!this.executor) {
             return
         }
@@ -252,8 +290,12 @@ export class RuntimeContextService {
         // destroy the deployment and service
         await this.asyncService.allMustDone(
             [
-                this.k8sDeploymentService.deleteDeployment(this.executor.id),
-                this.k8sServiceService.deleteService(this.executor.id),
+                this.k8sDeploymentService.deleteDeployment({
+                    executorId: this.executor.id 
+                }),
+                this.k8sServiceService.deleteService({
+                    executorId: this.executor.id 
+                }),
             ]
         )
     }

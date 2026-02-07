@@ -2,8 +2,10 @@ import {
     ReservesWithFeesParams,
     ReservesWithFeesResult,
     IReservesWithFeesService,
-    ClmmLiquidityPoolState,
 } from "../types"
+import type {
+    ClmmLiquidityPoolState,
+} from "../../types"
 import {
     Injectable,
 } from "@nestjs/common"
@@ -83,6 +85,7 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
      * @param param - Parameters for calculating reserves with fees
      * @param param.state - The CLMM liquidity pool state
      * @param param.bot - The bot schema containing active position details
+     * @param param.liquidityPool - The liquidity pool schema
      * @returns The computed reserves, fees, and rewards
      * @throws {LiquidityPoolClmmStateNotFoundException} If CLMM state is missing for the pool
      * @throws {ActivePositionNotFoundException} If no active position is found for the bot
@@ -92,13 +95,12 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
      * @throws {MissingActivePositionLiquidityException} If position has no liquidity
      * @throws {TokenNotFoundException} If a reward token's metadata is not found
      */
-    async reservesWithFees({ bot, state }: ReservesWithFeesParams): Promise<ReservesWithFeesResult> {
+    async reservesWithFees({ bot, state, liquidityPool }: ReservesWithFeesParams): Promise<ReservesWithFeesResult> {
         const _state = state as ClmmLiquidityPoolState
-
         // Stage: state validation (pool must have CLMM static state)
-        if (!_state.static.clmmState) {
+        if (!liquidityPool.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         // Stage: state validation (requires an active position)
@@ -110,7 +112,7 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
 
         if (!bot.activePosition.associatedPosition?.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         // Stage: state validation (position must have CLMM state recorded)
@@ -126,25 +128,25 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
 
         const {
             programAddress
-        } = _state.static.metadata as RaydiumLiquidityPoolMetadata
+        } = liquidityPool.metadata as RaydiumLiquidityPoolMetadata
 
         // ----------------------------
         // Token validation
         // ----------------------------
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: _state.static.tokenA.toString(),
+                $eq: liquidityPool.tokenA.toString(),
             },
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: _state.static.tokenB.toString(),
+                $eq: liquidityPool.tokenB.toString(),
             },
         })
 
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -153,17 +155,17 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
         // ----------------------------
         const { pda: tickArrayLowerPda } =
             await this.tickArrayService.getPda({
-                poolStateAddress: address(_state.static.poolAddress),
+                poolStateAddress: address(liquidityPool.poolAddress),
                 tickIndex: tickLower,
-                tickSpacing: new BN(_state.static.clmmState.tickSpacing),
+                tickSpacing: new BN(liquidityPool.clmmState.tickSpacing),
                 programAddress: address(programAddress),
             })
 
         const { pda: tickArrayUpperPda } =
             await this.tickArrayService.getPda({
-                poolStateAddress: address(_state.static.poolAddress),
+                poolStateAddress: address(liquidityPool.poolAddress),
                 tickIndex: tickUpper,
-                tickSpacing: new BN(_state.static.clmmState.tickSpacing),
+                tickSpacing: new BN(liquidityPool.clmmState?.tickSpacing ?? 0),
                 programAddress: address(programAddress),
             })
 
@@ -190,7 +192,7 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
                 kind: ErrorSolanaAccountKind.PersonalPosition,
                 address: positionId,
                 dexId: DexId.Raydium,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -199,7 +201,7 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
                 kind: ErrorSolanaAccountKind.TickArrayLower,
                 address: tickArrayLowerPda,
                 dexId: DexId.Raydium,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -208,7 +210,7 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
                 kind: ErrorSolanaAccountKind.TickArrayUpper,
                 address: tickArrayUpperPda,
                 dexId: DexId.Raydium,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -232,11 +234,11 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
         // ----------------------------
         const tickLowerIndex = new Decimal(tickLower.toString())
             .sub(new Decimal(tickArrayLower.startTickIndex.toString()))
-            .div(new Decimal(_state.static.clmmState.tickSpacing.toString()))
+            .div(new Decimal(liquidityPool.clmmState?.tickSpacing ?? 0))
 
         const tickUpperIndex = new Decimal(tickUpper.toString())
             .sub(new Decimal(tickArrayUpper.startTickIndex.toString()))
-            .div(new Decimal(_state.static.clmmState.tickSpacing.toString()))
+            .div(new Decimal(liquidityPool.clmmState?.tickSpacing ?? 0))
 
         if (
             tickLowerIndex.lessThan(0) ||
@@ -278,7 +280,7 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
         } = this.clmmReservesFormulaService.computeReserves({
             tickLower,
             tickUpper,
-            tickCurrent: _state.dynamic.tickCurrent,
+            tickCurrent: _state.tickCurrent,
             liquidity,
             decimalsA: new Decimal(tokenA.decimals),
             decimalsB: new Decimal(tokenB.decimals),
@@ -289,13 +291,13 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
         // Fee calculation
         // ----------------------------
         const { feeA, feeB } = this.clmmFeesFormulaService.computeFees({
-            feeGrowthGlobalA: _state.dynamic.feeGrowthGlobalA,
-            feeGrowthGlobalB: _state.dynamic.feeGrowthGlobalB,
+            feeGrowthGlobalA: _state.feeGrowthGlobalA,
+            feeGrowthGlobalB: _state.feeGrowthGlobalB,
             feeGrowthOutsideLowerA: new BN(tickLowerData.feeGrowthOutsideX64A.toString()),
             feeGrowthOutsideUpperA: new BN(tickUpperData.feeGrowthOutsideX64A.toString()),
             feeGrowthOutsideLowerB: new BN(tickLowerData.feeGrowthOutsideX64B.toString()),
             feeGrowthOutsideUpperB: new BN(tickUpperData.feeGrowthOutsideX64B.toString()),
-            tickCurrent: _state.dynamic.tickCurrent,
+            tickCurrent: _state.tickCurrent,
             tickLower,
             tickUpper,
             feeGrowthInsideLastA: new BN(positionState.feeGrowthInside0LastX64.toString()),
@@ -313,7 +315,7 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
         // ----------------------------
         // Rewards (CLMM time-based)
         // ----------------------------
-        const clmmRewards = _state.dynamic.rewards as Array<DynamicClmmRewardInfo>
+        const clmmRewards = _state.rewards as Array<DynamicClmmRewardInfo>
         const rewards = Object.fromEntries(
             clmmRewards.map((clmmReward, index) => {
                 const tokenAddress = clmmReward.tokenAddress
@@ -328,12 +330,12 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
                     })
                 }
                 const posReward = positionState.rewardInfos[index]
-                const lastUpdateMs = clmmReward.lastUpdateTimeMs ?? _state.dynamic.rewardLastUpdatedTimeMs ?? new BN(0)
+                const lastUpdateMs = clmmReward.lastUpdateTimeMs ?? _state.rewardLastUpdatedTimeMs ?? new BN(0)
                 const rewardAmount = this.clmmRewardsFormulaService.computeReward({
                     rewardGrowthGlobal: new BN(clmmReward.growthGlobal.toString()),
                     rewardGrowthOutsideLower: new BN(tickLowerData.rewardGrowthsOutsideX64[index].toString()),
                     rewardGrowthOutsideUpper: new BN(tickUpperData.rewardGrowthsOutsideX64[index].toString()),
-                    tickCurrent: _state.dynamic.tickCurrent,
+                    tickCurrent: _state.tickCurrent,
                     tickLower,
                     tickUpper,
                     rewardGrowthInsideLast: new BN(posReward.growthInsideLastX64.toString()),
@@ -342,7 +344,7 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
                     rewardOwned: new BN(posReward.rewardAmountOwed.toString()),
                     emissionsPerSecond: new BN(clmmReward.emissionPerSecond.toString()),
                     lastUpdateMs,
-                    totalLiquidity: new BN(_state.dynamic.liquidity.toString()),
+                    totalLiquidity: new BN(_state.liquidity.toString()),
                 })
                 return [
                     token.id,
@@ -357,7 +359,7 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
             feeA,
             feeB,
             rewards,
-            snapshotAt: _state.dynamic.snapshotAt,
+            snapshotAt: _state.snapshotAt,
         }
     }
 }

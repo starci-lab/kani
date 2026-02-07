@@ -1,10 +1,6 @@
 import {
     Injectable 
 } from "@nestjs/common"
-import type {
-    BotSchema, 
-    LiquidityPoolSchema,
-} from "@modules/databases"
 import {
     LockAuthorityService,
 } from "../../../bussiness"
@@ -18,9 +14,7 @@ import {
 import {
     ClosePositionEnqueueService,
     LiquidityPoolStateService,
-} from "@modules/blockchains"
-import {
-    SettlementService 
+    SettlementService
 } from "@modules/blockchains"
 import {
     PositionAssociateService 
@@ -63,7 +57,6 @@ export class HandleClosePositionService {
         @InjectQueue(bullData[BullQueueName.ClosePosition].name)
         private readonly closePositionQueue: Queue<string>,
     ) {}
-
     /**
      * Process close-position request for the given bot and liquidity pool.
      *
@@ -90,12 +83,12 @@ export class HandleClosePositionService {
         })
         const jobId = new Types.ObjectId().toString()
         // Settle the position to determine if we should close
-        const dynamicLiquidityPoolInfo = eventPayload ?? await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
+        const state = eventPayload ?? await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
         const { settled, strategyResults } = await this.settlementService.settle(
             {
                 bot,
                 liquidityPool,
-                state: dynamicLiquidityPoolInfo,
+                state,
             }
         )
         if (!settled && envConfig().executor.runtime.operation.closePosition.settle.enabled) {
@@ -135,7 +128,7 @@ export class HandleClosePositionService {
                     jobId,
                     isRetry: false,
                     liquidityPool,
-                    dynamicLiquidityPoolInfo: dynamicLiquidityPoolInfo
+                    state,
                 }
             )
             this.winstonService.log(

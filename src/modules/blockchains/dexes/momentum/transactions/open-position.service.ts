@@ -64,30 +64,30 @@ export class OpenPositionTxbService {
 
     async createOpenPositionTxb({
         txb,
-        state,
         tickLower,
         tickUpper,
         amountA,
         amountB,
         bot,
+        liquidityPool,
     }: CreateOpenPositionTxbParams): Promise<CreateOpenPositionTxbResult> {
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenA.toString(),
+            id: liquidityPool.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenB.toString(),
+            id: liquidityPool.tokenB.toString(),
         })
-        if (!state.static.clmmState) {
+        if (!liquidityPool.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException(
                 {
-                    liquidityPoolId: state.static.displayId,
+                    liquidityPoolId: liquidityPool.displayId,
                 }
             )
         }
@@ -147,8 +147,8 @@ export class OpenPositionTxbService {
         txb.transferObjects([feeCoinA.coinArg,
             feeCoinB.coinArg],
         feeToAddress)
-        const { packageId, versionObject } = state.static
-            .metadata as MomentumLiquidityPoolMetadata
+        const { packageId, versionObject } = liquidityPool.metadata as MomentumLiquidityPoolMetadata
+
         const slippage = new Decimal(envConfig().dexes.momentum.openPosition.slippage)
         const [lowerTick1] = txb.moveCall({
             target: `${packageId}::tick_math::get_tick_at_sqrt_price`,
@@ -160,7 +160,7 @@ export class OpenPositionTxbService {
         })
         const [tick_spacing] = txb.moveCall({
             target: `${packageId}::i32::from_u32`,
-            arguments: [txb.pure.u32(state.static.clmmState.tickSpacing)],
+            arguments: [txb.pure.u32(liquidityPool.clmmState.tickSpacing)],
         })
         const [lowerTickmod] = txb.moveCall({
             target: `${packageId}::i32::mod`,
@@ -187,7 +187,7 @@ export class OpenPositionTxbService {
         const [positionObj] = txb.moveCall({
             target: `${packageId}::liquidity::open_position`,
             arguments: [
-                txb.object(state.static.poolAddress),
+                txb.object(liquidityPool.poolAddress),
                 txb.object(lowerTick),
                 txb.object(upperTick),
                 txb.object(versionObject),
@@ -201,7 +201,7 @@ export class OpenPositionTxbService {
             typeArguments: [tokenA.tokenAddress,
                 tokenB.tokenAddress],
             arguments: [
-                txb.object(state.static.poolAddress),
+                txb.object(liquidityPool.poolAddress),
                 txb.object(positionObj),
                 txb.object(sourceCoinA.coinArg),
                 txb.object(sourceCoinB.coinArg),

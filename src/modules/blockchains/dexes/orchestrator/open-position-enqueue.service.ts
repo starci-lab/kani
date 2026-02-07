@@ -9,7 +9,6 @@ import {
     JobType,
     PrimaryMemoryStorageService,
     QuoteRatioStatus,
-    LiquidityPoolSchema
 } from "@modules/databases"
 import {
     BalanceSnapshotsNotFoundException,
@@ -48,9 +47,6 @@ import {
 import {
     OpenPositionPayload 
 } from "../../types"
-import {
-    DynamicLiquidityPoolInfoCacheResult 
-} from "@modules/cache"
 import {
     EnqueueOpenPositionParams
 } from "./types"
@@ -115,7 +111,7 @@ export class OpenPositionEnqueueService {
             bot,
             jobId,
             isRetry,
-            dynamicLiquidityPoolInfo,
+            state,
         }: EnqueueOpenPositionParams,
     ): Promise<Job<string>> {
         /**
@@ -243,7 +239,7 @@ export class OpenPositionEnqueueService {
             botId: bot.id,
             liquidityPoolId: liquidityPool.id,
             isRetry,
-            dynamicLiquidityPoolInfo,
+            state,
         }
         return await this.openPositionQueue.add(
             jobId,

@@ -27,26 +27,23 @@ export class ExecutorModule extends ConfigurableModuleClass {
         options: typeof OPTIONS_TYPE,
     ): DynamicModule {
         const dynamicModule = super.register(options)
-        const modules: Array<DynamicModule> = []    
-        if (!options.configOnly) {
-            modules.push(
-                LoadersModule.register({
-                    isGlobal: true,
-                }),
-                RuntimesModule.register({
-                    isGlobal: true,
-                }),
-                BussinessModule.register({
-                    isGlobal: true,
-                }),
-                WorkersModule.register({
-                    isGlobal: true,
-                }),
-                InterfacesModule.register({
-                    isGlobal: true,
-                }),
-            )
-        }
+        const modules: Array<DynamicModule> = [
+            BussinessModule.register({
+                isGlobal: options.isGlobal,
+            }),
+            LoadersModule.register({
+                isGlobal: options.isGlobal,
+            }),
+            RuntimesModule.register({
+                isGlobal: options.isGlobal,
+            }),
+            WorkersModule.register({
+                isGlobal: options.isGlobal,
+            }),
+            InterfacesModule.register({
+                isGlobal: options.isGlobal,
+            }),
+        ]    
         return {  
             ...dynamicModule,
             imports: [...modules],

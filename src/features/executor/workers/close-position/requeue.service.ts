@@ -119,13 +119,13 @@ export class RequeueService implements OnApplicationBootstrap {
                         // skip if job already in queue
                         return
                     }
-                    const dynamicLiquidityPoolInfo = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
+                    const state = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
                     // check settlement status
                     const { settled, strategyResults } = await this.settlementService.settle(
                         {
                             bot,
                             liquidityPool,
-                            state: dynamicLiquidityPoolInfo,
+                            state,
                         }
                     )
                     if (!settled && envConfig().executor.runtime.operation.closePosition.settle.enabled) {
@@ -153,7 +153,7 @@ export class RequeueService implements OnApplicationBootstrap {
                                 liquidityPool,
                                 jobId: bot.activeJob?.job?.toString() ?? "",
                                 isRetry: true,
-                                dynamicLiquidityPoolInfo,
+                                state,
                             }
                         )
                         this.winstonService.log(

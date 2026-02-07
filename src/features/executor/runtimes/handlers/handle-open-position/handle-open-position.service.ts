@@ -222,7 +222,7 @@ export class HandleOpenPositionService {
                     jobId,
                     isRetry: false,
                     liquidityPool,
-                    dynamicLiquidityPoolInfo: eventPayload,
+                    state: eventPayload,
                 }
             )
             this.winstonService.log(

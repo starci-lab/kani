@@ -89,7 +89,9 @@ export class BootstrapResourceCleanupService implements OnModuleInit {
             await this.asyncService.allMustDone(
                 executorIdsToDelete.map(
                     executorId => this.k8sDeploymentService.deleteDeployment(
-                        executorId
+                        {
+                            executorId 
+                        }
                     )
                 )
             )
@@ -134,7 +136,9 @@ export class BootstrapResourceCleanupService implements OnModuleInit {
             await this.asyncService.allMustDone(
                 executorIdsToDelete.map(
                     executorId => this.k8sServiceService.deleteService(
-                        executorId
+                        {
+                            executorId 
+                        }
                     )
                 )
             )

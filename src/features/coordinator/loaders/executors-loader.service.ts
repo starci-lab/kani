@@ -1,5 +1,7 @@
+import type {
+    ExecutorSchema
+} from "@modules/databases"
 import {
-    ExecutorSchema,
     InjectPrimaryMongoose,
 } from "@modules/databases"
 import {

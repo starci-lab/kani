@@ -13,7 +13,7 @@ import {
 } from "@modules/mixin"
 import {
     OrderBook 
-} from "../../types"
+} from "../types"
 import {
     envConfig 
 } from "@modules/env"

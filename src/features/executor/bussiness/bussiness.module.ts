@@ -23,6 +23,7 @@ export class BussinessModule extends ConfigurableModuleClass {
         const dynamicModule = super.register(options)
         return {
             ...dynamicModule,
+            global: options.isGlobal,
             imports: [
                 DiagnosticsModule.register(
                     {

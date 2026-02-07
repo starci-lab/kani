@@ -33,6 +33,10 @@ import {
     FormulasModule,
     SettlementModule,
     EvalModule,
+    TxBuilderModule, 
+    BalanceModule, 
+    SnapshotsModule,
+    AggregatorsModule
 } from "@modules/blockchains"
 import {
     CacheModule 
@@ -41,16 +45,8 @@ import {
     CryptoModule 
 } from "@modules/crypto"
 import {
-    AggregatorsModule 
-} from "@modules/blockchains"
-import {
     SemaModule 
 } from "@modules/lock"
-import { 
-    TxBuilderModule, 
-    BalanceModule, 
-    SnapshotsModule 
-} from "@modules/blockchains"
 import {
     GcpModule 
 } from "@modules/gcp"
@@ -134,8 +130,12 @@ import {
         }),
         PrimaryMongoDbModule.register({
             isGlobal: true,
-            withSeeders: true,
-            memoryStorage: true,
+            withSeeders: {
+                manualSeed: true,
+            },
+            memoryStorage: {
+                manualLoad: true,
+            },
         }),
         PrivyModule.register({
             isGlobal: true,

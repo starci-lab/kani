@@ -79,6 +79,9 @@ import {
 import {
     ThrottlerModule 
 } from "@modules/throttler"
+import {
+    ObserverModule 
+} from "@features/observer"
 
 @Module({
     imports: [
@@ -132,8 +135,12 @@ import {
         }),
         PrimaryMongoDbModule.register({
             isGlobal: true,
-            withSeeders: true,
-            memoryStorage: true,
+            withSeeders: {
+                manualSeed: true,
+            },
+            memoryStorage: {
+                manualLoad: true,
+            },
         }),
         EventModule.register({
             isGlobal: true,
@@ -207,6 +214,9 @@ import {
         CexesModule.register({
             isGlobal: true,
         }), 
+        ObserverModule.register({
+            isGlobal: true,
+        }),
     ],
     providers: [
         {

@@ -56,7 +56,6 @@ export class LockAuthorityService implements OnApplicationBootstrap {
     onApplicationBootstrap() {
         this.notifyExpiredLocks()
     }
-
     /**
      * Returns the scheduler ZSET key for this executor instance.
      *
@@ -65,7 +64,6 @@ export class LockAuthorityService implements OnApplicationBootstrap {
     private getLockSchedulerKey() {
         return `${LOCK_AUTHORITY_KEY}:{${envConfig().executor.id}}:scheduler`
     }
-
     /**
      * Returns the lock key for the given bot for this executor instance.
      *
@@ -74,14 +72,12 @@ export class LockAuthorityService implements OnApplicationBootstrap {
     private getLockKey(botId: string) {
         return `${LOCK_AUTHORITY_KEY}:{${envConfig().executor.id}}:${botId}`
     }
-
     /**
      * Returns the bot ID from the lock key.
      */
     private getBotId(lockKey: string) {
         return lockKey.split(":")[2]
     }
-
     /**
      * Periodically scans the scheduler ZSET for expired locks (score <= now).
      *
@@ -144,7 +140,6 @@ export class LockAuthorityService implements OnApplicationBootstrap {
             )
             throw error
         }
-        
     }
 
     /**

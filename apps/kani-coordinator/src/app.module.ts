@@ -12,7 +12,7 @@ import {
 } from "@modules/winston"
 import {
     CoordinatorModule 
-} from "@modules/coordinator"
+} from "@features/coordinator"
 import {
     PrimaryMongoDbModule 
 } from "@modules/databases"

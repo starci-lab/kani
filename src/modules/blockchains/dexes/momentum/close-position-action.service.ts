@@ -102,6 +102,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
         } = await this.closePositionTxbService.createClosePositionTxb({
             bot,
             state: _state,
+            liquidityPool,
         })
 
         return await this.rpcExecutorService.withSuiClient({

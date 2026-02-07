@@ -1,7 +1,4 @@
 import {
-    ExecutorSchema 
-} from "@modules/databases"
-import {
     Injectable 
 } from "@nestjs/common"
 import {
@@ -10,6 +7,9 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import type {
+    GetAnnotationsParams
+} from "../types"
 
 /**
  * Builds Kubernetes annotations for executor-related resources.
@@ -31,11 +31,18 @@ export class K8SAnnotationsService {
      * Build Kubernetes annotations for an executor resource.
      *
      * Note: all values MUST be strings per Kubernetes annotation rules.
-     * @param executor - The executor schema.
-     * @returns The annotations.
+     *
+     * @param param - Parameters for getting annotations
+     * @returns The annotations
+     *
+     * @example
+     * const annotations = await service.getAnnotations({ executor })
      */
-    public getAnnotations(executor: ExecutorSchema): Record<K8SAnnotationKey, string> {
+    public getAnnotations({ executor }: GetAnnotationsParams): Record<K8SAnnotationKey, string> {
+        // get current timestamp
         const nowIso = this.dayjsService.now().toISOString()
+        
+        // build annotations object
         return {
             [K8SAnnotationKey.ExecutorId]: String(executor.id),
             [K8SAnnotationKey.ExecutorVersion]: String(executor.version ?? "unknown"),

@@ -20,6 +20,9 @@ import {
     PositionValueService
 } from "../math"
 import {
+    PositionNotFoundException
+} from "@modules/exceptions"
+import {
     UpdateClosePositionRecordParams,
     UpdateClosePositionRecordResult
 } from "./types"
@@ -68,7 +71,9 @@ export class ClosePositionSnapshotService {
         ).findById(positionId).session(session || null)
 
         if (!position) {
-            throw new Error(`Position with id ${positionId} not found`)
+            throw new PositionNotFoundException({
+                positionId,
+            })
         }
 
         // compute position and balance values from before/after

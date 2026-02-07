@@ -20,6 +20,9 @@ import {
     CreateClosePositionTxbParams,
     CreateClosePositionTxbResult
 } from "../types"
+import {
+    ClmmLiquidityPoolState 
+} from "../../../types"
 
 /**
  * Service responsible for creating close position transaction builders for Momentum.
@@ -40,8 +43,10 @@ export class ClosePositionTxbService {
             txb,
             bot,
             state,
+            liquidityPool,
         }: CreateClosePositionTxbParams
     ): Promise<CreateClosePositionTxbResult> {
+        const _state = state as ClmmLiquidityPoolState
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
@@ -49,26 +54,26 @@ export class ClosePositionTxbService {
         }
         if (!bot.activePosition.associatedPosition.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenA.toString(),
+            id: liquidityPool.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenB.toString(),
+            id: liquidityPool.tokenB.toString(),
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const {
             packageId,
             versionObject,
-        } = state.static.metadata as MomentumLiquidityPoolMetadata
+        } = liquidityPool.metadata as MomentumLiquidityPoolMetadata
         const [coinAOut,
             coinBOut] = txb.moveCall({
             target: `${packageId}::liquidity::remove_liquidity`,
@@ -77,7 +82,7 @@ export class ClosePositionTxbService {
                 tokenB.tokenAddress
             ],
             arguments: [
-                txb.object(state.static.poolAddress),
+                txb.object(liquidityPool.poolAddress),
                 txb.object(bot.activePosition.associatedPosition.positionId),
                 txb.pure.u128(bot.activePosition.associatedPosition.clmmState.liquidity),
                 txb.pure.u64(0),
@@ -90,7 +95,7 @@ export class ClosePositionTxbService {
             coinBOut],
         txb.pure.address(bot.accountAddress))
 
-        const rewards = state.dynamic.rewards
+        const rewards = _state.rewards
         const rewardCoins: Array<TransactionResult> = []
         for (const reward of rewards) {
             let rewardCoinType = reward.tokenAddress
@@ -100,7 +105,7 @@ export class ClosePositionTxbService {
             const rewardCoin = txb.moveCall({
                 target: `${packageId}::collect::reward`,
                 arguments: [
-                    txb.object(state.static.poolAddress),
+                    txb.object(liquidityPool.poolAddress),
                     txb.object(bot.activePosition.associatedPosition.positionId),
                     txb.object(SUI_CLOCK_OBJECT_ID),
                     txb.object(versionObject),

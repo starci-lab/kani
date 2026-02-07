@@ -21,14 +21,19 @@ import {
     AsyncService 
 } from "@modules/mixin"
 import {
-    ExecutorSchema 
-} from "@modules/databases"
-import {
     K8SAnnotationsService 
 } from "./k8s-annotations.service"
 import {
     K8SLabelsService 
 } from "./k8s-labels.service"
+import type {
+    GetServiceParams,
+    GetServiceResult,
+    CreateServiceParams,
+    CreateServiceResult,
+    DeleteServiceParams,
+    DeleteServiceResult
+} from "../types"
 
 /**
  * Manages Kubernetes `Service` resources for executor instances.
@@ -52,10 +57,17 @@ export class K8SServiceService {
     /**
      * Get a Kubernetes Service for an executor.
      *
-     * @param executor - executor schema
+     * @param param - Parameters for getting service
+     * @returns The Kubernetes service
+     *
+     * @example
+     * const service = await service.getService({ executor })
      */
-    public async getService(executor: ExecutorSchema) {
+    public async getService({ executor }: GetServiceParams): Promise<GetServiceResult> {
+        // create service name from executor ID
         const name = createExecutorName(executor.id)
+        
+        // retrieve service from Kubernetes
         const [service] = await this.asyncService.resolveTuple(
             this.kubernetesCoreApi.readNamespacedService({
                 name,
@@ -71,15 +83,28 @@ export class K8SServiceService {
      * This Service uses selectors from `K8SLabelsService` to route traffic
      * to Pods created by the executor Deployment.
      *
-     * @param executor - executor schema
+     * @param param - Parameters for creating service
+     * @returns Promise that resolves when service is created
+     *
+     * @example
+     * await service.createService({ executor })
      */
-    public async createService(executor: ExecutorSchema) {
+    public async createService({ executor }: CreateServiceParams): Promise<CreateServiceResult> {
+        // create service name from executor ID
         const name = createExecutorName(executor.id)
-        // create the labels and annotations
-        const selector = this.k8sLabelsService.getSelector(executor)
-        const labels = this.k8sLabelsService.getLabels(executor)
-        const annotations = this.k8sAnnotationsService.getAnnotations(executor)
-        // we create the service
+        
+        // build labels and annotations
+        const selector = this.k8sLabelsService.getSelector({
+            executor 
+        })
+        const labels = this.k8sLabelsService.getLabels({
+            executor 
+        })
+        const annotations = this.k8sAnnotationsService.getAnnotations({
+            executor 
+        })
+        
+        // create service in Kubernetes
         await this.kubernetesCoreApi.createNamespacedService({
             namespace: envConfig().k8s.executor.podNamespace,
             body: {
@@ -103,6 +128,8 @@ export class K8SServiceService {
                 },
             },
         })
+        
+        // log service creation
         this.winstonService.log(
             WinstonLog.ServiceCreated,
             {
@@ -114,14 +141,23 @@ export class K8SServiceService {
     /**
      * Delete a Kubernetes Service for an executor.
      *
-     * @param executor - executor schema
+     * @param param - Parameters for deleting service
+     * @returns Promise that resolves when service is deleted
+     *
+     * @example
+     * await service.deleteService({ executorId })
      */
-    public async deleteService(executorId: string) {
+    public async deleteService({ executorId }: DeleteServiceParams): Promise<DeleteServiceResult> {
+        // create service name from executor ID
         const name = createExecutorName(executorId)
+        
+        // delete service from Kubernetes
         await this.kubernetesCoreApi.deleteNamespacedService({
             name,
             namespace: envConfig().k8s.executor.podNamespace,
         })
+        
+        // log service deletion
         this.winstonService.log(
             WinstonLog.ServiceDeleted,
             {

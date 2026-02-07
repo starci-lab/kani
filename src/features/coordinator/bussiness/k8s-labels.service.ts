@@ -2,11 +2,12 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    ExecutorSchema 
-} from "@modules/databases"
-import {
     createExecutorName 
 } from "../utils"
+import type {
+    GetSelectorParams,
+    GetLabelsParams
+} from "../types"
 
 /**
  * Builds Kubernetes labels and selectors for executor-related resources.
@@ -27,9 +28,15 @@ export class K8SLabelsService {
      *
      * IMPORTANT: selector labels MUST be stable over time, otherwise Kubernetes
      * Services and Deployments may stop matching their Pods.
+     *
+     * @param param - Parameters for getting selector labels
+     * @returns The selector labels
+     *
+     * @example
+     * const selector = service.getSelector({ executor })
      */
     public getSelector(
-        executor: ExecutorSchema
+        { executor }: GetSelectorParams
     ): Record<K8SLabelKey.Instance | K8SLabelKey.Name, string> {
         return {
             [K8SLabelKey.Instance]: createExecutorName(executor.id),
@@ -42,12 +49,24 @@ export class K8SLabelsService {
      *
      * These labels may evolve over time but MUST always
      * include all selector labels.
+     *
+     * @param param - Parameters for getting labels
+     * @returns The labels
+     *
+     * @example
+     * const labels = service.getLabels({ executor })
      */
     public getLabels(
-        executor: ExecutorSchema
+        { executor }: GetLabelsParams
     ): Record<K8SLabelKey, string> {
+        // get selector labels as base
+        const selector = this.getSelector({
+            executor 
+        })
+        
+        // add component label
         return {
-            ...this.getSelector(executor),
+            ...selector,
             [K8SLabelKey.Component]: "service",
         }
     }

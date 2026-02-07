@@ -10,9 +10,10 @@ import {
 import {
     ExecutorsLoaderService 
 } from "../loaders"
-import {
-    ExecutorSchema 
-} from "@modules/databases"
+import type {
+    CreateRuntimeParams,
+    CreateRuntimeResult
+} from "../types"
 import {
     CoordinatorExecutorCreatedEventPayload, EventName, CoordinatorExecutorDeletedEventPayload 
 } from "@modules/event"
@@ -47,12 +48,14 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
      * complete successfully before proceeding.
      */
     async onApplicationBootstrap() {
-        // Create runtime instances for all executors that were loaded from the database
-        // Using allMustDone ensures all runtime creations complete successfully
+        // create runtime instances for all executors that were loaded from the database
+        // using allMustDone ensures all runtime creations complete successfully
         this.asyncService.allMustDone(
             this.executorsLoaderService.executorCollection.find().map(
                 async (executor) => {
-                    await this.createRuntime(executor)
+                    await this.createRuntime({
+                        executor 
+                    })
                 }
             )
         )
@@ -62,7 +65,8 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
         this.asyncService.allMustDone(
             Array.from(this.runtimes.values()).map(
                 async (runtime) => {
-                    await runtime.dispose()
+                    await runtime.dispose({
+                    })
                 }
             )
         )
@@ -73,16 +77,22 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
      * 
      * When a new executor is detected (either through initial load or change stream),
      * this handler creates a new runtime instance for that executor.
-     * 
-     * @param payload - The event payload containing the executor ID
+     *
+     * @param payload - The event payload containing executor information
+     * @returns Promise that resolves when runtime is created
+     *
+     * @example
+     * await service.handleCoordinatorExecutorCreated(payload)
      */
     @OnEvent(
         EventName.CoordinatorExecutorCreated
     )
     async handleCoordinatorExecutorCreated(
         payload: CoordinatorExecutorCreatedEventPayload
-    ) {
-        await this.createRuntime(payload)
+    ): Promise<void> {
+        await this.createRuntime({
+            executor: payload 
+        })
     }
     
     /**
@@ -97,12 +107,16 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
      * Each executor gets its own isolated context, allowing request-scoped services
      * to be executor-specific. This is useful for maintaining separate state and
      * configuration per executor.
-     * 
-     * @param executor - Partial executor schema containing at least the executor ID
+     *
+     * @param param - Parameters for creating runtime
+     * @returns Promise that resolves when runtime is created
+     *
+     * @example
+     * await service.createRuntime({ executor })
      */
     async createRuntime(
-        executor: Partial<ExecutorSchema>
-    ) {
+        { executor }: CreateRuntimeParams
+    ): Promise<CreateRuntimeResult> {
         await this.asyncService.allMustDone([
             (async () => {
                 // Create a unique context ID for this executor's runtime
@@ -131,18 +145,32 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
         ])
     }
 
+    /**
+     * Event handler that responds to executor deletion events.
+     *
+     * When an executor is deleted, this handler disposes and destroys
+     * the runtime instance for that executor.
+     *
+     * @param payload - The event payload containing executor ID
+     * @returns Promise that resolves when runtime is disposed
+     *
+     * @example
+     * await service.handleExecutorDeleted(payload)
+     */
     @OnEvent(
         EventName.CoordinatorExecutorDeleted
     )
     async handleExecutorDeleted(
-        { id}: CoordinatorExecutorDeletedEventPayload
-    ) {
+        { id }: CoordinatorExecutorDeletedEventPayload
+    ): Promise<void> {
         const runtime = this.runtimes.get(id)
         if (!runtime) {
             return
         }
         // dispose & destroy the runtime
-        await runtime.dispose(true)
+        await runtime.dispose({
+            withDestroy: true 
+        })
         // delete the runtime from the map
         this.runtimes.delete(id)
     }
