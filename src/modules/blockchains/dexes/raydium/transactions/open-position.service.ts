@@ -21,9 +21,6 @@ import {
     PrimaryMemoryStorageService, RaydiumLiquidityPoolMetadata 
 } from "@modules/databases"
 import {
-    ClmmLiquidityPoolState 
-} from "../../../types/pool-state"
-import {
     InvalidPoolTokensException, 
     LiquidityPoolClmmStateNotFoundException
 } from "@modules/exceptions"
@@ -84,19 +81,18 @@ export class OpenPositionInstructionService {
    */
     async createOpenPositionInstructions({
         bot,
-        state,
         liquidity,
         amountAMax,
         amountBMax,
         tickLower,
         tickUpper,
+        liquidityPool,
     }: CreateOpenPositionInstructionsParams)
     : Promise<CreateOpenPositionInstructionsResult>
     {
-        const _state = state as ClmmLiquidityPoolState
-        if (!_state.static.clmmState) {
+        if (!liquidityPool.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const instructions: Array<Instruction> = []
@@ -104,17 +100,17 @@ export class OpenPositionInstructionService {
         const mintKeyPair = await generateKeyPairSigner()
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: _state.static.tokenA.toString()
+                $eq: liquidityPool.tokenA.toString()
             }
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: _state.static.tokenB.toString()
+                $eq: liquidityPool.tokenB.toString()
             }
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.solana.feeToAddress
@@ -156,17 +152,17 @@ export class OpenPositionInstructionService {
             programAddress,
             tokenVault0,
             tokenVault1,
-        } = state.static.metadata as RaydiumLiquidityPoolMetadata
+        } = liquidityPool.metadata as RaydiumLiquidityPoolMetadata
         const { pda: tickArrayLowerPda } = await this.tickArrayService.getPda({
-            poolStateAddress: address(state.static.poolAddress),
+            poolStateAddress: address(liquidityPool.poolAddress),
             tickIndex: tickLower,
-            tickSpacing: new BN(_state.static.clmmState.tickSpacing),
+            tickSpacing: new BN(liquidityPool.clmmState.tickSpacing),
             programAddress: address(programAddress),
         })
         const { pda: tickArrayUpperPda } = await this.tickArrayService.getPda({
-            poolStateAddress: address(state.static.poolAddress),
+            poolStateAddress: address(liquidityPool.poolAddress),
             tickIndex: tickUpper,
-            tickSpacing: new BN(_state.static.clmmState.tickSpacing),
+            tickSpacing: new BN(liquidityPool.clmmState.tickSpacing),
             programAddress: address(programAddress),
         })
         const {
@@ -255,11 +251,11 @@ export class OpenPositionInstructionService {
         })
         const tickArrayLowerStartIndex = this.tickArrayService.getArrayStartIndex(
             tickLower, 
-            new BN(_state.static.clmmState.tickSpacing)
+            new BN(liquidityPool.clmmState.tickSpacing)
         )
         const tickArrayUpperStartIndex = this.tickArrayService.getArrayStartIndex(
             tickUpper, 
-            new BN(_state.static.clmmState.tickSpacing)
+            new BN(liquidityPool.clmmState.tickSpacing)
         )
         const {
             pda: personalPositionPda,
@@ -301,7 +297,7 @@ export class OpenPositionInstructionService {
                     role: AccountRole.WRITABLE,
                 },
                 {
-                    address: address(state.static.poolAddress),
+                    address: address(liquidityPool.poolAddress),
                     role: AccountRole.WRITABLE,
                 },
                 // protocol_position (deprecated)

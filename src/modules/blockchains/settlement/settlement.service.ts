@@ -18,13 +18,14 @@ export class SettlementService {
     async settle(
         { 
             bot, 
-            state 
+            state,
+            liquidityPool,
         }: SettleParams
     ): Promise<SettleResult> {
         const strategyResults: Array<SettleStrategyResult> = []
         // check if the position is out of range
         const outOfRangeSettleStrategyResult = await this.outOfRangeSettlementService.settle({
-            bot, state 
+            bot, state, liquidityPool 
         })
         strategyResults.push(outOfRangeSettleStrategyResult)
         const settled = strategyResults.some(result => result.settled)

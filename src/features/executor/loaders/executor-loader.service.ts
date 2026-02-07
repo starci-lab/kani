@@ -1,4 +1,4 @@
-import type {
+import {
     BotSchema,
     ExecutorSchema,
 } from "@modules/databases"

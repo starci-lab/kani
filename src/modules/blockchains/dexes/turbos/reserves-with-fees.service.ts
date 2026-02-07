@@ -2,8 +2,10 @@ import {
     ReservesWithFeesParams,
     ReservesWithFeesResult,
     IReservesWithFeesService,
-    ClmmLiquidityPoolState,
 } from "../types"
+import type {
+    ClmmLiquidityPoolState,
+} from "../../types"
 import {
     Injectable,
 } from "@nestjs/common"
@@ -89,7 +91,11 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
      * @throws {SuiObjectInvalidTypeException} If fetched objects are not of the expected Move object type
      * @throws {TokenNotFoundException} If a reward token's metadata is not found
      */
-    async reservesWithFees({ state, bot }: ReservesWithFeesParams): Promise<ReservesWithFeesResult> {
+    async reservesWithFees({ 
+        state,
+        bot,
+        liquidityPool,
+    }: ReservesWithFeesParams): Promise<ReservesWithFeesResult> {
         const _state = state as ClmmLiquidityPoolState
 
         // Stage: state validation (requires an active position)
@@ -101,14 +107,14 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
 
         // Stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenA.toString(),
+            id: liquidityPool.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenB.toString(),
+            id: liquidityPool.tokenB.toString(),
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -118,7 +124,7 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
         // Stage: state validation (CLMM state must be present on the associated position)
         if (!bot.activePosition.associatedPosition?.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -130,7 +136,7 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
         const tickUpper = new BN(tickUpperStr)
         const {
             i32Type
-        } = _state.static.metadata as TurbosLiquidityPoolMetadata
+        } = liquidityPool.metadata as TurbosLiquidityPoolMetadata
 
         // Serialize tick indices for dynamic field names
         const tickLowerName = serializeSuiI32(new BN(tickLower.toString()),
@@ -143,7 +149,7 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 return suiClient.getDynamicFieldObject({
-                    parentId: _state.static.poolAddress,
+                    parentId: liquidityPool.poolAddress,
                     name: {
                         type: tickLowerName.type,
                         value: tickLowerName.fields,
@@ -155,9 +161,9 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
         if (!tickLowerDataRaw) {
             throw new SuiObjectNotFoundException({
                 kind: ErrorSuiObjectKind.TickLower,
-                parentId: _state.static.poolAddress,
+                parentId: liquidityPool.poolAddress,
                 dexId: DexId.Turbos,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const _tickLowerData = tickLowerDataRaw as unknown as SuiMoveObjectData<
@@ -171,7 +177,7 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 return suiClient.getDynamicFieldObject({
-                    parentId: _state.static.poolAddress,
+                    parentId: liquidityPool.poolAddress,
                     name: {
                         type: tickUpperName.type,
                         value: tickUpperName.fields,
@@ -183,9 +189,9 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
         if (!tickUpperDataRaw) {
             throw new SuiObjectNotFoundException({
                 kind: ErrorSuiObjectKind.TickUpper,
-                parentId: _state.static.poolAddress,
+                parentId: liquidityPool.poolAddress,
                 dexId: DexId.Turbos,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const _tickUpperData = tickUpperDataRaw as unknown as SuiMoveObjectData<
@@ -212,14 +218,14 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
                 kind: ErrorSuiObjectKind.PositionNFT,
                 id: positionId,
                 dexId: DexId.Turbos,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         if (nftPositionInfo.data.content?.dataType !== "moveObject") {
             throw new SuiObjectInvalidTypeException({
                 kind: ErrorSuiObjectKind.PositionNFT,
                 id: positionId,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
                 dexId: DexId.Turbos,
             })
         }
@@ -243,7 +249,7 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
             throw new SuiObjectNotFoundException({
                 kind: ErrorSuiObjectKind.Position,
                 id: nftPosition.positionId,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
                 dexId: DexId.Turbos,
             })
         }
@@ -251,7 +257,7 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
             throw new SuiObjectInvalidTypeException({
                 kind: ErrorSuiObjectKind.Position,
                 id: nftPosition.positionId,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
                 dexId: DexId.Turbos,
             })
         }
@@ -267,7 +273,7 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
         } = this.clmmReservesFormulaService.computeReserves({
             tickLower,
             tickUpper,
-            tickCurrent: _state.dynamic.tickCurrent,
+            tickCurrent: _state.tickCurrent,
             liquidity: position.liquidity,
             decimalsA: new Decimal(tokenA.decimals),
             decimalsB: new Decimal(tokenB.decimals),
@@ -281,13 +287,13 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
             feeA,
             feeB
         } = this.clmmFeesFormulaService.computeFees({
-            feeGrowthGlobalA: _state.dynamic.feeGrowthGlobalA,
-            feeGrowthGlobalB: _state.dynamic.feeGrowthGlobalB,
+            feeGrowthGlobalA: _state.feeGrowthGlobalA,
+            feeGrowthGlobalB: _state.feeGrowthGlobalB,
             feeGrowthOutsideLowerA: new BN(tickLowerData.feeGrowthOutsideA.toString()),
             feeGrowthOutsideUpperA: new BN(tickUpperData.feeGrowthOutsideA.toString()),
             feeGrowthOutsideLowerB: new BN(tickLowerData.feeGrowthOutsideB.toString()),
             feeGrowthOutsideUpperB: new BN(tickUpperData.feeGrowthOutsideB.toString()),
-            tickCurrent: _state.dynamic.tickCurrent,
+            tickCurrent: _state.tickCurrent,
             tickLower,
             tickUpper,
             feeGrowthInsideLastA: position.feeGrowthInsideA,
@@ -305,12 +311,12 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
         // ----------------------------
         // Rewards (CLMM time-based)
         // ----------------------------
-        const clmmRewards = _state.dynamic.rewards as Array<DynamicClmmRewardInfo>
+        const clmmRewards = _state.rewards as Array<DynamicClmmRewardInfo>
         const rewards = Object.fromEntries(
             clmmRewards.map((clmmReward, index) => {
                 const {
                     tokenAddress
-                } = _state.dynamic.rewards[index]
+                } = _state.rewards[index]
                 const token = this.primaryMemoryStorageService.tokenCollection.findOne({
                     tokenAddress: {
                         $eq: tokenAddress,
@@ -325,7 +331,7 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
                     rewardGrowthGlobal: new BN(clmmReward.growthGlobal.toString()),
                     rewardGrowthOutsideLower: new BN(tickLowerData.rewardGrowthsOutside[index].toString()),
                     rewardGrowthOutsideUpper: new BN(tickUpperData.rewardGrowthsOutside[index].toString()),
-                    tickCurrent: _state.dynamic.tickCurrent,
+                    tickCurrent: _state.tickCurrent,
                     tickLower,
                     tickUpper,
                     rewardGrowthInsideLast: position.rewardInfos[index].rewardGrowthInside,
@@ -333,8 +339,8 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
                     decimals: new Decimal(token.decimals),
                     rewardOwned: position.rewardInfos[index].coinsOwedReward,
                     emissionsPerSecond: new BN(clmmReward.emissionPerSecond.toString()),
-                    lastUpdateMs: _state.dynamic.rewardLastUpdatedTimeMs ?? new BN(0),
-                    totalLiquidity: new BN(_state.dynamic.liquidity.toString()),
+                    lastUpdateMs: _state.rewardLastUpdatedTimeMs ?? new BN(0),
+                    totalLiquidity: new BN(_state.liquidity.toString()),
                 })
                 return [
                     token.id,
@@ -349,7 +355,7 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
             feeA,
             feeB,
             rewards,
-            snapshotAt: _state.dynamic.snapshotAt,
+            snapshotAt: _state.snapshotAt,
         }
     }
 }

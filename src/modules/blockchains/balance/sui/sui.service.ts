@@ -8,7 +8,7 @@ import {
     PrepareReconcileBalanceTransactionParams,
     PrepareReconcileBalanceTransactionResult,
     ExecuteReconcileBalanceTransactionParams,
-    ExecuteReconcileBalanceTransactionResults,
+    ExecuteReconcileBalanceTransactionResult,
     PrepareWithdrawTransactionParams,
     PrepareWithdrawTransactionResult,
     ExecuteWithdrawTransactionParams,
@@ -58,7 +58,7 @@ export class SuiBalanceService implements IBalanceActionService {
      * @example
      * const result = await service.executeReconcileBalanceTransaction({ bot, prepareTxs })
      */
-    public async executeReconcileBalanceTransaction(param: ExecuteReconcileBalanceTransactionParams): Promise<ExecuteReconcileBalanceTransactionResults> {
+    public async executeReconcileBalanceTransaction(param: ExecuteReconcileBalanceTransactionParams): Promise<ExecuteReconcileBalanceTransactionResult> {
         return await this.suiReconcileBalanceActionService.execute(param)
     }
 

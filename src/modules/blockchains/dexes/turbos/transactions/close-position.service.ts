@@ -43,6 +43,7 @@ export class ClosePositionTxbService {
             txb,
             state,
             bot,     
+            liquidityPool,
         }: CreateClosePositionTxbParams
     ): Promise<CreateClosePositionTxbResult> {
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
@@ -60,17 +61,17 @@ export class ClosePositionTxbService {
         txb.setSender(bot.accountAddress)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne(
             {
-                id: state.static.tokenA.toString()
+                id: liquidityPool.tokenA.toString()
             }
         )
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne(
             {
-                id: state.static.tokenB.toString()
+                id: liquidityPool.tokenB.toString()
             }
         )
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const targetOperationalAmount = this.primaryMemoryStorageService.
@@ -91,7 +92,7 @@ export class ClosePositionTxbService {
             feeType,
             positionsObject,
             versionObject 
-        } = state.static.metadata as TurbosLiquidityPoolMetadata
+        } = liquidityPool.metadata as TurbosLiquidityPoolMetadata
         const [coinA,
             coinB] = txb.moveCall({
             target: `${packageId}::position_manager::decrease_liquidity_with_return_`,
@@ -102,7 +103,7 @@ export class ClosePositionTxbService {
             ],
             arguments: [
                 // pool address
-                txb.object(state.static.poolAddress),
+                txb.object(liquidityPool.poolAddress),
                 // positions object
                 txb.object(positionsObject),
                 // position id
@@ -130,7 +131,7 @@ export class ClosePositionTxbService {
             ],
             arguments: [
                 // pool address
-                txb.object(state.static.poolAddress),
+                txb.object(liquidityPool.poolAddress),
                 // positions object
                 txb.object(positionsObject),
                 // position id
@@ -149,11 +150,11 @@ export class ClosePositionTxbService {
                 txb.object(versionObject),
             ],
         })
-        const rewards = state.dynamic.rewards
+        const rewards = state.rewards
         for (const [index,
             reward] of rewards.entries()) {
             if (
-                !deprecatedPoolRewards(state.static.poolAddress,
+                !deprecatedPoolRewards(liquidityPool.poolAddress,
                     index)
             ) {
                 txb.moveCall({
@@ -166,7 +167,7 @@ export class ClosePositionTxbService {
                     ],
                     arguments: [
                         // pool address
-                        txb.object(state.static.poolAddress),
+                        txb.object(liquidityPool.poolAddress),
                         // positions object
                         txb.object(positionsObject),
                         // position id

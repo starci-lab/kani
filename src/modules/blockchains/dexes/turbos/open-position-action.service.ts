@@ -25,7 +25,8 @@ import {
     AppVersion,
     BotSchema,
     DexId,
-    PrimaryMemoryStorageService
+    PrimaryMemoryStorageService,
+    LiquidityPoolSchema
 } from "@modules/databases"
 import {
     OpenPositionTxbService 
@@ -106,9 +107,11 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
      */
 
     async confirm(
-        { positionId, state }: ConfirmOpenPositionParams
+        { 
+            positionId, 
+            liquidityPool 
+        }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
-        const _state = state as ClmmLiquidityPoolState
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -124,7 +127,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         kind: ErrorSuiObjectKind.PositionNFT,
                         id: positionId,
                         dexId: DexId.Turbos,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
                 // Stage: on-chain fetch validation (object must be a Move object)
@@ -133,7 +136,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         kind: ErrorSuiObjectKind.PositionNFT,
                         id: positionId,
                         dexId: DexId.Turbos,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
                 const positionNftFields = positionNftObjectInfo.data.content.fields as unknown as TurbosSuiObjectPositionNFTFields
@@ -150,7 +153,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         kind: ErrorSuiObjectKind.Position,
                         id: turbosPositionNFT.positionId,
                         dexId: DexId.Turbos,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
                 // Stage: on-chain fetch validation (object must be a Move object)
@@ -159,7 +162,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         kind: ErrorSuiObjectKind.PositionNFT,
                         id: turbosPositionNFT.positionId,
                         dexId: DexId.Turbos,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })  
                 }
                 const clmmPositionFields = clmmPosition.data.content.fields as unknown as TurbosClmmPosition
@@ -174,6 +177,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         {
             bot,
             state,
+            liquidityPool,
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
@@ -184,23 +188,23 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             })
         }
         // Stage: state validation (pool must have CLMM static state)
-        if (!_state.static.clmmState) {
+        if (!liquidityPool.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const snapshotTargetBalanceAmount = new BN(bot.balanceSnapshots.targetBalanceAmount)
         const snapshotQuoteBalanceAmount = new BN(bot.balanceSnapshots.quoteBalanceAmount)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenA.toString(),
+            id: liquidityPool.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenB.toString(),
+            id: liquidityPool.tokenB.toString(),
         })
         // Stage: state validation (pool token metadata must exist)
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }   
         const targetIsA = bot.targetToken.toString() === tokenA.id
@@ -209,9 +213,9 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             tickUpper,
             utilizationPercentage,
         } = await this.tickMathService.findOptimalTickRange({
-            tickCurrent: _state.dynamic.tickCurrent,
-            tickSpacing: new Decimal(_state.static.clmmState.tickSpacing),
-            tickMultiplier: new Decimal(_state.static.clmmState.tickMultiplier),
+            tickCurrent: _state.tickCurrent,
+            tickSpacing: new Decimal(liquidityPool.clmmState.tickSpacing),
+            tickMultiplier: new Decimal(liquidityPool.clmmState.tickMultiplier),
             targetBalanceAmount: new BN(snapshotTargetBalanceAmount),
             quoteBalanceAmount: new BN(snapshotQuoteBalanceAmount),
             targetIsA,
@@ -239,6 +243,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             amountBMax,
             tickLower,
             state: _state,
+            liquidityPool,
             tickUpper,
         })
         return await this.rpcExecutorService.withSuiClient({
@@ -256,7 +261,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                                 throw new TransactionValidationFailedException({
                                     botId: bot.id,
                                     txHash: devInspect.effects.transactionDigest,
-                                    liquidityPoolId: _state.static.displayId,
+                                    liquidityPoolId: liquidityPool.displayId,
                                     type: TransactionType.OpenPosition,
                                 })
                             }
@@ -323,6 +328,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             txCheck,
             stimulate,
             prepareTxs,
+            liquidityPool,
         }: ExecuteOpenPositionParams
     ): Promise<ExecuteOpenPositionResult> {
         // Sui requires exactly one transaction per execution
@@ -354,6 +360,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             if (txBlock !== null && txBlock.effects?.status?.status === "success") {
                 const { positionId } = this.parseMintEvents({
                     bot,
+                    liquidityPool,
                     txHash,
                     state: _state,
                     events: txBlock?.events || [],
@@ -363,7 +370,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                     {
                         botId: bot.id,
                         txHash,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     }
                 )
                 return {
@@ -376,7 +383,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             throw new TransactionNotPreparedException({
                 botId: bot.id,
                 txHash,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
                 type: TransactionType.OpenPosition,
             })
         }
@@ -393,7 +400,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         throw new TransactionStimulatedFailedException({
                             botId: bot.id,
                             txHash: devInspect.effects.transactionDigest,
-                            liquidityPoolId: _state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                             type: TransactionType.OpenPosition,
                         })
                     }
@@ -402,11 +409,12 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         {
                             botId: bot.id,
                             txHash,
-                            liquidityPoolId: _state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         }
                     )
                     const { positionId } = this.parseMintEvents({
                         bot,
+                        liquidityPool,
                         txHash,
                         state: _state,
                         events: devInspect.events || [],
@@ -428,7 +436,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                     throw new TransactionExecutionFailedException({
                         botId: bot.id,
                         txHash,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
                 await suiClient.waitForTransaction({
@@ -439,11 +447,12 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                     {
                         botId: bot.id,
                         txHash: digest,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     }
                 )
                 const { positionId } = this.parseMintEvents({
                     bot,
+                    liquidityPool,
                     txHash,
                     state: _state,
                     events: events || [],
@@ -460,11 +469,10 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         {
             bot,
             txHash,
-            state,
+            liquidityPool,
             events,
         }: ParseMintEventsParams
     ): ParseMintEventsResult {
-        const _state = state as ClmmLiquidityPoolState
         const eventType = "::position_manager::MintNftEvent"
         const mintNftEvent = events.find(
             event => event.type.includes(eventType)
@@ -474,7 +482,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                 botId: bot.id,
                 txHash,
                 eventType,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const mintNftEventParsed = mintNftEvent.parsedJson as MintNftEvent
@@ -493,5 +501,6 @@ interface ParseMintEventsParams {
     bot: BotSchema
     txHash: string
     state: ClmmLiquidityPoolState
+    liquidityPool: LiquidityPoolSchema
     events: Array<SuiEvent>
 }

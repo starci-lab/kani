@@ -56,6 +56,8 @@ export interface CreateClosePositionTxbParams {
     bot: BotSchema
     /** CLMM liquidity pool state. */
     state: ClmmLiquidityPoolState
+    /** Liquidity pool. */
+    liquidityPool: LiquidityPoolSchema
 }
 
 /**

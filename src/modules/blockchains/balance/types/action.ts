@@ -2,7 +2,7 @@ import {
     PrepareReconcileBalanceTransactionParams,
     PrepareReconcileBalanceTransactionResult,
     ExecuteReconcileBalanceTransactionParams,
-    ExecuteReconcileBalanceTransactionResults,
+    ExecuteReconcileBalanceTransactionResult,
 } from "./reconcile"
 import {
     PrepareWithdrawTransactionParams,
@@ -33,7 +33,7 @@ import {
  */
 export interface IBalanceActionService {
     prepareReconcileBalanceTransaction(params: PrepareReconcileBalanceTransactionParams): Promise<PrepareReconcileBalanceTransactionResult>
-    executeReconcileBalanceTransaction(params: ExecuteReconcileBalanceTransactionParams): Promise<ExecuteReconcileBalanceTransactionResults>
+    executeReconcileBalanceTransaction(params: ExecuteReconcileBalanceTransactionParams): Promise<ExecuteReconcileBalanceTransactionResult>
     prepareWithdrawTransaction(params: PrepareWithdrawTransactionParams): Promise<PrepareWithdrawTransactionResult>
     executeWithdrawTransaction(params: ExecuteWithdrawTransactionParams): Promise<ExecuteWithdrawTransactionResult>
 }

@@ -125,6 +125,7 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
         const instructions = await this.closePositionInstructionService.createCloseInstructions({
             bot,
             state: _state,
+            liquidityPool,
         })
 
         return await this.rpcExecutorService.withSolanaRpc({

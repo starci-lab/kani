@@ -46,7 +46,7 @@ import {
 } from "../types"
 import {
     ClmmLiquidityPoolState 
-} from "../../types"
+} from "../../../types"
 /**
  * Service responsible for creating close position instructions for Raydium.
  * Handles instruction construction for closing liquidity positions.
@@ -69,12 +69,13 @@ export class ClosePositionInstructionService {
     async createCloseInstructions({
         bot,
         state,
+        liquidityPool,
     }: CreateCloseInstructionsParams)
         : Promise<Array<Instruction>> {
         const _state = state as ClmmLiquidityPoolState
-        if (!_state.static.clmmState) {
+        if (!liquidityPool.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }   
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
@@ -97,39 +98,44 @@ export class ClosePositionInstructionService {
         }
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: state.static.tokenA.toString()
+                $eq: liquidityPool.tokenA.toString()
             }
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: state.static.tokenB.toString()
+                $eq: liquidityPool.tokenB.toString()
             }
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
+            })
+        }
+        if (!liquidityPool.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const {
             programAddress,
             tokenVault0,
             tokenVault1,
-        } = state.static.metadata as RaydiumLiquidityPoolMetadata
+        } = liquidityPool.metadata as RaydiumLiquidityPoolMetadata
         const {
             nftMintAddress,
             ataAddress
         } = bot.activePosition.associatedPosition?.metadata as RaydiumPositionMetadata
         const personalPositionPda = address(bot.activePosition.associatedPosition?.positionId)  
         const { pda: tickArrayLowerPda } = await this.tickArrayService.getPda({
-            poolStateAddress: address(state.static.poolAddress),
-            tickIndex: new BN(bot.activePosition.associatedPosition?.clmmState.tickLower),
-            tickSpacing: new BN(_state.static.clmmState.tickSpacing),
+            poolStateAddress: address(liquidityPool.poolAddress),
+            tickIndex: new BN(bot.activePosition.associatedPosition.clmmState.tickLower),
+            tickSpacing: new BN(liquidityPool.clmmState.tickSpacing),
             programAddress: address(programAddress),
         })
         const { pda: tickArrayUpperPda } = await this.tickArrayService.getPda({
-            poolStateAddress: address(state.static.poolAddress),
+            poolStateAddress: address(liquidityPool.poolAddress),
             tickIndex: new BN(bot.activePosition.associatedPosition?.clmmState.tickUpper),
-            tickSpacing: new BN(_state.static.clmmState.tickSpacing),
+            tickSpacing: new BN(liquidityPool.clmmState.tickSpacing),
             programAddress: address(programAddress),
         })
         const {
@@ -165,7 +171,7 @@ export class ClosePositionInstructionService {
             endInstructions.push(...closeAtaBInstructions)
         }
         const remainingAccounts: Array<AccountMeta<string>> = []
-        for (const reward of state.dynamic.rewards) {
+        for (const reward of _state.rewards) {
             if (reward.tokenAddress.toString() === SYSTEM_PROGRAM_ADDRESS) {
                 continue
             }
@@ -218,7 +224,7 @@ export class ClosePositionInstructionService {
                     role: AccountRole.WRITABLE,
                 },
                 {
-                    address: address(state.static.poolAddress),
+                    address: address(liquidityPool.poolAddress),
                     role: AccountRole.WRITABLE,
                 },
                 {

@@ -12,7 +12,7 @@ import {
 } from "@modules/databases"
 import {
     HandleClosePositionService 
-} from "../handle-close-position.service"
+} from "./handle-close-position.service"
 import {
     LiquidityPoolNotFoundException 
 } from "@modules/exceptions"

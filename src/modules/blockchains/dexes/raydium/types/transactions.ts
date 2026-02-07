@@ -1,5 +1,6 @@
 import {
-    BotSchema
+    BotSchema,
+    LiquidityPoolSchema
 } from "@modules/databases"
 import {
     ClmmLiquidityPoolState
@@ -31,6 +32,8 @@ export interface CreateOpenPositionInstructionsParams {
     tickLower: BN
     /** Upper tick value. */
     tickUpper: BN
+    /** Liquidity pool. */
+    liquidityPool: LiquidityPoolSchema
 }
 
 /**
@@ -59,6 +62,8 @@ export interface CreateCloseInstructionsParams {
     bot: BotSchema
     /** CLMM liquidity pool state. */
     state: ClmmLiquidityPoolState
+    /** Liquidity pool. */
+    liquidityPool: LiquidityPoolSchema
 }
 
 /**

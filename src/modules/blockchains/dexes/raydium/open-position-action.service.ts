@@ -120,12 +120,12 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
      */
     async prepare({
         state,
+        liquidityPool,
         bot,
     }: PrepareOpenPositionParams): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
-
         // Determine if target token is token A
-        const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
+        const targetIsA = bot.targetToken.toString() === liquidityPool.tokenA.toString()
 
         // Stage: state validation (open-position requires an active position context)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
@@ -134,9 +134,9 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             })
         }
         // Stage: state validation (pool must have CLMM static state)
-        if (!_state.static.clmmState) {
+        if (!liquidityPool.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         // Stage: state validation (position must have CLMM state recorded)
@@ -163,15 +163,15 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
 
         // Find token metadata
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenA.toString(),
+            id: liquidityPool.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenB.toString(),
+            id: liquidityPool.tokenB.toString(),
         })
         // Stage: state validation (pool token metadata must exist)
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -181,9 +181,9 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             tickUpper,
             liquidity,
         } = await this.tickMathService.findOptimalTickRange({
-            tickCurrent: _state.dynamic.tickCurrent,
-            tickSpacing: new Decimal(_state.static.clmmState.tickSpacing),
-            tickMultiplier: new Decimal(_state.static.clmmState.tickMultiplier),
+            tickCurrent: _state.tickCurrent,
+            tickSpacing: new Decimal(liquidityPool.clmmState.tickSpacing),
+            tickMultiplier: new Decimal(liquidityPool.clmmState.tickMultiplier),
             targetBalanceAmount: snapshotTargetBalanceAmountBN,
             quoteBalanceAmount: snapshotQuoteBalanceAmountBN,
             targetIsA,
@@ -216,6 +216,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             amountBMax: amountB,
             tickLower,
             tickUpper,
+            liquidityPool,
         })
 
         return await this.rpcExecutorService.withSolanaRpc({
@@ -346,12 +347,13 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         positionId,
         bot,
         state,
+        liquidityPool,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         // Stage: input validation (position ID must be provided)
         if (!positionId) {
             throw new MissingPositionIdParamException({
                 botId: bot.id,
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const txHashes: Array<string> = []
@@ -380,7 +382,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                         {
                             botId: bot.id,
                             txHash: prepareTx.txHash,
-                            liquidityPoolId: state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         }
                     )
                     txHashes.push(prepareTx.txHash)
@@ -416,7 +418,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                                 {
                                     botId: bot.id,
                                     txHash: prepareTx.txHash,
-                                    liquidityPoolId: state.static.displayId,
+                                    liquidityPoolId: liquidityPool.displayId,
                                 }
                             )
                             txHashes.push(prepareTx.txHash)
@@ -442,7 +444,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                         {
                             botId: bot.id,
                             txHash: prepareTx.txHash,
-                            liquidityPoolId: state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         }
                     )
                     txHashes.push(prepareTx.txHash)
@@ -466,7 +468,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
      */
     async confirm({
         positionId,
-        state,
+        liquidityPool,
     }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
@@ -485,7 +487,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                         kind: ErrorSolanaAccountKind.PersonalPosition,
                         address: positionId.toString(),
                         dexId: DexId.Raydium,
-                        liquidityPoolId: state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
 

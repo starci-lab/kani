@@ -4,7 +4,6 @@ import {
 import {
     ExecuteClosePositionParams,
     IClosePositionActionService,
-    ClmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
     ExecuteClosePositionResult,
@@ -49,6 +48,9 @@ import {
 import {
     AppVersion
 } from "@modules/databases"
+import {
+    ClmmLiquidityPoolState 
+} from "../../types"
 
 /**
  * Service responsible for closing positions on Turbos DEX.
@@ -83,7 +85,8 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
      */
     async prepare({
         bot,
-        state
+        state,
+        liquidityPool,
     }: PrepareClosePositionParams): Promise<PrepareClosePositionResult> {
         const _state = state as ClmmLiquidityPoolState
         
@@ -100,6 +103,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
         } = await this.closePositionTxbService.createClosePositionTxb({
             bot,
             state: _state,
+            liquidityPool,
         })
         
         return await this.rpcExecutorService.withSuiClient({
@@ -119,7 +123,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                                     botId: bot.id,
                                     txHash: devInspect.effects.transactionDigest,
                                     type: TransactionType.ClosePosition,
-                                    liquidityPoolId: _state.static.displayId,
+                                    liquidityPoolId: liquidityPool.displayId,
                                 })
                             }
                             
@@ -188,13 +192,11 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
      */
     async execute({
         bot,
-        state,
         txCheck,
         stimulate,
         prepareTxs,
+        liquidityPool,
     }: ExecuteClosePositionParams): Promise<ExecuteClosePositionResult> {
-        const _state = state as ClmmLiquidityPoolState
-        
         // Sui requires exactly one transaction per execution
         if (prepareTxs.length !== 1) {
             throw new SuiSingleTransactionRequiredException({
@@ -229,7 +231,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                     {
                         botId: bot.id,
                         txHash,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     }
                 )
                 return {
@@ -243,7 +245,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
             throw new TransactionNotPreparedException({
                 botId: bot.id,
                 txHash,
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
                 type: TransactionType.ClosePosition,
             })
         }
@@ -262,7 +264,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                         throw new TransactionStimulatedFailedException({
                             botId: bot.id,
                             txHash: devInspect.effects.transactionDigest,
-                            liquidityPoolId: _state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                             type: TransactionType.ClosePosition,
                         })
                     }
@@ -271,7 +273,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                         {
                             botId: bot.id,
                             txHash,
-                            liquidityPoolId: _state.static.displayId,
+                            liquidityPoolId: liquidityPool.displayId,
                         }
                     )
                     return {
@@ -291,7 +293,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                     throw new TransactionExecutionFailedException({
                         botId: bot.id,
                         txHash: digest,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     })
                 }
                 
@@ -304,7 +306,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                     {
                         botId: bot.id,
                         txHash: digest,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: liquidityPool.displayId,
                     }
                 )
                 return {

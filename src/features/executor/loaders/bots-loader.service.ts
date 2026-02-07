@@ -8,7 +8,7 @@
  * - Periodic full reload (reconciliation) via scheduled interval
  * - Emitting ExecutorBotUpdated event when changes occur
  */
-import type {
+import {
     BotSchema,
 } from "@modules/databases"
 import {
