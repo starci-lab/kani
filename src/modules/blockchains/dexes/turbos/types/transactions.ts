@@ -4,7 +4,7 @@ import {
 import BN from "bn.js"
 import {
     ClmmLiquidityPoolState
-} from "../../types"
+} from "../../../types"
 import {
     BotSchema
 } from "@modules/databases"

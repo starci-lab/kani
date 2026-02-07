@@ -20,6 +20,8 @@ export interface CreateOpenPositionTxbParams {
     bot: BotSchema
     /** CLMM liquidity pool state. */
     state: ClmmLiquidityPoolState
+    /** Liquidity pool. */
+    liquidityPool: LiquidityPoolSchema
     /** Lower tick value. */
     tickLower: BN
     /** Upper tick value. */

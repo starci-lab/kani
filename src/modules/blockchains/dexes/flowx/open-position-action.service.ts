@@ -205,6 +205,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
             liquidity: new BN(0),
             tickLower,
             state: _state,
+            liquidityPool,
             tickUpper,
         })
         return await this.rpcExecutorService.withSuiClient({

@@ -66,11 +66,11 @@ export class OpenPositionTxbService {
         {
             txb,
             bot,
-            state,
             tickLower,
             tickUpper,
             amountA,
             amountB,
+            liquidityPool,
         }: CreateOpenPositionTxbParams
     ): Promise<CreateOpenPositionTxbResult> {
         txb = txb ?? new Transaction()
@@ -80,16 +80,16 @@ export class OpenPositionTxbService {
             positionRegistryObject,
             poolRegistryObject,
             versionObject
-        } = state.static.metadata as FlowXLiquidityPoolMetadata
+        } = liquidityPool.metadata as FlowXLiquidityPoolMetadata
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenA.toString(),
+            id: liquidityPool.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenB.toString(),
+            id: liquidityPool.tokenB.toString(),
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const targetOperationalAmount = this.primaryMemoryStorageService.
@@ -188,7 +188,7 @@ export class OpenPositionTxbService {
             arguments: [
                 txb.object(positionRegistryObject),
                 txb.object(poolRegistryObject),
-                txb.pure.u64(decimalToBps(new Decimal(state.static.fee).mul(100)).toNumber()),
+                txb.pure.u64(decimalToBps(new Decimal(liquidityPool.fee).mul(100)).toNumber()),
                 tickLowerI32,
                 tickUpperI32,
                 txb.object(versionObject),

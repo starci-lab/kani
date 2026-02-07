@@ -14,7 +14,7 @@ import {
 import {
     BalanceConfigNotFoundException,
     TokenNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     TokenType,
     toDecimalAmount

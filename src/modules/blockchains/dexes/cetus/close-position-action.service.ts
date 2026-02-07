@@ -99,6 +99,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
         } = await this.closePositionTxbService.createClosePositionTxb({
             bot,
             state: _state,
+            liquidityPool,
         })
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,

@@ -49,7 +49,7 @@ export class OpenPositionTxbService {
     async createOpenPositionTxb(
         {
             txb,
-            state,
+            liquidityPool,
             tickLower,
             tickUpper,
             amountAMax,
@@ -62,7 +62,7 @@ export class OpenPositionTxbService {
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne(
             {
                 id: {
-                    $eq: state.static.tokenA.toString(),
+                    $eq: liquidityPool.tokenA.toString(),
                 },
             }
 
@@ -70,14 +70,14 @@ export class OpenPositionTxbService {
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne(
             {
                 id: {
-                    $eq: state.static.tokenB.toString(),
+                    $eq: liquidityPool.tokenB.toString(),
                 },
             }
         )
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException(
                 {
-                    liquidityPoolId: state.static.displayId,
+                    liquidityPoolId: liquidityPool.displayId,
                 }
             )
         }
@@ -155,7 +155,7 @@ export class OpenPositionTxbService {
         const {
             intergratePackageId,
             globalConfigObject,
-        } = state.static.metadata as CetusLiquidityPoolMetadata
+        } = liquidityPool.metadata as CetusLiquidityPoolMetadata
         txb.moveCall({
             target: `${intergratePackageId}::pool_script_v2::open_position_with_liquidity_by_fix_coin`,
             typeArguments: [
@@ -164,7 +164,7 @@ export class OpenPositionTxbService {
             ],
             arguments: [
                 txb.object(globalConfigObject),
-                txb.object(state.static.poolAddress),
+                txb.object(liquidityPool.poolAddress),
                 txb.pure.u32(Number(asUintN(BigInt(tickLower.toNumber())).toString())),
                 txb.pure.u32(Number(asUintN(BigInt(tickUpper.toNumber())).toString())),
                 txb.object(sourceCoinA.coinArg),

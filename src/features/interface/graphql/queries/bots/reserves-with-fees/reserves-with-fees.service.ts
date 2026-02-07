@@ -25,6 +25,7 @@ import {
     LiquidityPoolNotFoundException,
 } from "@modules/exceptions"
 import {
+    LiquidityPoolStateService,
     ReservesWithFeesActionService,
 } from "@modules/blockchains"
 
@@ -36,6 +37,7 @@ export class ReservesWithFeesService {
         private readonly reservesWithFeesActionService: ReservesWithFeesActionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly activePositionAssociateService: ActivePositionAssociateService,
+        private readonly liquidityPoolStateService: LiquidityPoolStateService,
     ) {}
 
     async reservesWithFees(
@@ -87,6 +89,7 @@ export class ReservesWithFeesService {
                 id: activePosition.liquidityPool.toString(),
             })
         }
+        const state = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
         const {
             reserveA,
             reserveB,
@@ -97,6 +100,7 @@ export class ReservesWithFeesService {
         } = await this.reservesWithFeesActionService.reservesWithFees({
             bot,
             liquidityPool,
+            state,
         })
         const rewardsAsNumbers = Object.fromEntries(
             Object.entries(rewards).map(([k,

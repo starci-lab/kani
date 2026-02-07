@@ -42,6 +42,7 @@ export class ClosePositionTxbService {
         txb,
         bot,
         state,
+        liquidityPool,
     }: CreateClosePositionTxbParams
     ): Promise<CreateClosePositionTxbResult> {
         txb = txb ?? new Transaction()
@@ -55,25 +56,25 @@ export class ClosePositionTxbService {
         }
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: state.static.tokenA.toString(),
+                $eq: liquidityPool.tokenA.toString(),
             },
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: state.static.tokenB.toString(),
+                $eq: liquidityPool.tokenB.toString(),
             },
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
         const {
             intergratePackageId,
             globalConfigObject,
             rewarderGlobalVaultObject
-        } = state.static.metadata as CetusLiquidityPoolMetadata
-        const rewarders = state.dynamic.rewards
+        } = liquidityPool.metadata as CetusLiquidityPoolMetadata
+        const rewarders = state.rewards
         for (const rewarder of rewarders) {
             const zeroCoinTxResult = txb.moveCall({
                 target: "0x2::coin::zero",
@@ -90,7 +91,7 @@ export class ClosePositionTxbService {
                 ],
                 arguments: [
                     txb.object(globalConfigObject),
-                    txb.object(state.static.poolAddress),
+                    txb.object(liquidityPool.poolAddress),
                     txb.object(bot.activePosition.associatedPosition?.positionId ?? ""),
                     txb.object(rewarderGlobalVaultObject),
                     txb.object(zeroCoinTxResult),
@@ -106,7 +107,7 @@ export class ClosePositionTxbService {
             ],
             arguments: [
                 txb.object(globalConfigObject),
-                txb.object(state.static.poolAddress),
+                txb.object(liquidityPool.poolAddress),
                 txb.object(bot.activePosition.associatedPosition?.positionId ?? ""),
                 txb.pure.u64(0),
                 txb.pure.u64(0),

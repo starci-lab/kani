@@ -3,12 +3,12 @@ import {
 } from "@mysten/sui/transactions"
 import BN from "bn.js"
 import {
-    ClmmLiquidityPoolState,
-} from "../../types"
-import {
-    BotSchema
+    BotSchema,
+    LiquidityPoolSchema
 } from "@modules/databases"
-
+import {
+    ClmmLiquidityPoolState
+} from "../../../types"
 /**
  * Parameters for creating open position transaction builder.
  */
@@ -17,6 +17,8 @@ export interface CreateOpenPositionTxbParams {
     txb?: Transaction
     /** CLMM liquidity pool state. */
     state: ClmmLiquidityPoolState
+    /** Liquidity pool. */
+    liquidityPool: LiquidityPoolSchema
     /** Lower tick value. */
     tickLower: BN
     /** Upper tick value. */
@@ -53,6 +55,8 @@ export interface CreateClosePositionTxbParams {
     bot: BotSchema
     /** CLMM liquidity pool state. */
     state: ClmmLiquidityPoolState
+    /** Liquidity pool. */
+    liquidityPool: LiquidityPoolSchema
 }
 
 /**

@@ -53,7 +53,7 @@ export const createRedisCacheManagerProvider = (): Provider => ({
             const randomString = v4()
             const cacheKey = `${debug.ok.redis}:${randomString}`
             await cache.set(
-                debug.ok.redis,
+                cacheKey,
                 true,
                 debug.ttl
             )
