@@ -78,8 +78,6 @@ export class ExecuteService {
         params: ExecuteParams
     ): Promise<ExecuteResult> {
         // HEARTBEAT phase
-        await new Promise((resolve) => setTimeout(resolve,
-            12000))
         await this.sendHeartbeatService.process({
             ...params,
             fatal: true,

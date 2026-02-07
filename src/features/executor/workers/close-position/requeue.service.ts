@@ -89,7 +89,6 @@ export class RequeueService implements OnApplicationBootstrap {
             // get TTL from config
             const ttl = envConfig().executor.runtime.operation.closePosition.requeue.interval
             // find bots with stale active jobs
-            // find bots with stale active jobs
             const bots = await this.connection.model<BotSchema>(BotSchema.name).find({
                 executor: envConfig().executor.id,
                 activeJob: {
