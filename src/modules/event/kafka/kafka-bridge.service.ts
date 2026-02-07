@@ -120,11 +120,9 @@ export class KafkaBridgeService implements OnApplicationBootstrap, OnModuleInit,
                         this.topics
                     )
                     // create abort controller for connection management
-                    const abortController = new AbortController()
-                    
+                    const abortController = new AbortController()    
                     // create timeout for connection idle detection
                     let timeout: NodeJS.Timeout | undefined = undefined
-         
                     // reset timeout function to keep connection alive
                     const resetTimeout = () => {
                         if (timeout) {
