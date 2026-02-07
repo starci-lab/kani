@@ -182,7 +182,6 @@ export class KafkaBridgeService implements OnApplicationBootstrap, OnModuleInit,
                     resetTimeout()
                     // consume the stream
                     for await (const payload of stream) {
-                        console.log("hetai")
                         const { topic, message } = payload
                         // parse message value
                         const value = message.value?.toString() || "{}"

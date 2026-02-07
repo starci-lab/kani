@@ -1,3 +1,4 @@
+import pRetry from "p-retry"
 import {
     StreamConnection
 } from "../types"
@@ -98,11 +99,15 @@ implements StreamConnection<EachMessagePayload>
      * Closes Kafka consumer safely.
      */
     async close(): Promise<void> {
-        this.consumer.stop().catch(() => {})
-        this.consumer.disconnect().catch(() => {})
-
-        if (this.onCloseHandler) {
-            this.onCloseHandler()
-        }
+        await pRetry(
+            async () => {
+                await this.consumer.stop()
+                await this.consumer.disconnect()
+                // call the onClose handler
+                if (this.onCloseHandler) {
+                    this.onCloseHandler()
+                }
+            }
+        )
     }
 }
