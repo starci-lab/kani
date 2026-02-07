@@ -1,5 +1,5 @@
 import {
-    Injectable
+    Injectable,
 } from "@nestjs/common"
 import type {
     ExecuteParams,
@@ -11,44 +11,35 @@ import {
     InjectPrimaryMongoose,
     JobSchema,
     JobStatus,
-    TransactionType,
 } from "@modules/databases"
 import {
-    Connection
+    Connection,
 } from "mongoose"
 import {
     WinstonLog,
-    WinstonService 
+    WinstonService,
 } from "@modules/winston"
 import {
-    AddTransactionRecordParams,
     ClosePositionActionService,
-    PrepareClosePositionResult,
 } from "@modules/blockchains"
 import {
-    envConfig 
+    envConfig,
 } from "@modules/env"
 import {
-    ToStringObject 
+    ToStringObject,
 } from "@modules/common"
 import {
-    InjectSuperJson,
     DayjsService,
     AsyncService,
 } from "@modules/mixin"
 import {
-    SuperJSON 
-} from "superjson"
-import {
-    AbstractException,
-    ClosePositionJobExecutedFailedException,
+    ExecuteClosePositionResultNotFoundException,
+    JobFailureException,
+    JobFailureStrategy,
 } from "@modules/exceptions"
 import {
-    FatalError,
-} from "../fatal"
-import {
-    UnrecoverableError,
-} from "bullmq"
+    SerializerService,
+} from "../common"
 
 /**
  * Service for the EXECUTE phase of close-position jobs.
@@ -63,19 +54,19 @@ export class ExecuteService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
         private readonly dayjsService: DayjsService,
         private readonly asyncService: AsyncService,
+        private readonly serializerService: SerializerService,
     ) {}
 
     /**
-     * EXECUTE phase.
+     * EXECUTE phase: executes prepared close-position transactions, persists PREPARED → EXECUTED.
      *
-     * Executes prepared close-position transactions and persists a state transition:
-     * PREPARED → EXECUTED. Also returns `transactionRecords` for the CONFIRM phase.
+     * @param params - Execute params (job, bot, prepareResult, payload, ...)
+     * @returns Execute result with executeResult data
      *
-     * Idempotency: if the job is already at/after EXECUTED, returns the existing metadata.
+     * @example
+     * const result = await executeService.process(params)
      */
     async process(
         {
@@ -84,18 +75,18 @@ export class ExecuteService {
             bullmqJob,
             prepareResult,
             payload,
-            dynamicLiquidityPoolInfo,
+            state,
             liquidityPool,
         }: ExecuteParams
     ): Promise<ExecuteResult> {
         const isRetry = bullmqJob.attemptsMade > 0
-        // Guard: if job already passed EXECUTED phase, do nothing
+        // guard: idempotency (return persisted data if already executed)
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Executed)
         ) {
-            const { closePositionTransaction: stringifiedClosePositionTransaction, transactionRecords: stringifiedTransactionRecords } = job.data as ToStringObject<ClosePositionJobData>
-            const closePositionTransaction = this.superJson.parse<PrepareClosePositionResult>(stringifiedClosePositionTransaction)
-            const transactionRecords = stringifiedTransactionRecords ? this.superJson.parse<Array<AddTransactionRecordParams>>(stringifiedTransactionRecords) : undefined
+            const jobData = this.serializerService.deserialize<ClosePositionJobData>(
+                job.data as Partial<ToStringObject<ClosePositionJobData>>
+            )
             this.winstonService.log(
                 WinstonLog.ClosePositionJobAlreadyExecuted,
                 {
@@ -109,71 +100,59 @@ export class ExecuteService {
                 }
             )
             return {
-                result: {
-                    closePositionTransaction,
-                    transactionRecords,
-                }
+                data: jobData,
             }
         }
-        const { closePositionTransaction } = prepareResult
-        const [executeResult,
-            error] = await this.asyncService.resolveTuple(
+        const prepareTxs = prepareResult?.data.prepareResult?.prepareTxs ?? []
+        const [
+            executeResult,
+            error,
+        ] = await this.asyncService.resolveTuple(
             this.closePositionActionService.execute(
                 {
                     bot,
-                    prepareTxs: closePositionTransaction.prepareTxs,
-                    state: {
-                        static: liquidityPool,
-                        dynamic: dynamicLiquidityPoolInfo,
-                    },
+                    prepareTxs,
+                    liquidityPool,
+                    state,
                     txCheck: isRetry || (payload.isRetry ?? false),
                     stimulate: envConfig().executor.runtime.operation.closePosition.stimulate,
                 }
-            ),
+            )
         )
         if (error) {
-            const failedError = new ClosePositionJobExecutedFailedException({
+            throw new JobFailureException({
+                strategy: JobFailureStrategy.Requeue,
                 originalError: error,
+            })
+        }
+        if (!executeResult) {
+            throw new ExecuteClosePositionResultNotFoundException({
                 botId: bot.id,
                 jobId: job.id,
                 liquidityPoolId: liquidityPool.displayId,
             })
-            if (error instanceof AbstractException) {
-                throw new FatalError(failedError.toJSON())
-            }
-            throw new UnrecoverableError(failedError.toJSON())
         }
-        const txHashes = executeResult.txHashes ?? closePositionTransaction.prepareTxs.map((tx) => tx.txHash)
-        const transactionRecords: Array<AddTransactionRecordParams> = txHashes.map(
-            (txHash) => (
-                {
-                    bot,
-                    txHash,
-                    chainId: bot.chainId,
-                    type: TransactionType.ClosePosition,
-                }
-            ),
-        )
-
-        await this.connection
-            .model<JobSchema>(JobSchema.name)
-            .updateOne(
-                {
-                    _id: job.id
+        const data = this.serializerService.serialize<Partial<ClosePositionJobData>>({
+            executeResult,
+        })
+        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            {
+                _id: {
+                    $eq: job._id,
                 },
-                {
-                    $set: {
-                        status: JobStatus.Executed,
-                        "data.transactionRecords": this.superJson.stringify(transactionRecords),
-                    },
-                }
-            )
-        return {
-            result: {
-                ...prepareResult,
-                transactionRecords,
+            },
+            {
+                $set: {
+                    status: JobStatus.Executed,
+                    ...data,
+                },
             }
+        )
+        return {
+            data: {
+                prepareResult: prepareResult?.data.prepareResult,
+                executeResult,
+            },
         }
     }
 }
-

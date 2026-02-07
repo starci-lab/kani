@@ -151,6 +151,104 @@ export class ExecuteReconcileBalanceTransactionResultNotFoundException extends A
     }
 }
 
+/** Metadata for prepare close position result not found. */
+export interface PrepareClosePositionResultNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    botId: string
+    jobId: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/** Thrown when prepare close position result is null or undefined after prepare. */
+export class PrepareClosePositionResultNotFoundException extends AbstractException {
+    constructor({
+        botId,
+        jobId,
+        liquidityPoolId,
+    }: PrepareClosePositionResultNotFoundExceptionMetadata) {
+        super(
+            "Prepare close position result not found",
+            "PREPARE_CLOSE_POSITION_RESULT_NOT_FOUND_EXCEPTION",
+            {
+                botId,
+                jobId,
+                liquidityPoolId,
+            },
+        )
+    }
+}
+
+/** Metadata for execute close position result not found. */
+export interface ExecuteClosePositionResultNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    botId: string
+    jobId: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/** Thrown when execute close position result is null or undefined after execute. */
+export class ExecuteClosePositionResultNotFoundException extends AbstractException {
+    constructor({
+        botId,
+        jobId,
+        liquidityPoolId,
+    }: ExecuteClosePositionResultNotFoundExceptionMetadata) {
+        super(
+            "Execute close position result not found",
+            "EXECUTE_CLOSE_POSITION_RESULT_NOT_FOUND_EXCEPTION",
+            {
+                botId,
+                jobId,
+                liquidityPoolId,
+            },
+        )
+    }
+}
+
+/** Metadata for prepare withdraw transaction result not found. */
+export interface PrepareWithdrawTransactionResultNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    botId: string
+    jobId: string
+}
+
+/** Thrown when prepare withdraw transaction result is null or undefined after prepare. */
+export class PrepareWithdrawTransactionResultNotFoundException extends AbstractException {
+    constructor({
+        botId,
+        jobId,
+    }: PrepareWithdrawTransactionResultNotFoundExceptionMetadata) {
+        super(
+            "Prepare withdraw transaction result not found",
+            "PREPARE_WITHDRAW_TRANSACTION_RESULT_NOT_FOUND_EXCEPTION",
+            {
+                botId,
+                jobId,
+            },
+        )
+    }
+}
+
+/** Metadata for execute withdraw transaction result not found. */
+export interface ExecuteWithdrawTransactionResultNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    botId: string
+    jobId: string
+}
+
+/** Thrown when execute withdraw transaction result is null or undefined after execute. */
+export class ExecuteWithdrawTransactionResultNotFoundException extends AbstractException {
+    constructor({
+        botId,
+        jobId,
+    }: ExecuteWithdrawTransactionResultNotFoundExceptionMetadata) {
+        super(
+            "Execute withdraw transaction result not found",
+            "EXECUTE_WITHDRAW_TRANSACTION_RESULT_NOT_FOUND_EXCEPTION",
+            {
+                botId,
+                jobId,
+            },
+        )
+    }
+}
+
 /** Thrown when output coin is not found after swap. */
 export class OutputCoinNotFoundException extends AbstractException {
     constructor({

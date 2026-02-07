@@ -1,5 +1,5 @@
 import {
-    Injectable 
+    Injectable,
 } from "@nestjs/common"
 import type {
     PrepareParams,
@@ -9,38 +9,34 @@ import type {
 import {
     getJobStatusOrder,
     InjectPrimaryMongoose,
+    JobSchema,
     JobStatus,
 } from "@modules/databases"
 import {
-    JobSchema
-} from "@modules/databases"
-import {
-    WinstonLog, WinstonService
+    WinstonLog,
+    WinstonService,
 } from "@modules/winston"
 import {
-    Connection 
+    Connection,
 } from "mongoose"
 import {
     ClosePositionActionService,
-    PrepareClosePositionResult,
 } from "@modules/blockchains"
 import {
-    InjectSuperJson,
     DayjsService,
-    AsyncService
+    AsyncService,
 } from "@modules/mixin"
 import {
-    SuperJSON 
-} from "superjson"
-import {
-    ToStringObject 
-} from "@modules/common"
-import {
-    ClosePositionJobPreparedFailedException,
+    JobFailureException,
+    JobFailureStrategy,
+    PrepareClosePositionResultNotFoundException,
 } from "@modules/exceptions"
 import {
-    FatalError,
-} from "../fatal"
+    ToStringObject,
+} from "@modules/common"
+import {
+    SerializerService,
+} from "../common"
 
 /**
  * Service for the PREPARE phase of close-position jobs.
@@ -55,52 +51,42 @@ export class PrepareService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly closePositionActionService: ClosePositionActionService,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
         private readonly dayjsService: DayjsService,
         private readonly asyncService: AsyncService,
+        private readonly serializerService: SerializerService,
     ) {}
 
-    // Phase: PREPARE
-    // Responsibility:
-    // - Build the open-position transaction (no execution here)
-    // - Persist job metadata required for execution phase
-    // - Transition job state from PENDING → PREPARED
-    // Notes:
-    // - This phase must be idempotent
-    // - Safe to re-enter on retry/replay
     /**
-     * PREPARE phase.
+     * PREPARE phase: prepares close-position transaction, persists PENDING → PREPARED.
      *
-     * Prepares a "close position" transaction via `ClosePositionOrchestratorService`
-     * and persists a state transition: PENDING → PREPARED (including
-     * `metadata.closePositionTransaction`).
+     * @param params - Prepare params (job, bot, liquidityPool, dynamicLiquidityPoolInfo, ...)
+     * @returns Prepare result with closePositionTransaction data
      *
-     * Idempotency: if the job is already at/after PREPARED, returns the previously
-     * persisted metadata instead of recomputing.
+     * @example
+     * const result = await prepareService.process({ job, bot, liquidityPool, ... })
      */
     async process(
         {
             job,
-            bot, 
-            dynamicLiquidityPoolInfo,
+            bot,
+            state,
             liquidityPool,
         }: PrepareParams
     ): Promise<PrepareResult> {
-        // Guard: if job already passed PENDING phase, do nothing
-        // This prevents duplicate preparation on retry or replay
+        // guard: idempotency (return persisted data if already prepared)
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Prepared)
         ) {
-            const { closePositionTransaction: stringifiedClosePositionTransaction } = job.data as ToStringObject<ClosePositionJobData>
-            const closePositionTransaction = this.superJson.parse<PrepareClosePositionResult>(stringifiedClosePositionTransaction)
+            const jobData = this.serializerService.deserialize<ClosePositionJobData>(
+                job.data as Partial<ToStringObject<ClosePositionJobData>>
+            )
             this.winstonService.log(
                 WinstonLog.ClosePositionJobAlreadyPrepared,
                 {
                     botId: bot.id,
                     jobId: job.id,
                     liquidityPoolId: liquidityPool.displayId,
-                    txHashes: closePositionTransaction.prepareTxs.map((prepareTx) => prepareTx.txHash),
+                    txHashes: jobData?.prepareResult?.prepareTxs?.map((prepareTx) => prepareTx.txHash) ?? [],
                     ageMs: this.dayjsService.now().diff(
                         job.createdAt,
                         "millisecond",
@@ -108,33 +94,38 @@ export class PrepareService {
                 }
             )
             return {
-                result: {
-                    closePositionTransaction,
-                }
+                data: jobData,
             }
         }
-        const [closePositionTransaction,
-            error] = await this.asyncService.resolveTuple(
+        const [
+            prepareResult,
+            error,
+        ] = await this.asyncService.resolveTuple(
             this.closePositionActionService.prepare(
                 {
                     bot,
-                    state: {
-                        static: liquidityPool,
-                        dynamic: dynamicLiquidityPoolInfo,
-                    },
+                    liquidityPool,
+                    state,
                 }
             )
         )
         if (error) {
-            const failedError = new ClosePositionJobPreparedFailedException({
+            throw new JobFailureException({
                 originalError: error,
+                strategy: JobFailureStrategy.Fatal,
+            })
+        }
+        if (!prepareResult) {
+            throw new PrepareClosePositionResultNotFoundException({
                 botId: bot.id,
                 jobId: job.id,
                 liquidityPoolId: liquidityPool.displayId,
             })
-            // throw everything as a fatal error to stop the job
-            throw new FatalError(failedError.toJSON())
         }
+        // persist job: PENDING → PREPARED
+        const data = this.serializerService.serialize<Partial<ClosePositionJobData>>({
+            prepareResult,
+        })
         await this.connection.model<JobSchema>(JobSchema.name).updateOne(
             {
                 _id: {
@@ -144,7 +135,7 @@ export class PrepareService {
             {
                 $set: {
                     status: JobStatus.Prepared,
-                    "data.closePositionTransaction": this.superJson.stringify(closePositionTransaction),
+                    ...data,
                 },
             }
         )
@@ -153,14 +144,14 @@ export class PrepareService {
             {
                 botId: bot.id,
                 jobId: job.id,
-                txHashes: closePositionTransaction.prepareTxs.map((prepareTx) => prepareTx.txHash),
+                txHashes: prepareResult.prepareTxs.map((prepareTx) => prepareTx.txHash),
                 liquidityPoolId: liquidityPool.displayId,
             }
         )
         return {
-            result: {
-                closePositionTransaction,
-            }
+            data: {
+                prepareResult,
+            },
         }
     }
 }

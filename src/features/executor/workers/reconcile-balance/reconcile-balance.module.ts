@@ -2,12 +2,6 @@ import {
     Module,
 } from "@nestjs/common"
 import {
-    ClearService,
-    OnCompletedService,
-    OnFailedService,
-    SendHeartbeatService,
-} from "../common"
-import {
     ReconcileBalanceWorker,
 } from "./reconcile-balance.worker"
 import {
@@ -32,12 +26,8 @@ import {
             ReconcileBalanceWorker,
             PrepareService,
             ExecuteService,
-            SendHeartbeatService,
             ConfirmService,
-            OnCompletedService,
-            OnFailedService,
             RequeueService,
-            ClearService,
         ],
     }
 )

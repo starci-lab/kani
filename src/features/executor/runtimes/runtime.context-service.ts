@@ -26,6 +26,9 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import type {
+    RuntimeContext,
+} from "./types"
 import {
     HandleClmmPositionOpenRequestedEventService,
     HandleDlmmPositionOpenRequestedEventService,
@@ -33,7 +36,7 @@ import {
     HandleClmmPositionCloseRequestedEventService,
     HandleDlmmPositionCloseRequestedEventService,
     HandleWithdrawService,
-} from "./core"
+} from "./handlers"
 
 @Injectable(
     {
@@ -234,10 +237,4 @@ export class RuntimeContextService {
         // clear the cached bot
         this.bot = null
     }
-
-}
-
-
-export interface RuntimeContext {
-    id: string
 }

@@ -11,36 +11,26 @@ import {
     InjectPrimaryMongoose,
     JobSchema,
     JobStatus,
+    TransactionType,
 } from "@modules/databases"
 import {
     Connection,
 } from "mongoose"
 import type {
     ConfirmParams,
-    WithdrawJobData,
 } from "./types"
 import {
     WinstonLog,
-    WinstonService 
+    WinstonService,
 } from "@modules/winston"
 import {
     DayjsService,
-    InjectSuperJson,
 } from "@modules/mixin"
 import {
-    ToStringObject 
-} from "@modules/common"
+    SerializerService,
+} from "../common"
 import {
-    PrepareWithdrawTransactionResult 
-} from "@modules/blockchains"
-import {
-    AddTransactionRecordParams 
-} from "@modules/blockchains"
-import {
-    SuperJSON 
-} from "superjson"
-import {
-    envConfig 
+    envConfig,
 } from "@modules/env"
 
 /**
@@ -59,20 +49,17 @@ export class ConfirmService {
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
         private readonly dayjsService: DayjsService,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
+        private readonly serializerService: SerializerService,
     ) {}
 
     /**
-     * CONFIRM phase.
+     * CONFIRM phase: re-fetches balances, persists transaction records and bot snapshot.
      *
-     * Post-transaction bookkeeping after swaps have been executed:
-     * - re-fetch balances from chain
-     * - persist transaction snapshot records (if any)
-     * - persist updated bot balance snapshot
-     * - transition job status to CONFIRMED
+     * @param params - Confirm params (bot, job, executeResult)
+     * @returns void
      *
-     * Idempotency: if the job is already at/after CONFIRMED, returns early.
+     * @example
+     * await confirmService.process({ bot, job, executeResult })
      */
     async process(
         {
@@ -80,16 +67,11 @@ export class ConfirmService {
             job,
             executeResult,
         }: ConfirmParams
-    ) {
+    ): Promise<void> {
+        // guard: idempotency (return early if already confirmed)
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Confirmed)
         ) {
-            const { 
-                withdrawTransaction: stringifiedWithdrawTransaction, 
-                transactionRecords: stringifiedTransactionRecords 
-            } = job.data as ToStringObject<WithdrawJobData>
-            const withdrawTransaction = this.superJson.parse<PrepareWithdrawTransactionResult>(stringifiedWithdrawTransaction)
-            const transactionRecords = stringifiedTransactionRecords ? this.superJson.parse<Array<AddTransactionRecordParams>>(stringifiedTransactionRecords) : undefined
             this.winstonService.log(
                 WinstonLog.WithdrawJobAlreadyConfirmed,
                 {
@@ -99,30 +81,28 @@ export class ConfirmService {
                         "millisecond"),
                 }
             )
-            return {
-                result: {
-                    withdrawTransaction,
-                    transactionRecords,
-                }
-            }
+            return
         }
         if (!envConfig().executor.runtime.operation.withdraw.stimulate) {
-        // re-fetch balances post execution
+            const txHashes = executeResult?.data.executeResult?.txHashes ?? []
             const {
                 targetBalanceAmount,
                 quoteBalanceAmount,
                 gasBalanceAmount,
             } = await this.balanceFetcherService.fetchBalances({
-                bot
+                bot,
             })
 
             const session = await this.connection.startSession()
             await session.withTransaction(
                 async () => {
-                    for (const transactionRecord of executeResult.transactionRecords || []) {
+                    for (const txHash of txHashes) {
                         await this.transactionSnapshotService.addTransactionRecord(
                             {
-                                ...transactionRecord,
+                                bot,
+                                txHash,
+                                chainId: bot.chainId,
+                                type: TransactionType.Withdraw,
                                 session,
                             }
                         )
@@ -165,5 +145,3 @@ export class ConfirmService {
         )
     }
 }
-
-

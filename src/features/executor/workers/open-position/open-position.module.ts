@@ -2,12 +2,6 @@ import {
     Module,
 } from "@nestjs/common"
 import {
-    ClearService,
-    OnCompletedService,
-    OnFailedService,
-    SendHeartbeatService,
-} from "../common"
-import {
     PrepareService,
 } from "./prepare.service"
 import {
@@ -31,12 +25,8 @@ import {
         providers: [
             OpenPositionWorker,
             PrepareService,
-            SendHeartbeatService,
-            OnCompletedService,
-            OnFailedService,
             ExecuteService,
             ConfirmService,
-            ClearService,
             RequeueService,
         ],
     }

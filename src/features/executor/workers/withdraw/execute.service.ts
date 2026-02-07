@@ -1,5 +1,5 @@
 import {
-    Injectable
+    Injectable,
 } from "@nestjs/common"
 import type {
     ExecuteParams,
@@ -7,48 +7,39 @@ import type {
     WithdrawJobData,
 } from "./types"
 import {
-    AddTransactionRecordParams,
     BalanceActionService,
-    PrepareWithdrawTransactionResult
 } from "@modules/blockchains"
 import {
     getJobStatusOrder,
     InjectPrimaryMongoose,
     JobSchema,
     JobStatus,
-    TransactionType,
 } from "@modules/databases"
 import {
-    Connection
+    Connection,
 } from "mongoose"
 import {
     WinstonLog,
-    WinstonService 
+    WinstonService,
 } from "@modules/winston"
 import {
-    envConfig 
+    envConfig,
 } from "@modules/env"
 import {
     DayjsService,
-    InjectSuperJson,
     AsyncService,
 } from "@modules/mixin"
 import {
-    SuperJSON 
-} from "superjson"
-import {
-    ToStringObject 
-} from "@modules/common"
-import {
-    AbstractException,
-    WithdrawJobExecutedFailedException,
+    ExecuteWithdrawTransactionResultNotFoundException,
+    JobFailureException,
+    JobFailureStrategy,
 } from "@modules/exceptions"
 import {
-    FatalError,
-} from "../fatal"
+    ToStringObject,
+} from "@modules/common"
 import {
-    UnrecoverableError,
-} from "bullmq"
+    SerializerService,
+} from "../common"
 
 /**
  * Service for the EXECUTE phase of withdraw jobs.
@@ -64,18 +55,18 @@ export class ExecuteService {
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
         private readonly dayjsService: DayjsService,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
         private readonly asyncService: AsyncService,
+        private readonly serializerService: SerializerService,
     ) {}
 
     /**
-     * EXECUTE phase.
+     * EXECUTE phase: executes prepared withdraw transactions, persists PREPARED → EXECUTED.
      *
-     * Executes prepared swap transactions and persists a state transition:
-     * PREPARED → EXECUTED. Also returns `transactionRecords` for the CONFIRM phase.
+     * @param params - Execute params (job, bot, prepareResult, payload, ...)
+     * @returns Execute result with executeResult data
      *
-     * Idempotency: if the job is already at/after EXECUTED, returns the existing metadata.
+     * @example
+     * const result = await executeService.process(params)
      */
     async process(
         {
@@ -87,16 +78,13 @@ export class ExecuteService {
         }: ExecuteParams
     ): Promise<ExecuteResult> {
         const isRetry = bullmqJob.attemptsMade > 0
-        // Guard: if job already passed EXECUTED phase, do nothing
+        // guard: idempotency (return persisted data if already executed)
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Executed)
         ) {
-            const { 
-                withdrawTransaction: stringifiedWithdrawTransaction, 
-                transactionRecords: stringifiedTransactionRecords 
-            } = job.data as ToStringObject<WithdrawJobData>
-            const withdrawTransaction = this.superJson.parse<PrepareWithdrawTransactionResult>(stringifiedWithdrawTransaction)
-            const transactionRecords = stringifiedTransactionRecords ? this.superJson.parse<Array<AddTransactionRecordParams>>(stringifiedTransactionRecords) : undefined
+            const jobData = this.serializerService.deserialize<WithdrawJobData>(
+                job.data as Partial<ToStringObject<WithdrawJobData>>
+            )
             this.winstonService.log(
                 WinstonLog.WithdrawJobAlreadyExecuted,
                 {
@@ -107,69 +95,57 @@ export class ExecuteService {
                 }
             )
             return {
-                result: {
-                    withdrawTransaction,
-                    transactionRecords,
-                }
+                data: jobData,
             }
         }
 
-        const transactionRecords: Array<AddTransactionRecordParams> = []
-        const { withdrawTransaction } = prepareResult
-
-        const [executeResult,
-            error] = await this.asyncService.resolveTuple(
+        const prepareTxs = prepareResult?.data.prepareResult?.prepareTxs ?? []
+        const [
+            executeResult,
+            error,
+        ] = await this.asyncService.resolveTuple(
             this.balanceActionService.executeWithdrawTransaction(
                 {
                     bot,
-                    prepareTxs: withdrawTransaction.prepareTxs,
+                    prepareTxs,
                     isRetry: isRetry || (payload.isRetry ?? false),
                     stimulate: envConfig().executor.runtime.operation.withdraw.stimulate,
                 }
             )
         )
         if (error) {
-            const failedError = new WithdrawJobExecutedFailedException({
+            throw new JobFailureException({
+                strategy: JobFailureStrategy.Requeue,
                 originalError: error,
+            })
+        }
+        if (!executeResult) {
+            throw new ExecuteWithdrawTransactionResultNotFoundException({
                 botId: bot.id,
                 jobId: job.id,
             })
-            if (error instanceof AbstractException) {
-                throw new FatalError(failedError.toJSON())
-            }
-            throw new UnrecoverableError(failedError.toJSON())
         }
-
-        const txHashes = executeResult?.txHashes ?? []
-        for (const txHash of txHashes) {
-            transactionRecords.push(
-                {
-                    bot,
-                    txHash,
-                    chainId: bot.chainId,
-                    type: TransactionType.Withdraw,
-                }
-            )
-        }
-        await this.connection
-            .model<JobSchema>(JobSchema.name)
-            .updateOne(
-                {
-                    _id: job.id
+        const data = this.serializerService.serialize<Partial<WithdrawJobData>>({
+            executeResult,
+        })
+        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            {
+                _id: {
+                    $eq: job._id,
                 },
-                {
-                    $set: {
-                        status: JobStatus.Executed,
-                        "data.transactionRecords": this.superJson.stringify(transactionRecords),
-                    },
-                }
-            )
-        return {
-            result: {
-                ...prepareResult,
-                transactionRecords,
+            },
+            {
+                $set: {
+                    status: JobStatus.Executed,
+                    ...data,
+                },
             }
+        )
+        return {
+            data: {
+                prepareResult: prepareResult?.data.prepareResult,
+                executeResult,
+            },
         }
     }
 }
-

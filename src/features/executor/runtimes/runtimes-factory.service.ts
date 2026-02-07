@@ -16,8 +16,11 @@ import {
 import {
     OnEvent 
 } from "@nestjs/event-emitter"
+import type {
+    RuntimeContext,
+} from "./types"
 import {
-    RuntimeContext, RuntimeContextService 
+    RuntimeContextService,
 } from "./runtime.context-service"
 
 /**

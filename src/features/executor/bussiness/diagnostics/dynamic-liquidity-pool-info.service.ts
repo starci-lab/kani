@@ -3,10 +3,12 @@ import {
     OnModuleInit,
     OnApplicationBootstrap,
 } from "@nestjs/common"
+import type {
+    LiquidityPoolSchema,
+} from "@modules/databases"
 import {
     LiquidityPoolType,
     PrimaryMemoryStorageService,
-    LiquidityPoolSchema,
 } from "@modules/databases"
 import {
     WinstonLog, WinstonService 
@@ -24,6 +26,12 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import {
+    Collection,
+} from "lokijs"
+import type {
+    DynamicLiquidityPoolInfoDiagnosticReadinessResult,
+} from "../types"
 
 /**
  * DynamicLiquidityPoolInfoDiagnosticService
@@ -95,6 +103,11 @@ export class DynamicLiquidityPoolInfoDiagnosticService implements OnModuleInit, 
         })
     }
 
+    /**
+     * Diagnose dynamic liquidity pool info availability for all active pools.
+     *
+     * @returns Array of diagnostic readiness results per pool
+     */
     async diagnose(): Promise<Array<DynamicLiquidityPoolInfoDiagnosticReadinessResult>> {
         // Evaluate each pool independently and return a full results list.
         const liquidityPools = this.liquidityPoolCollection.find()
@@ -168,9 +181,13 @@ export class DynamicLiquidityPoolInfoDiagnosticService implements OnModuleInit, 
         return await this.asyncService.allMustDone<Array<DynamicLiquidityPoolInfoDiagnosticReadinessResult>>(promises)
     }
 
-    async ready(
-        id: string
-    ): Promise<boolean> {
+    /**
+     * Check if a pool's dynamic info is ready (non-stale, available).
+     *
+     * @param id - Liquidity pool display ID
+     * @returns true if ready
+     */
+    async ready(id: string): Promise<boolean> {
         const result = this.results.findOne({
             id: {
                 $eq: id,
@@ -178,10 +195,4 @@ export class DynamicLiquidityPoolInfoDiagnosticService implements OnModuleInit, 
         })
         return result?.ready ?? false
     }
-}
-
-export interface DynamicLiquidityPoolInfoDiagnosticReadinessResult {
-    id: string
-    ready: boolean
-    ageMs?: number
 }

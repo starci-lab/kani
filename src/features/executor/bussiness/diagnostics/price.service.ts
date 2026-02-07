@@ -6,9 +6,11 @@ import {
 import {
     PriceService 
 } from "@modules/blockchains"
+import type {
+    TokenSchema 
+} from "@modules/databases"
 import {
     PrimaryMemoryStorageService, 
-    TokenSchema
 } from "@modules/databases"
 import {
     WinstonLog, WinstonService 
@@ -26,6 +28,12 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import {
+    Collection,
+} from "lokijs"
+import type {
+    PriceDiagnosticReadinessResult,
+} from "../types"
 /**
  * PriceDiagnosticService
  *
@@ -109,6 +117,11 @@ export class PriceDiagnosticService implements OnModuleInit, OnApplicationBootst
         })
     }
 
+    /**
+     * Diagnose price availability for all selectable tokens.
+     *
+     * @returns Array of diagnostic readiness results per token
+     */
     async diagnose(): Promise<Array<PriceDiagnosticReadinessResult>> {
         // retrieve all tokens from the primary memory storage service
         const tokens = this.tokenCollection.find()
@@ -175,9 +188,13 @@ export class PriceDiagnosticService implements OnModuleInit, OnApplicationBootst
         return await this.asyncService.allMustDone<Array<PriceDiagnosticReadinessResult>>(promises)
     }
 
-    async ready(
-        id: string
-    ): Promise<boolean> {
+    /**
+     * Check if a token's price is ready (non-stale, available).
+     *
+     * @param id - Token ID
+     * @returns true if ready
+     */
+    async ready(id: string): Promise<boolean> {
         // Fast readiness check backed by the latest interval snapshot.
         const result = this.results.findOne({
             id: {
@@ -186,11 +203,4 @@ export class PriceDiagnosticService implements OnModuleInit, OnApplicationBootst
         })
         return result?.ready ?? false
     }
-}
-
-export interface PriceDiagnosticReadinessResult {
-    id: string
-    ready: boolean
-    ageMs?: number
-    price?: number
 }

@@ -8,8 +8,10 @@
  * - Periodic full reload (reconciliation) via scheduled interval
  * - Emitting ExecutorBotUpdated event when changes occur
  */
-import {
+import type {
     BotSchema,
+} from "@modules/databases"
+import {
     ExecutorSchema,
     InjectPrimaryMongoose,
 } from "@modules/databases"

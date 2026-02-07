@@ -1,17 +1,15 @@
 import type {
-    ProcessParams,
+    ProcessParams, ProcessResult 
 } from "./process"
 import type {
-    ClosePositionJobData 
-} from "./data"
+    PrepareResult 
+} from "./prepare"
 
 /** Params for the EXECUTE phase. */
 export interface ExecuteParams extends ProcessParams {
     /** Output of prepare() (prepared close-position transaction + optional metadata). */
-    prepareResult: ClosePositionJobData
+    prepareResult: PrepareResult
 }
 
 /** Result of the EXECUTE phase. */
-export interface ExecuteResult {
-    result: ClosePositionJobData
-}
+export type ExecuteResult = ProcessResult

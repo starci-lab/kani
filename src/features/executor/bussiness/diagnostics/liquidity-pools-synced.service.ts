@@ -3,10 +3,12 @@ import {
     OnModuleInit,
     OnApplicationBootstrap,
 } from "@nestjs/common"
-import {
-    PrimaryMemoryStorageService,
+import type {
     LiquidityPoolSchema,
     LiquidityPoolId,
+} from "@modules/databases"
+import {
+    PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
     WinstonLog,
@@ -33,12 +35,13 @@ import {
 import {
     Interval 
 } from "@nestjs/schedule"
+import {
+    Collection,
+} from "lokijs"
 import _ from "lodash"
-
-export interface LiquidityPoolsSyncedDiagnosticMessage {
-    ready: boolean
-    ageMs?: number
-}
+import type {
+    LiquidityPoolsSyncedDiagnosticMessage,
+} from "../types"
 
 @Injectable()
 export class LiquidityPoolSyncedDiagnosticService
@@ -116,6 +119,11 @@ implements OnModuleInit, OnApplicationBootstrap {
         })
     }
 
+    /**
+     * Diagnose liquidity pools synced status for all active pools.
+     *
+     * @returns Partial record of pool ID to diagnostic message
+     */
     async diagnose(): Promise<
         Partial<Record<LiquidityPoolId, LiquidityPoolsSyncedDiagnosticMessage>>
         > {

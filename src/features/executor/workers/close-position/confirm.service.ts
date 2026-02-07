@@ -14,6 +14,7 @@ import {
     JobSchema,
     JobStatus,
     PrimaryMemoryStorageService,
+    TransactionType,
 } from "@modules/databases"
 import {
     Connection,
@@ -118,7 +119,7 @@ export class ConfirmService {
                 })
             }
         
-            const { transactionRecords } = executeResult
+            const txHashes = executeResult?.data.executeResult?.txHashes ?? []
             // Fetch dynamic pool from cache
             const dynamicLiquidityPoolInfo = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
             // Extract reward token addresses
@@ -151,11 +152,14 @@ export class ConfirmService {
             const session = await this.connection.startSession()
             await session.withTransaction(
                 async (session) => {
-                    if (transactionRecords?.length) {
-                        for (const record of transactionRecords) {
+                    if (txHashes?.length) {
+                        for (const txHash of txHashes) {
                             await this.transactionSnapshotService.addTransactionRecord(
                                 {
-                                    ...record,
+                                    bot,
+                                    txHash,
+                                    chainId: bot.chainId,
+                                    type: TransactionType.ClosePosition,
                                     session,
                                 },
                             )
@@ -206,7 +210,7 @@ export class ConfirmService {
                                 incentiveBalanceAmounts,
                             },
                             positionId: bot.activePosition?.associatedPosition?.id ?? "",
-                            closeTxHashes: transactionRecords?.map((record) => record.txHash) ?? [],
+                            closeTxHashes: txHashes,
                             targetToken,
                             quoteToken,
                             gasToken,

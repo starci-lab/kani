@@ -1,13 +1,13 @@
 import {
     Injectable 
 } from "@nestjs/common"
-import {
+import type {
     BotSchema, 
     LiquidityPoolSchema,
 } from "@modules/databases"
 import {
-    LockAuthorityService 
-} from "../../bussiness"
+    LockAuthorityService,
+} from "../../../bussiness"
 import {
     WinstonLog,
     WinstonService 
@@ -19,9 +19,6 @@ import {
     ClosePositionEnqueueService,
     LiquidityPoolStateService,
 } from "@modules/blockchains"
-import {
-    LiquidityPoolsSyncedEventPayload 
-} from "@modules/event"
 import {
     SettlementService 
 } from "@modules/blockchains"
@@ -43,27 +40,18 @@ import {
 import {
     Queue
 } from "bullmq"
+import type {
+    HandleClosePositionParams,
+} from "./types"
 
-export interface HandleClosePositionParams {
-    bot: BotSchema
-    liquidityPool: LiquidityPoolSchema
-    eventPayload?: LiquidityPoolsSyncedEventPayload
-}
+/**
+ * Runtime service for scheduling close-position jobs.
+ *
+ * @example
+ * await handleClosePositionService.process({ bot, liquidityPool, eventPayload })
+ */
 @Injectable()
 export class HandleClosePositionService {
-    /**
-     * Runtime entrypoint for scheduling an "close position" job for a bot.
-     *
-     * This service is called by event adapters (CLMM/DLMM) when a liquidity pool signals
-     * that a position should be closed.
-     *
-     * Responsibilities:
-     * - Guard against invalid bot states (not running / no active position to close / already has active job)
-     * - Acquire lock authority (single-writer) before enqueuing work
-     * - Resolve the requested liquidity pool from memory storage
-     * - Enqueue a BullMQ `ClosePosition` job via `ClosePositionEnqueueService`
-     * - Log enqueue success/failure and release lock on enqueue failure
-     */
     constructor(
         private readonly closePositionEnqueueService: ClosePositionEnqueueService,
         private readonly lockAuthorityService: LockAuthorityService,
@@ -77,13 +65,13 @@ export class HandleClosePositionService {
     ) {}
 
     /**
-     * Handles a close-position request for the given bot and event payload.
+     * Process close-position request for the given bot and liquidity pool.
      *
-     * Side effects:
-     * - Acquires lock authority (Redis)
-     * - Enqueues a BullMQ job
-     * - Logs via Winston
-     * - Releases lock authority if enqueue fails
+     * @param params - Handle close position params (bot, liquidityPool, eventPayload)
+     * @returns void
+     *
+     * @example
+     * await handleClosePositionService.process({ bot, liquidityPool, eventPayload })
      */
     async process(
         {
@@ -102,13 +90,12 @@ export class HandleClosePositionService {
         })
         const jobId = new Types.ObjectId().toString()
         // Settle the position to determine if we should close
+        const dynamicLiquidityPoolInfo = eventPayload ?? await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
         const { settled, strategyResults } = await this.settlementService.settle(
             {
                 bot,
-                state: {
-                    static: liquidityPool,
-                    dynamic: eventPayload ?? await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool),
-                },
+                liquidityPool,
+                state: dynamicLiquidityPoolInfo,
             }
         )
         if (!settled && envConfig().executor.runtime.operation.closePosition.settle.enabled) {
@@ -148,7 +135,7 @@ export class HandleClosePositionService {
                     jobId,
                     isRetry: false,
                     liquidityPool,
-                    dynamicLiquidityPoolInfo: eventPayload
+                    dynamicLiquidityPoolInfo: dynamicLiquidityPoolInfo
                 }
             )
             this.winstonService.log(

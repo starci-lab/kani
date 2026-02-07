@@ -1,5 +1,5 @@
 import {
-    Injectable 
+    Injectable,
 } from "@nestjs/common"
 import type {
     PrepareParams,
@@ -9,53 +9,44 @@ import type {
 import {
     getJobStatusOrder,
     InjectPrimaryMongoose,
+    JobSchema,
     JobStatus,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
     BotWithdrawalAddressNotSetException,
+    JobFailureException,
+    JobFailureStrategy,
+    PrepareWithdrawTransactionResultNotFoundException,
     SomeTokensNotFoundException,
     TokenBalanceNotEnoughForWithdrawException,
-    TokenNotFoundException
+    TokenNotFoundException,
 } from "@modules/exceptions"
 import {
     BalanceFetcherService,
-    PrepareWithdrawTransactionResult
 } from "@modules/blockchains"
 import {
     BalanceActionService,
+    BalanceWithdrawTokenInput,
 } from "@modules/blockchains"
-import {
-    JobSchema
-} from "@modules/databases"
 import {
     WinstonLog,
-    WinstonService
+    WinstonService,
 } from "@modules/winston"
 import {
-    Connection 
+    Connection,
 } from "mongoose"
 import {
+    DayjsService,
     AsyncService,
-    InjectSuperJson,
 } from "@modules/mixin"
 import {
-    DayjsService 
-} from "@modules/mixin"
+    SerializerService,
+} from "../common"
 import {
-    BalanceWithdrawTokenInput 
-} from "@modules/blockchains"
-import SuperJSON from "superjson"
-import {
-    ToStringObject 
+    ToStringObject,
 } from "@modules/common"
 import BN from "bn.js"
-import {
-    WithdrawJobPreparedFailedException,
-} from "@modules/exceptions"
-import {
-    FatalError,
-} from "../fatal"
 
 /**
  * Service for the PREPARE phase of withdraw jobs.
@@ -74,42 +65,32 @@ export class PrepareService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly dayjsService: DayjsService,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
+        private readonly serializerService: SerializerService,
     ) {}
 
-    // Phase: PREPARE
-    // Responsibility:
-    // - Ensure tokens are available (either from payload or fetched live)
-    // - Compute withdraw plan (withdraw steps)
-    // - Transition job state from PENDING → PREPARED
-    // Notes:
-    // - This phase must be idempotent
-    // - Safe to re-enter on retry
     /**
-     * PREPARE phase.
+     * PREPARE phase: ensures tokens, validates balances, prepares withdraw transactions.
      *
-     * Ensures balances are available (payload or live fetch), computes the reconcile
-     * swap plan, pre-builds swap transactions, and persists a state transition:
-     * PENDING → PREPARED (including `metadata.swapTransactions`).
+     * @param params - Prepare params (job, bot, payload)
+     * @returns Prepare result with withdrawTransaction data
      *
-     * Idempotency: if the job is already at/after PREPARED, returns the previously
-     * persisted metadata instead of recomputing.
+     * @example
+     * const result = await prepareService.process({ job, bot, payload })
      */
     async process({
         job,
-        bot, 
+        bot,
         payload: {
             payload: cacheResult,
-        }
+        },
     }: PrepareParams): Promise<PrepareResult> {
-        // Guard: if job already passed PENDING phase, do nothing
-        // This prevents duplicate preparation on retry or replay
+        // guard: idempotency (return persisted data if already prepared)
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Prepared)
         ) {
-            const { withdrawTransaction: stringifiedWithdrawTransaction } = job.data as ToStringObject<WithdrawJobData>
-            const withdrawTransaction = this.superJson.parse<PrepareWithdrawTransactionResult>(stringifiedWithdrawTransaction)
+            const jobData = this.serializerService.deserialize<WithdrawJobData>(
+                job.data as Partial<ToStringObject<WithdrawJobData>>
+            )
             this.winstonService.log(
                 WinstonLog.WithdrawJobAlreadyPrepared,
                 {
@@ -117,13 +98,11 @@ export class PrepareService {
                     jobId: job.id,
                     ageMs: this.dayjsService.now().diff(job.createdAt,
                         "millisecond"),
-                    txHashes: withdrawTransaction.prepareTxs.map((prepareTx) => prepareTx.txHash),
+                    txHashes: jobData?.prepareResult?.prepareTxs?.map((prepareTx) => prepareTx.txHash) ?? [],
                 }
             )
             return {
-                result: {
-                    withdrawTransaction,
-                }
+                data: jobData,
             }
         }
         if (!bot.withdrawalAddress) {
@@ -134,15 +113,15 @@ export class PrepareService {
         const tokens = this.primaryMemoryStorageService.tokenCollection.find(
             {
                 id: {
-                    $in: cacheResult.tokenInputs.map((tokenInput) => tokenInput.tokenId)
-                }
+                    $in: cacheResult.tokenInputs.map((tokenInput) => tokenInput.tokenId),
+                },
             }
         )
         if (tokens.length !== cacheResult.tokenInputs.length) {
             throw new SomeTokensNotFoundException(
                 {
                     actualCount: tokens.length,
-                    expectedCount: cacheResult.tokenInputs.length
+                    expectedCount: cacheResult.tokenInputs.length,
                 }
             )
         }
@@ -153,13 +132,13 @@ export class PrepareService {
                     token,
                 })
                 return [
-                    token.id, 
+                    token.id,
                     tokenBalance.balanceAmount,
                 ] as [string, BN]
             })
-        ) 
+        )
         const tokenBalancesMap = new Map<string, BN>(tokenBalances)
-        // we ensure the requested balance is not exceeded
+        // ensure requested balance is not exceeded
         for (const tokenInput of cacheResult.tokenInputs) {
             const tokenBalance = tokenBalancesMap.get(tokenInput.tokenId)
             if (!tokenBalance) {
@@ -177,10 +156,10 @@ export class PrepareService {
                 )
             }
         }
-        // Convert tokenInputs from payload (with tokenId) to WithdrawTokenInput (with token)
+        // convert tokenInputs from payload to WithdrawTokenInput
         const withdrawTokenInputs: Array<BalanceWithdrawTokenInput> = cacheResult.tokenInputs.map(
             (tokenInput) => {
-                const token = tokens.find((token) => token.id.toString() === tokenInput.tokenId)
+                const token = tokens.find((t) => t.id.toString() === tokenInput.tokenId)
                 if (!token) {
                     throw new TokenNotFoundException({
                         id: tokenInput.tokenId,
@@ -193,13 +172,9 @@ export class PrepareService {
                 }
             }
         )
-        // Prepare withdraw transactions
-        // Note: toAddress and toUsdc should come from payload or config
-        // For now, we'll use bot.accountAddress as default toAddress
-        // and toUsdc as false (can be made configurable)
         const [
-            withdrawTransaction,
-            error
+            prepareResult,
+            error,
         ] = await this.asyncService.resolveTuple(
             this.balanceActionService.prepareWithdrawTransaction({
                 bot,
@@ -209,43 +184,46 @@ export class PrepareService {
             })
         )
         if (error) {
-            const failedError = new WithdrawJobPreparedFailedException({
+            throw new JobFailureException({
                 originalError: error,
+                strategy: JobFailureStrategy.Fatal,
+            })
+        }
+        if (!prepareResult) {
+            throw new PrepareWithdrawTransactionResultNotFoundException({
                 botId: bot.id,
                 jobId: job.id,
             })
-            // throw everything as a fatal error to stop the job
-            throw new FatalError(failedError.toJSON())
         }
-        // Persist job state transition:
-        // PENDING → PREPARED
-        // This marks preparation as completed and enables execution phase
-        await this.connection
-            .model<JobSchema>(JobSchema.name)
-            .updateOne(
-                {
-                    _id: job.id 
+        // persist job: PENDING → PREPARED
+        const data = this.serializerService.serialize<Partial<WithdrawJobData>>({
+            prepareResult
+        })
+        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            {
+                _id: {
+                    $eq: job._id,
                 },
-                {
-                    $set: {
-                        status: JobStatus.Prepared,
-                        "data.withdrawTransaction": this.superJson.stringify(withdrawTransaction)
-                    },
-                }
-            )
+            },
+            {
+                $set: {
+                    status: JobStatus.Prepared,
+                    ...data,
+                },
+            }
+        )
         this.winstonService.log(
             WinstonLog.WithdrawJobPrepared,
             {
                 botId: bot.id,
                 jobId: job.id,
-                txHashes: withdrawTransaction.prepareTxs.map((prepareTx) => prepareTx.txHash),
+                txHashes: prepareResult.prepareTxs.map((prepareTx) => prepareTx.txHash),
             }
         )
-        // Return execution plan to next phase
         return {
-            result: {
-                withdrawTransaction
-            }
+            data: {
+                prepareResult,
+            },
         }
     }
 }

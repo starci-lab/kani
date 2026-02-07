@@ -30,5 +30,5 @@ export interface ProcessParams {
 
 /** Result of withdraw phase processing. */
 export interface ProcessResult {
-    result: WithdrawJobData
+    data: Partial<WithdrawJobData>
 }

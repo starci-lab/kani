@@ -1,39 +1,45 @@
-import {
-    ClmmPositionOpenRequestedEventPayload 
+import type {
+    ClmmPositionCloseRequestedEventPayload,
 } from "@modules/event"
 import {
-    Injectable 
+    Injectable,
 } from "@nestjs/common"
-import {
+import type {
     BotSchema,
-    PrimaryMemoryStorageService
 } from "@modules/databases"
 import {
-    HandleOpenPositionService 
-} from "./handle-open-position.service"
+    PrimaryMemoryStorageService,
+} from "@modules/databases"
+import {
+    HandleClosePositionService 
+} from "../handle-close-position.service"
 import {
     LiquidityPoolNotFoundException 
 } from "@modules/exceptions"
 
+/**
+ * Adapter for CLMM position close requested events.
+ *
+ * @example
+ * await handleClmmPositionCloseRequestedEventService.process(bot, eventPayload)
+ */
 @Injectable()
-export class HandleClmmPositionOpenRequestedEventService {
-    /**
-     * Adapter for CLMM "position open requested" events.
-     *
-     * Responsibilities:
-     * - Bridge the CLMM-specific event type into the shared `HandleOpenPositionService`.
-     * - Keep this handler thin (no business logic here).
-     */
+export class HandleClmmPositionCloseRequestedEventService {
     constructor(
-        private readonly handleOpenPositionService: HandleOpenPositionService,
+        private readonly handleClosePositionService: HandleClosePositionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
+
     /**
-     * Routes the CLMM open-position event to the generic open-position handler.
+     * Route CLMM close-position event to the generic close-position handler.
+     *
+     * @param bot - Bot schema
+     * @param eventPayload - CLMM position close requested event payload
+     * @returns void
      */
     process(
         bot: BotSchema,
-        eventPayload: ClmmPositionOpenRequestedEventPayload,
+        eventPayload: ClmmPositionCloseRequestedEventPayload,
     ) {
         const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
             {
@@ -47,7 +53,7 @@ export class HandleClmmPositionOpenRequestedEventService {
                 id: eventPayload.id,
             })
         }   
-        this.handleOpenPositionService.process(
+        this.handleClosePositionService.process(
             {
                 bot,
                 liquidityPool,

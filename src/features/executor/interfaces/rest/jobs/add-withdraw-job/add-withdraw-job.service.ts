@@ -14,6 +14,12 @@ import {
     WinstonService,
 } from "@modules/winston"
 
+/**
+ * Service for adding withdraw jobs to the cache.
+ *
+ * @example
+ * await addWithdrawJobService.addWithdrawJob({ id, tokenInputs, toUsdc })
+ */
 @Injectable()
 export class AddWithdrawJobService {
     constructor(
@@ -21,6 +27,15 @@ export class AddWithdrawJobService {
         private readonly winstonService: WinstonService,
     ) {}
 
+    /**
+     * Cache withdraw job payload for a bot.
+     *
+     * @param params - Add withdraw job params (id, tokenInputs, toUsdc)
+     * @returns void
+     *
+     * @example
+     * await service.addWithdrawJob({ id: "botId", tokenInputs, toUsdc: false })
+     */
     async addWithdrawJob(
         {
             tokenInputs,

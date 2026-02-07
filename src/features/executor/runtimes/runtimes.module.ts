@@ -19,7 +19,7 @@ import {
     HandleClosePositionService,
     HandleReconcileBalanceService,
     HandleWithdrawService,
-} from "./core"
+} from "./handlers"
 
 @Module({
 })

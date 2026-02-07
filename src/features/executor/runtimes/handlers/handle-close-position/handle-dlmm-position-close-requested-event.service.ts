@@ -1,38 +1,41 @@
-import {
-    DlmmPositionCloseRequestedEventPayload 
+import type {
+    DlmmPositionCloseRequestedEventPayload,
 } from "@modules/event"
 import {
-    Injectable 
+    Injectable,
 } from "@nestjs/common"
-import {
-    BotSchema 
+import type {
+    BotSchema,
 } from "@modules/databases"
 import {
-    HandleClosePositionService 
+    PrimaryMemoryStorageService,
+} from "@modules/databases"
+import {
+    HandleClosePositionService,
 } from "./handle-close-position.service"
-import {
-    PrimaryMemoryStorageService 
-} from "@modules/databases"
 import {
     LiquidityPoolNotFoundException 
 } from "@modules/exceptions"
 
+/**
+ * Adapter for DLMM position close requested events.
+ *
+ * @example
+ * await handleDlmmPositionCloseRequestedEventService.process(bot, event)
+ */
 @Injectable()
 export class HandleDlmmPositionCloseRequestedEventService {
-    /**
-     * Adapter for DLMM "position close requested" events.
-     *
-     * Responsibilities:
-     * - Bridge the DLMM-specific event type into the shared `HandleClosePositionService`.
-     * - Keep this handler thin (no business logic here).
-     */
     constructor(
         private readonly handleClosePositionService: HandleClosePositionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     /**
-     * Routes the DLMM close-position event to the generic close-position handler.
+     * Route DLMM close-position event to the generic close-position handler.
+     *
+     * @param bot - Bot schema
+     * @param event - DLMM position close requested event payload
+     * @returns void
      */
     process(
         bot: BotSchema,

@@ -28,37 +28,23 @@ import {
 import {
     sleep 
 } from "@modules/common"
+import type {
+    AcquireParams,
+    ReleaseParams,
+    SendHeartbeatParams,
+} from "./types"
 
 const LOCK_AUTHORITY_KEY = "lock-authority"
 
-export interface AcquireParams {
-    botId: string,
-}
-
-export interface ReleaseParams {
-    botId: string,
-}
-
-export interface SendHeartbeatParams {
-    botId: string,
-}
-
+/**
+ * Redis-backed lock authority service for bots.
+ * Ensures only ONE executor instance owns the authority to run side-effecting work for a bot.
+ *
+ * @example
+ * const acquired = await lockAuthorityService.acquire({ botId: "..." })
+ */
 @Injectable()
 export class LockAuthorityService implements OnApplicationBootstrap {
-    /**
-     * Redis-backed lock authority for a bot.
-     *
-     * Purpose:
-     * - Ensure only ONE executor instance owns the "authority" to run side-effecting work for a bot.
-     *
-     * Implementation:
-     * - A per-bot lock key (string) is set with TTL (PX).
-     * - A scheduler ZSET tracks lock keys by their expire timestamp (score = expireAt ms).
-     *
-     * Notes:
-     * - Keys are namespaced/hardened with `createHash(...)` and include `envConfig().executor.id`
-     *   so multiple executors do not collide.
-     */
     constructor(
         @InjectIoRedis(IoRedisInstanceKey.LockAuthority)
         private readonly redisClient: RedisOrCluster,
@@ -164,16 +150,11 @@ export class LockAuthorityService implements OnApplicationBootstrap {
     /**
      * Acquire lock authority for a bot.
      *
-     * Flow:
-     * - Create per-bot lock key + scheduler ZSET key.
-     * - Compute `expireAt = now + ttl`.
-     * - Run a Lua script to atomically:
-     *   - SET lock key with NX + PX (only if not exists)
-     *   - ZADD scheduler ZSET with score=expireAt and member=lockKey
+     * @param params - Acquire params (botId)
+     * @returns true if lock was acquired, false if lock already existed
      *
-     * Returns:
-     * - true if lock was acquired
-     * - false if lock already existed
+     * @example
+     * const acquired = await lockAuthorityService.acquire({ botId: "..." })
      */
     async acquire(
         {
@@ -242,14 +223,11 @@ export class LockAuthorityService implements OnApplicationBootstrap {
     /**
      * Release lock authority for a bot.
      *
-     * Flow:
-     * - Atomically:
-     *   - DEL the lock key
-     *   - ZREM the lock key from the scheduler ZSET
+     * @param params - Release params (botId)
+     * @returns true if lock existed and was removed, false if no lock existed
      *
-     * Returns:
-     * - true if a lock existed and was removed
-     * - false if no lock existed
+     * @example
+     * await lockAuthorityService.release({ botId: "..." })
      */
     async release({ botId }: ReleaseParams): Promise<boolean> {
         await sleep(100) // 0.1s to release the lock to avoid race condition
@@ -297,14 +275,11 @@ export class LockAuthorityService implements OnApplicationBootstrap {
     /**
      * Refresh (heartbeat) the lock authority for a bot.
      *
-     * Flow:
-     * - Check the lock key exists and its value matches expected (== 1)
-     * - Extend TTL (PEXPIRE)
-     * - Update scheduler ZSET score to new expireAt (ZADD)
+     * @param params - Send heartbeat params (botId)
+     * @returns true if lock was refreshed, false if authority is lost
      *
-     * Returns:
-     * - true if lock was refreshed
-     * - false if lock does not exist (or value doesn't match), meaning authority is lost
+     * @example
+     * const ok = await lockAuthorityService.sendHeartbeat({ botId: "..." })
      */
     async sendHeartbeat({ botId }: SendHeartbeatParams): Promise<boolean> {
     // create the key for the lock authority

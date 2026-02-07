@@ -1,11 +1,12 @@
 import {
-    Injectable 
+    Injectable,
 } from "@nestjs/common"
-import {
-    BotSchema 
+import type {
+    BotSchema,
 } from "@modules/databases"
 import {
-    WithdrawEnqueueService
+    ReconcileBalanceEnqueueService,
+    EvalSnapshotService,
 } from "@modules/blockchains"
 import {
     LockAuthorityService 
@@ -18,12 +19,12 @@ import {
     Types 
 } from "mongoose"
 import {
+    DayjsService,
     WaitService
 } from "@modules/mixin"
 import {
-    CacheService,
-    CacheKey,
-} from "@modules/cache"
+    envConfig 
+} from "@modules/env"
 import {
     InjectQueue 
 } from "@nestjs/bullmq"
@@ -34,64 +35,60 @@ import {
     BullQueueName, bullData
 } from "@modules/bullmq"
 
+/**
+ * Runtime service for scheduling reconcile-balance jobs.
+ *
+ * @example
+ * await handleReconcileBalanceService.process(bot)
+ */
 @Injectable()
-export class HandleWithdrawService {
-    /**
-     * Runtime entrypoint for scheduling a "withdraw" job for a bot.
-     *
-     * Responsibilities:
-     * - Guard against invalid bot states (not running / has active position / already has active job)
-     * - Acquire lock authority (single-writer) before enqueuing work
-     * - Enqueue a BullMQ `Withdraw` job via `WithdrawEnqueueService.enqueue`
-     * - Log enqueue success/failure and release lock on enqueue failure
-     */
+export class HandleReconcileBalanceService {
     constructor(
-        private readonly withdrawEnqueueService: WithdrawEnqueueService,
+        private readonly reconcileBalanceEnqueueService: ReconcileBalanceEnqueueService,
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly winstonService: WinstonService,
+        private readonly dayjsService: DayjsService,
         private readonly waitService: WaitService,
-        @InjectQueue(bullData[BullQueueName.Withdraw].name)
-        private readonly withdrawQueue: Queue<string>,
-        private readonly cacheService: CacheService,
+        @InjectQueue(bullData[BullQueueName.ReconcileBalance].name)
+        private readonly reconcileBalanceQueue: Queue<string>,
+        private readonly evalSnapshotService: EvalSnapshotService,
     ) {}
 
     /**
-     * Schedules withdraw work for the given bot.
+     * Schedule reconcile-balance work for the given bot.
      *
-     * Side effects:
-     * - Acquires lock authority (Redis)
-     * - Enqueues a BullMQ job
-     * - Logs via Winston
-     * - Releases lock authority if enqueue fails
+     * @param bot - Bot schema
+     * @returns void
+     *
+     * @example
+     * await handleReconcileBalanceService.process(bot)
      */
     async process(
-        bot: BotSchema
+        bot: BotSchema,
     ) {
-        // Check if withdraw is already scheduled (cached tokenInputs for this bot)
-        const payload = await this.cacheService.get(
-            {
-                key: CacheKey.Withdraw,
-                args: [bot.id],
-            }
-        )
-        if (!payload) {
-            return
-        }
-        
-        // Skip if bot is running
-        if (bot.running) return
+        // Skip if bot is not running
+        if (!bot.running) return
         // Skip if bot has an active position
         if (bot.activePosition) return
+        // Skip if balance snapshot is within cooldown (avoid rescan too soon)
+        if (bot.balanceSnapshots?.snapshotAt) {
+            const diffMs = this.dayjsService.now().diff(
+                this.dayjsService.from(bot.balanceSnapshots.snapshotAt),
+                "millisecond"
+            )
+            if (diffMs <= envConfig().executor.runtime.operation.reconcileBalance.cooldown.rescan) {
+                return
+            }
+        }
         // Skip if bot already has an active job
         if (bot.activeJob) {
             return
         }
-
         // Wait to ensure no job for this bot is already in the queue
         const noActiveJobFound = await this.waitService.wait(
             {
                 action: async () => {
-                    const job = await this.withdrawQueue.getJob(bot.id)
+                    const job = await this.reconcileBalanceQueue.getJob(bot.id)
                     return !job
                 }
             }
@@ -105,17 +102,16 @@ export class HandleWithdrawService {
         )
         if (!acquired) return
         const jobId = new Types.ObjectId().toString()
-        // Enqueue the withdraw job
+        // Enqueue the reconcile-balance job
         try {
-            const bullmqJob = await this.withdrawEnqueueService.enqueue(
+            const bullmqJob = await this.reconcileBalanceEnqueueService.enqueue(
                 {
                     bot,
                     jobId,
-                    payload,
                 }
             )
             this.winstonService.log(
-                WinstonLog.WithdrawJobEnqueued,
+                WinstonLog.ReconcileBalanceJobEnqueued,
                 {
                     jobId,
                     botId: bot.id,
@@ -124,7 +120,7 @@ export class HandleWithdrawService {
             )
         } catch (error) {
             this.winstonService.log(
-                WinstonLog.WithdrawJobEnqueueFailed,
+                WinstonLog.ReconcileBalanceJobEnqueueFailed,
                 {
                     botId: bot.id,
                     error: error.message,

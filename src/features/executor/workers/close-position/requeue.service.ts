@@ -100,9 +100,7 @@ export class RequeueService implements OnApplicationBootstrap {
                     },
                 }
             ).data()
-            /**
-             * Map the bots to the job ids
-             */
+            // requeue each stale bot
             const promises = bots.map(
                 async (bot) => {
                     await this.positionAssociateService.associateActivePosition({
@@ -118,7 +116,7 @@ export class RequeueService implements OnApplicationBootstrap {
                     }
                     const bullmqJob = await this.closePositionQueue.getJob(bot.id)
                     if (bullmqJob) {
-                    // we can add additional logic here
+                        // skip if job already in queue
                         return
                     }
                     const dynamicLiquidityPoolInfo = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
@@ -126,10 +124,8 @@ export class RequeueService implements OnApplicationBootstrap {
                     const { settled, strategyResults } = await this.settlementService.settle(
                         {
                             bot,
-                            state: {
-                                static: liquidityPool,
-                                dynamic: dynamicLiquidityPoolInfo,
-                            },
+                            liquidityPool,
+                            state: dynamicLiquidityPoolInfo,
                         }
                     )
                     if (!settled && envConfig().executor.runtime.operation.closePosition.settle.enabled) {

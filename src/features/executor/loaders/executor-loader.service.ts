@@ -1,7 +1,9 @@
-import {
-    AppVersion,
+import type {
     BotSchema,
     ExecutorSchema,
+} from "@modules/databases"
+import {
+    AppVersion,
     InjectPrimaryMongoose,
 } from "@modules/databases"
 import {
@@ -74,6 +76,14 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
         this.observe()
     }
 
+    /**
+     * Load executor document from MongoDB.
+     *
+     * @returns void
+     *
+     * @example
+     * await executorLoaderService.load()
+     */
     async load(): Promise<void> {
         // run under semaphore
         const token  = await this.sema.tryAcquire()

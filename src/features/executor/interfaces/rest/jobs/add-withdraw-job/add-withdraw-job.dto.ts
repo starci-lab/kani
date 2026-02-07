@@ -9,6 +9,7 @@ import {
     IsBoolean,
 } from "class-validator"
 
+/** DTO for a single token input in withdraw request. */
 export class WithdrawTokenInputDto {
     @IsMongoId()
     @ApiProperty({
@@ -27,6 +28,7 @@ export class WithdrawTokenInputDto {
         amount: string
 }
 
+/** DTO for add withdraw job REST request. */
 export class AddWithdrawJobRequestDto {
     @IsMongoId()
     @ApiProperty({
@@ -50,6 +52,7 @@ export class AddWithdrawJobRequestDto {
         toUsdc: boolean
 }
 
+/** DTO for add withdraw job REST response. */
 export class AddWithdrawJobResponseDto
     extends AbstractRestResponse<undefined>
     implements IAbstractRestResponse {

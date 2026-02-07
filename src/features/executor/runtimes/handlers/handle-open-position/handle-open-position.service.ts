@@ -2,13 +2,11 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    BotSchema, 
-    LiquidityPoolSchema,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
     LockAuthorityService 
-} from "../../bussiness"
+} from "../../../bussiness"
 import {
     WinstonLog,
     WinstonService 
@@ -27,12 +25,9 @@ import {
     DayjsService, AsyncService 
 } from "@modules/mixin"
 import {
-    LiquidityPoolsSyncedEventPayload 
-} from "@modules/event"
-import {
     PriceDiagnosticService,
     DynamicLiquidityPoolInfoDiagnosticService,
-} from "../../bussiness"  
+} from "../../../bussiness"  
 import {
     DynamicLiquidityPoolInfoDiagnosticNotReadyException,
     PriceDiagnosticNotReadyException,
@@ -50,27 +45,18 @@ import {
 import {
     Queue
 } from "bullmq"
+import type {
+    HandleOpenPositionParams,
+} from "./types"
 
-export interface HandleOpenPositionParams {
-    bot: BotSchema
-    liquidityPool: LiquidityPoolSchema
-    eventPayload?: LiquidityPoolsSyncedEventPayload
-}
+/**
+ * Runtime service for scheduling open-position jobs.
+ *
+ * @example
+ * await handleOpenPositionService.process({ bot, liquidityPool, eventPayload })
+ */
 @Injectable()
 export class HandleOpenPositionService {
-    /**
-     * Runtime entrypoint for scheduling an "open position" job for a bot.
-     *
-     * This service is called by event adapters (CLMM/DLMM) when a liquidity pool signals
-     * that a position should be opened.
-     *
-     * Responsibilities:
-     * - Guard against invalid bot states (not running / already in position / already has active job)
-     * - Acquire lock authority (single-writer) before enqueuing work
-     * - Resolve the requested liquidity pool from memory storage
-     * - Enqueue a BullMQ `OpenPosition` job via `OpenPositionEnqueueService`
-     * - Log enqueue success/failure and release lock on enqueue failure
-     */
     constructor(
         private readonly openPositionEnqueueService: OpenPositionEnqueueService,
         private readonly lockAuthorityService: LockAuthorityService,
@@ -87,13 +73,13 @@ export class HandleOpenPositionService {
     ) {}
 
     /**
-     * Handles an open-position request for the given bot and event payload.
+     * Process open-position request for the given bot and liquidity pool.
      *
-     * Side effects:
-     * - Acquires lock authority (Redis)
-     * - Enqueues a BullMQ job
-     * - Logs via Winston
-     * - Releases lock authority if enqueue fails
+     * @param params - Handle open position params (bot, liquidityPool, eventPayload)
+     * @returns void
+     *
+     * @example
+     * await handleOpenPositionService.process({ bot, liquidityPool, eventPayload })
      */
     async process(
         {

@@ -1,9 +1,7 @@
 import type {
     ClosePositionPayload,
+    LiquidityPoolState,
 } from "@modules/blockchains"
-import type {
-    DynamicLiquidityPoolInfoCacheResult,
-} from "@modules/cache"
 import type {
     BotSchema,
     JobSchema,
@@ -13,7 +11,6 @@ import type {
 import type {
     Job,
 } from "bullmq"
-
 import type {
     ClosePositionJobData 
 } from "./data"
@@ -36,7 +33,7 @@ export interface ProcessParams {
     liquidityPool: LiquidityPoolSchema
 
     /** Liquidity pool state. */
-    dynamicLiquidityPoolInfo: DynamicLiquidityPoolInfoCacheResult
+    state: LiquidityPoolState
 
     /** Target token. */
     targetToken: TokenSchema
@@ -50,5 +47,5 @@ export interface ProcessParams {
 
 /** Result of close-position phase processing. */
 export interface ProcessResult {
-    result: ClosePositionJobData
+    data: Partial<ClosePositionJobData>
 }
