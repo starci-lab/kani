@@ -152,7 +152,6 @@ export class PrepareService {
                     botId: bot.id,
                     jobId: job.id,
                     txHashes: undefined,
-                    quoteRatioResult: undefined,
                     balanceAmounts: {
                         targetBalanceAmount: targetBalanceAmountBN.toString(),
                         quoteBalanceAmount: quoteBalanceAmountBN.toString(),
