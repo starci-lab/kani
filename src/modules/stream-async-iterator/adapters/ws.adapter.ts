@@ -41,12 +41,19 @@ export class WebSocketStreamConnection implements StreamConnection<MessageEvent>
     /**
      * Creates a new WebSocket connection.
      *
-     * @param url - WebSocket endpoint URL
+     * @param ws - WebSocket instance or URL string to create connection
+     *
+     * @example
+     * const connection = new WebSocketStreamConnection('ws://localhost:8080')
+     * // or
+     * const connection = new WebSocketStreamConnection(existingWebSocket)
      */
     constructor(ws: WebSocket | string) {
+        // create new WebSocket if URL string provided
         if (typeof ws === "string") {
             this.ws = new WebSocket(ws)
         } else {
+            // use provided WebSocket instance
             this.ws = ws
         }
     }
@@ -56,8 +63,14 @@ export class WebSocketStreamConnection implements StreamConnection<MessageEvent>
      * the WebSocket connection is successfully opened.
      *
      * @param handler - Callback executed on "open" event
+     *
+     * @example
+     * connection.onOpen(() => {
+     *   console.log('WebSocket connected')
+     * })
      */
-    onOpen(handler: () => void): void {
+    async onOpen(handler: () => void): Promise<void> {
+        // register open event handler
         this.ws.on("open",
             handler)
     }
@@ -69,8 +82,14 @@ export class WebSocketStreamConnection implements StreamConnection<MessageEvent>
      * message/frame received from the server.
      *
      * @param handler - Callback to process incoming data
+     *
+     * @example
+     * connection.onData((event) => {
+     *   console.log('Received message:', event.data)
+     * })
      */
     onData(handler: (data: MessageEvent) => void): void {
+        // register message event handler
         this.ws.on("message",
             handler)
     }
@@ -84,8 +103,14 @@ export class WebSocketStreamConnection implements StreamConnection<MessageEvent>
      * - internal WebSocket errors
      *
      * @param handler - Callback to handle errors
+     *
+     * @example
+     * connection.onError((error) => {
+     *   console.error('WebSocket error:', error)
+     * })
      */
     onError(handler: (error: Error) => void): void {
+        // register error event handler
         this.ws.on("error",
             handler)
     }
@@ -99,8 +124,14 @@ export class WebSocketStreamConnection implements StreamConnection<MessageEvent>
      * - the client explicitly calls close()
      *
      * @param handler - Callback executed on "close" event
+     *
+     * @example
+     * connection.onClose(() => {
+     *   console.log('WebSocket closed')
+     * })
      */
     onClose(handler: () => void): void {
+        // register close event handler
         this.ws.on("close",
             handler)
     }
@@ -111,8 +142,12 @@ export class WebSocketStreamConnection implements StreamConnection<MessageEvent>
      * - Ensures close() is only called in valid states
      * - Prevents redundant close calls
      * - Safe to invoke from cleanup logic (e.g. finally blocks)
+     *
+     * @example
+     * connection.close()
      */
-    close(): void {
+    async close(): Promise<void> {
+        // only close if connection is open or connecting
         if (
             this.ws.readyState === WebSocket.OPEN ||
             this.ws.readyState === WebSocket.CONNECTING

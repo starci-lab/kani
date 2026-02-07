@@ -1,4 +1,4 @@
-import type {
+import {
     ExecutorSchema
 } from "@modules/databases"
 import {
@@ -54,6 +54,12 @@ import {
 import {
     parseExecutorId 
 } from "../utils"
+import {
+    DayjsService 
+} from "@modules/mixin"
+import {
+    Dayjs 
+} from "dayjs"
 
 @Injectable()
 export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleInit {
@@ -73,6 +79,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
         private readonly lokiJSService: LokiJSService,
         @InjectKubernetesApi()
         private readonly kubernetesApi: AppsV1Api,
+        private readonly dayjsService: DayjsService,
     ) { }
 
     async onModuleInit() {
@@ -258,6 +265,8 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                             envConfig().coordinator.streams.mongoDbChangeStream.timeout,
                         )
                     }
+                    // create start time for duration calculation
+                    let startTime: Dayjs | null = null
                     // create the get resume token function
                     // create MongoDB ChangeStream connection
                     const streamConnection = new MongoDBChangeStreamConnection<ExecutorSchema>({
@@ -293,10 +302,17 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                                     })
                             },
                             onClose: async () => {
+                                // log connection closed
                                 this.winstonService.log(
                                     WinstonLog.CoordinatorPrimaryMongoDbChangeStreamClose,
                                     {
                                         streamName: "executors-loader",
+                                        durationMs: startTime
+                                            ? this.dayjsService.now().diff(
+                                                startTime,
+                                                "millisecond"
+                                            )
+                                            : null,
                                     }
                                 )
 
@@ -308,6 +324,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                                         streamName: "executors-loader",
                                     }
                                 )
+                                startTime = this.dayjsService.now()
                             },
                         }
                     )

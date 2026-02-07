@@ -971,7 +971,7 @@ export const envConfig = () => ({
         consumer: {
             retry: {
                 retries: parseEnvInt({
-                    key: "KAFKA_RETRY_RETRIES", defaultValue: Infinity 
+                    key: "KAFKA_RETRY_RETRIES", defaultValue: 3 
                 }), // 10 retries
                 restartOnFailure: parseEnvBoolean({
                     key: "KAFKA_RETRY_RESTART_ON_FAILURE", defaultValue: true 
@@ -979,19 +979,28 @@ export const envConfig = () => ({
                 factor: parseEnvFloat({
                     key: "KAFKA_RETRY_FACTOR", defaultValue: 2.0 
                 }), // 2x exponential backoff
+                maxTimeout: parseEnvMs({
+                    key: "KAFKA_RETRY_MAX_TIMEOUT", defaultValue: "30s" 
+                }),
             },
+            idleTimeout: parseEnvMs({
+                key: "KAFKA_CONSUMER_IDLE_TIMEOUT", defaultValue: "30s" 
+            }),
         },
         producer: {
             retry: {
                 retries: parseEnvInt({
                     key: "KAFKA_RETRY_RETRIES", defaultValue: Infinity 
-                }), // 10 retries
+                }), // retries when producer is not ready
                 restartOnFailure: parseEnvBoolean({
                     key: "KAFKA_RETRY_RESTART_ON_FAILURE", defaultValue: true 
                 }),
                 factor: parseEnvFloat({
                     key: "KAFKA_RETRY_FACTOR", defaultValue: 2.0 
                 }), // 2x exponential backoff
+                maxTimeout: parseEnvMs({
+                    key: "KAFKA_RETRY_MAX_TIMEOUT", defaultValue: "30s" 
+                }),
             },
         },
         numPartitions: parseEnvInt({

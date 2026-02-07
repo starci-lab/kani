@@ -12,6 +12,9 @@ import {
     DayjsService 
 } from "@modules/mixin"
 import {
+    Dayjs 
+} from "dayjs"
+import {
     OrderBook 
 } from "../types"
 import {
@@ -67,7 +70,8 @@ export class BybitOrderBookService implements OnApplicationBootstrap {
                     )
                 }
 
-                const startTime = this.dayjsService.now()
+                // create start time for duration calculation
+                let startTime: Dayjs | null = null
                 const stream = await this.streamAsyncIteratorService.createStream({
                     connection,
                     signal: abortController.signal,
@@ -77,6 +81,7 @@ export class BybitOrderBookService implements OnApplicationBootstrap {
                                 streamName: "bybit-order-book",
                                 symbols,
                             })
+                        startTime = this.dayjsService.now()
                         resetTimeout()
                         for (const chunk of symbolChunks) {
                             connection.ws.send(JSON.stringify({
@@ -98,10 +103,12 @@ export class BybitOrderBookService implements OnApplicationBootstrap {
                             {
                                 streamName: "bybit-order-book",
                                 symbols,
-                                durationMs: this.dayjsService.now().diff(
-                                    startTime,
-                                    "millisecond"
-                                ),
+                                durationMs: startTime
+                                    ? this.dayjsService.now().diff(
+                                        startTime,
+                                        "millisecond"
+                                    )
+                                    : null,
                             })
                     }
                 })

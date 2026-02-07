@@ -1,27 +1,34 @@
 /**
- * Kafka Module
- * 
+ * Module for Kafka integration.
+ *
  * Provides Kafka client, admin, producer, and consumer services.
- * 
+ *
  * Initialization order:
  * 1. KafkaAdminService - Creates topics (if enabled)
  * 2. KafkaProducerService - Waits for admin, then connects
  * 3. KafkaConsumerService - Waits for admin, then connects
  * 4. KafkaBridgeService - Bridges Kafka events to EventEmitter
+ *
+ * @example
+ * KafkaModule.register({
+ *   clientId: 'my-app',
+ *   createTopicsIfNotExists: true,
+ *   usePublish: true,
+ *   useConsume: true
+ * })
  */
-
+import type {
+    Provider 
+} from "@nestjs/common"
 import {
-    DynamicModule, Module, Provider 
+    DynamicModule, Module
 } from "@nestjs/common"
 import {
     ConfigurableModuleClass,
     OPTIONS_TYPE,
 } from "./kafka.module-definition"
 import {
-    createKafkaProvider 
-} from "./kafka.providers"
-import {
-    createKafkaAdminProvider 
+    createKafkaProvider, createKafkaAdminProvider
 } from "./kafka.providers"
 import {
     KafkaBridgeService 
@@ -39,27 +46,47 @@ import {
 @Module({
 })
 export class KafkaModule extends ConfigurableModuleClass {
+    /**
+     * Registers the Kafka module with configuration options.
+     *
+     * @param options - Kafka module configuration options
+     * @returns Dynamic module with configured providers
+     *
+     * @example
+     * KafkaModule.register({
+     *   clientId: 'my-app',
+     *   createTopicsIfNotExists: true,
+     *   usePublish: true,
+     *   useConsume: true
+     * })
+     */
     public static register(options: typeof OPTIONS_TYPE): DynamicModule {
-        const dynamicModule = super.register(options)   
-        // Core providers
+        const dynamicModule = super.register(options)
+
+        // create core providers
         const kafkaProvider = createKafkaProvider()
-        const adminProvider = createKafkaAdminProvider()   
+        const adminProvider = createKafkaAdminProvider()
+
+        // build providers array starting with core services
         const providers: Array<Provider> = [
-            // Core Kafka client
+            // core Kafka client
             kafkaProvider,
-            // Admin (must be first - creates topics)
+            // admin service (must be first - creates topics)
             adminProvider,
             KafkaAdminService,
         ]
-        // Producer
+
+        // add producer service if publishing is enabled
         if (options?.usePublish) {
             providers.push(KafkaProducerService)
         }
-        // Consumer
+
+        // add consumer and bridge services if consumption is enabled
         if (options?.useConsume) {
             providers.push(KafkaConsumerService)
             providers.push(KafkaBridgeService)
         }
+
         return {
             ...dynamicModule,
             providers: [...(dynamicModule.providers || []),

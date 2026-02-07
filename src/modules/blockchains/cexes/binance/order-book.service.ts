@@ -134,10 +134,12 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
                                 {
                                     streamName: ORDER_BOOK_STREAM_NAME,
                                     symbols,
-                                    durationMs: this.dayjsService.now().diff(
-                                        startTime,
-                                        "millisecond"
-                                    ),
+                                    durationMs: startTime
+                                        ? this.dayjsService.now().diff(
+                                            startTime,
+                                            "millisecond"
+                                        )
+                                        : null,
                                 }
                             )
                         }

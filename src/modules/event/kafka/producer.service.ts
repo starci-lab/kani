@@ -1,15 +1,18 @@
 /**
- * Kafka Producer Service
- * 
- * Independent service for producing messages to Kafka topics.
- * Waits for KafkaAdminService to be ready before initializing.
+ * Service for producing messages to Kafka topics.
+ *
+ * Independent service that waits for KafkaAdminService to be ready before initializing.
+ *
+ * @example
+ * const producer = await app.get(KafkaProducerService)
+ * await producer.producer.send({ topic: 'my-topic', messages: [...] })
  */
+import type {
+    Kafka, Producer
+} from "kafkajs"
 import {
     Injectable, OnModuleInit, OnApplicationShutdown
 } from "@nestjs/common"
-import {
-    Kafka, Producer
-} from "kafkajs"
 import {
     ReadinessWatcherFactoryService
 } from "@modules/mixin"
@@ -39,8 +42,17 @@ export class KafkaProducerService implements OnModuleInit, OnApplicationShutdown
         private readonly winstonService: WinstonService,
     ) { }
 
+    /**
+     * Initializes the Kafka producer.
+     *
+     * Waits for admin service to be ready, then creates and connects the producer.
+     *
+     * @returns Promise that resolves when producer is ready
+     */
     async onModuleInit(): Promise<void> {
+        // wait for admin service to be ready
         await this.readinessWatcherFactoryService.waitUntilReady(KafkaAdminService.name)
+        // create producer with configuration
         this.producer = this.kafka.producer(
             {
                 allowAutoTopicCreation: true,
@@ -50,14 +62,23 @@ export class KafkaProducerService implements OnModuleInit, OnApplicationShutdown
                     retries: envConfig().kafka.producer.retry.retries,
                     restartOnFailure: () => Promise.resolve(envConfig().kafka.producer.retry.restartOnFailure),
                     factor: envConfig().kafka.producer.retry.factor,
+                    maxRetryTime: envConfig().kafka.producer.retry.maxTimeout,
                 },
             }
         )
+        // connect producer to Kafka
         await this.producer.connect()
+        // log producer ready
         this.winstonService.log(WinstonLog.KafkaProducerReady,
             {
             })
     }
+
+    /**
+     * Disconnects the Kafka producer on application shutdown.
+     *
+     * @returns Promise that resolves when producer is disconnected
+     */
 
     async onApplicationShutdown(): Promise<void> {
         await this.producer.disconnect()

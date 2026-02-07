@@ -70,6 +70,7 @@ export interface CoordinatorPrimaryMongoDbChangeStreamErrorMessage {
 
 export interface CoordinatorPrimaryMongoDbChangeStreamCloseMessage {
     streamName: string
+    durationMs: number | null
 }
 
 export interface CoordinatorPrimaryMongoDbChangeStreamStartedMessage {
@@ -107,6 +108,7 @@ export interface ExecutorMongoDbChangeStreamErrorMessage {
 
 export interface ExecutorMongoDbChangeStreamCloseMessage {
     streamName: string
+    durationMs: number | null
 }
 
 export interface ExecutorMongoDbChangeStreamStartedMessage {

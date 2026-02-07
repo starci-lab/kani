@@ -2,8 +2,8 @@ import {
     Module 
 } from "@nestjs/common"
 import {
-    CommandsModule 
-} from "@modules/commands"
+    CliModule 
+} from "@features/cli"
 import {
     EnvModule 
 } from "@modules/env"
@@ -89,13 +89,15 @@ import {
         }),
         PrimaryMongoDbModule.register({
             isGlobal: true,
-            memoryStorage: true,
+            memoryStorage: {
+                manualLoad: true,
+            },
             withSeeders: {
                 manualSeed: true,
             },
             associate: true,
         }),
-        CommandsModule.register({
+        CliModule.register({
             isGlobal: true,
         }),
     ],

@@ -114,10 +114,12 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                                     {
                                         streamName: GATE_LAST_PRICE_STREAM_NAME,
                                         symbols,
-                                        durationMs: this.dayjsService.now().diff(
-                                            startTime,
-                                            "millisecond"
-                                        ),
+                                        durationMs: startTime
+                                            ? this.dayjsService.now().diff(
+                                                startTime,
+                                                "millisecond"
+                                            )
+                                            : null,
                                     }
                                 )
                             }

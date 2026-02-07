@@ -41,6 +41,12 @@ import {
 import {
     Sema 
 } from "async-sema"
+import {
+    Dayjs 
+} from "dayjs"
+import {
+    DayjsService 
+} from "@modules/mixin"
 
 const STREAM_NAME = "executor-loader"
 @Injectable()
@@ -58,6 +64,7 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
         private readonly eventEmitterService: EventEmitterService,
         private readonly winstonService: WinstonService,
         private readonly semaService: SemaService,
+        private readonly dayjsService: DayjsService,
     ) { }
 
     async onModuleInit() {
@@ -201,6 +208,8 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
                             resumeAfter: resumeToken ?? undefined,
                         }
                     })
+                    // create start time for duration calculation
+                    let startTime: Dayjs | null = null
                     // create the stream
                     const stream = await this.streamAsyncIteratorService.createStream(
                         {
@@ -220,6 +229,12 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
                                     WinstonLog.ExecutorMongoDbChangeStreamClose,
                                     {
                                         streamName: STREAM_NAME,
+                                        durationMs: startTime
+                                            ? this.dayjsService.now().diff(
+                                                startTime,
+                                                "millisecond"
+                                            )
+                                            : null,
                                     }
                                 )
 
@@ -231,6 +246,7 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
                                         streamName: STREAM_NAME,
                                     }
                                 )
+                                startTime = this.dayjsService.now()
                             },
                         }
                     )

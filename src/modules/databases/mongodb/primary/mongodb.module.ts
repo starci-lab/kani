@@ -117,7 +117,8 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                 SeedersModule.register(
                     {
                         isGlobal: options.isGlobal,
-                        manualSeed: !(typeof options.withSeeders === "object" ? options.withSeeders.manualSeed : true),
+                        // disable seeding in production, have to manually seed the database
+                        manualSeed: envConfig().isProduction ? true : !(typeof options.withSeeders === "object" ? options.withSeeders.manualSeed : true),
                     }
                 ),
             )

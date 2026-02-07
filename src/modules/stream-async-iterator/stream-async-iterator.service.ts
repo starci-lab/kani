@@ -58,9 +58,9 @@ export class StreamAsyncIteratorService {
                 }
                 // on open handler
                 if (onOpen) {
-                    connection.onOpen(
-                        () => {
-                            onOpen(connection)
+                    await connection.onOpen(
+                        async () => {
+                            await onOpen(connection)
                         }
                     )
                 }

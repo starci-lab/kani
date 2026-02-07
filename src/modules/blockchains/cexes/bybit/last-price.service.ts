@@ -111,10 +111,12 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                                 {
                                     streamName: BYBIT_LAST_PRICE_STREAM_NAME,
                                     symbols: batch,
-                                    durationMs: this.dayjsService.now().diff(
-                                        startTime,
-                                        "millisecond"
-                                    ),
+                                    durationMs: startTime
+                                        ? this.dayjsService.now().diff(
+                                            startTime,
+                                            "millisecond"
+                                        )
+                                        : null,
                                 }
                             )
                         }

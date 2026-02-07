@@ -61,6 +61,14 @@ export class MongoDBChangeStreamConnection<TSchema extends AbstractSchema> imple
      * Creates a new MongoDB ChangeStream connection.
      *
      * @param changeStream - either an existing ChangeStream instance or parameters to create one
+     *
+     * @example
+     * const connection = new MongoDBChangeStreamConnection({
+     *   model: MyModel,
+     *   pipeline: [{ $match: { operationType: 'insert' } }]
+     * })
+     * // or
+     * const connection = new MongoDBChangeStreamConnection(existingChangeStream)
      */
     constructor(
         changeStream: ChangeStream<TSchema> | {
@@ -69,19 +77,19 @@ export class MongoDBChangeStreamConnection<TSchema extends AbstractSchema> imple
             options?: ChangeStreamOptions
         }
     ) {
+        // create ChangeStream from model if parameters provided
         if ("model" in changeStream) {
-            // Create ChangeStream from model
             this.changeStream = changeStream.model.watch(
                 changeStream.pipeline ?? [],
                 changeStream.options ?? {
                 }
             ) as ChangeStream<TSchema>
         } else {
-            // Use provided ChangeStream
+            // use provided ChangeStream instance
             this.changeStream = changeStream
         }
 
-        // Consider the stream open immediately after creation
+        // consider the stream open immediately after creation
         // MongoDB ChangeStream is ready when created
         this.opened = true
     }
@@ -94,10 +102,17 @@ export class MongoDBChangeStreamConnection<TSchema extends AbstractSchema> imple
      * so this is called immediately after stream creation.
      *
      * @param handler - Callback executed on "open" event
+     *
+     * @example
+     * connection.onOpen(() => {
+     *   console.log('MongoDB ChangeStream ready')
+     * })
      */
-    onOpen(handler: () => void): void {
+    async onOpen(handler: () => void): Promise<void> {
+        // store handler for later use
         this.onOpenHandler = handler
-        // If stream is already opened, call handler immediately
+
+        // if stream is already opened, call handler immediately
         if (this.opened) {
             handler()
         }
@@ -109,8 +124,14 @@ export class MongoDBChangeStreamConnection<TSchema extends AbstractSchema> imple
      * document change in the MongoDB collection.
      *
      * @param handler - Callback to process incoming change data
+     *
+     * @example
+     * connection.onData(async (change) => {
+     *   console.log('Document changed:', change.operationType, change.fullDocument)
+     * })
      */
     onData(handler: (data: ChangeDoc<TSchema>) => void | Promise<void>): void {
+        // register change event handler
         this.changeStream.on("change",
             handler)
     }
@@ -123,8 +144,14 @@ export class MongoDBChangeStreamConnection<TSchema extends AbstractSchema> imple
      * - internal ChangeStream errors
      *
      * @param handler - Callback to handle errors
+     *
+     * @example
+     * connection.onError((error) => {
+     *   console.error('MongoDB ChangeStream error:', error)
+     * })
      */
     onError(handler: (error: Error) => void): void {
+        // register error event handler
         this.changeStream.on("error",
             (error: Error) => {
                 handler(error)
@@ -141,8 +168,14 @@ export class MongoDBChangeStreamConnection<TSchema extends AbstractSchema> imple
      * - the stream is invalidated
      *
      * @param handler - Callback executed on "close" event
+     *
+     * @example
+     * connection.onClose(() => {
+     *   console.log('MongoDB ChangeStream closed')
+     * })
      */
     onClose(handler: () => void): void {
+        // register close event handler
         this.changeStream.on("close",
             handler)
     }
@@ -153,8 +186,12 @@ export class MongoDBChangeStreamConnection<TSchema extends AbstractSchema> imple
      * - Ensures close() is only called in valid states
      * - Prevents redundant close calls
      * - Safe to invoke from cleanup logic (e.g. finally blocks)
+     *
+     * @example
+     * connection.close()
      */
-    close(): void {
+    async close(): Promise<void> {
+        // only close if stream exists and is not already closed
         if (this.changeStream && !this.changeStream.closed) {
             this.changeStream.close()
         }

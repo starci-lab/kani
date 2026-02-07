@@ -4,7 +4,7 @@ import {
 } from "@nestjs/common"
 import {
     ConfigurableModuleClass,
-} from "./commands.module-definition"
+} from "./cli.module-definition"
 import {
     CoreModule,
 } from "./core"
@@ -25,4 +25,4 @@ import {
         ),
     ],
 })
-export class CommandsModule extends ConfigurableModuleClass {}
+export class CliModule extends ConfigurableModuleClass {}

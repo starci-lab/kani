@@ -41,12 +41,18 @@ export class EventSourceStreamConnection implements StreamConnection<MessageEven
      * Creates a new EventSource (SSE) connection.
      *
      * @param eventSource - either an existing EventSource instance or an SSE URL
+     *
+     * @example
+     * const connection = new EventSourceStreamConnection('http://localhost:8080/events')
+     * // or
+     * const connection = new EventSourceStreamConnection(existingEventSource)
      */
     constructor(eventSource: EventSource | string) {
-        // Establish the EventSource connection immediately
+        // create new EventSource if URL string provided
         if (typeof eventSource === "string") {
             this.eventSource = new EventSource(eventSource)
         } else {
+            // use provided EventSource instance
             this.eventSource = eventSource
         }
     }
@@ -56,8 +62,14 @@ export class EventSourceStreamConnection implements StreamConnection<MessageEven
      * the SSE connection is successfully opened.
      *
      * @param handler - Callback executed on "open" event
+     *
+     * @example
+     * connection.onOpen(() => {
+     *   console.log('SSE connection opened')
+     * })
      */
-    onOpen(handler: () => void): void {
+    async onOpen(handler: () => void): Promise<void> {
+        // register open event listener
         this.eventSource.addEventListener("open",
             handler)
     }
@@ -69,8 +81,14 @@ export class EventSourceStreamConnection implements StreamConnection<MessageEven
      * message/frame received from the server.
      *
      * @param handler - Callback to process incoming SSE message
+     *
+     * @example
+     * connection.onData((event) => {
+     *   console.log('Received SSE message:', event.data)
+     * })
      */
     onData(handler: (data: MessageEvent) => void): void {
+        // register message event listener
         this.eventSource.addEventListener("message",
             handler)
     }
@@ -84,9 +102,15 @@ export class EventSourceStreamConnection implements StreamConnection<MessageEven
      * - internal EventSource errors
      *
      * @param handler - Callback to handle errors
+     *
+     * @example
+     * connection.onError((error) => {
+     *   console.error('SSE error:', error)
+     * })
      */
     onError(
         handler: (error: Error) => void): void {
+        // register error event listener and convert ErrorEvent to Error
         this.eventSource.addEventListener("error",
             (error: ErrorEvent) => {
                 handler(new Error(error.message))
@@ -102,8 +126,14 @@ export class EventSourceStreamConnection implements StreamConnection<MessageEven
      * - the client explicitly calls close()
      *
      * @param handler - Callback executed on "close" event
+     *
+     * @example
+     * connection.onClose(() => {
+     *   console.log('SSE connection closed')
+     * })
      */
     onClose(handler: () => void): void {
+        // register close event listener
         this.eventSource.addEventListener("close",
             handler)
     }
@@ -114,8 +144,12 @@ export class EventSourceStreamConnection implements StreamConnection<MessageEven
      * - Ensures close() is only called in valid states
      * - Prevents redundant close calls
      * - Safe to invoke from cleanup logic (e.g. finally blocks)
+     *
+     * @example
+     * connection.close()
      */
-    close(): void {
+    async close(): Promise<void> {
+        // only close if connection is open or connecting
         if (
             this.eventSource.readyState === EventSource.OPEN ||
             this.eventSource.readyState === EventSource.CONNECTING

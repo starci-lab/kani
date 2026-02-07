@@ -21,6 +21,9 @@ import {
 import {
     WebSocketStreamConnection, StreamAsyncIteratorService 
 } from "@modules/stream-async-iterator"
+import {
+    Dayjs 
+} from "dayjs"
   
 @Injectable()
 export class GateOrderBookService implements OnApplicationBootstrap {
@@ -55,7 +58,8 @@ export class GateOrderBookService implements OnApplicationBootstrap {
                     )
                 }
 
-                const startTime = this.dayjsService.now()
+                // create start time for duration calculation
+                let startTime: Dayjs | null = null
                 const stream = await this.streamAsyncIteratorService.createStream({
                     connection,
                     signal: abortController.signal,
@@ -65,6 +69,7 @@ export class GateOrderBookService implements OnApplicationBootstrap {
                                 streamName: "gate-order-book",
                                 symbols,
                             })
+                        startTime = this.dayjsService.now()
                         resetTimeout()
                         connection.ws.send(JSON.stringify({
                             channel: "spot.book_ticker",
@@ -86,10 +91,12 @@ export class GateOrderBookService implements OnApplicationBootstrap {
                             {
                                 streamName: "gate-order-book",
                                 symbols,
-                                durationMs: this.dayjsService.now().diff(
-                                    startTime,
-                                    "millisecond"
-                                ),
+                                durationMs: startTime
+                                    ? this.dayjsService.now().diff(
+                                        startTime,
+                                        "millisecond"
+                                    )
+                                    : null,
                             })
                     }
                 })

@@ -1,15 +1,15 @@
+import type {
+    Admin, ITopicConfig 
+} from "kafkajs"
+import {
+    Injectable, OnModuleInit, Inject 
+} from "@nestjs/common"
 import {
     envConfig 
 } from "@modules/env"
 import {
     MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
 } from "./kafka.module-definition"
-import {
-    Injectable, OnModuleInit, Inject 
-} from "@nestjs/common"
-import {
-    Admin, ITopicConfig 
-} from "kafkajs"
 import {
     InjectKafkaAdmin 
 } from "./kafka.decorators"
@@ -115,29 +115,33 @@ export class KafkaAdminService implements OnModuleInit {
     }
 
     /**
-     * Create Kafka topics defined in eventMetadataMap.
+     * Creates Kafka topics defined in eventMetadataMap.
      *
      * Each event corresponds to exactly one Kafka topic.
      * All topic configuration is centralized here to avoid:
      * - auto-created topics
      * - unsafe default settings
+     *
+     * @returns Promise that resolves when topics are created
+     *
+     * @example
+     * await adminService.createTopics()
      */
     async createTopics(): Promise<void> {
-        /**
-         * Filter only events that explicitly opt in to Kafka.
-         */
+        // filter only events that explicitly opt in to Kafka
         const topics = Object.entries(configMap).filter(
             ([, metadata]) => metadata.useKafka,
         )
+
+        // get list of existing topics from Kafka
         const listedTopics = await this.admin.listTopics()
-        // get the topics that are not in the listedTopics
+
+        // filter out topics that already exist
         const topicsToCreate = topics.filter(([topic]) => !listedTopics.includes(topic))
         if (!topicsToCreate.length) {
             return
         }
-        /**
-         * Convert event metadata into Kafka topic definitions.
-         */
+        // convert event metadata into Kafka topic definitions
         const topicConfigs: Array<ITopicConfig> = topicsToCreate.map(
             ([eventName,
                 metadata]) => ({
@@ -280,16 +284,14 @@ export class KafkaAdminService implements OnModuleInit {
             }),
         )
 
-        /**
-         * Request Kafka to create topics.
-         *
-         * This call is asynchronous on the broker side.
-         */
+        // request Kafka to create topics (asynchronous on broker side)
         await this.admin.createTopics(
             {
                 topics: topicConfigs,
             }
         )
+
+        // log successful topic creation
         this.winstonService.log(WinstonLog.KafkaTopicsCreated,
             {
                 topics: topicsToCreate.map(([topic]) => topic),
@@ -298,23 +300,36 @@ export class KafkaAdminService implements OnModuleInit {
     }
 
     /**
-     * Delete Kafka topics defined in eventMetadataMap.
+     * Deletes Kafka topics defined in eventMetadataMap.
      *
      * This is destructive and should only be used in development.
+     *
+     * @returns Promise that resolves when topics are deleted
+     *
+     * @example
+     * await adminService.deleteTopics()
      */
     async deleteTopics(): Promise<void> {
+        // get all topics that use Kafka from config
         const topics = Object.entries(configMap)
             .filter(([, metadata]) => metadata.useKafka)
             .map(([topic]) => topic)
+
+        // get list of existing topics from Kafka
         const listedTopics = await this.admin.listTopics()
-        // get the topics that are not in the listedTopics
-        const topicsToDelete = topics.filter(topic => !listedTopics.includes(topic))
+
+        // filter to only topics that actually exist
+        const topicsToDelete = topics.filter(topic => listedTopics.includes(topic))
         if (!topicsToDelete.length) {
             return
         }
+
+        // delete topics from Kafka
         await this.admin.deleteTopics({
             topics: topicsToDelete,
         })
+
+        // log successful topic deletion
         this.winstonService.log(WinstonLog.KafkaTopicsDeleted,
             {
                 topics: topicsToDelete,

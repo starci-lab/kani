@@ -94,7 +94,6 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                     }
                     
                     let startTime: Dayjs | null = null
-                    
                     // create WebSocket stream
                     const stream = await this.streamAsyncIteratorService.createStream({
                         connection,
@@ -137,10 +136,12 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                 {
                                     streamName: BINANCE_LAST_PRICE_STREAM_NAME,
                                     symbols: batch,
-                                    durationMs: this.dayjsService.now().diff(
-                                        startTime,
-                                        "millisecond"
-                                    ),
+                                    durationMs: startTime
+                                        ? this.dayjsService.now().diff(
+                                            startTime,
+                                            "millisecond"
+                                        )
+                                        : null,
                                 }
                             )
                         }

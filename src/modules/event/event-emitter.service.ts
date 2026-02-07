@@ -116,7 +116,8 @@ export class EventEmitterService implements OnModuleInit {
             await this.kafkaProducerService.producer.send({
                 topic: eventName,
                 compression: CompressionTypes.GZIP,
-                acks: 1,
+                // ack = 0 means the producer will not wait for the leader to commit the message to the partition
+                acks: 0,
                 messages: [
                     {
                         value: this.superjson.stringify({

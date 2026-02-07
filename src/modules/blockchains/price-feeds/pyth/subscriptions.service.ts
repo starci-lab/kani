@@ -20,7 +20,11 @@ import {
 import {
     AsyncService,
     RetryService,
+    DayjsService,
 } from "@modules/mixin"
+import {
+    Dayjs 
+} from "dayjs"
 import {
     envConfig 
 } from "@modules/env"
@@ -61,6 +65,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
         private readonly winstonService: WinstonService,
         private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
         private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
+        private readonly dayjsService: DayjsService,
     ) { }
 
     /**
@@ -103,6 +108,8 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                             envConfig().priceFeeds.pyth.interval.rest,
                         )
                     }
+                    // create start time for duration calculation
+                    let startTime: Dayjs | null = null
                     // Create async iterator stream from connection
                     const stream = await this.streamAsyncIteratorService.createStream({
                         connection,
@@ -115,6 +122,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                                     symbols: batch,
                                 }
                             )
+                            startTime = this.dayjsService.now()
                         },
                         onClose: () => {
                             // Log connection closure
@@ -124,6 +132,12 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                                     streamName: PYTH_SUBSCRIPTIONS_STREAM_NAME,
                                     error: "Connection closed",
                                     symbols: batch,
+                                    durationMs: startTime
+                                        ? this.dayjsService.now().diff(
+                                            startTime,
+                                            "millisecond"
+                                        )
+                                        : null,
                                 }
                             )
                         },

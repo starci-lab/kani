@@ -242,6 +242,30 @@ export const configMap = {
         messageType: {
         },
     },
+    // Kafka Consumer Opened
+    [WinstonLog.KafkaConsumerOpened]: {
+        name: WinstonLog.KafkaConsumerOpened,
+        level: WinstonLevel.Info,
+        loki: false,
+        messageType: {
+        },
+    },
+    // Kafka Consumer Closed
+    [WinstonLog.KafkaConsumerClosed]: {
+        name: WinstonLog.KafkaConsumerClosed,
+        level: WinstonLevel.Error,
+        loki: false,
+        messageType: {
+        },
+    },
+    // Kafka Consumer Error
+    [WinstonLog.KafkaConsumerError]: {
+        name: WinstonLog.KafkaConsumerError,
+        level: WinstonLevel.Info,
+        loki: false,
+        messageType: {
+        },
+    },
     // Withdraw Transaction Executed
     [WinstonLog.WithdrawTransactionExecuted]: {
         name: WinstonLog.WithdrawTransactionExecuted,

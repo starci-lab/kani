@@ -64,7 +64,11 @@ import {
 } from "lokijs"
 import {
     LokiJSService,
+    DayjsService,
 } from "@modules/mixin"
+import {
+    Dayjs 
+} from "dayjs"
   
 /** Stream name used for logs when watching MongoDB Change Stream */
 const STREAM_NAME = "bots-loader"
@@ -95,6 +99,7 @@ implements OnApplicationBootstrap, OnModuleInit {
       private readonly semaService: SemaService,
       private readonly winstonService: WinstonService,
       private readonly lokiJSService: LokiJSService,
+      private readonly dayjsService: DayjsService,
     ) {}
   
     /**
@@ -275,6 +280,9 @@ implements OnApplicationBootstrap, OnModuleInit {
                     )
                 }
   
+                // create start time for duration calculation
+                let startTime: Dayjs | null = null
+
                 // Listen only for update operations, ignore insert/delete
                 const streamConnection =
             new MongoDBChangeStreamConnection<BotSchema>({
@@ -311,7 +319,13 @@ implements OnApplicationBootstrap, OnModuleInit {
                     this.winstonService.log(
                         WinstonLog.ExecutorMongoDbChangeStreamClose,
                         {
-                            streamName: STREAM_NAME 
+                            streamName: STREAM_NAME,
+                            durationMs: startTime
+                                ? this.dayjsService.now().diff(
+                                    startTime,
+                                    "millisecond"
+                                )
+                                : null,
                         },
                     )
                 },
@@ -322,6 +336,7 @@ implements OnApplicationBootstrap, OnModuleInit {
                             streamName: STREAM_NAME 
                         },
                     )
+                    startTime = this.dayjsService.now()
                 },
             })
   

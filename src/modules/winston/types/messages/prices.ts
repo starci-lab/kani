@@ -24,6 +24,7 @@ export interface PythSubscriptionsClosedMessage {
     streamName: string
     error: string
     symbols: Array<string>
+    durationMs: number | null
 }
 
 export interface PythSubscriptionResolvedMessage {
@@ -80,7 +81,7 @@ export interface WebsocketSubscriptionOpenedMessage {
 export interface WebsocketSubscriptionClosedMessage {
     streamName: string
     symbols: Array<string>
-    durationMs: number
+    durationMs: number | null
 }
 
 export interface WebsocketSubscriptionErrorMessage {
