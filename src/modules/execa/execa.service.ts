@@ -3,7 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     ExecaExecutionFailedException
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     execa
 } from "execa"
@@ -23,19 +23,32 @@ export class ExecaService {
     async exec(
         { command, args = [] }: ExecParams
     ): Promise<ExecResult> {
-        const subprocess = execa(command,
-            args,
-            {
-                shell: false 
-            })
-        const { stdout, stderr } = await subprocess
-        if (stderr) {
+        try {
+            const subprocess = execa(command,
+                args,
+                {
+                    shell: false
+                })
+            const { stdout, stderr } = await subprocess
+            if (stderr) {
+                throw new ExecaExecutionFailedException({
+                    command,
+                    args,
+                    stderr,
+                    stdout,
+                })
+            }
+            return stdout
+        } catch (err: unknown) {
+            const execaErr = err as { exitCode?: number; stdout?: string; stderr?: string }
             throw new ExecaExecutionFailedException({
                 command,
                 args,
-                stderr,
+                stderr: execaErr.stderr ?? String(err),
+                stdout: execaErr.stdout,
+                exitCode: execaErr.exitCode,
+                originalError: err instanceof Error ? err : undefined,
             })
         }
-        return stdout
     }
 }

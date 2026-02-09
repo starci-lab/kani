@@ -11,8 +11,8 @@ import {
 import type {
     AgentServiceRegisterParams,
     AgentServiceRegisterResult,
+    ConsulConfig,
     ConsulOptions,
-    ConsulServiceConfig,
     HealthServiceParams,
     HealthServiceResult,
     StatusLeaderResult,
@@ -34,7 +34,8 @@ import {
 @Injectable()
 export class ConsulRegisterService {
     readonly axios: AxiosInstance
-    private readonly config: ConsulServiceConfig
+    /** Consul config for service registration. */
+    private readonly config: ConsulConfig
 
     constructor(
         @Inject(MODULE_OPTIONS_TOKEN)
