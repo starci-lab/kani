@@ -134,10 +134,10 @@ import {
         PrimaryMongoDbModule.register({
             isGlobal: true,
             withSeeders: {
-                manualSeed: false,
+                manualSeed: true,
             },
             memoryStorage: {
-                manualLoad: true,
+                manualLoad: false,
             },
             associate: true,
         }),
