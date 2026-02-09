@@ -104,6 +104,9 @@ import {
 import {
     AxiosModule 
 } from "@modules/axios"
+import {
+    StreamAsyncIteratorModule 
+} from "@modules/stream-async-iterator"
 
 @Module({
     imports: [
@@ -128,6 +131,9 @@ import {
             instanceKeys: [
                 RedisInstanceKey.Cache,
             ],
+        }),
+        StreamAsyncIteratorModule.register({
+            isGlobal: true,
         }),
         CacheModule.register({
             isGlobal: true,
