@@ -2,12 +2,6 @@ import type {
     ServiceName,
 } from "@modules/common"
 
-/** Executor DNS discovery config (register service with Consul agent). */
-export interface ConsulExecutorDnsOptions {
-    /** ID to register with Consul. */
-    id: string
-}
-
 /**
  * Options for Consul module registration.
  */
@@ -22,4 +16,8 @@ export interface ConsulOptions {
     port?: number
     /** Address to register with Consul. */
     address?: string
+    /** Tags to register with Consul. */
+    tags?: Array<string>
+    /** Metadata to register with Consul. */
+    metas?: Record<string, string>
 }

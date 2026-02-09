@@ -1117,128 +1117,135 @@ export const envConfig = () => ({
     },
     /** Kubernetes: executor pod (namespace, image, probes, replicas, resources, node pool, env ConfigMap/Secret). */
     k8s: {
-        executor: {
+        /** Global: common settings for all services. */
+        global: {
             podNamespace: parseEnvString({
                 key: "POD_NAMESPACE", defaultValue: "default" 
             }),
+            podId: parseEnvString({
+                key: "POD_ID", defaultValue: "default" 
+            }),
+        },
+        /** Executor: namespace for executor service. */
+        executor: {
             image: parseEnvString({
                 key: "KANI_EXECUTOR_IMAGE", defaultValue: "nginx:alpine" 
             }),
             probes: {
                 liveness: {
                     failureThreshold: parseEnvInt({
-                        key: "K8S_EXECUTOR_PROBES_LIVENESS_FAILURE_THRESHOLD", defaultValue: 3 
+                        key: "KANI_EXECUTOR_PROBES_LIVENESS_FAILURE_THRESHOLD", defaultValue: 3 
                     }),
                     httpGet: {
                         path: parseEnvString({
-                            key: "K8S_EXECUTOR_PROBES_LIVENESS_PATH", defaultValue: "/api/terminus/liveness" 
+                            key: "KANI_EXECUTOR_PROBES_LIVENESS_PATH", defaultValue: "/api/terminus/liveness" 
                         }),
                         port: parseEnvString({
-                            key: "K8S_EXECUTOR_PROBES_LIVENESS_PORT", defaultValue: "app" 
+                            key: "KANI_EXECUTOR_PROBES_LIVENESS_PORT", defaultValue: "app" 
                         }),
                         scheme: parseEnvString({
-                            key: "K8S_EXECUTOR_PROBES_LIVENESS_SCHEME", defaultValue: "HTTP" 
+                            key: "KANI_EXECUTOR_PROBES_LIVENESS_SCHEME", defaultValue: "HTTP" 
                         }),
                     },
                     initialDelaySeconds: parseEnvSecond({
-                        key: "K8S_EXECUTOR_PROBES_LIVENESS_INITIAL_DELAY_SECONDS", defaultValue: "60s" 
+                        key: "KANI_EXECUTOR_PROBES_LIVENESS_INITIAL_DELAY_SECONDS", defaultValue: "60s" 
                     }),
                     periodSeconds: parseEnvSecond({
-                        key: "K8S_EXECUTOR_PROBES_LIVENESS_PERIOD_SECONDS", defaultValue: "120s" 
+                        key: "KANI_EXECUTOR_PROBES_LIVENESS_PERIOD_SECONDS", defaultValue: "120s" 
                     }),
                     successThreshold: parseEnvInt({
-                        key: "K8S_EXECUTOR_PROBES_LIVENESS_SUCCESS_THRESHOLD", defaultValue: 1 
+                        key: "KANI_EXECUTOR_PROBES_LIVENESS_SUCCESS_THRESHOLD", defaultValue: 1 
                     }),
                     timeoutSeconds: parseEnvSecond({
-                        key: "K8S_EXECUTOR_PROBES_LIVENESS_TIMEOUT_SECONDS", defaultValue: "5s" 
+                        key: "KANI_EXECUTOR_PROBES_LIVENESS_TIMEOUT_SECONDS", defaultValue: "5s" 
                     }),
                 },
                 readiness: {
                     failureThreshold: parseEnvInt({
-                        key: "K8S_EXECUTOR_PROBES_READINESS_FAILURE_THRESHOLD", defaultValue: 3 
+                        key: "KANI_EXECUTOR_PROBES_READINESS_FAILURE_THRESHOLD", defaultValue: 3 
                     }),
                     httpGet: {
                         path: parseEnvString({
-                            key: "K8S_EXECUTOR_PROBES_READINESS_PATH", defaultValue: "/api/terminus/readiness" 
+                            key: "KANI_EXECUTOR_PROBES_READINESS_PATH", defaultValue: "/api/terminus/readiness" 
                         }),
                         port: parseEnvString({
-                            key: "K8S_EXECUTOR_PROBES_READINESS_PORT", defaultValue: "app" 
+                            key: "KANI_EXECUTOR_PROBES_READINESS_PORT", defaultValue: "app" 
                         }),
                         scheme: parseEnvString({
-                            key: "K8S_EXECUTOR_PROBES_READINESS_SCHEME", defaultValue: "HTTP" 
+                            key: "KANI_EXECUTOR_PROBES_READINESS_SCHEME", defaultValue: "HTTP" 
                         }),
                     },
                     initialDelaySeconds: parseEnvSecond({
-                        key: "K8S_EXECUTOR_PROBES_READINESS_INITIAL_DELAY_SECONDS", defaultValue: "60s" 
+                        key: "KANI_EXECUTOR_PROBES_READINESS_INITIAL_DELAY_SECONDS", defaultValue: "60s" 
                     }),
                     periodSeconds: parseEnvSecond({
-                        key: "K8S_EXECUTOR_PROBES_READINESS_PERIOD_SECONDS", defaultValue: "120s" 
+                        key: "KANI_EXECUTOR_PROBES_READINESS_PERIOD_SECONDS", defaultValue: "120s" 
                     }),
                     successThreshold: parseEnvInt({
-                        key: "K8S_EXECUTOR_PROBES_READINESS_SUCCESS_THRESHOLD", defaultValue: 1 
+                        key: "KANI_EXECUTOR_PROBES_READINESS_SUCCESS_THRESHOLD", defaultValue: 1 
                     }),
                     timeoutSeconds: parseEnvSecond({
-                        key: "K8S_EXECUTOR_PROBES_READINESS_TIMEOUT_SECONDS", defaultValue: "5s" 
+                        key: "KANI_EXECUTOR_PROBES_READINESS_TIMEOUT_SECONDS", defaultValue: "5s" 
                     }),
                 },
                 startup: {
                     failureThreshold: parseEnvInt({
-                        key: "K8S_EXECUTOR_PROBES_STARTUP_FAILURE_THRESHOLD", defaultValue: 3 
+                        key: "KANI_EXECUTOR_PROBES_STARTUP_FAILURE_THRESHOLD", defaultValue: 3 
                     }),
                     httpGet: {
                         path: parseEnvString({
-                            key: "K8S_EXECUTOR_PROBES_STARTUP_PATH", defaultValue: "/api/terminus/startup" 
+                            key: "KANI_EXECUTOR_PROBES_STARTUP_PATH", defaultValue: "/api/terminus/startup" 
                         }),
                         port: parseEnvString({
-                            key: "K8S_EXECUTOR_PROBES_STARTUP_PORT", defaultValue: "app" 
+                            key: "KANI_EXECUTOR_PROBES_STARTUP_PORT", defaultValue: "app" 
                         }),
                         scheme: parseEnvString({
-                            key: "K8S_EXECUTOR_PROBES_STARTUP_SCHEME", defaultValue: "HTTP" 
+                            key: "KANI_EXECUTOR_PROBES_STARTUP_SCHEME", defaultValue: "HTTP" 
                         }),
                     },
                     initialDelaySeconds: parseEnvSecond({
-                        key: "K8S_EXECUTOR_PROBES_STARTUP_INITIAL_DELAY_SECONDS", defaultValue: "60s" 
+                        key: "KANI_EXECUTOR_PROBES_STARTUP_INITIAL_DELAY_SECONDS", defaultValue: "60s" 
                     }),
                     periodSeconds: parseEnvSecond({
-                        key: "K8S_EXECUTOR_PROBES_STARTUP_PERIOD_SECONDS", defaultValue: "120s" 
+                        key: "KANI_EXECUTOR_PROBES_STARTUP_PERIOD_SECONDS", defaultValue: "120s" 
                     }),
                     successThreshold: parseEnvInt({
-                        key: "K8S_EXECUTOR_PROBES_STARTUP_SUCCESS_THRESHOLD", defaultValue: 1 
+                        key: "KANI_EXECUTOR_PROBES_STARTUP_SUCCESS_THRESHOLD", defaultValue: 1 
                     }),
                     timeoutSeconds: parseEnvSecond({
-                        key: "K8S_EXECUTOR_PROBES_STARTUP_TIMEOUT_SECONDS", defaultValue: "5s" 
+                        key: "KANI_EXECUTOR_PROBES_STARTUP_TIMEOUT_SECONDS", defaultValue: "5s" 
                     }),
                 }
             },
             replicas: parseEnvInt({
-                key: "K8S_EXECUTOR_REPLICAS", defaultValue: 1 
+                key: "KANI_EXECUTOR_REPLICAS", defaultValue: 1 
             }),
             envVarsConfigMapName: parseEnvString({
-                key: "K8S_EXECUTOR_ENV_VARS_CONFIG_MAP_NAME", defaultValue: "kani-executor-service-env-vars" 
+                key: "KANI_EXECUTOR_ENV_VARS_CONFIG_MAP_NAME", defaultValue: "kani-executor-service-env-vars" 
             }),
             envVarsSecretName: parseEnvString({
-                key: "K8S_EXECUTOR_ENV_VARS_SECRET_NAME", defaultValue: "kani-executor-service-env-vars" 
+                key: "KANI_EXECUTOR_ENV_VARS_SECRET_NAME", defaultValue: "kani-executor-service-env-vars" 
             }),
             resources: {
                 limits: {
                     cpu: parseEnvString({
-                        key: "K8S_EXECUTOR_RESOURCES_LIMITS_CPU", defaultValue: "512m" 
+                        key: "KANI_EXECUTOR_RESOURCES_LIMITS_CPU", defaultValue: "512m" 
                     }),
                     memory: parseEnvString({
-                        key: "K8S_EXECUTOR_RESOURCES_LIMITS_MEMORY", defaultValue: "1Gi" 
+                        key: "KANI_EXECUTOR_RESOURCES_LIMITS_MEMORY", defaultValue: "1Gi" 
                     }),
                 },
                 requests: {
                     cpu: parseEnvString({
-                        key: "K8S_EXECUTOR_RESOURCES_REQUESTS_CPU", defaultValue: "64m" 
+                        key: "KANI_EXECUTOR_RESOURCES_REQUESTS_CPU", defaultValue: "64m" 
                     }),
                     memory: parseEnvString({
-                        key: "K8S_EXECUTOR_RESOURCES_REQUESTS_MEMORY", defaultValue: "128Mi" 
+                        key: "KANI_EXECUTOR_RESOURCES_REQUESTS_MEMORY", defaultValue: "128Mi" 
                     }),
                 },
             },
             nodePool: parseEnvString({
-                key: "K8S_EXECUTOR_NODE_POOL", defaultValue: "kani-primary-node-pool" 
+                key: "KANI_EXECUTOR_NODE_POOL", defaultValue: "kani-primary-node-pool" 
             }),
         },
     },
@@ -1258,6 +1265,10 @@ export const envConfig = () => ({
     },
     /** Service listen ports: interface, coordinator, executor, observer, inspector, etc. */
     ports: {
+        /** Global port: used for common services like Prometheus, Grafana, etc. */
+        global: parseEnvInt({
+            key: "KANI_GLOBAL_PORT", defaultValue: 3000 
+        }),
         kaniInterface: parseEnvInt({
             key: "KANI_INTERFACE_PORT", defaultValue: 3001 
         }),

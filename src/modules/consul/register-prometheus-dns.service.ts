@@ -53,13 +53,16 @@ export class RegisterPrometheusDnsService implements OnModuleInit, OnApplication
                 // address is the address to register with Consul, left empty to use agent node address, which is better for Kubernetes
                 address: this.options.address,
                 // http is the HTTP endpoint to register with Consul, which we use to scrape Prometheus metrics
-                http: buildPrometheusMetricsUrl(envConfig().consul.serviceUrl),
+                http: buildPrometheusMetricsUrl(),
                 interval: envConfig().prometheus.metrics.interval,
                 tags: [
-                    `executor-id=${this.options.id}`,
+                    `service-name=${this.options.serviceName}`,
+                    ...(this.options.tags ?? []),
                 ],
                 metas: {
-                    executorId: this.options.id,
+                    serviceName: this.options.serviceName,
+                    ...(this.options.metas ?? {
+                    }),
                 },
             }
         )
