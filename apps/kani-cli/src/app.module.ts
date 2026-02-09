@@ -5,6 +5,7 @@ import {
     CliModule 
 } from "@features/cli"
 import {
+    envConfig,
     EnvModule 
 } from "@modules/env"
 import {
@@ -93,10 +94,10 @@ import {
         PrimaryMongoDbModule.register({
             isGlobal: true,
             memoryStorage: {
-                manualLoad: true,
+                manualLoad: envConfig().databases.mongoose.primary.manualLoad,
             },
             withSeeders: {
-                manualSeed: true,
+                manualSeed: envConfig().databases.mongoose.primary.manualSeed,
             },
             associate: true,
         }),

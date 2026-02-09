@@ -11,7 +11,8 @@ import {
     WinstonLevel, WinstonModule 
 } from "@modules/winston"
 import {
-    envConfig, EnvModule 
+    envConfig,
+    EnvModule,
 } from "@modules/env"
 import {
     DexId, PrimaryMongoDbModule 
@@ -141,10 +142,10 @@ import {
         PrimaryMongoDbModule.register({
             isGlobal: true,
             withSeeders: {
-                manualSeed: true,
+                manualSeed: envConfig().databases.mongoose.primary.manualSeed,
             },
             memoryStorage: {
-                manualLoad: false,
+                manualLoad: envConfig().databases.mongoose.primary.manualLoad,
             },
             associate: true,
         }),

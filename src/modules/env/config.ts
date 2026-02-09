@@ -817,6 +817,12 @@ export const envConfig = () => ({
                 dbName: parseEnvString({
                     key: "PRIMARY_MONGO_DB_NAME", defaultValue: "cicore" 
                 }),
+                manualSeed: parseEnvBoolean({
+                    key: "PRIMARY_MONGO_DB_MANUAL_SEED", defaultValue: true 
+                }),
+                manualLoad: parseEnvBoolean({
+                    key: "PRIMARY_MONGO_DB_MANUAL_LOAD", defaultValue: false 
+                }),
             },
         },
     },

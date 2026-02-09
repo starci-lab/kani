@@ -2,7 +2,8 @@ import {
     Module 
 } from "@nestjs/common"
 import {
-    EnvModule 
+    EnvModule,
+    envConfig,
 } from "@modules/env"
 import {
     ServiceName,
@@ -134,10 +135,10 @@ import {
         PrimaryMongoDbModule.register({
             isGlobal: true,
             withSeeders: {
-                manualSeed: true,
+                manualSeed: envConfig().databases.mongoose.primary.manualSeed,
             },
             memoryStorage: {
-                manualLoad: false,
+                manualLoad: envConfig().databases.mongoose.primary.manualLoad,
             },
             associate: true,
         }),
