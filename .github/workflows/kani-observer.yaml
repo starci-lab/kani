@@ -4,8 +4,9 @@ on:
   push:
     branches: [main, build]
     paths:
-      - "src/**"
+      - "src/modules/**"
       - "apps/kani-observer/**"
+      - "src/features/observer/**"
       - ".github/workflows/kani-observer.yaml"
 
 concurrency:

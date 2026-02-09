@@ -4,8 +4,9 @@ on:
   push:
     branches: [main, build]
     paths:
-      - "src/**"
+      - "src/modules/**"
       - "apps/kani-interface/**"
+      - "src/features/interface/**"
       - ".github/workflows/kani-interface.yaml"
 
 concurrency:

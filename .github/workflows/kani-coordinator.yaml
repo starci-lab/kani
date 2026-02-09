@@ -4,8 +4,9 @@ on:
   push:
     branches: [main, build]
     paths:
-      - "src/**"
+      - "src/modules/**"
       - "apps/kani-coordinator/**"
+      - "src/features/coordinator/**"
       - ".github/workflows/kani-coordinator.yaml"
 
 concurrency:

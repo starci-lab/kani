@@ -17,7 +17,7 @@ import {
 export const buildExecutorEndpoint = (bot: BotSchema) => {
     if (runInKubernetes()) {
         const executorId = bot.executor.toString()
-        return `http://kani-executor-${executorId}.${envConfig().k8s.executor.podNamespace}.svc.cluster.local:3000`
+        return `http://kani-executor-${executorId}.${envConfig().k8s.global.podNamespace}.svc.cluster.local:3000`
     }
     return `http://localhost:${envConfig().ports.kaniExecutor}`
 }
