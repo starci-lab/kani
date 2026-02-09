@@ -117,8 +117,7 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                 SeedersModule.register(
                     {
                         isGlobal: options.isGlobal,
-                        // disable seeding in production, have to manually seed the database
-                        manualSeed: envConfig().isProduction ? true : !(typeof options.withSeeders === "object" ? options.withSeeders.manualSeed : true),
+                        manualSeed: options.withSeeders?.manualSeed,
                     }
                 ),
             )
@@ -131,7 +130,7 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
             extraModules.push(
                 MemoryModule.register({
                     isGlobal: options.isGlobal,
-                    manualLoad: !(typeof options.memoryStorage === "object" ? options.memoryStorage.manualLoad : true),
+                    manualLoad: options.memoryStorage?.manualLoad,
                 }),
             )
         }

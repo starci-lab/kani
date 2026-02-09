@@ -93,10 +93,10 @@ import {
         PrimaryMongoDbModule.register({
             isGlobal: true,
             memoryStorage: {
-                manualLoad: true,
+                manualLoad: false,
             },
             withSeeders: {
-                manualSeed: true,
+                manualSeed: false,
             },
             associate: true,
         }),

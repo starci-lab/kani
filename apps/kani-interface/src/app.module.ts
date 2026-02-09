@@ -133,11 +133,11 @@ import {
         }),
         PrimaryMongoDbModule.register({
             isGlobal: true,
+            withSeeders: {
+                manualSeed: false,
+            },
             memoryStorage: {
                 manualLoad: true,
-            },
-            withSeeders: {
-                manualSeed: true,
             },
             associate: true,
         }),

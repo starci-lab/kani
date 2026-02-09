@@ -139,7 +139,7 @@ import {
         PrimaryMongoDbModule.register({
             isGlobal: true,
             withSeeders: {
-                manualSeed: true,
+                manualSeed: false,
             },
             memoryStorage: {
                 manualLoad: true,

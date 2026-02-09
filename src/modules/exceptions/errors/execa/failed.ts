@@ -26,7 +26,7 @@ export class ExecaExecutionFailedException extends AbstractException {
             stdout,
             exitCode,
             originalError,
-        }: ExecutionFailedExceptionMetadata
+        }: ExecaExecutionFailedExceptionMetadata
     ) {
         super(
             "Execution failed",
