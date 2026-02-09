@@ -232,7 +232,6 @@ import {
                 isGlobal: true,
                 serviceName: ServiceName.KaniExecutor,
                 enablePrometheusDnsDiscovery: true,
-                id: envConfig().executor.id,
                 port: envConfig().ports.kaniExecutor,
             }
         ),

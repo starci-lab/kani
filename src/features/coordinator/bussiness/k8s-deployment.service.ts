@@ -183,8 +183,58 @@ export class K8SDeploymentService  {
                                             },
                                         },
                                         {
+                                            name: "POD_ID",
+                                            valueFrom: {
+                                                fieldRef: {
+                                                    apiVersion: "v1",
+                                                    fieldPath: "metadata.uid",
+                                                },
+                                            },
+                                        },
+                                        {
+                                            name: "POD_IP",
+                                            valueFrom: {
+                                                fieldRef: {
+                                                    apiVersion: "v1",
+                                                    fieldPath: "status.podIP",
+                                                },
+                                            },
+                                        },
+                                        {
+                                            name: "NODE_NAME",
+                                            valueFrom: {
+                                                fieldRef: {
+                                                    apiVersion: "v1",
+                                                    fieldPath: "spec.nodeName",
+                                                },
+                                            },
+                                        },
+                                        {
+                                            name: "SERVICE_ACCOUNT",
+                                            valueFrom: {
+                                                fieldRef: {
+                                                    apiVersion: "v1",
+                                                    fieldPath: "spec.serviceAccountName",
+                                                },
+                                            },
+                                        },
+                                        {
+                                            name: "HOST_IP",
+                                            valueFrom: {
+                                                fieldRef: {
+                                                    apiVersion: "v1",
+                                                    fieldPath: "status.hostIP",
+                                                },
+                                            },
+                                        },
+                                        {
                                             name: "POD_NAMESPACE",
-                                            value: envConfig().k8s.global.podNamespace,
+                                            valueFrom: {
+                                                fieldRef: {
+                                                    apiVersion: "v1",
+                                                    fieldPath: "metadata.namespace",
+                                                },
+                                            },
                                         },
                                         {
                                             name: "EXECUTOR_ID",

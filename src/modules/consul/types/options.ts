@@ -8,8 +8,6 @@ import type {
 export interface ConsulOptions {
     /** Service name to register with Consul. */
     serviceName: ServiceName
-    /** Executor ID to register with Consul. */
-    id: string
     /** Enable Prometheus DNS discovery: register executor service on init, deregister on shutdown. */
     enablePrometheusDnsDiscovery?: boolean
     /** Port to register with Consul. */

@@ -13,7 +13,7 @@ export const buildPrometheusMetricsPath = () =>
 export const buildPrometheusMetricsUrl = () => {
     const path = `api/${buildPrometheusMetricsPath()}`
     if (runInKubernetes()) {
-        return `http://${envConfig().k8s.global.podId}:${envConfig().ports.global}/${path}`
+        return `http://${envConfig().k8s.global.podIp}:${envConfig().ports.global}/${path}`
     }
     return `http://localhost:${envConfig().ports.global}/${path}`
 }

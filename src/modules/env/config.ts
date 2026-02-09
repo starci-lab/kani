@@ -1125,12 +1125,27 @@ export const envConfig = () => ({
     k8s: {
         /** Global: common settings for all services. */
         global: {
-            podNamespace: parseEnvString({
-                key: "POD_NAMESPACE", defaultValue: "default" 
-            }),
-            podId: parseEnvString({
-                key: "POD_ID", defaultValue: "default" 
-            }),
+            /** Pod namespace. */
+            podNamespace: parseEnvString(
+                {
+                    key: "POD_NAMESPACE", 
+                    defaultValue: "default" 
+                }
+            ),
+            /** Pod name. */
+            podName: parseEnvString(
+                {
+                    key: "POD_NAME", 
+                    defaultValue: "emiuacuong" 
+                }
+            ),
+            /** Pod IP. */
+            podIp: parseEnvString(
+                {
+                    key: "POD_IP", 
+                    defaultValue: "localhost" 
+                }
+            ),
         },
         /** Executor: namespace for executor service. */
         executor: {

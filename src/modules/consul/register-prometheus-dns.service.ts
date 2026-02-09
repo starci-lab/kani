@@ -18,6 +18,9 @@ import {
 import {
     buildPrometheusMetricsUrl 
 } from "@modules/service-configs"
+import {
+    Interval 
+} from "@nestjs/schedule"
 
 /**
  * Registers the executor with Consul for DNS-based service discovery.
@@ -35,42 +38,57 @@ export class RegisterPrometheusDnsService implements OnModuleInit, OnApplication
         private readonly options: typeof OPTIONS_TYPE,
     ) {
     }
-    /**
-     * Register the executor service with Consul.
-     */
+
     async onModuleInit(): Promise<void> {
-        // if enablePrometheusDnsDiscovery is false, return
+        await this.registerDns()
+    }
+
+    @Interval(10000)
+    async registerDnsCron(): Promise<void> {
         if (!this.options.enablePrometheusDnsDiscovery) {
             return
         }
+        await this.registerDns()
+    }
+    /**
+     * Register the executor service with Consul every 10 seconds.
+     */
+    async registerDns(): Promise<void> {
+        try {
         // register service
-        await this.consulRegisterService.agentServiceRegister(
-            {
-            // ID is the executor ID
-                id: this.options.id,
-                // port is the port to register with Consul
-                port: this.options.port ?? 3000,
-                // address is the address to register with Consul, left empty to use agent node address, which is better for Kubernetes
-                address: this.options.address,
-                // http is the HTTP endpoint to register with Consul, which we use to scrape Prometheus metrics
-                http: buildPrometheusMetricsUrl(),
-                interval: envConfig().prometheus.metrics.interval,
-                tags: [
-                    `service-name=${this.options.serviceName}`,
-                    ...(this.options.tags ?? []),
-                ],
-                metas: {
-                    serviceName: this.options.serviceName,
-                    ...(this.options.metas ?? {
-                    }),
-                },
-            }
-        )
+            await this.consulRegisterService.agentServiceRegister(
+                {
+                // ID is the executor ID
+                    id: envConfig().k8s.global.podName,
+                    // port is the port to register with Consul
+                    port: this.options.port ?? 3000,
+                    // address is the address to register with Consul
+                    address: envConfig().k8s.global.podIp,
+                    // http is the HTTP endpoint to register with Consul, which we use to scrape Prometheus metrics
+                    http: buildPrometheusMetricsUrl(),
+                    interval: envConfig().prometheus.metrics.interval,
+                    tags: [
+                        `service-name=${this.options.serviceName}`,
+                        ...(this.options.tags ?? []),
+                    ],
+                    metas: {
+                        serviceName: this.options.serviceName,
+                        ...(this.options.metas ?? {
+                        }),
+                    },
+                }
+            )
+        } catch (error) {
+            console.error(`Error registering DNS: ${error}`)
+        }
     }
     /**
      * Deregister the executor service from Consul.
      */
     async onApplicationShutdown(): Promise<void> {
-        await this.consulRegisterService.agentServiceDeregister(this.options.id)
+        if (!this.options.enablePrometheusDnsDiscovery) {
+            return
+        }
+        await this.consulRegisterService.agentServiceDeregister(envConfig().k8s.global.podName)
     }
 }
