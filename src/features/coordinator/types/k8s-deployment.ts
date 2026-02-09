@@ -1,6 +1,9 @@
 import type {
     ExecutorSchema
 } from "@modules/databases"
+import {
+    V1Deployment 
+} from "@kubernetes/client-node"
 
 /** Params for getting a Kubernetes deployment. */
 export interface GetDeploymentParams {
@@ -8,7 +11,7 @@ export interface GetDeploymentParams {
 }
 
 /** Result of getting a Kubernetes deployment. */
-export type GetDeploymentResult = unknown
+export type GetDeploymentResult = V1Deployment | null
 
 /** Params for creating a Kubernetes deployment. */
 export interface CreateDeploymentParams {

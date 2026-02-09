@@ -71,7 +71,7 @@ export class K8SServiceService {
         const [service] = await this.asyncService.resolveTuple(
             this.kubernetesCoreApi.readNamespacedService({
                 name,
-                namespace: envConfig().k8s.executor.podNamespace,
+                namespace: envConfig().k8s.global.podNamespace,
             }),
         )
         return service
@@ -106,11 +106,11 @@ export class K8SServiceService {
         
         // create service in Kubernetes
         await this.kubernetesCoreApi.createNamespacedService({
-            namespace: envConfig().k8s.executor.podNamespace,
+            namespace: envConfig().k8s.global.podNamespace,
             body: {
                 metadata: {
                     name,
-                    namespace: envConfig().k8s.executor.podNamespace,
+                    namespace: envConfig().k8s.global.podNamespace,
                     labels,
                     annotations,
                 },
@@ -154,7 +154,7 @@ export class K8SServiceService {
         // delete service from Kubernetes
         await this.kubernetesCoreApi.deleteNamespacedService({
             name,
-            namespace: envConfig().k8s.executor.podNamespace,
+            namespace: envConfig().k8s.global.podNamespace,
         })
         
         // log service deletion

@@ -1,4 +1,4 @@
-import type {
+import {
     ExecutorSchema
 } from "@modules/databases"
 import {
@@ -171,7 +171,7 @@ export class RuntimeContextService {
             return
         }
 
-        const annotations = deployment.metadata?.annotations
+        const annotations = deployment?.metadata?.annotations
         if (!annotations) {
             await this.k8sDeploymentService.deleteDeployment({
                 executorId: this.executor.id 
