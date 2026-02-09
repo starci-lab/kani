@@ -86,7 +86,7 @@ export class K8SDeploymentService  {
             this.kubernetesApi.readNamespacedDeployment(
                 {
                     name,
-                    namespace: envConfig().k8s.executor.podNamespace,
+                    namespace: envConfig().k8s.global.podNamespace,
                 }
             )
         )
@@ -134,11 +134,11 @@ export class K8SDeploymentService  {
         })
     
         await this.kubernetesApi.createNamespacedDeployment({
-            namespace: envConfig().k8s.executor.podNamespace,
+            namespace: envConfig().k8s.global.podNamespace,
             body: {
                 metadata: {
                     name,
-                    namespace: envConfig().k8s.executor.podNamespace,
+                    namespace: envConfig().k8s.global.podNamespace,
                     labels,
                     annotations,
                 },
@@ -184,7 +184,7 @@ export class K8SDeploymentService  {
                                         },
                                         {
                                             name: "POD_NAMESPACE",
-                                            value: envConfig().k8s.executor.podNamespace,
+                                            value: envConfig().k8s.global.podNamespace,
                                         },
                                         {
                                             name: "EXECUTOR_ID",
@@ -456,7 +456,7 @@ export class K8SDeploymentService  {
         // apply patch to deployment
         await this.kubernetesApi.patchNamespacedDeployment({
             name,
-            namespace: envConfig().k8s.executor.podNamespace,
+            namespace: envConfig().k8s.global.podNamespace,
             body: patchBody,
         }
         )
@@ -491,7 +491,7 @@ export class K8SDeploymentService  {
         await this.kubernetesApi.deleteNamespacedDeployment(
             {
                 name,
-                namespace: envConfig().k8s.executor.podNamespace,
+                namespace: envConfig().k8s.global.podNamespace,
             }
         )
         

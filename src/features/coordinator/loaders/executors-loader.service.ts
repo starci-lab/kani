@@ -114,7 +114,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
             // retrieve all deployments
             const deployments = await this.kubernetesApi.listNamespacedDeployment(
                 {
-                    namespace: envConfig().k8s.executor.podNamespace,
+                    namespace: envConfig().k8s.global.podNamespace,
                 }
             )
             const deploymentExecutorIds = deployments.items
