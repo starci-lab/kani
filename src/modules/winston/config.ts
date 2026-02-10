@@ -866,7 +866,7 @@ export const configMap = {
     // Executor Mongo Db Change Stream Close
     [WinstonLog.ExecutorMongoDbChangeStreamClose]: {
         name: WinstonLog.ExecutorMongoDbChangeStreamClose,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as ExecutorMongoDbChangeStreamCloseMessage,
@@ -874,7 +874,7 @@ export const configMap = {
     // Executor Mongo Db Change Stream Started
     [WinstonLog.ExecutorMongoDbChangeStreamStarted]: {
         name: WinstonLog.ExecutorMongoDbChangeStreamStarted,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as ExecutorMongoDbChangeStreamStartedMessage,
@@ -1810,7 +1810,7 @@ export const configMap = {
     // Lock Authority Acquired
     [WinstonLog.LockAuthorityAcquired]: {
         name: WinstonLog.LockAuthorityAcquired,
-        level: WinstonLevel.Warn,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as LockAuthorityAcquiredMessage,
