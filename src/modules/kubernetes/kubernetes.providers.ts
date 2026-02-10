@@ -37,4 +37,4 @@ export const createKubernetesCoreApiProvider = (): Provider => ({
         // create Core V1 API client for core resources
         return kubeConfig.makeApiClient(k8s.CoreV1Api)
     }
-})
+}) 
