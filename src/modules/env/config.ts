@@ -838,13 +838,16 @@ export const envConfig = () => ({
                     key: "PRIMARY_MONGO_DB_USERNAME", defaultValue: "root" 
                 }),
                 dbName: parseEnvString({
-                    key: "PRIMARY_MONGO_DB_NAME", defaultValue: "cicore" 
+                    key: "PRIMARY_MONGO_DB_NAME", defaultValue: "kani" 
                 }),
                 manualSeed: parseEnvBoolean({
                     key: "PRIMARY_MONGO_DB_MANUAL_SEED", defaultValue: true 
                 }),
                 manualLoad: parseEnvBoolean({
                     key: "PRIMARY_MONGO_DB_MANUAL_LOAD", defaultValue: false 
+                }),
+                maxAwaitTimeMS: parseEnvMs({
+                    key: "PRIMARY_MONGO_DB_MAX_AWAIT_TIME_MS", defaultValue: "30s" 
                 }),
             },
         },

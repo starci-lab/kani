@@ -307,6 +307,7 @@ implements OnApplicationBootstrap, OnModuleInit {
                         options: {
                             fullDocument: "updateLookup", // Fetch full document after update
                             resumeAfter: resumeToken ?? undefined,
+                            maxAwaitTimeMS: envConfig().databases.mongoose.primary.maxAwaitTimeMS,
                         },
                     })
 

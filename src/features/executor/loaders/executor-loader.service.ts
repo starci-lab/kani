@@ -207,6 +207,7 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
                             // For "update" events we need the full, post-update document.
                             fullDocument: "updateLookup",
                             resumeAfter: resumeToken ?? undefined,
+                            maxAwaitTimeMS: envConfig().databases.mongoose.primary.maxAwaitTimeMS,
                         }
                     })
                     // create start time for duration calculation
