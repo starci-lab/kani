@@ -29,7 +29,8 @@ import {
     EventName 
 } from "@modules/event"
 import {
-    MongoDBChangeStreamConnection, StreamAsyncIteratorService 
+    MongoDBChangeStreamConnection, 
+    StreamAsyncIteratorService 
 } from "@modules/stream-async-iterator"
 import _ from "lodash"
 import {
@@ -177,17 +178,17 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
                     const abortController = new AbortController()
                     // create a timeout function
                     // create the timeout
-                    let timeout: NodeJS.Timeout | undefined = undefined
+                    // let timeout: NodeJS.Timeout | undefined = undefined
                     // create the reset timeout function
-                    const resetTimeout = () => {
-                        if (timeout) {
-                            clearTimeout(timeout)
-                        }
-                        timeout = setTimeout(
-                            () => abortController.abort(),
-                            envConfig().executor.streams.mongoDbChangeStream.timeout,
-                        )
-                    }
+                    // const resetTimeout = () => {
+                    //     if (timeout) {
+                    //         clearTimeout(timeout)
+                    //     }
+                    //     timeout = setTimeout(
+                    //         () => abortController.abort(),
+                    //         envConfig().executor.streams.mongoDbChangeStream.timeout,
+                    //     )
+                    // }
                     // create the get resume token function
                     // create MongoDB ChangeStream connection
                     const streamConnection = new MongoDBChangeStreamConnection<ExecutorSchema>({
@@ -339,7 +340,7 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
                             }
                             }
                             // reset timeout when a change is processed
-                            resetTimeout()
+                            // resetTimeout()
                         } finally {
                             if (token) {
                                 this.sema.release(token)

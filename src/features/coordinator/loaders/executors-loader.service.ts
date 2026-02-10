@@ -30,7 +30,8 @@ import {
     EventName
 } from "@modules/event"
 import {
-    MongoDBChangeStreamConnection, StreamAsyncIteratorService 
+    MongoDBChangeStreamConnection, 
+    StreamAsyncIteratorService 
 } from "@modules/stream-async-iterator"
 import _ from "lodash"
 import {
@@ -254,17 +255,17 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                     const abortController = new AbortController()
                     // create a timeout function
                     // create the timeout
-                    let timeout: NodeJS.Timeout | undefined = undefined
-                    // create the reset timeout function
-                    const resetTimeout = () => {
-                        if (timeout) {
-                            clearTimeout(timeout)
-                        }
-                        timeout = setTimeout(
-                            () => abortController.abort(),
-                            envConfig().coordinator.streams.mongoDbChangeStream.timeout,
-                        )
-                    }
+                    // let timeout: NodeJS.Timeout | undefined = undefined
+                    // // create the reset timeout function
+                    // const resetTimeout = () => {
+                    //     if (timeout) {
+                    //         clearTimeout(timeout)
+                    //     }
+                    //     timeout = setTimeout(
+                    //         () => abortController.abort(),
+                    //         envConfig().coordinator.streams.mongoDbChangeStream.timeout,
+                    //     )
+                    // }
                     // create start time for duration calculation
                     let startTime: Dayjs | null = null
                     // create the get resume token function
@@ -424,7 +425,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                             }
                             }
                             // reset timeout when a change is processed
-                            resetTimeout()
+                            // resetTimeout()
                         } finally {
                             if (token) {
                                 this.sema.release(token)

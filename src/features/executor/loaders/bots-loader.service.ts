@@ -278,15 +278,15 @@ implements OnApplicationBootstrap, OnModuleInit {
                 const abortController = new AbortController()
 
                 /** Timeout to abort stream if no events within configured duration */
-                let timeout: NodeJS.Timeout | undefined
+                // let timeout: NodeJS.Timeout | undefined
 
-                const resetTimeout = () => {
-                    if (timeout) clearTimeout(timeout)
-                    timeout = setTimeout(
-                        () => abortController.abort(),
-                        envConfig().executor.streams.mongoDbChangeStream.timeout,
-                    )
-                }
+                // const resetTimeout = () => {
+                //     if (timeout) clearTimeout(timeout)
+                //     timeout = setTimeout(
+                //         () => abortController.abort(),
+                //         envConfig().executor.streams.mongoDbChangeStream.timeout,
+                //     )
+                // }
 
                 // create start time for duration calculation
                 let startTime: Dayjs | null = null
@@ -348,7 +348,7 @@ implements OnApplicationBootstrap, OnModuleInit {
                         },
                     })
 
-                resetTimeout()
+                // resetTimeout()
 
                 for await (const change of stream) {
                     const token = await this.sema.tryAcquire()
@@ -403,7 +403,7 @@ implements OnApplicationBootstrap, OnModuleInit {
                             break
                         }
                         }
-                        resetTimeout()
+                        //resetTimeout()
                     } finally {
                         this.sema.release(token)
                     }
