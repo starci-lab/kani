@@ -597,9 +597,9 @@ export const envConfig = () => ({
             },
         },
         ttl: {
-            rotationBotAssignments: parseEnvInt({
+            rotationBotAssignments: parseEnvMs({
                 key: "CACHE_TTL_ROTATION_BOT_ASSIGNMENTS",
-                defaultValue: 0
+                defaultValue: "100years"
             }),
             withdraw: parseEnvMs({
                 key: "CACHE_TTL_WITHDRAW",
@@ -613,25 +613,25 @@ export const envConfig = () => ({
                 key: "CACHE_TTL_SESSION_ID",
                 defaultValue: "15m"
             }),
-            aggregatedTokenPrice: parseEnvInt({
+            aggregatedTokenPrice: parseEnvMs({
                 key: "CACHE_TTL_AGGREGATED_TOKEN_PRICE",
-                defaultValue: 0
+                defaultValue: "100years"
             }),
-            dynamicClmmLiquidityPoolInfo: parseEnvInt({
+            dynamicClmmLiquidityPoolInfo: parseEnvMs({
                 key: "CACHE_TTL_DYNAMIC_CLMM_LIQUIDITY_POOL_INFO",
-                defaultValue: 0
+                defaultValue: "100years"
             }),
-            dynamicDlmmLiquidityPoolInfo: parseEnvInt({
+            dynamicDlmmLiquidityPoolInfo: parseEnvMs({
                 key: "CACHE_TTL_DYNAMIC_DLMM_LIQUIDITY_POOL_INFO",
-                defaultValue: 0
+                defaultValue: "100years"
             }),
-            poolAnalytics: parseEnvInt({
+            poolAnalytics: parseEnvMs({
                 key: "CACHE_TTL_POOL_ANALYTICS",
-                defaultValue: 0
+                defaultValue: "100years"
             }),
-            liquidityPoolsSyncedDiagnosticReadiness: parseEnvInt({
+            liquidityPoolsSyncedDiagnosticReadiness: parseEnvMs({
                 key: "CACHE_TTL_LIQUIDITY_POOLS_SYNCED_DIAGNOSTIC_READINESS",
-                defaultValue: 0
+                defaultValue: "100years"
             }),
         },
         stale: {
