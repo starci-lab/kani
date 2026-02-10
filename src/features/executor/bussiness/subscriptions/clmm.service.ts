@@ -70,8 +70,6 @@ export class ClmmSubscriptionService {
                 }
             }))
         })
-        console.log("idleClmmBots",
-            idleClmmBots)
         const activeClmmBots = await this.connection.model<BotSchema>(BotSchema.name).find({
             executor: envConfig().executor.id,
             activePosition: {
@@ -88,8 +86,6 @@ export class ClmmSubscriptionService {
                 }
             }))
         })
-        console.log("activeClmmBots",
-            activeClmmBots)
         // Broadcast open-position request to all idle bots on this pool.
         // No round-robin: each bot owns and opens its own position.
         for (const bot of idleClmmBots) {
