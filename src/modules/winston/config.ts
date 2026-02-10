@@ -4,6 +4,7 @@ import {
 import {
     NotSyncedProcessClosePositionMessage,
     NotSyncedProcessOpenPositionMessage,
+    RotationBotAssignmentsMessage,
     WinstonLevel,
 } from "./types"
 import {
@@ -1926,5 +1927,13 @@ export const configMap = {
         loki: true,
         messageType: {
         } as NotSyncedProcessClosePositionMessage,
+    },
+    // Rotation Bot Assignments
+    [WinstonLog.RotationBotAssignments]: {
+        name: WinstonLog.RotationBotAssignments,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as RotationBotAssignmentsMessage,
     },
 }

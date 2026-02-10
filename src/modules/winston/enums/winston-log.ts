@@ -1,5 +1,6 @@
 /** Log event names; each maps to a config entry in configMap (level, loki, messageType). */
 export enum WinstonLog {
+    RotationBotAssignments = "Rotation.Bot.Assignments",
     ReconcileBalanceTransactionFound = "Reconcile.Balance.Transaction.Found",
     WithdrawTransactionFound = "Withdraw.Transaction.Found",
     PythRestPricesFetched = "Pyth.Rest.Prices.Fetched",

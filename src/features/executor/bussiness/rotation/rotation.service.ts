@@ -34,6 +34,10 @@ import {
 import {
     Connection 
 } from "mongoose"
+import {
+    WinstonService,
+    WinstonLog,
+} from "@modules/winston"
 
 /**
  * Rotation Service
@@ -52,6 +56,7 @@ export class RotationService implements OnModuleInit {
         private readonly dayjsService: DayjsService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly winstonService: WinstonService,
     ) {}
 
     async onModuleInit() {
@@ -68,7 +73,7 @@ export class RotationService implements OnModuleInit {
      * 
      * @returns void
      */
-    private async rotate() {
+    private async processRotation() {
         // if cache is still valid, return
         const cachedResult = await this.cacheService.get({
             key: CacheKey.RotationBotAssignments,
@@ -195,6 +200,24 @@ export class RotationService implements OnModuleInit {
                     }
                 ]
             )
+        )
+    }
+    /**
+     * Rotate.
+     * 
+     * Rotate the bots to the liquidity pools.
+     * 
+     * @returns void
+     */
+    async rotate() {
+        // process rotation
+        await this.processRotation()
+        // logging
+        this.winstonService.log(
+            WinstonLog.RotationBotAssignments,
+            {
+                results: this.botAssignments,
+            }
         )
     }
     
