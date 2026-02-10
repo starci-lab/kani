@@ -1906,7 +1906,7 @@ export const configMap = {
     // Consul Register Successfully
     [WinstonLog.ConsulRegisterSuccessfully]: {
         name: WinstonLog.ConsulRegisterSuccessfully,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as ConsulRegisterSuccessfullyMessage,
