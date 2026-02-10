@@ -41,7 +41,7 @@ export class ReadinessWatcherFactoryService {
      */
     waitUntilReady(name: string): Promise<void> {
         const watcher = this.watchers.get(name)
-        if (!watcher) throw new Error(`Watcher '${name}' not found`)
+        if (!watcher) return Promise.resolve()
         return watcher.deferred.promise
     }
 

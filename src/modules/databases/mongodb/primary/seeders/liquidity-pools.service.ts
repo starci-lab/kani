@@ -17,6 +17,9 @@ import {
 import {
     Seeder 
 } from "./types"
+import type {
+    ClientSession 
+} from "mongoose"
 import {
     Connection 
 } from "mongoose"
@@ -38,16 +41,15 @@ export class LiquidityPoolsService implements Seeder {
      * Seed the LiquidityPools.
      * @returns void.
      */
-    async seed(): Promise<void> {
-        await this.connection.model<LiquidityPoolSchema>(LiquidityPoolSchema.name).create(data)
+    async seed(session?: ClientSession): Promise<void> {
+        await this.connection.model<LiquidityPoolSchema>(LiquidityPoolSchema.name).create(data, { ...(session && { session }) })
     }
     /**
      * Drop the LiquidityPools.
      * @returns void.
      */
-    async drop(): Promise<void> {
-        await this.connection.model<LiquidityPoolSchema>(LiquidityPoolSchema.name).deleteMany({
-        })
+    async drop(session?: ClientSession): Promise<void> {
+        await this.connection.model<LiquidityPoolSchema>(LiquidityPoolSchema.name).deleteMany({}, { ...(session && { session }) })
     }
 }
 /**

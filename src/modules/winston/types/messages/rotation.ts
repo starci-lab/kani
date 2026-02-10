@@ -4,5 +4,5 @@ import type {
 
 /** Rotation bot assignments message. */
 export interface RotationBotAssignmentsMessage {
-    results: Map<string, Omit<RotationBotAssignment, "botId">>
+    results: Record<string, Omit<RotationBotAssignment, "botId">>
 }

@@ -191,14 +191,15 @@ implements
                     resetTimeout()
                     // consume the stream
                     for await (const payload of stream) {
-
                         // get topic and message
                         const { topic, message } = payload
                         // parse message value
                         const value = message.value?.toString() || "{}"
                         const data = this.kafkaMessageFactoryService.parse(value)
                         // skip messages from same instance to prevent loops
-                        if (data.podName === envConfig().k8s.global.podName) {
+                        console.log("data.podName",
+                            data.podName)
+                        if (envConfig().isProduction && data.podName === envConfig().k8s.global.podName) {
                             continue
                         }
                         // if topic is ping, skip it

@@ -179,7 +179,7 @@ export class ConfirmService {
                             },
                             {
                                 $unset: {
-                                    activePosition: null,
+                                    activePosition: "",
                                 },
                             },
                             {

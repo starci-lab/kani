@@ -16,6 +16,9 @@ import {
 import {
     InjectPrimaryMongoose 
 } from "../mongodb.decorators"
+import type {
+    ClientSession 
+} from "mongoose"
 import {
     Connection 
 } from "mongoose"
@@ -40,17 +43,16 @@ export class DexesService implements Seeder {
      * Seed the Dexes.
      * @returns void.
      */
-    async seed(): Promise<void> {
-        await this.connection.model<DexSchema>(DexSchema.name).create(data)
+    async seed(session?: ClientSession): Promise<void> {
+        await this.connection.model<DexSchema>(DexSchema.name).create(data, { ...(session && { session }) })
     }
 
     /**
      * Drop the Dexes.
      * @returns void.
      */
-    async drop(): Promise<void> {
-        await this.connection.model<DexSchema>(DexSchema.name).deleteMany({
-        })
+    async drop(session?: ClientSession): Promise<void> {
+        await this.connection.model<DexSchema>(DexSchema.name).deleteMany({}, { ...(session && { session }) })
     }
 }   
 

@@ -91,7 +91,10 @@ export class HandleClosePositionService {
                 state,
             }
         )
-        if (!settled && !bot.activePosition?.forceClose && envConfig().executor.runtime.operation.closePosition.settle.enabled) {
+        if (
+            !settled && !bot.activePosition?.forceClose 
+            && envConfig().executor.runtime.operation.closePosition.settle.enabled
+        ) {
             this.winstonService.log(
                 WinstonLog.CannotSettlePosition,
                 {

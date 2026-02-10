@@ -11,7 +11,8 @@ import {
     Inject, Injectable, OnModuleInit 
 } from "@nestjs/common"
 import {
-    AsyncService, RetryService 
+    ReadinessWatcherFactoryService,
+    RetryService 
 } from "@modules/mixin"
 import {
     MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
@@ -19,6 +20,12 @@ import {
 import {
     ConfigService 
 } from "./config.service"
+import {
+    InjectPrimaryMongoose 
+} from "../mongodb.decorators"
+import {
+    Connection 
+} from "mongoose"
 
 /**
  * The service for the Seeders.
@@ -27,13 +34,15 @@ import {
 export class SeedersService implements OnModuleInit {
     constructor(
         @Inject(MODULE_OPTIONS_TOKEN)
-        private readonly options: typeof OPTIONS_TYPE,   
+        private readonly options: typeof OPTIONS_TYPE,
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
         private readonly tokenService: TokensService,
         private readonly dexService: DexesService,
         private readonly liquidityPoolService: LiquidityPoolsService,
         private readonly configService: ConfigService,
         private readonly retryService: RetryService,
-        private readonly asyncService: AsyncService
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) { }
 
     /**
@@ -41,44 +50,26 @@ export class SeedersService implements OnModuleInit {
      * @returns void.
      */
     private async process() {
-        await this.asyncService.allMustDone([
-            (
-                async () => {
-                    await this.retryService.retry({
-                        action: async () => {
-                            await this.tokenService.drop()
-                            await this.tokenService.seed()
-                        },
-                    })
-                })(),
-            (
-                async () => {
-                    await this.retryService.retry({
-                        action: async () => {
-                            await this.dexService.drop()
-                            await this.dexService.seed()
-                        },
-                    })
-                })(),
-            (
-                async () => {
-                    await this.retryService.retry({
-                        action: async () => {
-                            await this.liquidityPoolService.drop()
-                            await this.liquidityPoolService.seed()
-                        },
-                    })
-                })(),
-            (
-                async () => {
-                    await this.retryService.retry({
-                        action: async () => {
-                            await this.configService.drop()
-                            await this.configService.seed()
-                        },
-                    })
-                })(),
-        ])
+        this.readinessWatcherFactoryService.createWatcher(SeedersService.name)
+        const session = await this.connection.startSession()
+        // drop and seed in a transaction
+        await session.withTransaction(
+            async (session) => {
+                // drop and seed in order
+                await this.tokenService.drop(session)
+                await this.tokenService.seed(session)
+                // drop and seed in order
+                await this.dexService.drop(session)
+                await this.dexService.seed(session)
+                // drop and seed in order
+                await this.liquidityPoolService.drop(session)
+                await this.liquidityPoolService.seed(session)
+                // drop and seed in order
+                await this.configService.drop(session)
+                await this.configService.seed(session)
+            }
+        )
+        this.readinessWatcherFactoryService.setReady(SeedersService.name)
     }
 
     /**

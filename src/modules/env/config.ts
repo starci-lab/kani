@@ -838,7 +838,7 @@ export const envConfig = () => ({
                     key: "PRIMARY_MONGO_DB_USERNAME", defaultValue: "root" 
                 }),
                 dbName: parseEnvString({
-                    key: "PRIMARY_MONGO_DB_NAME", defaultValue: "kani" 
+                    key: "PRIMARY_MONGO_DB_NAME", defaultValue: "cicore" 
                 }),
                 manualSeed: parseEnvBoolean({
                     key: "PRIMARY_MONGO_DB_MANUAL_SEED", defaultValue: true 

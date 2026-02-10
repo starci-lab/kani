@@ -21,7 +21,7 @@ import {
     BipartiteMatchingService 
 } from "@modules/graph"
 import {
-    Types 
+    Types, Connection 
 } from "mongoose"
 import {
     CacheKey,
@@ -31,9 +31,6 @@ import {
 import {
     DayjsService
 } from "@modules/mixin"
-import {
-    Connection 
-} from "mongoose"
 import {
     WinstonService,
     WinstonLog,
@@ -49,6 +46,7 @@ const MAX_POOLS_PER_BOT = 2
 @Injectable()
 export class RotationService implements OnModuleInit {
     public botAssignments: Map<string, Omit<RotationBotAssignment, "botId">> = new Map()
+
     constructor(
         private readonly cacheService: CacheService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
@@ -62,16 +60,12 @@ export class RotationService implements OnModuleInit {
     async onModuleInit() {
         await this.readinessWatcherFactoryService.waitUntilReady(BotsLoaderService.name)
         this.readinessWatcherFactoryService.createWatcher(RotationService.name)
-        this.rotate()
+        await this.rotate() 
         this.readinessWatcherFactoryService.setReady(RotationService.name)
     }
 
     /**
-     * Rotate.
-     * 
-     * Rotate the bots to the liquidity pools.
-     * 
-     * @returns void
+     * Process rotation.
      */
     private async processRotation() {
         // if cache is still valid, return
@@ -79,35 +73,41 @@ export class RotationService implements OnModuleInit {
             key: CacheKey.RotationBotAssignments,
             args: [],
         })
-        if (cachedResult && this.dayjsService.now()
-            .diff(cachedResult.snapshotAt.toDate(),
-                "ms") 
-        <= envConfig().cache.stale.rotationBotAssignmentsMaxAgeMs) {
-            this.botAssignments = new Map<string, Omit<RotationBotAssignment, "botId">>(
-                cachedResult.results.map(
-                    (result) => [
-                        result.botId,
-                        {
-                            liquidityPoolIds: result.liquidityPoolIds,
-                        }
-                    ]
-                )
+
+        if (
+            cachedResult &&
+            cachedResult.results.length > 0 &&
+            this.dayjsService
+                .now()
+                .diff(cachedResult.snapshotAt.toDate(),
+                    "ms") 
+                <= envConfig().cache.stale.rotationBotAssignmentsMaxAgeMs
+        ) {
+            this.botAssignments = new Map(
+                cachedResult.results.map(result => [
+                    result.botId,
+                    {
+                        liquidityPoolIds: result.liquidityPoolIds 
+                    },
+                ])
             )
             return
         }
-        const bots = await this.connection.model<BotSchema>(BotSchema.name).find(
-            {
-                executor: envConfig().executor.id,
-            }
-        )
+
+        const bots = await this.connection
+            .model<BotSchema>(BotSchema.name)
+            .find({
+                executor: envConfig().executor.id 
+            })
+
         // collect liquidity pools
         const liquidityPoolSet = new Set<string>()
         for (const bot of bots) {
-            for (const pool of bot.liquidityPools ?? []) {
-                liquidityPoolSet.add(String(pool))
+            for (const liquidityPool of bot.liquidityPools ?? []) {
+                liquidityPoolSet.add(String(liquidityPool))
             }
         }
-      
+
         // build bot slots
         const botSlots: Array<string> = []
         for (const bot of bots) {
@@ -115,121 +115,109 @@ export class RotationService implements OnModuleInit {
                 botSlots.push(`${bot.id}#${i}`)
             }
         }
-      
+
         const liquidityPoolIds = Array.from(liquidityPoolSet)
-      
+
         const botSlotIndex = new Map<string, number>()
         const poolIndex = new Map<string, number>()
-      
+
         botSlots.forEach((id, i) => botSlotIndex.set(id,
             i))
         liquidityPoolIds.forEach((id, i) => poolIndex.set(id,
             i))
-      
-        const edges: Array<Array<number>> = []
-      
+
+        const edges: Array<[number, number]> = []
+
         // build edges
         for (const bot of bots) {
             for (let i = 0; i < MAX_POOLS_PER_BOT; i++) {
                 const uSlot = `${bot.id}#${i}`
-                const u = botSlotIndex.get(uSlot)!
-      
+                const u = botSlotIndex.get(uSlot)
+                if (u === undefined) continue
+
                 for (const pool of bot.liquidityPools ?? []) {
-                    const v = poolIndex.get(String(pool))!
-                    edges.push(
-                        [
-                            u,
-                            v
-                        ]
-                    )
+                    const v = poolIndex.get(String(pool))
+                    if (v === undefined) continue // ✅ tránh crash
+                    edges.push([u,
+                        v])
                 }
             }
         }
-        // call matching
+
+        // reset pools
+        const botMap = new Map<string, BotSchema>()
+        for (const bot of bots) {
+            bot.liquidityPools = []
+            botMap.set(bot.id,
+                bot)
+        }
+        
+        // find matching
         const { result } = this.bipartiteMatchingService.find({
             n: botSlots.length,
             m: liquidityPoolIds.length,
             edges,
         })
-        // reset pools
-        const botMap = new Map<string, BotSchema>()
-        for (const bot of bots) {
-            bot.liquidityPools = []
-            botMap.set(
-                bot.id,
-                bot
-            )
-        }
+
         // apply matching
         for (const [
             u,
             v
         ] of result) {
-            const slot = botSlots[u]          // "botId#i"
-            const [botId] = slot.split("#")   // "botId"
+            const slot = botSlots[u]
+            if (!slot) continue
 
+            const [botId] = slot.split("#")
             const liquidityPoolId = liquidityPoolIds[v]
-            const bot = botMap.get(botId)
+            if (!liquidityPoolId) continue
 
-            if (bot) {
-                bot.liquidityPools.push(new Types.ObjectId(liquidityPoolId))
-            }
+            const bot = botMap.get(botId)
+            if (!bot) continue
+
+            bot.liquidityPools.push(new Types.ObjectId(liquidityPoolId))
         }
-        // update bot assignments
-        const results = Array.from(botMap.values()).map((bot) => ({
-            botId: bot.id,
-            liquidityPoolIds: bot.liquidityPools.map((liquidityPool) => liquidityPool.toString()),
-        }))
-        await this.cacheService.set(
-            {
-                key: CacheKey.RotationBotAssignments,
-                args: [],
-                cacheResult: {
-                    results,
-                    snapshotAt: this.dayjsService.now(),
+
+        // build results
+        const results: RotationBotAssignment[] = Array.from(botMap.values()).map(
+            (bot) => ({
+                botId: bot.id,
+                liquidityPoolIds: bot.liquidityPools.map((p) => p.toString()),
+            })
+        )
+
+        // cache
+        await this.cacheService.set({
+            key: CacheKey.RotationBotAssignments,
+            args: [],
+            cacheResult: {
+                results,
+                snapshotAt: this.dayjsService.now(),
+            },
+        })
+
+        // build in-memory map
+        this.botAssignments = new Map(
+            results.map((r) => [
+                r.botId,
+                {
+                    liquidityPoolIds: r.liquidityPoolIds 
                 },
-            }
-        )
-        // update bot assignments
-        this.botAssignments = new Map<string, Omit<RotationBotAssignment, "botId">>(
-            results.map(
-                (result) => [
-                    result.botId,
-                    {
-                        liquidityPoolIds: result.liquidityPoolIds,
-                    }
-                ]
-            )
+            ])
         )
     }
-    /**
-     * Rotate.
-     * 
-     * Rotate the bots to the liquidity pools.
-     * 
-     * @returns void
-     */
+
     async rotate() {
-        // process rotation
         await this.processRotation()
-        // logging
         this.winstonService.log(
-            WinstonLog.RotationBotAssignments,
+            WinstonLog.RotationBotAssignments, 
             {
-                results: this.botAssignments,
+                results: Object.fromEntries(this.botAssignments.entries()),
             }
         )
     }
-    
-    /**
-     * Rotate interval.
-     * 
-     * Rotate the bots to the liquidity pools at a regular interval.
-     * 
-     * @returns void
-     */
+
     @Interval(envConfig().executor.interval.rotate)
-    rotateInterval() {
-        this.rotate()
+    async rotateInterval() {
+        await this.rotate()
     }
 }

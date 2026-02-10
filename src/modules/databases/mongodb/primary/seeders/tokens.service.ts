@@ -14,6 +14,9 @@ import {
 import {
     InjectPrimaryMongoose 
 } from "../mongodb.decorators"
+import type {
+    ClientSession 
+} from "mongoose"
 import {
     Connection 
 } from "mongoose"
@@ -31,12 +34,22 @@ export class TokensService implements Seeder {
         private readonly connection: Connection,
     ) { }
 
-    async seed(): Promise<void> {
-        await this.connection.model<TokenSchema>(TokenSchema.name).create(data)
+    async seed(session?: ClientSession): Promise<void> {
+        await this.connection.model<TokenSchema>(TokenSchema.name).create(data,
+            {
+                ...(session && {
+                    session 
+                }) 
+            })
     }
 
-    async drop(): Promise<void> {
+    async drop(session?: ClientSession): Promise<void> {
         await this.connection.model<TokenSchema>(TokenSchema.name).deleteMany({
+        },
+        {
+            ...(session && {
+                session 
+            }) 
         })
     }
 }   

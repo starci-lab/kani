@@ -17,6 +17,9 @@ import {
 import {
     InjectPrimaryMongoose 
 } from "../mongodb.decorators"
+import type {
+    ClientSession 
+} from "mongoose"
 import {
     Connection 
 } from "mongoose"
@@ -41,16 +44,26 @@ export class ConfigService implements Seeder {
      * Seed the Config.
      * @returns void.
      */
-    async seed(): Promise<void> {
-        await this.connection.model<ConfigSchema>(ConfigSchema.name).create(data)
+    async seed(session?: ClientSession): Promise<void> {
+        await this.connection.model<ConfigSchema>(ConfigSchema.name).create(data,
+            {
+                ...(session && {
+                    session 
+                }) 
+            })
     }
 
     /**
      * Drop the Config.
      * @returns void.
      */
-    async drop(): Promise<void> {
+    async drop(session?: ClientSession): Promise<void> {
         await this.connection.model<ConfigSchema>(ConfigSchema.name).deleteMany({
+        },
+        {
+            ...(session && {
+                session 
+            }) 
         })
     }
 }   

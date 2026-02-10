@@ -52,7 +52,6 @@ export class ClmmSubscriptionService {
     async handleClmmLiquidityPoolsSynced(
         event: ClmmLiquidityPoolsSyncedEventPayload
     ) {
-
         const idleClmmBots = await this.connection.model<BotSchema>(BotSchema.name).find({
             // match executor
             executor: envConfig().executor.id,

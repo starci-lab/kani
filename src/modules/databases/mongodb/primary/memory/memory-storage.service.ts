@@ -17,7 +17,7 @@ import {
     Collection
 } from "lokijs"
 import {
-    AsyncService, LokiJSService, ReadinessWatcherFactoryService
+    LokiJSService, ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
     MODULE_OPTIONS_TOKEN, OPTIONS_TYPE
@@ -44,6 +44,9 @@ import {
 import type {
     LoadResult 
 } from "./types"
+import {
+    SeedersService 
+} from "../seeders"
 
 /**
  * In-memory cache of primary MongoDB data (tokens, liquidity pools, dexes, configs).
@@ -66,106 +69,86 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
         private readonly options: typeof OPTIONS_TYPE,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly asyncService: AsyncService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly lokiJSService: LokiJSService,
     ) { }
 
     /** Load all collections and configs from MongoDB in parallel. */
     private async process(): Promise<void> {
-        await this.asyncService.allMustDone([
-            (async () => {
-                const tokens = await this.connection
-                    .model<TokenSchema>(TokenSchema.name)
-                    .find()
-                this.tokenCollection = await this.lokiJSService.createCollection<TokenSchema>({
-                    name: "token-collection",
-                    options: {
-                        indices: ["tokenAddress",
-                            "displayId",
-                            "id"],
-                    },
-                })
-                this.tokenCollection.insert(tokens.map(token => token.toJSON()))
-            })(),
-            (async () => {
-                const liquidityPools = await this.connection
-                    .model<LiquidityPoolSchema>(LiquidityPoolSchema.name)
-                    .find()
-                this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
-                    name: "liquidity-pool-collection",
-                    options: {
-                        indices: ["poolAddress",
-                            "displayId",
-                            "id"],
-                    },
-                })
-                this.liquidityPoolCollection.insert(liquidityPools.map(liquidityPool => liquidityPool.toJSON()))
-            })(),
-            (async () => {
-                const dexes = await this.connection
-                    .model<DexSchema>(DexSchema.name)
-                    .find()
-                this.dexCollection = await this.lokiJSService.createCollection<DexSchema>({ 
-                    name: "dex-collection",
-                    options: {
-                        indices: ["displayId",
-                            "id"],
-                    },
-                })
-                this.dexCollection.insert(dexes.map(dex => dex.toJSON()))
-            })(),
-            (async () => {
-                const gasConfig = await this.connection
-                    .model<ConfigSchema>(ConfigSchema.name)
-                    .findById<ConfigRecord<GasConfig>>(createObjectId(ConfigId.Gas))
-                if (!gasConfig) {
-                    throw new GasConfigNotFoundException({
-                    })
-                }
-                this.gasConfig = gasConfig.value
-            })(),
-            (async () => {
-                const balanceConfig = await this.connection
-                    .model<ConfigSchema>(ConfigSchema.name)
-                    .findById<ConfigRecord<BalanceConfig>>(createObjectId(ConfigId.Balance))
-                if (!balanceConfig) {
-                    throw new BalanceConfigNotFoundException({
-                    })
-                }
-                this.balanceConfig = balanceConfig.value
-            })(),
-            (async () => {
-                const accountLimits = await this.connection
-                    .model<ConfigSchema>(ConfigSchema.name)
-                    .findById<ConfigRecord<AccountLimitsConfig>>(createObjectId(ConfigId.AccountLimits))
-                if (!accountLimits) {
-                    throw new AccountLimitsConfigNotFoundException({
-                    })
-                }
-                this.accountLimits = accountLimits.value
-            })(),
-            (async () => {
-                const avatarsConfig = await this.connection
-                    .model<ConfigSchema>(ConfigSchema.name)
-                    .findById<ConfigRecord<AvatarsConfig>>(createObjectId(ConfigId.Avatars))
-                if (!avatarsConfig) {
-                    throw new AvatarsConfigNotFoundException({
-                    })
-                }
-                this.avatarsConfig = avatarsConfig.value
-            })(),
-            (async () => {
-                const authenticationConfig = await this.connection
-                    .model<ConfigSchema>(ConfigSchema.name)
-                    .findById<ConfigRecord<AuthenticationConfig>>(createObjectId(ConfigId.Authentication))
-                if (!authenticationConfig) {
-                    throw new AuthenticationConfigNotFoundException({
-                    })
-                }
-                this.authenticationConfig = authenticationConfig.value
-            })(),
-        ])
+        await this.readinessWatcherFactoryService.waitUntilReady(SeedersService.name)
+        const tokens = await this.connection
+            .model<TokenSchema>(TokenSchema.name)
+            .find()
+    
+        this.tokenCollection = await this.lokiJSService.createCollection<TokenSchema>({
+            name: "token-collection",
+            options: {
+                indices: ["tokenAddress",
+                    "displayId",
+                    "id"] 
+            },
+        })
+        this.tokenCollection.insert(tokens.map(t => t.toJSON()))
+    
+        const liquidityPools = await this.connection
+            .model<LiquidityPoolSchema>(LiquidityPoolSchema.name)
+            .find()
+    
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
+            name: "liquidity-pool-collection",
+            options: {
+                indices: ["poolAddress",
+                    "displayId",
+                    "id"] 
+            },
+        })
+        this.liquidityPoolCollection.insert(liquidityPools.map(liquidityPool => liquidityPool.toJSON()))
+    
+        const dexes = await this.connection
+            .model<DexSchema>(DexSchema.name)
+            .find()
+    
+        this.dexCollection = await this.lokiJSService.createCollection<DexSchema>({
+            name: "dex-collection",
+            options: {
+                indices: ["displayId",
+                    "id"] 
+            },
+        })
+        this.dexCollection.insert(dexes.map(d => d.toJSON()))
+        const gasConfig = await this.connection
+            .model<ConfigSchema>(ConfigSchema.name)
+            .findById<ConfigRecord<GasConfig>>(createObjectId(ConfigId.Gas))
+        if (!gasConfig) throw new GasConfigNotFoundException({
+        })
+        this.gasConfig = gasConfig.value
+        const balanceConfig = await this.connection
+            .model<ConfigSchema>(ConfigSchema.name)
+            .findById<ConfigRecord<BalanceConfig>>(createObjectId(ConfigId.Balance))
+        if (!balanceConfig) throw new BalanceConfigNotFoundException({
+        })
+        this.balanceConfig = balanceConfig.value
+    
+        const accountLimits = await this.connection
+            .model<ConfigSchema>(ConfigSchema.name)
+            .findById<ConfigRecord<AccountLimitsConfig>>(createObjectId(ConfigId.AccountLimits))
+        if (!accountLimits) throw new AccountLimitsConfigNotFoundException({
+        })
+        this.accountLimits = accountLimits.value
+    
+        const avatarsConfig = await this.connection
+            .model<ConfigSchema>(ConfigSchema.name)
+            .findById<ConfigRecord<AvatarsConfig>>(createObjectId(ConfigId.Avatars))
+        if (!avatarsConfig) throw new AvatarsConfigNotFoundException({
+        })
+        this.avatarsConfig = avatarsConfig.value
+    
+        const authenticationConfig = await this.connection
+            .model<ConfigSchema>(ConfigSchema.name)
+            .findById<ConfigRecord<AuthenticationConfig>>(createObjectId(ConfigId.Authentication))
+        if (!authenticationConfig) throw new AuthenticationConfigNotFoundException({
+        })
+        this.authenticationConfig = authenticationConfig.value
     }
 
     /**

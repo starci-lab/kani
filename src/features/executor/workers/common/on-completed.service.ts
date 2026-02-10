@@ -121,7 +121,7 @@ export class OnCompletedService {
                     },
                     {
                         $unset: {
-                            activeJob: "" 
+                            activeJob: "", 
                         } 
                     },
                     {
@@ -142,8 +142,10 @@ export class OnCompletedService {
         }
         this.winstonService.log(logEvent,
             logPayload)
-        this.lockAuthorityService.release({
-            botId: bot.id 
-        })
+        this.lockAuthorityService.release(
+            {
+                botId: bot.id 
+            }
+        )
     }
 }
