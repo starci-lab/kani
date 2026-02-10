@@ -33,6 +33,7 @@ import {
     AsyncService,
 } from "@modules/mixin"
 import {
+    AbstractException,
     ExecuteClosePositionResultNotFoundException,
     JobFailureException,
     JobFailureStrategy,
@@ -115,6 +116,12 @@ export class ExecuteService {
             )
         )
         if (error) {
+            if ((error instanceof AbstractException) && isRetry) {
+                throw new JobFailureException({
+                    strategy: JobFailureStrategy.Fatal,
+                    originalError: error,
+                })
+            }
             throw new JobFailureException({
                 strategy: JobFailureStrategy.Requeue,
                 originalError: error,

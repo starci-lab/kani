@@ -122,11 +122,13 @@ export class ExecuteService {
         )
         if (error) {
             // if the error is throw intentionally, throw a fatal error to let BullMQ handle the retry
-            if (error instanceof AbstractException) {
-                throw new JobFailureException({
-                    strategy: JobFailureStrategy.Fatal,
-                    originalError: error,
-                })
+            if ((error instanceof AbstractException) && isRetry) {
+                throw new JobFailureException(
+                    {
+                        strategy: JobFailureStrategy.Fatal,
+                        originalError: error,
+                    }
+                )
             }
             // if the error is not throw intentionally, throw a requeue error to let BullMQ handle the retry
             throw new JobFailureException({
