@@ -3,6 +3,7 @@ import {
 } from "./enums"
 import {
     KafkaTopicConfig,
+    PingEventPayload,
 } from "./types"
 import {
     ClmmLiquidityPoolsSyncedEventPayload,
@@ -53,6 +54,14 @@ export const configMap = {
         } as Partial<KafkaTopicConfig>,
         eventPayload: {
         } as ReinitializeBalancersEventPayload
+    },
+    [EventName.Ping]: {
+        useKafka: true,
+        useLocal: false,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as PingEventPayload
     },
     [EventName.CoordinatorExecutorCreated]: {
         useKafka: false,

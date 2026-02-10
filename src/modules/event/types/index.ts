@@ -1,3 +1,3 @@
 export * from "./kafka-topic"
-export * from "./messages"
+export * from "./event-payload"
 export * from "./options"

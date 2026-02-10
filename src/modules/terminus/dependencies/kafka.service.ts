@@ -16,7 +16,7 @@ import {
     DependencyName 
 } from "./config"
 import {
-    InstanceIdService 
+    InstanceService 
 } from "@modules/mixin"
 
 /**
@@ -26,7 +26,7 @@ import {
 export class KafkaService {
     constructor(
         private readonly microserviceHealthIndicator: MicroserviceHealthIndicator,
-        private readonly instanceIdService: InstanceIdService,
+        private readonly instanceService: InstanceService,
     ) {}
 
     /**
@@ -39,7 +39,7 @@ export class KafkaService {
             transport: Transport.KAFKA,
             options: {
                 client: {
-                    clientId: this.instanceIdService.getId(),
+                    clientId: this.instanceService.getId(),
                     brokers: [
                         `${cfg.host}:${cfg.port}`,
                     ],

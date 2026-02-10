@@ -8,12 +8,6 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
-} from "./kafka.module-definition"
-import {
-    buildKafkaClientId 
-} from "./utils"
-import {
     KAFKA, KAFKA_ADMIN 
 } from "./constants"
 
@@ -24,16 +18,11 @@ import {
  */
 export const createKafkaProvider = (): Provider => ({
     provide: KAFKA,
-    inject: [MODULE_OPTIONS_TOKEN],
-    useFactory: (options: typeof OPTIONS_TYPE): Kafka => {
-        // create Kafka client with configuration
-        const clientId = buildKafkaClientId(
-            options.serviceName,
-            options.id,
-        )
+    inject: [],
+    useFactory: (): Kafka => {
         return new Kafka({
             brokers: [`${envConfig().kafka.host}:${envConfig().kafka.port}`],
-            clientId,
+            clientId: envConfig().k8s.global.podName,
             logLevel: logLevel.NOTHING,
             sasl: envConfig().kafka.sasl.enabled ? {
                 mechanism: "scram-sha-256",

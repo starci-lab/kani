@@ -2,30 +2,9 @@ import type {
     CacheKey,
     CacheType,
 } from "../enums"
-import type {
-    AggregatedTokenPriceCacheResult,
-    DynamicClmmLiquidityPoolInfoCacheResult,
-    DynamicDlmmLiquidityPoolInfoCacheResult,
-    LiquidityPoolsSyncedDiagnosticReadinessCacheResult,
-    PoolAnalyticsCacheResult,
-    RotationBotAssignmentsCacheResult,
-    SendOtpCodeCacheResult,
-    SessionIdCacheResult,
-    WithdrawCacheResult,
-} from "./cache-results"
-
-/** Maps each cache key to its cache result type. */
-export interface CacheResultByKey {
-    [CacheKey.Withdraw]: WithdrawCacheResult
-    [CacheKey.SendOtpCode]: SendOtpCodeCacheResult
-    [CacheKey.AggregatedTokenPrice]: AggregatedTokenPriceCacheResult
-    [CacheKey.DynamicClmmLiquidityPoolInfo]: DynamicClmmLiquidityPoolInfoCacheResult
-    [CacheKey.DynamicDlmmLiquidityPoolInfo]: DynamicDlmmLiquidityPoolInfoCacheResult
-    [CacheKey.PoolAnalytics]: PoolAnalyticsCacheResult
-    [CacheKey.SessionId]: SessionIdCacheResult
-    [CacheKey.LiquidityPoolsSyncedDiagnosticReadiness]: LiquidityPoolsSyncedDiagnosticReadinessCacheResult
-    [CacheKey.RotationBotAssignments]: RotationBotAssignmentsCacheResult
-}
+import {
+    configMap 
+} from "../config"
 
 /** Params for cache get (key, optional args, cache type). */
 export interface GetParams<K extends CacheKey> {
@@ -38,7 +17,7 @@ export interface GetParams<K extends CacheKey> {
 export interface SetParams<K extends CacheKey> {
     key: K
     args?: Array<unknown>
-    cacheResult: CacheResultByKey[K]
+    cacheResult: typeof configMap[K]["cacheResult"]
     cacheType?: CacheType
 }
 

@@ -1,31 +1,21 @@
 import {
-    Inject, Injectable, OnModuleInit 
+    Injectable 
 } from "@nestjs/common"
 import {
     EventEmitter2 
 } from "@nestjs/event-emitter"
 import {
-    InjectSuperJson, InstanceIdService 
-} from "@modules/mixin"
-import {
     CompressionTypes 
 } from "kafkajs"
-import SuperJSON from "superjson"
-import {
-    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
-} from "./event.module-definition"
-import {
-    KafkaProducerService 
-} from "./kafka"
-import {
-    ModuleRef 
-} from "@nestjs/core"
 import {
     configMap,
 } from "./config"
 import {
     EventName,
 } from "./enums"
+import {
+    KafkaMessageFactoryService, KafkaProducerService 
+} from "./kafka"
 
 export interface EmitOptions {
     useKafka?: boolean
@@ -33,31 +23,16 @@ export interface EmitOptions {
 }
 
 @Injectable()
-export class EventEmitterService implements OnModuleInit {
-    private kafkaProducerService: KafkaProducerService
+export class EventEmitterService {
     constructor(
-        @Inject(MODULE_OPTIONS_TOKEN)
-        private readonly options: typeof OPTIONS_TYPE,
+        private readonly kafkaProducerService: KafkaProducerService,
+        private readonly kafkaMessageFactoryService: KafkaMessageFactoryService,
         private readonly eventEmitter: EventEmitter2,
-        private readonly instanceIdService: InstanceIdService,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
-        private readonly moduleRef: ModuleRef,
     ) {}
     
-    async onModuleInit() {
-        if (
-            this.isKafkaProducerEnabled()
-        ) {
-            this.kafkaProducerService = await this.moduleRef.get(
-                KafkaProducerService, 
-                {
-                    strict: false 
-                }
-            )
-        }
-    }
-
+    /**
+     * Get the event name.
+     */
     getEventName<T extends EventName>(
         event: T,
         args?: Array<unknown>
@@ -67,13 +42,10 @@ export class EventEmitterService implements OnModuleInit {
         }
         return event
     }
-
-    private isKafkaProducerEnabled(): boolean {
-        return (
-            this.options.kafka?.usePublish ?? false
-        )
-    }
-
+    
+    /**
+     * Emit an event.
+     */
     async emit<T extends EventName>(
         {
             event,
@@ -109,9 +81,7 @@ export class EventEmitterService implements OnModuleInit {
       
         // Emit to Kafka (cross-instance / distributed)
         if (
-            useKafka &&
-          this.isKafkaProducerEnabled() &&
-          this.kafkaProducerService
+            useKafka
         ) {
             await this.kafkaProducerService.producer.send({
                 topic: eventName,
@@ -120,16 +90,18 @@ export class EventEmitterService implements OnModuleInit {
                 acks: 0,
                 messages: [
                     {
-                        value: this.superjson.stringify({
-                            data: payload,
-                            instanceId: this.instanceIdService.getId(),
-                        }),
+                        value: this.kafkaMessageFactoryService.create(
+                            payload
+                        ),
                     },
                 ],
             })
         }
     }
 
+    /**
+     * On an event.
+     */
     on<T extends EventName>(
         {
             event,
@@ -147,6 +119,9 @@ export class EventEmitterService implements OnModuleInit {
         )
     }
 
+    /**
+     * Off an event.
+     */
     off<T extends EventName>(
         {
             event,
@@ -165,6 +140,9 @@ export class EventEmitterService implements OnModuleInit {
     }
 }
 
+/**
+ * Emit parameters.
+ */
 export interface EmitParams<T extends EventName> {
     event: T
     args?: Array<unknown>
@@ -172,12 +150,18 @@ export interface EmitParams<T extends EventName> {
     options?: EmitOptions
 }
 
+/**
+ * On parameters.
+ */
 export interface OnParams<T extends EventName> {
     event: T
     args?: Array<unknown>
     listener: (payload: typeof configMap[T]["eventPayload"]) => void
 }
 
+/**
+ * Off parameters.
+ */
 export interface OffParams<T extends EventName> {
     event: T
     args?: Array<unknown>

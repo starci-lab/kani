@@ -66,4 +66,8 @@ export const configMap = {
         cacheResult: {
         } as RotationBotAssignmentsCacheResult,
     },
+    [CacheKey.KafkaMessageDigest]: {
+        ttl: envConfig().cache.ttl.kafkaMessageDigest,
+        cacheResult: true,
+    },
 }

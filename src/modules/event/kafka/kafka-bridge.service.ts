@@ -1,53 +1,54 @@
 import {
-    Injectable, 
-    OnApplicationBootstrap, 
-    OnModuleInit, 
-    OnApplicationShutdown, 
-    Inject 
+    Injectable,
+    OnApplicationBootstrap,
+    OnModuleInit,
+    OnApplicationShutdown,
+    Inject
 } from "@nestjs/common"
 import {
-    EventEmitter2 
+    EventEmitter2
 } from "@nestjs/event-emitter"
-import { 
-    InjectSuperJson, 
-    InstanceIdService
-} from "@modules/mixin"
-import SuperJSON from "superjson"
 import {
-    KafkaConsumerService 
+    KafkaConsumerService
 } from "./consumer.service"
 import {
-    WinstonLog 
+    WinstonLog,
+    WinstonService
 } from "@modules/winston"
 import {
-    WinstonService 
-} from "@modules/winston"
-import {
-    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE
 } from "./kafka.module-definition"
 import _ from "lodash"
 import {
-    configMap 
+    configMap
 } from "../config"
-import type {
-    EventPayloadType 
-} from "../types"
 import {
     KafkaConsumerStreamConnection,
-    StreamAsyncIteratorService 
+    StreamAsyncIteratorService
 } from "@modules/stream-async-iterator"
 import {
-    envConfig 
+    envConfig
 } from "@modules/env"
 import {
-    Dayjs 
+    Dayjs
 } from "dayjs"
 import {
-    DayjsService 
+    DayjsService
 } from "@modules/mixin"
 import {
-    RetryService 
+    RetryService
 } from "@modules/mixin"
+import {
+    KafkaMessageFactoryService
+} from "./kafka-message-factory.service"
+import {
+    CacheKey,
+    CacheService,
+    CacheType
+} from "@modules/cache"
+import {
+    EventName
+} from "../enums"
 
 /**
  * Service that bridges Kafka messages to NestJS EventEmitter.
@@ -57,24 +58,26 @@ import {
  *
  * @example
  * const bridge = await app.get(KafkaBridgeService)
- * // Events are automatically bridged on application bootstrap
  */
 @Injectable()
-export class KafkaBridgeService implements OnApplicationBootstrap, OnModuleInit, OnApplicationShutdown {
+export class KafkaBridgeService
+implements
+    OnApplicationBootstrap,
+    OnModuleInit,
+    OnApplicationShutdown {
     private topics: Array<string> = []
     constructor(
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
         private readonly kafkaConsumerService: KafkaConsumerService,
         private readonly eventEmitter: EventEmitter2,
-        private readonly instanceIdService: InstanceIdService,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
         private readonly winstonService: WinstonService,
         private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
         private readonly dayjsService: DayjsService,
         private readonly retryService: RetryService,
-    ) {}
+        private readonly kafkaMessageFactoryService: KafkaMessageFactoryService,
+        private readonly cacheService: CacheService,
+    ) { }
 
     /**
      * Initializes topics list from config and options.
@@ -120,7 +123,7 @@ export class KafkaBridgeService implements OnApplicationBootstrap, OnModuleInit,
                         this.topics
                     )
                     // create abort controller for connection management
-                    const abortController = new AbortController()    
+                    const abortController = new AbortController()
                     // create timeout for connection idle detection
                     let timeout: NodeJS.Timeout | undefined = undefined
                     // reset timeout function to keep connection alive
@@ -129,7 +132,7 @@ export class KafkaBridgeService implements OnApplicationBootstrap, OnModuleInit,
                             clearTimeout(timeout)
                         }
                         timeout = setTimeout(
-                            () => abortController.abort(), 
+                            () => abortController.abort(),
                             envConfig().kafka.consumer.idleTimeout,
                         )
                     }
@@ -180,14 +183,42 @@ export class KafkaBridgeService implements OnApplicationBootstrap, OnModuleInit,
                     resetTimeout()
                     // consume the stream
                     for await (const payload of stream) {
+
+                        // get topic and message
                         const { topic, message } = payload
                         // parse message value
                         const value = message.value?.toString() || "{}"
-                        const data = this.superjson.parse(value) as EventPayloadType<unknown>
+                        const data = this.kafkaMessageFactoryService.parse(value)
                         // skip messages from same instance to prevent loops
-                        if (data.instanceId === this.instanceIdService.getId()) {
+                        if (data.podName === envConfig().k8s.global.podName) {
                             continue
                         }
+                        // if topic is ping, skip it
+                        if (topic === EventName.Ping) {
+                            resetTimeout()
+                            continue
+                        }
+                        // we check the digest to prevent duplicate messages
+                        const cached = await this.cacheService.get(
+                            {
+                                key: CacheKey.KafkaMessageDigest,
+                                args: [data.digest],
+                                cacheType: CacheType.Memory,
+                            }
+                        )
+                        // if the message is already in cache, skip it
+                        if (cached) {
+                            continue
+                        }
+                        // set the message in cache
+                        await this.cacheService.set(
+                            {
+                                key: CacheKey.KafkaMessageDigest,
+                                args: [data.digest],
+                                cacheResult: true,
+                                cacheType: CacheType.Memory,
+                            }
+                        )
                         // emit event to local EventEmitter
                         this.eventEmitter.emit(
                             topic,
@@ -196,9 +227,9 @@ export class KafkaBridgeService implements OnApplicationBootstrap, OnModuleInit,
                         // reset timeout to keep connection alive
                         resetTimeout()
                     }
-                }  
+                }
             }
-        )  
+        )
     }
 
     /**
@@ -209,7 +240,7 @@ export class KafkaBridgeService implements OnApplicationBootstrap, OnModuleInit,
     onApplicationBootstrap() {
         this.bridgeAllKafkaEvents()
     }
-  
+
     /**
      * Cleanup on application shutdown.
      *

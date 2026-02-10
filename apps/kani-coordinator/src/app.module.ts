@@ -71,9 +71,6 @@ import {
             isGlobal: true,
             kafka: {
                 createTopicsIfNotExists: true,
-                useConsume: false,
-                usePublish: true,
-                serviceName: ServiceName.KaniCoordinator,
             },
         }),
         WinstonModule.register({

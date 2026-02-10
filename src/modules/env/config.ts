@@ -601,6 +601,10 @@ export const envConfig = () => ({
                 key: "CACHE_TTL_ROTATION_BOT_ASSIGNMENTS",
                 defaultValue: "100years"
             }),
+            kafkaMessageDigest: parseEnvMs({
+                key: "CACHE_TTL_KAFKA_MESSAGE_DIGEST",
+                defaultValue: "10s"
+            }),
             withdraw: parseEnvMs({
                 key: "CACHE_TTL_WITHDRAW",
                 defaultValue: "5m"
@@ -1045,6 +1049,11 @@ export const envConfig = () => ({
             },
             idleTimeout: parseEnvMs({
                 key: "KAFKA_CONSUMER_IDLE_TIMEOUT", defaultValue: "30s" 
+            }),
+        },
+        ping: {
+            interval: parseEnvMs({
+                key: "KAFKA_PING_INTERVAL", defaultValue: "10s" 
             }),
         },
         producer: {

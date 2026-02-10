@@ -12,4 +12,5 @@ export enum CacheKey {
     PoolAnalytics = "pool.analytics",
     SessionId = "session.id",
     LiquidityPoolsSyncedDiagnosticReadiness = "liquidity.pools.synced.diagnostic.readiness",
+    KafkaMessageDigest = "kafka.message.digest",
 }

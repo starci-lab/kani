@@ -42,6 +42,9 @@ import {
 import {
     KafkaConsumerService 
 } from "./consumer.service"
+import {
+    KafkaMessageFactoryService 
+} from "./kafka-message-factory.service"
 
 @Module({
 })
@@ -56,8 +59,6 @@ export class KafkaModule extends ConfigurableModuleClass {
      * KafkaModule.register({
      *   clientId: 'my-app',
      *   createTopicsIfNotExists: true,
-     *   usePublish: true,
-     *   useConsume: true
      * })
      */
     public static register(options: typeof OPTIONS_TYPE): DynamicModule {
@@ -74,18 +75,11 @@ export class KafkaModule extends ConfigurableModuleClass {
             // admin service (must be first - creates topics)
             adminProvider,
             KafkaAdminService,
+            KafkaProducerService,
+            KafkaMessageFactoryService,
+            KafkaConsumerService,
+            KafkaBridgeService
         ]
-
-        // add producer service if publishing is enabled
-        if (options?.usePublish) {
-            providers.push(KafkaProducerService)
-        }
-
-        // add consumer and bridge services if consumption is enabled
-        if (options?.useConsume) {
-            providers.push(KafkaConsumerService)
-            providers.push(KafkaBridgeService)
-        }
 
         return {
             ...dynamicModule,

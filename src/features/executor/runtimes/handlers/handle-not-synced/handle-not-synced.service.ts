@@ -82,8 +82,10 @@ export class HandleNotSyncedService {
         // if the result is not found, we check if the instance is created within the stale period
         if (!result) {
             const createdAt = this.instanceService.getCreatedAt()
-            return this.dayjsService.now().diff(createdAt,
-                "ms") <= stale
+            return this.dayjsService.now().diff(
+                createdAt,
+                "ms"
+            ) <= stale
         }
         // if the result is found, we check if the snapshot is within the stale period
         const { snapshotAt } = result

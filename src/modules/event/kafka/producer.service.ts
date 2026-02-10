@@ -31,6 +31,15 @@ import {
 import {
     envConfig
 } from "@modules/env"
+import {
+    Interval 
+} from "@nestjs/schedule"
+import {
+    EventName 
+} from "../enums"
+import {
+    KafkaMessageFactoryService 
+} from "./kafka-message-factory.service"
 
 @Injectable()
 export class KafkaProducerService implements OnModuleInit, OnApplicationShutdown {
@@ -40,6 +49,7 @@ export class KafkaProducerService implements OnModuleInit, OnApplicationShutdown
         private readonly kafka: Kafka,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly winstonService: WinstonService,
+        private readonly kafkaMessageFactoryService: KafkaMessageFactoryService,
     ) { }
 
     /**
@@ -71,7 +81,30 @@ export class KafkaProducerService implements OnModuleInit, OnApplicationShutdown
         // log producer ready
         this.winstonService.log(WinstonLog.KafkaProducerReady,
             {
-            })
+            }
+        )
+    }
+
+    /**
+     * Pings the Kafka producer.
+     *
+     * @returns Promise that resolves when producer is pinged
+     */
+    @Interval(envConfig().kafka.ping.interval)
+    async pingKafka(): Promise<void> {
+        await this.producer.send({
+            topic: EventName.Ping,
+            messages: [
+                {
+                    value: this.kafkaMessageFactoryService.create(
+                        {
+                            status: "ok"
+                        },
+                        true
+                    )
+                }
+            ],
+        })
     }
 
     /**

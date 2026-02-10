@@ -13,11 +13,15 @@ import {
  */
 @Injectable()
 export class InstanceService {
+    // instance id, deprecated since we use pod id instead
+    private readonly id: string
+    // instance created at
     private readonly createdAt: Dayjs
-    private readonly instanceId: string
 
     constructor() {
-        this.instanceId = uuidv4()
+        // instance id
+        this.id = uuidv4()
+        // instance created at
         this.createdAt = dayjs()
     }
 
@@ -25,7 +29,7 @@ export class InstanceService {
      * Get the unique ID of the current app instance.
      */
     getId(): string {
-        return this.instanceId
+        return this.id
     }
 
     /**

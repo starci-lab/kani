@@ -11,7 +11,7 @@ import type {
     Consumer, Kafka 
 } from "kafkajs"
 import {
-    Injectable, OnModuleInit, OnApplicationShutdown, Inject 
+    Injectable, OnModuleInit, OnApplicationShutdown 
 } from "@nestjs/common"
 import {
     ReadinessWatcherFactoryService, RetryService 
@@ -23,14 +23,8 @@ import {
     KafkaAdminService 
 } from "./admin.service"
 import {
-    buildKafkaClientId,
-} from "./utils"
-import {
     envConfig 
 } from "@modules/env"
-import {
-    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
-} from "./kafka.module-definition"
 
 @Injectable()
 export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown {
@@ -40,8 +34,6 @@ export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown
         private readonly kafka: Kafka,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly retryService: RetryService,
-        @Inject(MODULE_OPTIONS_TOKEN)
-        private readonly options: typeof OPTIONS_TYPE,
     ) {}
     
     /**
@@ -60,18 +52,12 @@ export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown
                 action: async () => {
                     // create readiness watcher for this service
                     this.readinessWatcherFactoryService.createWatcher(KafkaConsumerService.name)
-
                     // wait for admin service to be ready
                     await this.readinessWatcherFactoryService.waitUntilReady(KafkaAdminService.name)
-
-                    // create consumer with configuration
-                    const groupId = buildKafkaClientId(
-                        this.options.serviceName,
-                        this.options.id,
-                    )
+                    // create consumer
                     this.consumer = this.kafka.consumer(
                         { 
-                            groupId,
+                            groupId: envConfig().k8s.global.podName,
                             allowAutoTopicCreation: true,
                             heartbeatInterval: envConfig().kafka.heartbeatInterval,
                             retry: {

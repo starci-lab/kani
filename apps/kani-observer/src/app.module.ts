@@ -151,12 +151,9 @@ import {
             isGlobal: true,
             kafka: {
                 createTopicsIfNotExists: true,
-                useConsume: true,
-                usePublish: true,
                 topics: [
                     EventName.ReinitializeBalancers,
                 ],
-                serviceName: ServiceName.KaniObserver,
             },
         }),
         TxBuilderModule.register({

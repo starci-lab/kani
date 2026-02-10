@@ -132,10 +132,8 @@ export class KafkaAdminService implements OnModuleInit {
         const topics = Object.entries(configMap).filter(
             ([, metadata]) => metadata.useKafka,
         )
-
         // get list of existing topics from Kafka
         const listedTopics = await this.admin.listTopics()
-
         // filter out topics that already exist
         const topicsToCreate = topics.filter(([topic]) => !listedTopics.includes(topic))
         if (!topicsToCreate.length) {
