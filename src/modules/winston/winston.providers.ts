@@ -77,7 +77,7 @@ export const createConsoleWinstonProvider = () => {
         ) => {
             return createLogger(
                 {
-                    level: envConfig().isProduction ? WinstonLevel.Info : options.level,
+                    level: envConfig().isProduction ? WinstonLevel.Verbose : options.level,
                     transports: [
                         createConsoleTransport(options),
                     ],
@@ -96,7 +96,7 @@ export const createLokiWinstonProvider = () => {
         ) => {
             return createLogger(
                 {
-                    level: envConfig().isProduction ? WinstonLevel.Info : options.level,
+                    level: envConfig().isProduction ? WinstonLevel.Verbose : options.level,
                     transports: [
                         createConsoleTransport(options),
                         createLokiTransport(options),
