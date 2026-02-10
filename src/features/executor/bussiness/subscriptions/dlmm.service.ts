@@ -15,19 +15,15 @@ import {
     RotationService
 } from "../rotation/rotation.service"
 import {
-    BotSchema 
+    BotSchema, 
+    InjectPrimaryMongoose
 } from "@modules/databases"
 import {
     envConfig 
 } from "@modules/env"
 import {
-    Types 
-} from "mongoose"
-import {
-    InjectConnection 
-} from "@nestjs/mongoose"
-import {
-    Connection 
+    Types,
+    Connection
 } from "mongoose"
 
 @Injectable()
@@ -35,7 +31,7 @@ export class DlmmSubscriptionService {
     constructor(
         private readonly eventEmitterService: EventEmitterService,
         private readonly rotationService: RotationService,
-        @InjectConnection()
+        @InjectPrimaryMongoose()
         private readonly connection: Connection,
     ) { }
 

@@ -123,18 +123,12 @@ export class HandleNotSyncedService {
                 return
             }
             // we check the bot assignments
-            const botAssignment = this.rotationService.botAssignmentsCollection.findOne(
-                {
-                    id: {
-                        $eq: bot.id,
-                    },
-                }
-            )
+            const botAssignment = this.rotationService.botAssignments.get(bot.id)
             if (!botAssignment) {
                 continue
             }
             // we take a random bot liquidity pool
-            const randomBotLiquidityPool = _.sample(botAssignment.liquidityPools)
+            const randomBotLiquidityPool = _.sample(botAssignment.liquidityPoolIds)
             if (!randomBotLiquidityPool) continue
             // we check the bot liquidity pool is valid
             const botLiquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({

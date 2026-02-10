@@ -13,15 +13,13 @@ import {
 } from "@modules/event"
 import {
     RotationService 
-} from "../rotation/rotation.service"
-import {
-    InjectConnection 
-} from "@nestjs/mongoose"
+} from "../rotation"
 import {
     Connection 
 } from "mongoose"
 import {
-    BotSchema 
+    BotSchema, 
+    InjectPrimaryMongoose
 } from "@modules/databases"
 import {
     envConfig 
@@ -35,7 +33,7 @@ export class ClmmSubscriptionService {
     constructor(
         private readonly eventEmitterService: EventEmitterService,
         private readonly rotationService: RotationService,
-        @InjectConnection()
+        @InjectPrimaryMongoose()
         private readonly connection: Connection,
     ) {}
     

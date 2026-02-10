@@ -14,7 +14,8 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    BotSchema 
+    BotSchema, 
+    InjectPrimaryMongoose
 } from "@modules/databases"
 import {
     BipartiteMatchingService 
@@ -30,9 +31,6 @@ import {
 import {
     DayjsService
 } from "@modules/mixin"
-import {
-    InjectConnection 
-} from "@nestjs/mongoose"
 import {
     Connection 
 } from "mongoose"
@@ -52,7 +50,7 @@ export class RotationService implements OnModuleInit {
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly bipartiteMatchingService: BipartiteMatchingService,
         private readonly dayjsService: DayjsService,
-        @InjectConnection()
+        @InjectPrimaryMongoose()
         private readonly connection: Connection,
     ) {}
 
