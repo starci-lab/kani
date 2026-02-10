@@ -58,7 +58,6 @@ import {
     ClearService,
     OnCompletedService,
     OnFailedService,
-    SendHeartbeatService,
 } from "../common"
 import {
     PrepareService,
@@ -105,7 +104,6 @@ export class ClosePositionWorker extends WorkerHost {
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         private readonly prepareService: PrepareService,
-        private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly executeService: ExecuteService,
         private readonly confirmService: ConfirmService,
         private readonly onCompletedService: OnCompletedService,

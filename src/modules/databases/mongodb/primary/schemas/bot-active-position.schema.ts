@@ -105,6 +105,22 @@ export class BotActivePositionSchema extends AbstractSchema {
             },
         )
             associatedLiquidityPool?: LiquidityPoolSchema
+
+        /**
+         * The created at timestamp of the active position.
+         */
+        @Field(
+            () => Boolean,
+            {
+                description: "Whether the active position is force closed",
+                nullable: true,
+            },
+        )
+        @Prop({
+            type: Boolean,
+            nullable: true,
+        })
+            forceClose?: boolean
 }
 
 /**
