@@ -20,8 +20,8 @@ import {
     ReadinessWatcherFactoryService
 } from "./readiness-watcher-factory.service"
 import {
-    InstanceIdService
-} from "./instance-id.service"
+    InstanceService
+} from "./instance.service"
 import {
     createSuperJsonServiceProvider
 } from "./superjson.providers"
@@ -55,7 +55,7 @@ export class MixinModule extends ConfigurableModuleClass {
             RetryService,
             WaitService,
             ReadinessWatcherFactoryService,
-            InstanceIdService,
+            InstanceService,
             DayjsService,
             createSuperJsonServiceProvider(),
             createFakerServiceProvider(),

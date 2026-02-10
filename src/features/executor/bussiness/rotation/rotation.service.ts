@@ -175,14 +175,17 @@ export class RotationService implements OnModuleInit {
             botId: bot.id,
             liquidityPoolIds: bot.liquidityPools.map((liquidityPool) => liquidityPool.toString()),
         }))
-        await this.cacheService.set({
-            key: CacheKey.RotationBotAssignments,
-            args: [],
-            cacheResult: {
-                results,
-                snapshotAt: this.dayjsService.now(),
-            },
-        })
+        await this.cacheService.set(
+            {
+                key: CacheKey.RotationBotAssignments,
+                args: [],
+                cacheResult: {
+                    results,
+                    snapshotAt: this.dayjsService.now(),
+                },
+            }
+        )
+        // update bot assignments
         this.botAssignments = new Map<string, Omit<RotationBotAssignment, "botId">>(
             results.map(
                 (result) => [

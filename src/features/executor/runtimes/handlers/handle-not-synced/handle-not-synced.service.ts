@@ -28,6 +28,9 @@ import {
     WinstonLog,
     WinstonService 
 } from "@modules/winston"
+import {
+    InstanceService 
+} from "@modules/mixin"
 
 /**
  * Handle not synced service.
@@ -45,6 +48,7 @@ export class HandleNotSyncedService {
         private readonly handleClosePositionService: HandleClosePositionService,
         private readonly handleOpenPositionService: HandleOpenPositionService,
         private readonly winstonService: WinstonService,
+        private readonly instanceService: InstanceService,
     ) {}
  
     /**
@@ -73,13 +77,21 @@ export class HandleNotSyncedService {
      */
     isSynced(id: string) {
         const result = this.results.get(id)
-        if (!result) return false
+        // get the stale period
+        const stale = envConfig().executor.diagnose.liquidityPoolsSynced.stale
+        // if the result is not found, we check if the instance is created within the stale period
+        if (!result) {
+            const createdAt = this.instanceService.getCreatedAt()
+            return this.dayjsService.now().diff(createdAt,
+                "ms") <= stale
+        }
+        // if the result is found, we check if the snapshot is within the stale period
         const { snapshotAt } = result
         if (!snapshotAt) return false
         return this.dayjsService.now().diff(
             snapshotAt,
             "ms"
-        ) <= envConfig().executor.diagnose.liquidityPoolsSynced.stale
+        ) <= stale
     }
    
     /**
@@ -90,67 +102,69 @@ export class HandleNotSyncedService {
     async process(
         bot: BotSchema,
     ) {
-        for (const liquidityPool of bot.liquidityPools) {
-            // get not synced liquidity pools
-            const synced = this.isSynced(liquidityPool.toString())
-            if (synced) {
-                continue
-            }
-            // we check the bot have a position
-            if (bot.activePosition) {
-                const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
+        // return if bot is not running
+        if (!bot.running) return
+        // we check the bot have a position
+        if (bot.activePosition) {
+            const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
+                {
                     id: {
                         $eq: bot.activePosition.liquidityPool.toString(),
                     },
-                })
-                if (!liquidityPool) {
-                    continue
                 }
-                this.winstonService.log(
-                    WinstonLog.NotSyncedProcessClosePosition,
-                    {
-                        botId: bot.id,
-                        liquidityPoolId: liquidityPool.displayId,
-                    }
-                )
-                // we try to process a close position
-                this.handleClosePositionService.process(
-                    {
-                        bot,
-                        liquidityPool,
-                    }
-                )
+            )
+            // check the liquidity pool is valid
+            if (!liquidityPool) {
                 return
             }
-            // we check the bot assignments
-            const botAssignment = this.rotationService.botAssignments.get(bot.id)
-            if (!botAssignment) {
-                continue
+            // check the liquidity pool is not synced
+            if (this.isSynced(liquidityPool.displayId)) {
+                return
             }
-            // we take a random bot liquidity pool
-            const randomBotLiquidityPool = _.sample(botAssignment.liquidityPoolIds)
-            if (!randomBotLiquidityPool) continue
-            // we check the bot liquidity pool is valid
-            const botLiquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
-                id: {
-                    $eq: randomBotLiquidityPool.toString(),
-                },
-            })
-            if (!botLiquidityPool) continue
             this.winstonService.log(
-                WinstonLog.NotSyncedProcessOpenPosition,
+                WinstonLog.NotSyncedProcessClosePosition,
                 {
                     botId: bot.id,
-                    liquidityPoolId: botLiquidityPool.displayId,
+                    liquidityPoolId: liquidityPool.displayId,
                 }
             )
-            // we try to process a open position
-            this.handleOpenPositionService.process(
+            // we try to process a close position
+            this.handleClosePositionService.process(
                 {
                     bot,
-                    liquidityPool: botLiquidityPool,
+                    liquidityPool,
                 }
             )
+            return
         }
+        const botAssignment = this.rotationService.botAssignments.get(bot.id)
+        if (!botAssignment) {
+            return
+        }
+        // we take a random bot liquidity pool
+        const botLiquidityPoolId = _.sample(botAssignment.liquidityPoolIds)
+        if (!botLiquidityPoolId) return
+        if (this.isSynced(botLiquidityPoolId)) return
+        // we check the bot liquidity pool is valid
+        const botLiquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
+            id: {
+                $eq: botLiquidityPoolId.toString(),
+            },
+        })
+        if (!botLiquidityPool) return
+        this.winstonService.log(
+            WinstonLog.NotSyncedProcessOpenPosition,
+            {
+                botId: bot.id,
+                liquidityPoolId: botLiquidityPool.displayId,
+            }
+        )
+        // we try to process a open position
+        this.handleOpenPositionService.process(
+            {
+                bot,
+                liquidityPool: botLiquidityPool,
+            }
+        )
     }
 }
