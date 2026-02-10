@@ -49,11 +49,17 @@ implements OnModuleInit, OnApplicationBootstrap
       private readonly lokiJSService: LokiJSService,
       private readonly dayjsService: DayjsService,
     ) {}
-  
+    
+    /**
+     * On application bootstrap.
+     */
     onApplicationBootstrap() {
         this.diagnoseInterval()
     }
   
+    /**
+     * Diagnose interval.
+     */
     @Interval(envConfig().executor.diagnose.price.interval)
     async diagnoseInterval() {
         const results = await this.diagnose()
@@ -103,9 +109,9 @@ implements OnModuleInit, OnApplicationBootstrap
         const ageMs = this.dayjsService
             .now()
             .diff(result.snapshotAt,
-                "ms")
-  
-        return ageMs <= maxAgeMs
+                "ms")  
+        const isReady = ageMs <= maxAgeMs
+        return isReady
     }
   
     async diagnose(): Promise<Array<PriceDiagnosticReadinessResult>> {

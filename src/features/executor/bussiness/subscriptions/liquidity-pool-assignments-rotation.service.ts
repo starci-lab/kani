@@ -31,6 +31,9 @@ export class LiquidityPoolAssignmentsRotationService implements OnModuleInit {
         private readonly lokiJSService: LokiJSService,
     ) {}
 
+    /**
+     * On module init.
+     */
     async onModuleInit() {
         await this.readinessWatcherFactoryService.waitUntilReady(BotsLoaderService.name)
         this.readinessWatcherFactoryService.createWatcher(LiquidityPoolAssignmentsRotationService.name)
@@ -44,7 +47,9 @@ export class LiquidityPoolAssignmentsRotationService implements OnModuleInit {
         this.readinessWatcherFactoryService.setReady(LiquidityPoolAssignmentsRotationService.name)
     }
 
-    // rotate is a method to reallocate the liquidity pools to the bots
+    /**
+     * Rotate.
+     */
     async rotate() {
         // TECHNICAL DEBT: this is a temporary solution to get the bots from the database
         const bots = this.botsLoaderService.botCollection.chain().find().data({

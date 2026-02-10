@@ -229,6 +229,9 @@ implements OnModuleInit, OnApplicationBootstrap
         return results
     }
   
+    /**
+     * Diagnose interval.
+     */
     @Interval(envConfig().executor.diagnose.liquidityPoolsSynced.interval)
     async diagnoseInterval() {
         const newResults = await this.diagnose()
@@ -323,6 +326,9 @@ implements OnModuleInit, OnApplicationBootstrap
         this.results = new Map(newResults)
     }
   
+    /**
+     * On application bootstrap.
+     */
     onApplicationBootstrap() {
         this.diagnoseInterval()
     }

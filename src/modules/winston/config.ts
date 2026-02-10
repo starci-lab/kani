@@ -1496,7 +1496,7 @@ export const configMap = {
     // Liquidity Pools Became Ready
     [WinstonLog.LiquidityPoolsBecameReady]: {
         name: WinstonLog.LiquidityPoolsBecameReady,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as LiquidityPoolsBecameReadyMessage,
@@ -1504,7 +1504,7 @@ export const configMap = {
     // Liquidity Pools Became Not Ready
     [WinstonLog.LiquidityPoolsBecameNotReady]: {
         name: WinstonLog.LiquidityPoolsBecameNotReady,
-        level: WinstonLevel.Warn,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as LiquidityPoolsBecameNotReadyMessage,
