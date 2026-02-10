@@ -8,6 +8,9 @@ import {
     SubscriptionsModule 
 } from "./subscriptions"
 import {
+    RotationModule 
+} from "./rotation"
+import {
     DiagnosticsModule 
 } from "./diagnostics"
 import {
@@ -31,6 +34,11 @@ export class BussinessModule extends ConfigurableModuleClass {
                     }
                 ),
                 SubscriptionsModule.register(
+                    {
+                        isGlobal: options.isGlobal,
+                    }
+                ),
+                RotationModule.register(
                     {
                         isGlobal: options.isGlobal,
                     }

@@ -99,6 +99,9 @@ import {
 import {
     ExecutorModule 
 } from "@features/executor"
+import {
+    GraphModule 
+} from "@modules/graph"
 
 @Module({
     imports: [
@@ -122,6 +125,9 @@ import {
             instanceKeys: [
                 RedisInstanceKey.Cache,
             ],
+        }),
+        GraphModule.register({
+            isGlobal: true,
         }),
         SemaModule.register({
             isGlobal: true,

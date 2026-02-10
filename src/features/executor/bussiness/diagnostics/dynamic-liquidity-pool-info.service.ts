@@ -54,10 +54,16 @@ implements OnModuleInit, OnApplicationBootstrap
 
     /* ================= BOOTSTRAP ================= */
 
+    /**
+     * On application bootstrap.
+     */
     onApplicationBootstrap() {
         this.diagnoseInterval()
     }
 
+    /**
+     * Diagnose interval.
+     */
     @Interval(envConfig().executor.diagnose.dynamicLiquidityPoolInfo.interval)
     async diagnoseInterval() {
         const results = await this.diagnose()
@@ -65,6 +71,9 @@ implements OnModuleInit, OnApplicationBootstrap
         this.results.insert(results)
     }
 
+    /**
+     * On module init.
+     */
     async onModuleInit() {
         this.liquidityPoolCollection =
             await this.lokiJSService.createCollection<LiquidityPoolSchema>({
@@ -116,6 +125,11 @@ implements OnModuleInit, OnApplicationBootstrap
         return isReady
     }
 
+    /**
+     * Diagnose.
+     *
+     * @returns Array of dynamic liquidity pool info diagnostic readiness results
+     */
     async diagnose(): Promise<Array<DynamicLiquidityPoolInfoDiagnosticReadinessResult>> {
         const liquidityPools = this.liquidityPoolCollection.find()
 
@@ -128,10 +142,12 @@ implements OnModuleInit, OnApplicationBootstrap
                         ? CacheKey.DynamicClmmLiquidityPoolInfo
                         : CacheKey.DynamicDlmmLiquidityPoolInfo
 
-                const dynamicInfo = await this.cacheService.get({
-                    key: cacheKey,
-                    args: [liquidityPool.id.toString()],
-                })
+                const dynamicInfo = await this.cacheService.get(
+                    {
+                        key: cacheKey,
+                        args: [liquidityPool.id.toString()],
+                    }
+                )
 
                 if (!dynamicInfo) {
                     this.winstonService.log(
@@ -184,6 +200,12 @@ implements OnModuleInit, OnApplicationBootstrap
 
     /* ================= PUBLIC ================= */
 
+    /**
+     * Ready.
+     *
+     * @param id - Liquidity pool id
+     * @returns True if the liquidity pool is ready, false otherwise
+     */
     async ready(id: string): Promise<boolean> {
         const result = this.results.findOne({
             id: {

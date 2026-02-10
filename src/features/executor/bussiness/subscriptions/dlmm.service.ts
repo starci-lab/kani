@@ -12,14 +12,14 @@ import {
     EventEmitterService
 } from "@modules/event"
 import {
-    LiquidityPoolAssignmentsRotationService
-} from "./liquidity-pool-assignments-rotation.service"
+    RotationService
+} from "../rotation/rotation.service"
 
 @Injectable()
 export class DlmmSubscriptionService {
     constructor(
         private readonly eventEmitterService: EventEmitterService,
-        private readonly liquidityPoolAssignmentsRotationService: LiquidityPoolAssignmentsRotationService,
+        private readonly rotationService: RotationService,
     ) { }
 
     /**
@@ -38,7 +38,7 @@ export class DlmmSubscriptionService {
         event: DlmmLiquidityPoolsSyncedEventPayload
     ) {
         // Select bots that are currently idle and associated with THIS DLMM pool
-        const idleDlmmBots = this.liquidityPoolAssignmentsRotationService.botAssignmentsCollection.find(
+        const idleDlmmBots = this.rotationService.botAssignmentsCollection.find(
             {
                 activePosition: {
                     $eq: undefined,
@@ -48,7 +48,7 @@ export class DlmmSubscriptionService {
                 },
             }
         )
-        const activeDlmmBots = this.liquidityPoolAssignmentsRotationService.botAssignmentsCollection.find(
+        const activeDlmmBots = this.rotationService.botAssignmentsCollection.find(
             {
                 liquidityPools: {
                     $where: (liquidityPools: Array<string>) => liquidityPools.includes(event.id),

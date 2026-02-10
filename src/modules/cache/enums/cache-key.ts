@@ -3,6 +3,7 @@
  * Each key corresponds to a cache namespace and its result type.
  */
 export enum CacheKey {
+    RotationBotAssignments = "rotation.bot.assignments",
     Withdraw = "withdraw",
     SendOtpCode = "send.otp.code",
     AggregatedTokenPrice = "aggregated.token.price",

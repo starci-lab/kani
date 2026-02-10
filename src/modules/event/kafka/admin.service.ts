@@ -292,7 +292,8 @@ export class KafkaAdminService implements OnModuleInit {
         )
 
         // log successful topic creation
-        this.winstonService.log(WinstonLog.KafkaTopicsCreated,
+        this.winstonService.log(
+            WinstonLog.KafkaTopicsCreated,
             {
                 topics: topicsToCreate.map(([topic]) => topic),
             }

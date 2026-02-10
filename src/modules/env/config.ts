@@ -597,6 +597,10 @@ export const envConfig = () => ({
             },
         },
         ttl: {
+            rotationBotAssignments: parseEnvInt({
+                key: "CACHE_TTL_ROTATION_BOT_ASSIGNMENTS",
+                defaultValue: 0
+            }),
             withdraw: parseEnvMs({
                 key: "CACHE_TTL_WITHDRAW",
                 defaultValue: "5m"
@@ -631,10 +635,24 @@ export const envConfig = () => ({
             }),
         },
         stale: {
-            priceMaxAgeMs: parseEnvMs({
-                key: "CACHE_STALE_PRICE_MAX_AGE_MS",
-                defaultValue: "10s"
-            }),
+            priceMaxAgeMs: parseEnvMs(
+                {
+                    key: "CACHE_STALE_PRICE_MAX_AGE_MS",
+                    defaultValue: "10s"
+                }
+            ),
+            rotationBotAssignmentsMaxAgeMs: parseEnvMs(
+                {
+                    key: "CACHE_STALE_ROTATION_BOT_ASSIGNMENTS_MAX_AGE_MS",
+                    defaultValue: "10s"
+                }
+            ),
+            dynamicLiquidityPoolInfoMaxAgeMs: parseEnvMs(
+                {
+                    key: "CACHE_STALE_DYNAMIC_LIQUIDITY_POOL_INFO_MAX_AGE_MS",
+                    defaultValue: "10s"
+                }
+            ),
         },
     },
     /** Price validation: max allowed deviation ratio. */

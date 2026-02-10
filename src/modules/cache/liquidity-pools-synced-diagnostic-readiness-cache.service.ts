@@ -8,7 +8,7 @@ import {
     CacheKey
 } from "./enums"
 import {
-    LiquidityPoolsSyncedDiagnosticReadinessResult,
+    LiquidityPoolsSyncedDiagnosticReadinessCacheResult,
     SetLiquidityPoolsSyncedDiagnosticReadinessParams
 } from "./types"
 import {
@@ -70,7 +70,7 @@ export class LiquidityPoolsSyncedDiagnosticReadinessCacheService {
      * @example
      * const result = await service.get()
      */
-    async get(): Promise<LiquidityPoolsSyncedDiagnosticReadinessResult> {
+    async get(): Promise<LiquidityPoolsSyncedDiagnosticReadinessCacheResult> {
         const cachedResult = await this.cacheService.get({
             key: CacheKey.LiquidityPoolsSyncedDiagnosticReadiness,
         })

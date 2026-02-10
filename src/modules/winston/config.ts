@@ -2,6 +2,8 @@ import {
     WinstonLog,
 } from "./enums"
 import {
+    NotSyncedProcessClosePositionMessage,
+    NotSyncedProcessOpenPositionMessage,
     WinstonLevel,
 } from "./types"
 import {
@@ -1908,5 +1910,21 @@ export const configMap = {
         loki: true,
         messageType: {
         } as ConsulRegisterSuccessfullyMessage,
+    },
+    // Not Synced Process Open Position
+    [WinstonLog.NotSyncedProcessOpenPosition]: {
+        name: WinstonLog.NotSyncedProcessOpenPosition,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as NotSyncedProcessOpenPositionMessage,
+    },
+    // Not Synced Process Close Position
+    [WinstonLog.NotSyncedProcessClosePosition]: {
+        name: WinstonLog.NotSyncedProcessClosePosition,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as NotSyncedProcessClosePositionMessage,
     },
 }

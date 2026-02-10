@@ -12,14 +12,18 @@ import {
     EventEmitterService 
 } from "@modules/event"
 import {
-    LiquidityPoolAssignmentsRotationService 
-} from "./liquidity-pool-assignments-rotation.service"
+    RotationService 
+} from "../rotation/rotation.service"
+import {
+    PrimaryMemoryStorageService 
+} from "@modules/databases"
 
 @Injectable()
 export class ClmmSubscriptionService {
     constructor(
         private readonly eventEmitterService: EventEmitterService,
-        private readonly liquidityPoolAssignmentsRotationService: LiquidityPoolAssignmentsRotationService,
+        private readonly rotationService: RotationService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
     
     /**
@@ -37,12 +41,7 @@ export class ClmmSubscriptionService {
     async handleClmmLiquidityPoolsSynced(
         event: ClmmLiquidityPoolsSyncedEventPayload
     ) {
-        // Select bots that are currently idle and associated with THIS CLMM pool
-        // const idleClmmBots =
-        //     this.liquidityPoolAssignmentsRotationService.botAssignmentsCollection.find()
-        //         .filter((bot) => !bot.activePosition)
-        //         .filter((bot) => bot.liquidityPools.some((liquidityPool) => liquidityPool?.toString() === event.id))
-        const idleClmmBots = this.liquidityPoolAssignmentsRotationService.botAssignmentsCollection.find(
+        const idleClmmBots = this.rotationService.botAssignmentsCollection.find(
             {
                 activePosition: {
                     $eq: undefined,
@@ -52,7 +51,7 @@ export class ClmmSubscriptionService {
                 },
             }
         )
-        const activeClmmBots = this.liquidityPoolAssignmentsRotationService.botAssignmentsCollection.find(
+        const activeClmmBots = this.rotationService.botAssignmentsCollection.find(
             {
                 liquidityPools: {
                     $where: (liquidityPools: Array<string>) => liquidityPools.includes(event.id),

@@ -3,16 +3,13 @@ import {
 } from "@nestjs/common"
 import {
     ConfigurableModuleClass, OPTIONS_TYPE 
-} from "./subscriptions.module-definition"
+} from "./rotation.module-definition"
 import {
-    ClmmSubscriptionService 
-} from "./clmm.service"
-import {
-    DlmmSubscriptionService 
-} from "./dlmm.service"
+    RotationService 
+} from "./rotation.service"
 @Module({
 })
-export class SubscriptionsModule extends ConfigurableModuleClass {
+export class RotationModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE
     ): DynamicModule {
@@ -21,10 +18,11 @@ export class SubscriptionsModule extends ConfigurableModuleClass {
             ...dynamicModule,
             providers: [
                 ...dynamicModule.providers || [], 
-                ClmmSubscriptionService, 
-                DlmmSubscriptionService,
+                RotationService
             ],
-            exports: [],
+            exports: [
+                RotationService,
+            ],
         }
     }
 }   

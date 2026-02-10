@@ -6,6 +6,6 @@ import type {
 export type LiquidityPoolSyncedDiagnosticReadinessResult = SnapshotCacheResult
 
 /** Liquidity pools synced diagnostic readiness cache result. */
-export interface LiquidityPoolsSyncedDiagnosticReadinessResult extends SnapshotCacheResult {
+export interface LiquidityPoolsSyncedDiagnosticReadinessCacheResult extends SnapshotCacheResult {
     results: Partial<Record<string, LiquidityPoolSyncedDiagnosticReadinessResult>>
 }

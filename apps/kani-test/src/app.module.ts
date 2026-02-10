@@ -4,8 +4,15 @@ import {
 import {
     AppService 
 } from "./app.service"
+import {
+    GraphModule 
+} from "@modules/graph"
 @Module({
-    imports: [],
+    imports: [
+        GraphModule.register({
+            isGlobal: true,
+        }),
+    ],
     controllers: [],
     providers: [AppService],
 })

@@ -8,8 +8,9 @@ import type {
     AggregatedTokenPriceCacheResult,
     DynamicClmmLiquidityPoolInfoCacheResult,
     DynamicDlmmLiquidityPoolInfoCacheResult,
-    LiquidityPoolsSyncedDiagnosticReadinessResult,
+    LiquidityPoolsSyncedDiagnosticReadinessCacheResult,
     PoolAnalyticsCacheResult,
+    RotationBotAssignmentsCacheResult,
     SendOtpCodeCacheResult,
     SessionIdCacheResult,
     WithdrawCacheResult,
@@ -53,11 +54,16 @@ export const configMap = {
     [CacheKey.LiquidityPoolsSyncedDiagnosticReadiness]: {
         ttl: envConfig().cache.ttl.liquidityPoolsSyncedDiagnosticReadiness,
         cacheResult: {
-        } as LiquidityPoolsSyncedDiagnosticReadinessResult,
+        } as LiquidityPoolsSyncedDiagnosticReadinessCacheResult,
     },
     [CacheKey.SendOtpCode]: {
         ttl: envConfig().cache.ttl.sendOtpCode,
         cacheResult: {
         } as SendOtpCodeCacheResult,
+    },
+    [CacheKey.RotationBotAssignments]: {
+        ttl: envConfig().cache.ttl.rotationBotAssignments,
+        cacheResult: {
+        } as RotationBotAssignmentsCacheResult,
     },
 }

@@ -6,12 +6,13 @@ import type {
     AggregatedTokenPriceCacheResult,
     DynamicClmmLiquidityPoolInfoCacheResult,
     DynamicDlmmLiquidityPoolInfoCacheResult,
-    LiquidityPoolsSyncedDiagnosticReadinessResult,
+    LiquidityPoolsSyncedDiagnosticReadinessCacheResult,
     PoolAnalyticsCacheResult,
+    RotationBotAssignmentsCacheResult,
     SendOtpCodeCacheResult,
     SessionIdCacheResult,
     WithdrawCacheResult,
-} from "./messages"
+} from "./cache-results"
 
 /** Maps each cache key to its cache result type. */
 export interface CacheResultByKey {
@@ -22,7 +23,8 @@ export interface CacheResultByKey {
     [CacheKey.DynamicDlmmLiquidityPoolInfo]: DynamicDlmmLiquidityPoolInfoCacheResult
     [CacheKey.PoolAnalytics]: PoolAnalyticsCacheResult
     [CacheKey.SessionId]: SessionIdCacheResult
-    [CacheKey.LiquidityPoolsSyncedDiagnosticReadiness]: LiquidityPoolsSyncedDiagnosticReadinessResult
+    [CacheKey.LiquidityPoolsSyncedDiagnosticReadiness]: LiquidityPoolsSyncedDiagnosticReadinessCacheResult
+    [CacheKey.RotationBotAssignments]: RotationBotAssignmentsCacheResult
 }
 
 /** Params for cache get (key, optional args, cache type). */

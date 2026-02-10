@@ -1,0 +1,107 @@
+{
+  "alice": [
+    "steak",
+    "dumpling"
+  ],
+  "bob": [
+    "salad",
+    "sushi",
+    "spaghetti"
+  ],
+  "charlie": [
+    "donut",
+    "spaghetti",
+    "sushi",
+    "taco"
+  ],
+  "david": [
+    "sushi",
+    "burger",
+    "pho",
+    "ice cream",
+    "sandwich"
+  ],
+  "emma": [
+    "fried chicken",
+    "sandwich",
+    "burrito"
+  ],
+  "frank": [
+    "banh mi",
+    "burger"
+  ],
+  "grace": [
+    "pizza",
+    "pho",
+    "sandwich",
+    "banh mi"
+  ],
+  "henry": [
+    "ramen",
+    "sushi"
+  ],
+  "ivy": [
+    "pizza",
+    "ice cream",
+    "burger"
+  ],
+  "jack": [
+    "lasagna",
+    "spaghetti"
+  ],
+  "kate": [
+    "curry",
+    "hotdog",
+    "donut",
+    "dumpling",
+    "pizza"
+  ],
+  "leo": [
+    "dumpling",
+    "burrito"
+  ],
+  "mia": [
+    "salad"
+  ],
+  "nick": [
+    "pizza",
+    "pasta",
+    "hotdog",
+    "curry",
+    "burger"
+  ],
+  "olivia": [
+    "pasta",
+    "ice cream",
+    "hotdog",
+    "salad"
+  ],
+  "paul": [
+    "burger",
+    "taco"
+  ],
+  "quinn": [
+    "pizza",
+    "steak"
+  ],
+  "rose": [
+    "taco",
+    "banh mi",
+    "curry",
+    "dumpling"
+  ],
+  "sam": [
+    "sandwich",
+    "sushi",
+    "burger",
+    "steak",
+    "fried chicken"
+  ],
+  "tina": [
+    "sandwich",
+    "donut",
+    "spaghetti",
+    "taco",
+    "dumpling"
+  ]
+}

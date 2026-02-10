@@ -213,4 +213,6 @@ export enum WinstonLog {
     MetricInitialized = "Prometheus.Metric.Initialized",
     ConsulRegisterFailed = "Consul.Register.Failed",
     ConsulRegisterSuccessfully = "Consul.Register.Successfully",
+    NotSyncedProcessOpenPosition = "Not.Synced.Process.Open.Position",
+    NotSyncedProcessClosePosition = "Not.Synced.Process.Close.Position",
 }
