@@ -1,20 +1,21 @@
+import {
+    Dayjs 
+} from "dayjs"
+
 /** Result of dynamic liquidity pool info diagnostic readiness check. */
 export interface DynamicLiquidityPoolInfoDiagnosticReadinessResult {
     id: string
-    ready: boolean
-    ageMs?: number
+    snapshotAt?: Dayjs
 }
 
 /** Message for liquidity pools synced diagnostic. */
 export interface LiquidityPoolsSyncedDiagnosticMessage {
-    ready: boolean
-    ageMs?: number
+    snapshotAt?: Dayjs
 }
 
 /** Result of price diagnostic readiness check. */
 export interface PriceDiagnosticReadinessResult {
     id: string
-    ready: boolean
-    ageMs?: number
+    snapshotAt?: Dayjs
     price?: number
 }

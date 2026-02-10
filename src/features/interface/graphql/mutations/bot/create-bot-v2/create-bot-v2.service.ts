@@ -98,19 +98,22 @@ export class CreateBotV2Service {
         // TO DO: we will find the most recommended liquidity pools for the user
         if (!liquidityPoolIds || liquidityPoolIds.length === 0) { 
             liquidityPoolIds = _
-                .chain(this.primaryMemoryStorageService.liquidityPoolCollection.find({
-                    chainId: {
-                        $eq: chainId 
-                    },
-                }))
-                .filter((liquidityPool) => {
-                    const tokenA = liquidityPool.tokenA.toString()
-                    const tokenB = liquidityPool.tokenB.toString()
-                    return (
-                        (tokenA === targetToken.id && tokenB === quoteToken.id) ||
+                .chain(
+                    this.primaryMemoryStorageService.liquidityPoolCollection.find({
+                        chainId: {
+                            $eq: chainId 
+                        },
+                    }
+                    ))
+                .filter(
+                    (liquidityPool) => {
+                        const tokenA = liquidityPool.tokenA.toString()
+                        const tokenB = liquidityPool.tokenB.toString()
+                        return (
+                            (tokenA === targetToken.id && tokenB === quoteToken.id) ||
                     (tokenA === quoteToken.id && tokenB === targetToken.id)
-                    )
-                })
+                        )
+                    })
                 .sampleSize(3)
                 .map((liquidityPool) => liquidityPool.id)
                 .value()

@@ -47,12 +47,14 @@ export class ConsulRegisterService {
             serviceName: options.serviceName,
         }
 
-        this.axios = this.axiosService.create({
-            key: "consul",
-            config: {
-                baseURL: `${this.config.host}/v1`,
-            },
-        })
+        this.axios = this.axiosService.create(
+            {
+                key: "consul",
+                config: {
+                    baseURL: `${this.config.host}/v1`,
+                },
+            }
+        )
     }
 
     /**

@@ -438,6 +438,11 @@ export const envConfig = () => ({
                 }),
             },
             operation: {
+                notSynced: {
+                    interval: parseEnvMs({
+                        key: "EXECUTOR_OPERATION_NOT_SYNCED_INTERVAL", defaultValue: "10s" 
+                    }),
+                },
                 openPosition: {
                     requeue: {
                         interval: parseEnvMs({
@@ -836,7 +841,14 @@ export const envConfig = () => ({
         serviceUrl: parseEnvString({
             key: "CONSUL_SERVICE_URL",
             defaultValue: "http://localhost:3000"
-        })
+        }),
+        register: {
+            // Interval for Consul service registration
+            interval: parseEnvMs({
+                key: "CONSUL_REGISTER_INTERVAL",
+                defaultValue: "10s"
+            }),
+        },
     },
     /** Prometheus: service registration for DNS discovery. */
     prometheus: {

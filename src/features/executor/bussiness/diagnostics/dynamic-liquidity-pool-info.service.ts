@@ -15,6 +15,7 @@ import {
 } from "@modules/winston"
 import {
     AsyncService,
+    DayjsService,
     LokiJSService,
 } from "@modules/mixin"
 import {
@@ -56,6 +57,7 @@ export class DynamicLiquidityPoolInfoDiagnosticService implements OnModuleInit, 
         private readonly asyncService: AsyncService,
         private readonly cacheService: CacheService,
         private readonly lokiJSService: LokiJSService,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     @Interval(envConfig().executor.diagnose.dynamicLiquidityPoolInfo.interval)
@@ -102,83 +104,75 @@ export class DynamicLiquidityPoolInfoDiagnosticService implements OnModuleInit, 
             },
         })
     }
-
+    
     /**
-     * Diagnose dynamic liquidity pool info availability for all active pools.
+     * Diagnose dynamic liquidity pool info for all active pools.
      *
-     * @returns Array of diagnostic readiness results per pool
+     * @returns Array of dynamic liquidity pool info diagnostic readiness results
      */
     async diagnose(): Promise<Array<DynamicLiquidityPoolInfoDiagnosticReadinessResult>> {
-        // Evaluate each pool independently and return a full results list.
         const liquidityPools = this.liquidityPoolCollection.find()
-        const promises: Array<Promise<DynamicLiquidityPoolInfoDiagnosticReadinessResult>> = liquidityPools.map(
-            async (liquidityPool) => {
-                try {
-                    // Cache key depends on pool type.
-                    const cacheKey =
-                        liquidityPool.type === LiquidityPoolType.Clmm
-                            ? CacheKey.DynamicClmmLiquidityPoolInfo
-                            : CacheKey.DynamicDlmmLiquidityPoolInfo
-
-                    const dynamicInfo = await this.cacheService.get({
-                        key: cacheKey,
-                        args: [liquidityPool.id.toString()],
-                    })
-
-                    if (!dynamicInfo) {
-                        // Cache miss: snapshot not available yet.
-                        this.winstonService.log(
-                            WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailedNotFound,
-                            {
-                                liquidityPoolId: liquidityPool.displayId,
-                            },
-                        )
-
-                        return {
-                            id: liquidityPool.displayId,
-                            ready: false,
-                        }
-                    }
-
-                    // Staleness is based on the snapshot timestamp vs now.
-                    const ageMs = Date.now() - dynamicInfo.snapshotAt.toDate().getTime()
-
-                    if (ageMs > liquidityPool.staleMs) {
-                        this.winstonService.log(
-                            WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailedStale,
-                            {
-                                liquidityPoolId: liquidityPool.displayId,
-                                ageMs,
-                            },
-                        )
-                        return {
-                            id: liquidityPool.id,
-                            ready: false,
-                            ageMs,
-                        }
-                    }
-                    return {
-                        id: liquidityPool.id,
-                        ready: true,
-                        ageMs,
-                    }
-                } catch (error) {
-                    // Any unexpected error: log and mark as failed.
+      
+        const promises: Array<Promise<DynamicLiquidityPoolInfoDiagnosticReadinessResult>> = liquidityPools.map(async (liquidityPool) => {
+            try {
+                const cacheKey =
+              liquidityPool.type === LiquidityPoolType.Clmm
+                  ? CacheKey.DynamicClmmLiquidityPoolInfo
+                  : CacheKey.DynamicDlmmLiquidityPoolInfo
+      
+                const dynamicInfo = await this.cacheService.get({
+                    key: cacheKey,
+                    args: [liquidityPool.id.toString()],
+                })
+      
+                if (!dynamicInfo) {
                     this.winstonService.log(
-                        WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailed,
+                        WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailedNotFound,
                         {
-                            liquidityPoolId: liquidityPool.displayId,
-                            error: error.message,
+                            liquidityPoolId: liquidityPool.displayId 
                         },
                     )
+      
                     return {
-                        id: liquidityPool.id,
-                        ready: false,
+                        id: liquidityPool.displayId,
                     }
                 }
+      
+                const snapshotAt = this.dayjsService.from(dynamicInfo.snapshotAt)
+                const ageMs = this.dayjsService.now().diff(snapshotAt,
+                    "ms")
+      
+                if (ageMs > liquidityPool.staleMs) {
+                    this.winstonService.log(
+                        WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailedStale,
+                        {
+                            liquidityPoolId: liquidityPool.displayId,
+                            ageMs,
+                        },
+                    )
+                }
+      
+                return {
+                    id: liquidityPool.displayId,
+                    snapshotAt,
+                }
+            } catch (error) {
+                this.winstonService.log(
+                    WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailed,
+                    {
+                        liquidityPoolId: liquidityPool.displayId,
+                        error: error.message,
+                    },
+                )
+      
+                return {
+                    id: liquidityPool.id,
+                    snapshotAt: undefined,
+                }
             }
-        )
-        return await this.asyncService.allMustDone<Array<DynamicLiquidityPoolInfoDiagnosticReadinessResult>>(promises)
+        })
+      
+        return this.asyncService.allMustDone(promises)
     }
 
     /**
@@ -190,9 +184,22 @@ export class DynamicLiquidityPoolInfoDiagnosticService implements OnModuleInit, 
     async ready(id: string): Promise<boolean> {
         const result = this.results.findOne({
             id: {
-                $eq: id,
+                $eq: id 
+            } 
+        })
+        if (!result || !result.snapshotAt) return false
+      
+        const liquidityPool = this.liquidityPoolCollection.findOne({
+            id: {
+                $eq: id 
             },
         })
-        return result?.ready ?? false
+        if (!liquidityPool) return false
+      
+        const ageMs = this.dayjsService.now().diff(
+            this.dayjsService.from(result.snapshotAt),
+            "ms"
+        )
+        return ageMs <= liquidityPool.staleMs
     }
 }

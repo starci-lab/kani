@@ -18,4 +18,6 @@ export enum MetricName {
     ClosePositionSuccessTotal = "kanibot_close_position_success_total",
     /** Current bot count gauge. */
     BotCount = "kanibot_bot_count",
+    /** Current transaction count gauge. */
+    TxCount = "kanibot_tx_count",
 }

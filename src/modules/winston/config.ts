@@ -199,6 +199,8 @@ import {
     OpenPositionLockAuthorityReleasedMessage,
     ClosePositionLockAuthorityReleasedMessage,
     WithdrawLockAuthorityReleasedMessage,
+    ConsulRegisterFailedMessage,
+    ConsulRegisterSuccessfullyMessage,
 } from "./types"
 
 /** Map of Winston log names to level, Loki flag, and message type. */
@@ -1890,5 +1892,21 @@ export const configMap = {
         loki: true,
         messageType: {
         } as MetricInitializedMessage,
+    },
+    // Consul Register Failed
+    [WinstonLog.ConsulRegisterFailed]: {
+        name: WinstonLog.ConsulRegisterFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ConsulRegisterFailedMessage,
+    },
+    // Consul Register Successfully
+    [WinstonLog.ConsulRegisterSuccessfully]: {
+        name: WinstonLog.ConsulRegisterSuccessfully,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as ConsulRegisterSuccessfullyMessage,
     },
 }

@@ -19,6 +19,7 @@ import {
     HandleClosePositionService,
     HandleReconcileBalanceService,
     HandleWithdrawService,
+    HandleNotSyncedService,
 } from "./handlers"
 import {
     LockAuthorityService 
@@ -59,6 +60,7 @@ export class RuntimesModule extends ConfigurableModuleClass {
                 HandleClmmPositionCloseRequestedEventService,
                 HandleDlmmPositionCloseRequestedEventService,
                 HandleWithdrawService,
+                HandleNotSyncedService,
             ],
             exports: [
                 RuntimesFactoryService,

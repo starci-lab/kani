@@ -21,6 +21,10 @@ import {
 import {
     Interval 
 } from "@nestjs/schedule"
+import {
+    WinstonService,
+    WinstonLog,
+} from "@modules/winston"
 
 /**
  * Registers the executor with Consul for DNS-based service discovery.
@@ -36,29 +40,36 @@ export class RegisterPrometheusDnsService implements OnModuleInit, OnApplication
         private readonly consulRegisterService: ConsulRegisterService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
+        private readonly winstonService: WinstonService,
     ) {
     }
 
+    /**
+     * On module init.
+     */
     async onModuleInit(): Promise<void> {
         await this.registerDns()
     }
 
-    @Interval(10000)
+    /**
+     * Register the executor service with Consul every 10 seconds.
+     */
+    @Interval(envConfig().consul.register.interval)
     async registerDnsCron(): Promise<void> {
-        if (!this.options.enablePrometheusDnsDiscovery) {
-            return
-        }
         await this.registerDns()
     }
     /**
      * Register the executor service with Consul every 10 seconds.
      */
     async registerDns(): Promise<void> {
+        if (!this.options.enablePrometheusDnsDiscovery) {
+            return
+        }
         try {
         // register service
             await this.consulRegisterService.agentServiceRegister(
                 {
-                // ID is the executor ID
+                    // ID is the executor ID
                     id: envConfig().k8s.global.podName,
                     // port is the port to register with Consul
                     port: this.options.port ?? 3000,
@@ -78,8 +89,19 @@ export class RegisterPrometheusDnsService implements OnModuleInit, OnApplication
                     },
                 }
             )
+            this.winstonService.log(
+                WinstonLog.ConsulRegisterSuccessfully,
+                {
+                    id: envConfig().k8s.global.podName,
+                }
+            )
         } catch (error) {
-            console.error(`Error registering DNS: ${error}`)
+            this.winstonService.log(
+                WinstonLog.ConsulRegisterFailed,
+                {
+                    error: error.message,
+                }
+            )
         }
     }
     /**
@@ -89,6 +111,8 @@ export class RegisterPrometheusDnsService implements OnModuleInit, OnApplication
         if (!this.options.enablePrometheusDnsDiscovery) {
             return
         }
-        await this.consulRegisterService.agentServiceDeregister(envConfig().k8s.global.podName)
+        await this.consulRegisterService.agentServiceDeregister(
+            envConfig().k8s.global.podName
+        )
     }
 }

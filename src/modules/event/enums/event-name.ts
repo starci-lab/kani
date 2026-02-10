@@ -20,5 +20,5 @@ export enum EventName {
     DlmmPositionCloseWithoutEventRequested = "dlmm.position.close.without.event.requested",
     LockAuthorityTimeout = "lock.authority.timeout",
     LiquidityPoolsBecameReady = "liquidity.pools.became.ready",
-    LiquidityPoolsBecameNotReady = "liquidity.pools.became.not.ready",
+    LiquidityPoolsBecameNotReady = "liquidity.pools.became.not.ready"
 }

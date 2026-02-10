@@ -5,9 +5,6 @@ import {
     APP_FILTER 
 } from "@nestjs/core"
 import {
-    ExecutorModule 
-} from "@modules/executor"
-import {
     WinstonLevel, WinstonModule 
 } from "@modules/winston"
 import {
@@ -99,6 +96,9 @@ import {
 import {
     ServiceName 
 } from "@modules/common"
+import {
+    ExecutorModule 
+} from "@features/executor"
 
 @Module({
     imports: [

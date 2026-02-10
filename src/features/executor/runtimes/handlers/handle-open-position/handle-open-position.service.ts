@@ -186,9 +186,11 @@ export class HandleOpenPositionService {
                                     tokenId: token.displayId,
                                 }
                             )
-                            throw new PriceDiagnosticNotReadyException({
-                                tokenId: token.displayId,
-                            })
+                            throw new PriceDiagnosticNotReadyException(
+                                {
+                                    tokenId: token.displayId,
+                                }
+                            )
                         }
                     }
                 )(),

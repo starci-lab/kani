@@ -21,15 +21,34 @@ import {
     BotNotOwnedByUserException,
     BotNotV2Exception,
     UserNotFoundException,
+    CannotToggleBotRunningStateException,
 } from "@modules/exceptions"
+import {
+    BalanceEvalStatus,
+    EvalBalanceService,
+} from "@modules/blockchains"
+import {
+    WinstonService,
+} from "@modules/winston"
 
+/**
+ * Service for toggling the running state of a bot
+ */
 @Injectable()
 export class ToggleBotV2Service {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly evalBalanceService: EvalBalanceService,
+        private readonly winstonService: WinstonService,
     ) { }
-
+    
+    /**
+     * Toggles the running state of a bot
+     * @param response - The response from the Privy API
+     * @param id - The ID of the bot
+     * @param running - The new running state of the bot
+     */
     async toggleBotV2(
         response: VerifyAccessTokenResponse,
         {
@@ -68,17 +87,32 @@ export class ToggleBotV2Service {
                 id,
             })
         }
-        // we toggle the bot running state
-        await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+        // evaluate the balance
+        const { status } = await this.evalBalanceService.eval(
             {
-                _id: id 
-            },
-            {
-                $set: {
-                    running 
-                } 
+                bot,
             }
         )
+        if (status !== BalanceEvalStatus.Ok) {
+            throw new CannotToggleBotRunningStateException(
+                {
+                    id,
+                    status,
+                }
+            )
+        }
+        // we toggle the bot running state
+        await this.connection.model<BotSchema>(BotSchema.name)
+            .updateOne(
+                {
+                    _id: id 
+                },
+                {
+                    $set: {
+                        running 
+                    } 
+                }
+            )
     }
 }
 

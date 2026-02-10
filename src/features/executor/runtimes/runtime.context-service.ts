@@ -36,6 +36,7 @@ import {
     HandleClmmPositionCloseRequestedEventService,
     HandleDlmmPositionCloseRequestedEventService,
     HandleWithdrawService,
+    HandleNotSyncedService,
 } from "./handlers"
 
 @Injectable(
@@ -67,6 +68,7 @@ export class RuntimeContextService {
         private readonly handleClmmPositionCloseRequestedEventService: HandleClmmPositionCloseRequestedEventService,
         private readonly handleDlmmPositionCloseRequestedEventService: HandleDlmmPositionCloseRequestedEventService,
         private readonly handleWithdrawService: HandleWithdrawService,
+        private readonly handleNotSyncedService: HandleNotSyncedService,
     ) { }
 
     private readonly executorBotUpdatedHandler = (
@@ -167,8 +169,10 @@ export class RuntimeContextService {
                             if (!this.bot) {
                                 return
                             }
-                            this.handleDlmmPositionOpenRequestedEventService.process(this.bot,
-                                event)
+                            this.handleDlmmPositionOpenRequestedEventService.process(
+                                this.bot,
+                                event
+                            )
                         },
                     })
                     // subscribe to clmm position close requested events
@@ -181,9 +185,21 @@ export class RuntimeContextService {
                             }
                             this.handleClmmPositionCloseRequestedEventService.process(
                                 this.bot,
-                                event)
+                                event
+                            )
                         },
                     })
+                    // subscribe to liquidity pools synced events
+                    this.eventEmitterService.on(
+                        {
+                            event: EventName.LiquidityPoolsBecameReady,
+                            listener: (
+                                { ids }
+                            ) => {
+                                this.handleNotSyncedService.markSynced(ids)
+                            },
+                        }
+                    )
                     // subscribe to dlmm position close requested events
                     this.eventEmitterService.on({
                         event: EventName.DlmmPositionCloseRequested,
@@ -196,6 +212,11 @@ export class RuntimeContextService {
                                 event)
                         },
                     })
+                    // invoke and schedule the handle not synced service
+                    this.invokeAndSchedule(
+                        envConfig().executor.runtime.operation.notSynced.interval,
+                        (bot) => this.handleNotSyncedService.process(bot),
+                    )
                     // invoke and schedule the reconcile balance service
                     this.invokeAndSchedule(
                         envConfig().executor.runtime.operation.reconcileBalance.interval.poll,

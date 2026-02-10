@@ -211,4 +211,6 @@ export enum WinstonLog {
     ClosePositionLockAuthorityReleased = "Close.Position.Lock.Authority.Released",
     WithdrawLockAuthorityReleased = "Withdraw.Lock.Authority.Released",
     MetricInitialized = "Prometheus.Metric.Initialized",
+    ConsulRegisterFailed = "Consul.Register.Failed",
+    ConsulRegisterSuccessfully = "Consul.Register.Successfully",
 }
