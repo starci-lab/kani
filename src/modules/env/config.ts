@@ -629,10 +629,12 @@ export const envConfig = () => ({
                 key: "CACHE_TTL_POOL_ANALYTICS",
                 defaultValue: "100years"
             }),
-            liquidityPoolsSyncedDiagnosticReadiness: parseEnvMs({
-                key: "CACHE_TTL_LIQUIDITY_POOLS_SYNCED_DIAGNOSTIC_READINESS",
-                defaultValue: "100years"
-            }),
+            liquidityPoolsSyncedDiagnosticReadiness: parseEnvMs(
+                {
+                    key: "CACHE_TTL_LIQUIDITY_POOLS_SYNCED_DIAGNOSTIC_READINESS",
+                    defaultValue: "100years"
+                }
+            ),
         },
         stale: {
             priceMaxAgeMs: parseEnvMs(
@@ -644,12 +646,6 @@ export const envConfig = () => ({
             rotationBotAssignmentsMaxAgeMs: parseEnvMs(
                 {
                     key: "CACHE_STALE_ROTATION_BOT_ASSIGNMENTS_MAX_AGE_MS",
-                    defaultValue: "10s"
-                }
-            ),
-            dynamicLiquidityPoolInfoMaxAgeMs: parseEnvMs(
-                {
-                    key: "CACHE_STALE_DYNAMIC_LIQUIDITY_POOL_INFO_MAX_AGE_MS",
                     defaultValue: "10s"
                 }
             ),
