@@ -49,6 +49,12 @@ import {
 import {
     EventName
 } from "../enums"
+import {
+    InjectKafkaAdmin 
+} from "./kafka.decorators"
+import {
+    Admin 
+} from "kafkajs"
 
 /**
  * Service that bridges Kafka messages to NestJS EventEmitter.
@@ -77,6 +83,8 @@ implements
         private readonly retryService: RetryService,
         private readonly kafkaMessageFactoryService: KafkaMessageFactoryService,
         private readonly cacheService: CacheService,
+        @InjectKafkaAdmin()
+        private readonly kafkaAdmin: Admin,
     ) { }
 
     /**
@@ -248,6 +256,9 @@ implements
      */
     onApplicationShutdown() {
         // Consumer disconnect is handled by KafkaConsumerService.onApplicationShutdown
+        this.kafkaConsumerService.consumer.disconnect()
+        // Delete the group from Kafka
+        this.kafkaAdmin.deleteGroups([envConfig().k8s.global.podName])
     }
 }
 
