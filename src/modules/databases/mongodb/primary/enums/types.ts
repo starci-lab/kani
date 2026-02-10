@@ -143,6 +143,7 @@ export enum JobStatus {
     Executed = "executed",
     Confirmed = "confirmed",
     Completed = "completed",
+    Cleared = "cleared",
     Failed = "failed",
 }
 
@@ -164,6 +165,9 @@ registerEnumType(GraphQLTypeJobStatus,
             },
             [JobStatus.Completed]: {
                 description: "The job has been completed",
+            },
+            [JobStatus.Cleared]: {
+                description: "The job has been cleared",
             },
             [JobStatus.Failed]: {
                 description: "The job has failed",

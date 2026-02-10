@@ -5,6 +5,7 @@ import {
     InjectPrimaryMongoose,
     BotSchema,
     JobSchema,
+    JobStatus,
 } from "@modules/databases"
 import {
     Connection,
@@ -15,6 +16,12 @@ import {
 import type {
     ClearServiceParams
 } from "./types"
+import {
+    DayjsService,
+} from "@modules/mixin"
+import {
+    envConfig,
+} from "@modules/env"
 
 /**
  * Service for clearing the bot's `activeJob` and releasing the lock authority.
@@ -25,6 +32,7 @@ export class ClearService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly lockAuthorityService: LockAuthorityService,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     /**
@@ -48,17 +56,28 @@ export class ClearService {
                     },
                     {
                         $unset: {
-                            activeJob: null,
+                            activeJob: "",
                         },
                     },
                     {
                         session,
                     }
                 )
-                // clear the job
-                await this.connection.model<JobSchema>(JobSchema.name).deleteOne(
+                // clear the job by updating the job status to completed
+                await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                     {
                         _id: jobId,
+                    },
+                    {
+                        $set: {
+                            status: JobStatus.Cleared,
+                            processedAt: this.dayjsService.now().toDate(),
+                            ...(envConfig().executor.workers.job.level === 1 ? {
+                                $unset: {
+                                    data: null,
+                                },
+                            } : undefined),
+                        },
                     },
                     {
                         session,

@@ -30,6 +30,12 @@ import {
 import {
     LockAuthorityService,
 } from "../../bussiness"
+import {
+    DayjsService,
+} from "@modules/mixin"
+import {
+    envConfig,
+} from "@modules/env"
 
 /**
  * Service for handling job failure.
@@ -41,6 +47,7 @@ export class OnFailedService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly lockAuthorityService: LockAuthorityService,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     /** Winston log event per queue. */
@@ -115,7 +122,13 @@ export class OnFailedService {
                         },
                         {
                             $set: {
-                                status: JobStatus.Failed 
+                                status: JobStatus.Failed,
+                                processedAt: this.dayjsService.now().toDate(),
+                                ...(envConfig().executor.workers.job.level === 1 ? {
+                                    $unset: {
+                                        data: null,
+                                    },
+                                } : undefined),
                             },
                         },
                         {

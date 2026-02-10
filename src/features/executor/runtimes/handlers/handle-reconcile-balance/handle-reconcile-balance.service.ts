@@ -6,7 +6,6 @@ import type {
 } from "@modules/databases"
 import {
     ReconcileBalanceEnqueueService,
-    EvalSnapshotService,
 } from "@modules/blockchains"
 import {
     LockAuthorityService 
@@ -51,7 +50,6 @@ export class HandleReconcileBalanceService {
         private readonly waitService: WaitService,
         @InjectQueue(bullData[BullQueueName.ReconcileBalance].name)
         private readonly reconcileBalanceQueue: Queue<string>,
-        private readonly evalSnapshotService: EvalSnapshotService,
     ) {}
 
     /**

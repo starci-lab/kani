@@ -149,6 +149,7 @@ export const getJobStatusOrder = (status: JobStatus): number => {
     case JobStatus.Executed: return 2
     case JobStatus.Confirmed: return 3
     case JobStatus.Completed: return 4
-    case JobStatus.Failed: return 0
+    case JobStatus.Cleared: return 5
+    case JobStatus.Failed: return 6
     }
 }

@@ -98,7 +98,6 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                             session
                         })
                     const job = jobRaw.toJSON<JobSchema>()
-                    
                     // update bot with active job reference
                     await this.connection.model<BotSchema>(BotSchema.name)
                         .updateOne(
