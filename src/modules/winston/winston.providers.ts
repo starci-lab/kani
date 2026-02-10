@@ -20,6 +20,7 @@ import {
 import {
     WinstonLevel 
 } from "./types"
+
 export const createConsoleTransport = (
     options: typeof OPTIONS_TYPE
 ) => {
