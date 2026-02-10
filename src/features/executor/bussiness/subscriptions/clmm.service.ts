@@ -76,6 +76,7 @@ export class ClmmSubscriptionService {
             executor: envConfig().executor.id,
             activePosition: {
                 $exists: true,
+                $ne: null,
             },
             $or: Array.from(this.rotationService.botAssignments.entries()).map(([
                 botId, 
