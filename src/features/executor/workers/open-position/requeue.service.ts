@@ -37,9 +37,6 @@ import {
     LiquidityPoolStateService 
 } from "@modules/blockchains"
 import {
-    BotsLoaderService 
-} from "../../loaders"
-import {
     LockAuthorityService 
 } from "../../bussiness"
 import {
@@ -63,7 +60,6 @@ export class RequeueService implements OnApplicationBootstrap {
         private readonly openPositionQueue: Queue<string>,
         private readonly dayjsService: DayjsService,
         private readonly winstonService: WinstonService,
-        private readonly botsLoaderService: BotsLoaderService,
         private readonly asyncService: AsyncService,
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,

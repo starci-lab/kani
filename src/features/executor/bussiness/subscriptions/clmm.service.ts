@@ -15,15 +15,28 @@ import {
     RotationService 
 } from "../rotation/rotation.service"
 import {
-    PrimaryMemoryStorageService 
+    InjectConnection 
+} from "@nestjs/mongoose"
+import {
+    Connection 
+} from "mongoose"
+import {
+    BotSchema 
 } from "@modules/databases"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    Types 
+} from "mongoose"
 
 @Injectable()
 export class ClmmSubscriptionService {
     constructor(
         private readonly eventEmitterService: EventEmitterService,
         private readonly rotationService: RotationService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        @InjectConnection()
+        private readonly connection: Connection,
     ) {}
     
     /**
@@ -41,26 +54,40 @@ export class ClmmSubscriptionService {
     async handleClmmLiquidityPoolsSynced(
         event: ClmmLiquidityPoolsSyncedEventPayload
     ) {
-        const idleClmmBots = this.rotationService.botAssignmentsCollection.find(
-            {
-                activePosition: {
-                    $eq: undefined,
-                },
-                liquidityPools: {
-                    $where: (liquidityPools: Array<string>) => liquidityPools.includes(event.id),
-                },
-            }
-        )
-        const activeClmmBots = this.rotationService.botAssignmentsCollection.find(
-            {
-                liquidityPools: {
-                    $where: (liquidityPools: Array<string>) => liquidityPools.includes(event.id),
-                },
-                activePosition: {
-                    $ne: undefined,
-                },
-            }
-        )
+
+        const idleClmmBots = await this.connection.model<BotSchema>(BotSchema.name).find({
+            // match executor
+            executor: envConfig().executor.id,
+            // no position assigned
+            activePosition: {
+                $exists: false,
+            },
+            // where liquidity pools assigned
+            $or: Array.from(this.rotationService.botAssignments.entries()).map(([
+                botId, 
+                botAssignment
+            ]) => ({
+                _id: new Types.ObjectId(botId),
+                liquidityPools: { 
+                    $in: botAssignment.liquidityPoolIds.map(id => new Types.ObjectId(id)) 
+                }
+            }))
+        })
+        const activeClmmBots = await this.connection.model<BotSchema>(BotSchema.name).find({
+            executor: envConfig().executor.id,
+            activePosition: {
+                $exists: true,
+            },
+            $or: Array.from(this.rotationService.botAssignments.entries()).map(([
+                botId, 
+                botAssignment
+            ]) => ({
+                _id: new Types.ObjectId(botId),
+                liquidityPools: { 
+                    $in: botAssignment.liquidityPoolIds.map(id => new Types.ObjectId(id)) 
+                }
+            }))
+        })
         // Broadcast open-position request to all idle bots on this pool.
         // No round-robin: each bot owns and opens its own position.
         for (const bot of idleClmmBots) {

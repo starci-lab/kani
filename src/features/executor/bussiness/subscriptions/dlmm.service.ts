@@ -14,12 +14,29 @@ import {
 import {
     RotationService
 } from "../rotation/rotation.service"
+import {
+    BotSchema 
+} from "@modules/databases"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    Types 
+} from "mongoose"
+import {
+    InjectConnection 
+} from "@nestjs/mongoose"
+import {
+    Connection 
+} from "mongoose"
 
 @Injectable()
 export class DlmmSubscriptionService {
     constructor(
         private readonly eventEmitterService: EventEmitterService,
         private readonly rotationService: RotationService,
+        @InjectConnection()
+        private readonly connection: Connection,
     ) { }
 
     /**
@@ -38,26 +55,37 @@ export class DlmmSubscriptionService {
         event: DlmmLiquidityPoolsSyncedEventPayload
     ) {
         // Select bots that are currently idle and associated with THIS DLMM pool
-        const idleDlmmBots = this.rotationService.botAssignmentsCollection.find(
-            {
+        const idleDlmmBots = await this.connection.model<BotSchema>(BotSchema.name).find({
+            executor: envConfig().executor.id,
+            activePosition: {
+                $exists: false,
+            },
+            $or: Array.from(this.rotationService.botAssignments.entries()).map(([
+                botId, 
+                botAssignment
+            ]) => ({
+                _id: new Types.ObjectId(botId),
+                liquidityPools: { 
+                    $in: botAssignment.liquidityPoolIds.map(id => new Types.ObjectId(id)) 
+                }
+            }))
+        })
+        const activeDlmmBots = await this.connection.model<BotSchema>(BotSchema.name)
+            .find({
+                executor: envConfig().executor.id,
                 activePosition: {
-                    $eq: undefined,
+                    $exists: true,
                 },
-                liquidityPools: {
-                    $where: (liquidityPools: Array<string>) => liquidityPools.includes(event.id),
-                },
-            }
-        )
-        const activeDlmmBots = this.rotationService.botAssignmentsCollection.find(
-            {
-                liquidityPools: {
-                    $where: (liquidityPools: Array<string>) => liquidityPools.includes(event.id),
-                },
-                activePosition: {
-                    $ne: undefined,
-                },
-            }
-        )
+                $or: Array.from(this.rotationService.botAssignments.entries()).map(([
+                    botId, 
+                    botAssignment
+                ]) => ({
+                    _id: new Types.ObjectId(botId),
+                    liquidityPools: { 
+                        $in: botAssignment.liquidityPoolIds.map(id => new Types.ObjectId(id)) 
+                    }
+                }))
+            })
         // Broadcast close-position request to all idle bots on this pool.
         // No round-robin: each bot owns and closes its own position.
         for (const bot of idleDlmmBots) {

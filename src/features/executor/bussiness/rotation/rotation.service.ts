@@ -25,43 +25,39 @@ import {
 import {
     CacheKey,
     CacheService, 
-    RotationBotAssignmentsResult
+    RotationBotAssignment
 } from "@modules/cache"
 import {
-    DayjsService 
+    DayjsService
 } from "@modules/mixin"
 import {
-    LokiJSService 
-} from "@modules/mixin"
+    InjectConnection 
+} from "@nestjs/mongoose"
 import {
-    Collection 
-} from "lokijs"
+    Connection 
+} from "mongoose"
 
 /**
  * Rotation Service
  * 
  * Rotate the bots to the liquidity pools.
  */
+const MAX_POOLS_PER_BOT = 2
+
 @Injectable()
 export class RotationService implements OnModuleInit {
-    public botAssignmentsCollection: Collection<BotSchema>
+    public botAssignments: Map<string, Omit<RotationBotAssignment, "botId">> = new Map()
     constructor(
         private readonly cacheService: CacheService,
-        private readonly botsLoaderService: BotsLoaderService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly bipartiteMatchingService: BipartiteMatchingService,
         private readonly dayjsService: DayjsService,
-        private readonly lokiJSService: LokiJSService,
+        @InjectConnection()
+        private readonly connection: Connection,
     ) {}
 
     async onModuleInit() {
         await this.readinessWatcherFactoryService.waitUntilReady(BotsLoaderService.name)
-        this.botAssignmentsCollection = await this.lokiJSService.createCollection<BotSchema>({
-            name: "executor-bot-assignments",
-            options: {
-                indices: ["id"],
-            },
-        })
         this.readinessWatcherFactoryService.createWatcher(RotationService.name)
         this.rotate()
         this.readinessWatcherFactoryService.setReady(RotationService.name)
@@ -72,9 +68,9 @@ export class RotationService implements OnModuleInit {
      * 
      * Rotate the bots to the liquidity pools.
      * 
-     * @returns Promise<Array<RotationBotAssignmentsResult>>
+     * @returns void
      */
-    private async rotateCache(): Promise<Array<RotationBotAssignmentsResult>> {
+    private async rotate() {
         // if cache is still valid, return
         const cachedResult = await this.cacheService.get({
             key: CacheKey.RotationBotAssignments,
@@ -84,17 +80,23 @@ export class RotationService implements OnModuleInit {
             .diff(cachedResult.snapshotAt.toDate(),
                 "ms") 
         <= envConfig().cache.stale.rotationBotAssignmentsMaxAgeMs) {
-            return cachedResult.results
+            this.botAssignments = new Map<string, Omit<RotationBotAssignment, "botId">>(
+                cachedResult.results.map(
+                    (result) => [
+                        result.botId,
+                        {
+                            liquidityPoolIds: result.liquidityPoolIds,
+                        }
+                    ]
+                )
+            )
+            return
         }
-        const bots = this.botsLoaderService.botCollection
-            .chain()
-            .find()
-            .data({
-                removeMeta: true 
-            })
-      
-        const MAX_POOLS_PER_BOT = 2
-      
+        const bots = await this.connection.model<BotSchema>(BotSchema.name).find(
+            {
+                executor: envConfig().executor.id,
+            }
+        )
         // collect liquidity pools
         const liquidityPoolSet = new Set<string>()
         for (const bot of bots) {
@@ -183,7 +185,16 @@ export class RotationService implements OnModuleInit {
                 snapshotAt: this.dayjsService.now(),
             },
         })
-        return results
+        this.botAssignments = new Map<string, Omit<RotationBotAssignment, "botId">>(
+            results.map(
+                (result) => [
+                    result.botId,
+                    {
+                        liquidityPoolIds: result.liquidityPoolIds,
+                    }
+                ]
+            )
+        )
     }
     
     /**
@@ -196,30 +207,5 @@ export class RotationService implements OnModuleInit {
     @Interval(envConfig().executor.interval.rotate)
     rotateInterval() {
         this.rotate()
-    }
-
-    async rotate() {
-        const results = await this.rotateCache()
-        const botAssignments = this.botsLoaderService.botCollection
-            .chain()
-            .find({
-            })
-            .data({
-                removeMeta: true 
-            })
-            .map((bot) => {
-                // update bot assignments
-                bot.liquidityPools = results
-                    .find((result) => result.botId === bot.id)
-                    ?.liquidityPoolIds
-                    .map((liquidityPoolId) => new Types.ObjectId(liquidityPoolId)) ?? []
-                // return bot
-                return bot
-            }
-            )
-        // remove old bot assignments
-        this.botAssignmentsCollection.clear()
-        // insert new bot assignments
-        this.botAssignmentsCollection.insert(botAssignments)
     }
 }

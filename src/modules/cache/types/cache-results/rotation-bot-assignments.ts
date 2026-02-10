@@ -3,10 +3,12 @@ import {
 } from "./base"
 
 /** Rotation bot assignments cache result. */
-export interface RotationBotAssignmentsResult {
+export interface RotationBotAssignment {
     botId: string
     liquidityPoolIds: Array<string>
 }
+
+/** Rotation bot assignments cache result. */
 export interface RotationBotAssignmentsCacheResult extends SnapshotCacheResult {
-    results: Array<RotationBotAssignmentsResult>
+    results: Array<RotationBotAssignment>
 }
