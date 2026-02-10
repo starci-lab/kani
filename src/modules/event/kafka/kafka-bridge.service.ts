@@ -199,6 +199,8 @@ implements
                         // skip messages from same instance to prevent loops
                         console.log("data.podName",
                             data.podName)
+                        console.log("envConfig().k8s.global.podName",
+                            envConfig().k8s.global.podName)
                         if (envConfig().isProduction && data.podName === envConfig().k8s.global.podName) {
                             continue
                         }
