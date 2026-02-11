@@ -98,7 +98,12 @@ export class RotationService implements OnModuleInit {
         const bots = await this.connection
             .model<BotSchema>(BotSchema.name)
             .find({
-                executor: envConfig().executor.id 
+                executor: {
+                    $eq: envConfig().executor.id,
+                },
+                running: {
+                    $eq: true,
+                },
             }
             )
         // collect liquidity pools

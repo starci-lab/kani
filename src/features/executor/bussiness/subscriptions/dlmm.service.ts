@@ -52,7 +52,9 @@ export class DlmmSubscriptionService {
     ) {
         // Select bots that are currently idle and associated with THIS DLMM pool
         const idleDlmmBots = await this.connection.model<BotSchema>(BotSchema.name).find({
-            executor: envConfig().executor.id,
+            executor: {
+                $eq: envConfig().executor.id,
+            },
             activePosition: {
                 $exists: false,
             },
@@ -74,7 +76,9 @@ export class DlmmSubscriptionService {
         })
         const activeDlmmBots = await this.connection.model<BotSchema>(BotSchema.name)
             .find({
-                executor: envConfig().executor.id,
+                executor: {
+                    $eq: envConfig().executor.id,
+                },
                 activePosition: {
                     $exists: true,
                     $ne: null,
@@ -82,15 +86,6 @@ export class DlmmSubscriptionService {
                 liquidityPools: {
                     $in: [new Types.ObjectId(event.id)] 
                 },
-                $or: Array.from(this.rotationService.botAssignments.entries()).map(([
-                    botId, 
-                    botAssignment
-                ]) => ({
-                    _id: new Types.ObjectId(botId),
-                    liquidityPools: { 
-                        $in: botAssignment.liquidityPoolIds.map(id => new Types.ObjectId(id)) 
-                    }
-                }))
             })
         // Broadcast close-position request to all idle bots on this pool.
         // No round-robin: each bot owns and closes its own position.

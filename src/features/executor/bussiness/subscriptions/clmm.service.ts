@@ -54,7 +54,9 @@ export class ClmmSubscriptionService {
     ) {
         const idleClmmBots = await this.connection.model<BotSchema>(BotSchema.name).find({
             // match executor
-            executor: envConfig().executor.id,
+            executor: {
+                $eq: envConfig().executor.id,
+            },
             // no position assigned
             activePosition: {
                 $exists: false,
@@ -77,7 +79,9 @@ export class ClmmSubscriptionService {
             }))
         })
         const activeClmmBots = await this.connection.model<BotSchema>(BotSchema.name).find({
-            executor: envConfig().executor.id,
+            executor: {
+                $eq: envConfig().executor.id,
+            },
             activePosition: {
                 $exists: true,
                 $ne: null,
@@ -85,15 +89,6 @@ export class ClmmSubscriptionService {
             liquidityPools: {
                 $in: [new Types.ObjectId(event.id)] 
             },
-            $or: Array.from(this.rotationService.botAssignments.entries()).map(([
-                botId, 
-                botAssignment
-            ]) => ({
-                _id: new Types.ObjectId(botId),
-                liquidityPools: { 
-                    $in: botAssignment.liquidityPoolIds.map(id => new Types.ObjectId(id)) 
-                }
-            }))
         })
         // Broadcast open-position request to all idle bots on this pool.
         // No round-robin: each bot owns and opens its own position.
