@@ -109,7 +109,6 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
     }: PrepareOpenPositionParams): Promise<PrepareOpenPositionResult> {
         const _state = state as DlmmLiquidityPoolState
         const targetIsA = bot.targetToken.toString() === liquidityPool.tokenA.toString()
-
         // Stage: state validation (open-position requires an active position context)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
@@ -189,7 +188,6 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                 tx),
         )
         const transaction = compileTransaction(transactionMessage)
-
         if (bot.version === AppVersion.V1) {
             return await this.signerService.withSolanaSigner({
                 bot,
@@ -198,12 +196,33 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                     const signedTransaction = await signTransaction([signer.keyPair,
                         positionKeyPair.keyPair],
                     transaction)
-
                     // Validate transaction before returning
                     assertIsSendableTransaction(signedTransaction)
                     assertIsTransactionWithinSizeLimit(signedTransaction)
                     const transactionSignature = getSignatureFromTransaction(signedTransaction)
                     const txHash = transactionSignature.toString()
+                    // stimulate transaction
+                    const stimulateTransaction = await this.rpcExecutorService.withSolanaRpc({
+                        accessType: RpcAccessType.Write,
+                        callback: async ({ rpc }) => {
+                            return await rpc.simulateTransaction(
+                                getBase64EncodedWireTransaction(signedTransaction),
+                                {
+                                    encoding: "base64",
+                                    commitment: "confirmed",
+                                },
+                            ).send()
+                        }
+                    })
+                    if (stimulateTransaction.value.err) {
+                        throw new TransactionStimulatedFailedException(
+                            {
+                                botId: bot.id,
+                                txHash: txHash,
+                                type: TransactionType.OpenPosition,
+                            }
+                        )
+                    }
                     return {
                         prepareTxs: [
                             {
@@ -249,11 +268,33 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                     walletId: bot.privyMetadata.walletId,
                 }
             )
-            return {
-                prepareTxs: [{
+            // stimulate transaction
+            const stimulateTransaction = await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Write,
+                callback: async ({ rpc }) => {
+                    return await rpc.simulateTransaction(
+                        getBase64EncodedWireTransaction(signedTransaction.signedTransaction),
+                        {
+                            encoding: "base64",
+                            commitment: "confirmed",
+                        },
+                    ).send()
+                }
+            })
+            if (stimulateTransaction.value.err) {
+                throw new TransactionStimulatedFailedException({
+                    botId: bot.id,
                     txHash: signedTransaction.txHash,
-                    solanaTx: signedTransaction.signedTransaction,
-                }],
+                    type: TransactionType.OpenPosition,
+                })
+            }
+            return {
+                prepareTxs: [
+                    {
+                        txHash: signedTransaction.txHash,
+                        solanaTx: signedTransaction.signedTransaction,
+                    }
+                ],
                 feeAmountA,
                 feeAmountB,
                 amountA,

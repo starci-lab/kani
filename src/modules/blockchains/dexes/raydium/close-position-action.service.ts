@@ -155,50 +155,82 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
         )
         const transaction = compileTransaction(transactionMessage)
 
+        let prepareTxs: PrepareClosePositionResult["prepareTxs"]
         if (bot.version === AppVersion.V1) {
-            return await this.signerService.withSolanaSigner({
+            const result = await this.signerService.withSolanaSigner({
                 bot,
                 action: async (signer) => {
-                    const signedTransaction = await signTransaction([signer.keyPair],
-                        transaction)
+                    const signedTransaction = await signTransaction(
+                        [signer.keyPair],
+                        transaction,
+                    )
                     const transactionSignature = getSignatureFromTransaction(signedTransaction)
                     const txHash = transactionSignature.toString()
                     assertIsSendableTransaction(signedTransaction)
                     assertIsTransactionWithinSizeLimit(signedTransaction)
                     return {
                         prepareTxs: [{
-                            txHash, solanaTx: signedTransaction 
+                            txHash,
+                            solanaTx: signedTransaction,
                         }],
                     }
                 },
             })
-        }
-
-        if (!bot.encryptedPrivySignerPrivateKeyPayload) {
-            throw new EncryptedPrivySignerPrivateKeyNotFoundException({
-                botId: bot.id 
+            prepareTxs = result.prepareTxs
+        } else {
+            if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                    botId: bot.id,
+                })
+            }
+            if (!bot.privyMetadata) {
+                throw new PrivyMetadataNotFoundException({
+                    botId: bot.id,
+                })
+            }
+            const signedTransaction = await this.privySignService.signSolanaTransaction({
+                lifetimeConstraint: {
+                    blockhash: latestBlockhash.blockhash,
+                    lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+                },
+                transaction,
+                encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
+                walletId: bot.privyMetadata.walletId,
             })
+            prepareTxs = [
+                {
+                    txHash: signedTransaction.txHash,
+                    solanaTx: signedTransaction.signedTransaction,
+                },
+            ]
         }
-        if (!bot.privyMetadata) {
-            throw new PrivyMetadataNotFoundException({
-                botId: bot.id 
-            })
-        }
-
-        const signedTransaction = await this.privySignService.signSolanaTransaction({
-            lifetimeConstraint: {
-                blockhash: latestBlockhash.blockhash,
-                lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+        const simulateResult = await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Write,
+            callback: async ({ rpc }) => {
+                return await rpc.simulateTransaction(
+                    getBase64EncodedWireTransaction(prepareTxs[0].solanaTx!),
+                    {
+                        encoding: "base64",
+                        commitment: "confirmed",
+                    },
+                ).send()
             },
-            transaction,
-            encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
-            walletId: bot.privyMetadata.walletId,
         })
+        if (simulateResult.value.err) {
+            throw new TransactionSubmitFailedException({
+                message: simulateResult.value.err.toString(),
+                originalError: new TransactionStimulatedFailedException(
+                    {
+                        botId: bot.id,
+                        txHash: prepareTxs[0].txHash,
+                        liquidityPoolId: liquidityPool.displayId,
+                        type: TransactionType.ClosePosition,
+                    },
+                ),
+            })
+        }
         return {
-            prepareTxs: [{
-                txHash: signedTransaction.txHash,
-                solanaTx: signedTransaction.signedTransaction,
-            }],
+            prepareTxs,
         }
     }
 

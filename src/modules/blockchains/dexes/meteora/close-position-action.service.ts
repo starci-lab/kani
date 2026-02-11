@@ -59,7 +59,8 @@ import {
     PrivySignService
 } from "@modules/privy"
 import {
-    DlmmLiquidityPoolState
+    DlmmLiquidityPoolState,
+    PrepareTx
 } from "../../types"
 import {
     AsyncService 
@@ -109,7 +110,6 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                 botId: bot.id,
             })
         }
-
         // Stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: liquidityPool.tokenA.toString(),
@@ -122,14 +122,13 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                 liquidityPoolId: liquidityPool.displayId,
             })
         }
-
         // Create close position instructions
         const instructions = await this.closePositionInstructionService.createCloseInstructions({
             bot,
             state: _state,
             liquidityPool,
         })
-
+        // Get latest blockhash for transaction lifetime
         const lastedBlockhashResult = await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
@@ -151,29 +150,50 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
         )
         const transaction = compileTransaction(transactionMessage)
 
+        let prepareTxs: Array<PrepareTx>
         if (bot.version === AppVersion.V1) {
-            return await this.signerService.withSolanaSigner({
+            const prepareTx: PrepareTx = await this.signerService.withSolanaSigner({
                 bot,
                 action: async (signer) => {
-                    // Sign transaction with V1 signer
-                    const signedTransaction = await signTransaction([signer.keyPair],
-                        transaction)
+                    const signedTransaction = await signTransaction(
+                        [signer.keyPair],
+                        transaction,
+                    )
                     const transactionSignature = getSignatureFromTransaction(signedTransaction)
                     const txHash = transactionSignature.toString()
-
-                    // Validate transaction before returning
                     assertIsSendableTransaction(signedTransaction)
                     assertIsTransactionWithinSizeLimit(signedTransaction)
                     return {
-                        prepareTxs: [{
-                            txHash,
-                            solanaTx: signedTransaction,
-                        }],
+                        txHash,
+                        solanaTx: signedTransaction,
                     }
                 },
             })
+            // Stimulate before returning
+            const simulateResult = await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Write,
+                callback: async ({ rpc }) => {
+                    return await rpc.simulateTransaction(
+                        getBase64EncodedWireTransaction(prepareTx.solanaTx!),
+                        {
+                            encoding: "base64",
+                            commitment: "confirmed",
+                        },
+                    ).send()
+                },
+            })
+            if (simulateResult.value.err) {
+                throw new TransactionStimulatedFailedException(
+                    {
+                        botId: bot.id,
+                        txHash: prepareTx.txHash,
+                        liquidityPoolId: liquidityPool.displayId,
+                        type: TransactionType.ClosePosition,
+                    }
+                )
+            }
+            prepareTxs = [prepareTx]
         } else {
-            // Stage: state validation (Privy signing prerequisites for V2 bots)
             if (!bot.privyMetadata) {
                 throw new PrivyMetadataNotFoundException({
                     botId: bot.id,
@@ -184,8 +204,6 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                     botId: bot.id,
                 })
             }
-
-            // Sign transaction using Privy service
             const signedTransaction = await this.privySignService.signSolanaTransaction({
                 lifetimeConstraint: {
                     blockhash: lastedBlockhashResult.value.blockhash,
@@ -195,12 +213,36 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                 encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                 walletId: bot.privyMetadata.walletId,
             })
-            return {
-                prepareTxs: [{
-                    txHash: signedTransaction.txHash,
-                    solanaTx: signedTransaction.signedTransaction,
-                }],
+            const prepareTx: PrepareTx = {
+                txHash: signedTransaction.txHash,
+                solanaTx: signedTransaction.signedTransaction,
             }
+            // Stimulate before returning
+            const simulateResult = await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Write,
+                callback: async ({ rpc }) => {
+                    return await rpc.simulateTransaction(
+                        getBase64EncodedWireTransaction(prepareTx.solanaTx!),
+                        {
+                            encoding: "base64",
+                            commitment: "confirmed",
+                        },
+                    ).send()
+                },
+            })
+            if (simulateResult.value.err) {
+                throw  new TransactionStimulatedFailedException({
+                    botId: bot.id,
+                    txHash: prepareTx.txHash,
+                    liquidityPoolId: liquidityPool.displayId,
+                    type: TransactionType.ClosePosition,
+                }
+                )
+            }
+            prepareTxs = [prepareTx]
+        }
+        return {
+            prepareTxs,
         }
     }
 

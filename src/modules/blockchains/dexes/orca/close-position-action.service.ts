@@ -60,7 +60,8 @@ import {
     PrivySignService 
 } from "@modules/privy"
 import {
-    ClmmLiquidityPoolState
+    ClmmLiquidityPoolState,
+    PrepareTx
 } from "../../types"
 import {
     AsyncService 
@@ -156,8 +157,9 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
         )
         const transaction = compileTransaction(transactionMessage)
 
+        let prepareTxs: Array<PrepareTx>
         if (bot.version === AppVersion.V1) {
-            return await this.signerService.withSolanaSigner({
+            const prepareTx: PrepareTx = await this.signerService.withSolanaSigner({
                 bot,
                 action: async (signer) => {
                     const signedTransaction = await signTransaction([signer.keyPair],
@@ -167,39 +169,82 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                     assertIsSendableTransaction(signedTransaction)
                     assertIsTransactionWithinSizeLimit(signedTransaction)
                     return {
-                        prepareTxs: [{
-                            txHash, solanaTx: signedTransaction 
-                        }],
+                        txHash, 
+                        solanaTx: signedTransaction 
                     }
                 },
             })
-        }
-
-        if (!bot.encryptedPrivySignerPrivateKeyPayload) {
-            throw new EncryptedPrivySignerPrivateKeyNotFoundException({
-                botId: bot.id 
+            // Stimulate before returning
+            const simulateResult = await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Write,
+                callback: async ({ rpc }) => {
+                    return await rpc.simulateTransaction(
+                        getBase64EncodedWireTransaction(prepareTx.solanaTx!),
+                        {
+                            encoding: "base64",
+                            commitment: "confirmed",
+                        },
+                    ).send()
+                },
             })
-        }
-        if (!bot.privyMetadata) {
-            throw new PrivyMetadataNotFoundException({
-                botId: bot.id 
+            if (simulateResult.value.err) {
+                throw new TransactionStimulatedFailedException({
+                    botId: bot.id,
+                    txHash: prepareTx.txHash,
+                    liquidityPoolId: liquidityPool.displayId,
+                    type: TransactionType.ClosePosition,
+                })
+            }
+            prepareTxs = [prepareTx]
+        } else {
+            if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                    botId: bot.id 
+                })
+            }
+            if (!bot.privyMetadata) {
+                throw new PrivyMetadataNotFoundException({
+                    botId: bot.id 
+                })
+            }
+            const signedTransaction = await this.privySignService.signSolanaTransaction({
+                lifetimeConstraint: {
+                    blockhash: latestBlockhash.blockhash,
+                    lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+                },
+                transaction,
+                encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
+                walletId: bot.privyMetadata.walletId,
             })
-        }
-
-        const signedTransaction = await this.privySignService.signSolanaTransaction({
-            lifetimeConstraint: {
-                blockhash: latestBlockhash.blockhash,
-                lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-            },
-            transaction,
-            encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
-            walletId: bot.privyMetadata.walletId,
-        })
-        return {
-            prepareTxs: [{
+            const prepareTx: PrepareTx = {
                 txHash: signedTransaction.txHash,
                 solanaTx: signedTransaction.signedTransaction,
-            }],
+            }
+            // Stimulate before returning
+            const simulateResult = await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Write,
+                callback: async ({ rpc }) => {
+                    return await rpc.simulateTransaction(
+                        getBase64EncodedWireTransaction(prepareTx.solanaTx!),
+                        {
+                            encoding: "base64",
+                            commitment: "confirmed",
+                        },
+                    ).send()
+                },
+            })
+            if (simulateResult.value.err) {
+                throw new TransactionStimulatedFailedException({
+                    botId: bot.id,
+                    txHash: prepareTx.txHash,
+                    liquidityPoolId: liquidityPool.displayId,
+                    type: TransactionType.ClosePosition,
+                })
+            }
+            prepareTxs = [prepareTx]
+        }
+        return {
+            prepareTxs 
         }
     }
 

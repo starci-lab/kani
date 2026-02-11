@@ -1,5 +1,5 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
     IOpenActionService,
@@ -11,13 +11,13 @@ import {
     ConfirmOpenPositionResult,
 } from "../types"
 import {
-    SignerService 
+    SignerService
 } from "../../signers"
 import {
     AppVersion, DexId, OrcaPositionMetadata, PrimaryMemoryStorageService, TransactionType
 } from "@modules/databases"
-import { 
-    InvalidPoolTokensException, 
+import {
+    InvalidPoolTokensException,
     BalanceSnapshotsNotFoundException,
     SolanaAccountNotFoundException,
     ErrorSolanaAccountKind,
@@ -26,12 +26,14 @@ import {
     EncryptedPrivySignerPrivateKeyNotFoundException,
     PrivyMetadataNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
-    TransactionValidationFailedException,
+    TransactionStimulatedFailedException,
+    TransactionSubmitFailedException,
+    TransactionExecutionFailedException,
 } from "@modules/exceptions"
 import {
-    TickMathService 
+    TickMathService
 } from "../../math"
-import { 
+import {
     pipe,
     setTransactionMessageFeePayerSigner,
     setTransactionMessageLifetimeUsingBlockhash,
@@ -51,28 +53,32 @@ import {
     getBase64EncodedWireTransaction,
 } from "@solana/kit"
 import BN from "bn.js"
-import { 
-    OpenPositionInstructionService 
+import {
+    OpenPositionInstructionService
 } from "./transactions"
 import {
-    WinstonLog, WinstonService 
+    WinstonLog, WinstonService
 } from "@modules/winston"
 import Decimal from "decimal.js"
 import {
-    RpcExecutorService 
+    RpcExecutorService
 } from "../../clients"
 import {
-    RpcAccessType 
+    RpcAccessType
 } from "@modules/filesystem"
 import {
-    Position 
+    Position
 } from "./beets"
 import {
-    PrivySignService 
+    PrivySignService
 } from "@modules/privy"
 import {
-    ClmmLiquidityPoolState
+    ClmmLiquidityPoolState,
+    PrepareTx
 } from "../../types"
+import {
+    AsyncService 
+} from "@modules/mixin"
 
 /**
  * Service responsible for opening positions on Orca DEX.
@@ -92,6 +98,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly privySignService: PrivySignService,
         private readonly winstonService: WinstonService,
+        private readonly asyncService: AsyncService,
     ) { }
 
     /**
@@ -203,7 +210,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
 
         const transactionMessage = pipe(
             createTransactionMessage({
-                version: 0 
+                version: 0
             }),
             (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)),
                 tx),
@@ -214,8 +221,9 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         )
         const transaction = compileTransaction(transactionMessage)
 
+        let result: PrepareOpenPositionResult
         if (bot.version === AppVersion.V1) {
-            return await this.signerService.withSolanaSigner({
+            result = await this.signerService.withSolanaSigner({
                 bot,
                 action: async (signer) => {
                     const signedTransaction = await signTransaction(
@@ -231,10 +239,33 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                         nftMintAddress: mintKeyPair.address.toString(),
                         ataAddress: ataAddress.toString(),
                     }
+                    const prepareTx: PrepareTx = {
+                        txHash,
+                        solanaTx: signedTransaction,
+                    }
+                    // Stimulate before returning
+                    const simulateResult = await this.rpcExecutorService.withSolanaRpc({
+                        accessType: RpcAccessType.Write,
+                        callback: async ({ rpc }) => {
+                            return await rpc.simulateTransaction(
+                                getBase64EncodedWireTransaction(prepareTx.solanaTx!),
+                                {
+                                    encoding: "base64",
+                                    commitment: "confirmed",
+                                },
+                            ).send()
+                        },
+                    })
+                    if (simulateResult.value.err) {
+                        throw new TransactionStimulatedFailedException({
+                            botId: bot.id,
+                            txHash: prepareTx.txHash,
+                            liquidityPoolId: liquidityPool.displayId,
+                            type: TransactionType.OpenPosition,
+                        })
+                    }
                     return {
-                        prepareTxs: [{
-                            txHash, solanaTx: signedTransaction 
-                        }],
+                        prepareTxs: [prepareTx],
                         feeAmountA,
                         feeAmountB,
                         tickLower,
@@ -246,48 +277,70 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                     }
                 },
             })
-        }
-
-        if (!bot.privyMetadata) {
-            throw new PrivyMetadataNotFoundException({
-                botId: bot.id 
+        } else {
+            if (!bot.privyMetadata) {
+                throw new PrivyMetadataNotFoundException({
+                    botId: bot.id
+                })
+            }
+            if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                    botId: bot.id
+                })
+            }
+            const partialSignedTransaction = await partiallySignTransaction([mintKeyPair.keyPair],
+                transaction)
+            const signedTransaction = await this.privySignService.signSolanaTransaction({
+                lifetimeConstraint: {
+                    blockhash: latestBlockhash.blockhash,
+                    lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+                },
+                transaction: partialSignedTransaction,
+                encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
+                walletId: bot.privyMetadata.walletId,
             })
-        }
-        if (!bot.encryptedPrivySignerPrivateKeyPayload) {
-            throw new EncryptedPrivySignerPrivateKeyNotFoundException({
-                botId: bot.id 
-            })
-        }
-
-        const partialSignedTransaction = await partiallySignTransaction([mintKeyPair.keyPair],
-            transaction)
-        const signedTransaction = await this.privySignService.signSolanaTransaction({
-            lifetimeConstraint: {
-                blockhash: latestBlockhash.blockhash,
-                lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-            },
-            transaction: partialSignedTransaction,
-            encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
-            walletId: bot.privyMetadata.walletId,
-        })
-        const metadata: OrcaPositionMetadata = {
-            nftMintAddress: mintKeyPair.address.toString(),
-            ataAddress: ataAddress.toString(),
-        }
-        return {
-            prepareTxs: [{
+            const metadata: OrcaPositionMetadata = {
+                nftMintAddress: mintKeyPair.address.toString(),
+                ataAddress: ataAddress.toString(),
+            }
+            const prepareTx: PrepareTx = {
                 txHash: signedTransaction.txHash,
                 solanaTx: signedTransaction.signedTransaction,
-            }],
-            feeAmountA,
-            feeAmountB,
-            tickLower,
-            tickUpper,
-            amountA,
-            amountB,
-            metadata,
-            positionId: personalPosition.toString(),
+            }
+            // Stimulate before returning
+            const simulateResult = await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Write,
+                callback: async ({ rpc }) => {
+                    return await rpc.simulateTransaction(
+                        getBase64EncodedWireTransaction(prepareTx.solanaTx!),
+                        {
+                            encoding: "base64",
+                            commitment: "confirmed",
+                        },
+                    ).send()
+                },
+            })
+            if (simulateResult.value.err) {
+                throw new TransactionStimulatedFailedException({
+                    botId: bot.id,
+                    txHash: prepareTx.txHash,
+                    liquidityPoolId: liquidityPool.displayId,
+                    type: TransactionType.OpenPosition,
+                })
+            }
+            result = {
+                prepareTxs: [prepareTx],
+                feeAmountA,
+                feeAmountB,
+                tickLower,
+                tickUpper,
+                amountA,
+                amountB,
+                metadata,
+                positionId: personalPosition.toString(),
+            }
         }
+        return result
     }
 
     /**
@@ -378,11 +431,18 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                     },
                 })
                 if (transaction.value.err) {
-                    throw new TransactionValidationFailedException({
-                        botId: bot.id,
-                        txHash: prepareTx.txHash,
-                        type: TransactionType.OpenPosition,
-                    })
+                    throw new TransactionSubmitFailedException(
+                        {
+                            message: transaction.value.err.toString(),
+                            originalError: new TransactionStimulatedFailedException({
+                                botId: bot.id,
+                                txHash: prepareTx.txHash,
+                                liquidityPoolId: liquidityPool.displayId,
+                                type: TransactionType.OpenPosition,
+                            }
+                            )
+                        }
+                    )
                 }
                 this.winstonService.log(
                     WinstonLog.OpenPositionTransactionStimulated,
@@ -403,12 +463,24 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                         })
                     },
                 })
-                await sendAndConfirmTransaction(
-                    solanaTx,
-                    {
-                        commitment: "confirmed" 
-                    },
-                )
+                const [, error] = await this.asyncService.resolveTuple(
+                    sendAndConfirmTransaction(
+                        solanaTx,
+                        {
+                            commitment: "confirmed"
+                        },
+                    ))
+                if (error) {
+                    throw new TransactionSubmitFailedException({
+                        message: error.toString(),
+                        originalError: new TransactionExecutionFailedException({
+                            botId: bot.id,
+                            txHash: prepareTx.txHash,
+                            liquidityPoolId: liquidityPool.displayId,
+                            type: TransactionType.OpenPosition,
+                        })
+                    })
+                }
                 this.winstonService.log(
                     WinstonLog.OpenPositionTransactionExecuted,
                     {
@@ -444,7 +516,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             callback: async ({ rpc }) => {
                 // Fetch position account from chain
                 const positionInfo = await fetchEncodedAccount(
-                    rpc, 
+                    rpc,
                     address(positionId),
                     {
                         commitment: "confirmed",

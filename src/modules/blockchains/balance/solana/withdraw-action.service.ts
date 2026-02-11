@@ -285,6 +285,30 @@ export class SolanaWithdrawActionService {
                     solanaTx: signedTransaction.signedTransaction,
                 }
             }
+            const simulateResult = await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Write,
+                callback: async ({ rpc }) => {
+                    return await rpc.simulateTransaction(
+                        getBase64EncodedWireTransaction(transaction.solanaTx),
+                        {
+                            encoding: "base64",
+                            commitment: "confirmed",
+                        },
+                    ).send()
+                },
+            })
+            if (simulateResult.value.err) {
+                throw new TransactionSubmitFailedException({
+                    message: simulateResult.value.err.toString(),
+                    originalError: new TransactionStimulatedFailedException(
+                        {
+                            botId: bot.id,
+                            txHash: transaction.txHash,
+                            type: TransactionType.Withdraw,
+                        },
+                    ),
+                })
+            }
             prepareTxs.push({
                 txHash: transaction.txHash,
                 solanaTx: transaction.solanaTx,

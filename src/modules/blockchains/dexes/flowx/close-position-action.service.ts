@@ -343,11 +343,11 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
         if (effects?.status?.status !== "success") {
             throw new TransactionSubmitFailedException({
                 originalError: new TransactionExecutionFailedException({
-                        botId: bot.id,
-                        txHash: digest,
-                        liquidityPoolId: liquidityPool.displayId,
-                        type: TransactionType.ClosePosition,
-                    }),
+                    botId: bot.id,
+                    txHash: digest,
+                    liquidityPoolId: liquidityPool.displayId,
+                    type: TransactionType.ClosePosition,
+                }),
                 message: effects?.status?.error ?? "Unknown error",
             })
         }
