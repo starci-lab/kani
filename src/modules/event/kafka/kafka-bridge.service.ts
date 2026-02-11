@@ -1,6 +1,5 @@
 import {
     Injectable,
-    OnApplicationBootstrap,
     OnModuleInit,
     OnApplicationShutdown,
     Inject
@@ -36,7 +35,8 @@ import {
     DayjsService
 } from "@modules/mixin"
 import {
-    RetryService
+    RetryService,
+    ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
     KafkaMessageFactoryService
@@ -55,20 +55,25 @@ import {
 import {
     Admin 
 } from "kafkajs"
+import {
+    getEventName 
+} from "../utils"
+import {
+    KafkaIdRegistryService 
+} from "./kafka-id-registry.service"
 
 /**
- * Service that bridges Kafka messages to NestJS EventEmitter.
- *
- * Subscribes to Kafka topics and emits events to the local EventEmitter,
- * filtering out messages from the same instance to prevent loops.
- *
- * @example
- * const bridge = await app.get(KafkaBridgeService)
+     * Service that bridges Kafka messages to NestJS EventEmitter.
+     *
+     * Subscribes to Kafka topics and emits events to the local EventEmitter,
+     * filtering out messages from the same instance to prevent loops.
+     *
+     * @example
+     * const bridge = await app.get(KafkaBridgeService)
  */
 @Injectable()
 export class KafkaBridgeService
 implements
-    OnApplicationBootstrap,
     OnModuleInit,
     OnApplicationShutdown {
     private topics: Array<string> = []
@@ -83,6 +88,8 @@ implements
         private readonly retryService: RetryService,
         private readonly kafkaMessageFactoryService: KafkaMessageFactoryService,
         private readonly cacheService: CacheService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly kafkaIdRegistryService: KafkaIdRegistryService,
         @InjectKafkaAdmin()
         private readonly kafkaAdmin: Admin,
     ) { }
@@ -94,7 +101,8 @@ implements
      * - Events that have useKafka enabled in config
      * - Topics specified in module options (if any)
      */
-    onModuleInit() {
+    async onModuleInit(): Promise<void> {
+        await this.readinessWatcherFactoryService.waitUntilReady(KafkaConsumerService.name)
         // get all events with kafka metadata and extract topic names
         const allKafkaTopics = Object.entries(configMap).filter(
             ([, metadata]) => metadata.useKafka
@@ -107,6 +115,8 @@ implements
         } else {
             this.topics = allKafkaTopics
         }
+        // bridge all Kafka events to EventEmitter
+        await this.bridgeAllKafkaEvents()
     }
 
     /**
@@ -197,7 +207,7 @@ implements
                         const value = message.value?.toString() || "{}"
                         const data = this.kafkaMessageFactoryService.parse(value)
                         // skip messages from same instance to prevent loops
-                        if (envConfig().isProduction && data.podName === envConfig().k8s.global.podName) {
+                        if (data.podName === this.kafkaIdRegistryService.getId()) {
                             continue
                         }
                         // if topic is ping, skip it
@@ -228,7 +238,7 @@ implements
                         )
                         // emit event to local EventEmitter
                         this.eventEmitter.emit(
-                            topic,
+                            getEventName(topic as EventName),
                             data.data
                         )
                         // reset timeout to keep connection alive
@@ -237,15 +247,6 @@ implements
                 }
             }
         )
-    }
-
-    /**
-     * Called when application is bootstrapped.
-     *
-     * Starts bridging Kafka events to EventEmitter.
-     */
-    onApplicationBootstrap() {
-        this.bridgeAllKafkaEvents()
     }
 
     /**

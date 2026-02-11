@@ -189,17 +189,6 @@ export class RuntimeContextService {
                             )
                         },
                     })
-                    // subscribe to liquidity pools synced events
-                    this.eventEmitterService.on(
-                        {
-                            event: EventName.LiquidityPoolsBecameReady,
-                            listener: (
-                                { ids }
-                            ) => {
-                                this.handleNotSyncedService.markSynced(ids)
-                            },
-                        }
-                    )
                     // subscribe to dlmm position close requested events
                     this.eventEmitterService.on({
                         event: EventName.DlmmPositionCloseRequested,

@@ -86,7 +86,6 @@ implements OnModuleInit, OnApplicationBootstrap
     }
   
     /* ================= EVENTS ================= */
-  
     @OnEvent(EventName.ClmmLiquidityPoolsSynced)
     async handleClmmSynced(event: LiquidityPoolsSyncedEventPayload) {
         this.winstonService.log(

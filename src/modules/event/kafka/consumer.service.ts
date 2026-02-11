@@ -25,6 +25,9 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import {
+    KafkaIdRegistryService 
+} from "./kafka-id-registry.service"
 
 @Injectable()
 export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown {
@@ -34,6 +37,7 @@ export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown
         private readonly kafka: Kafka,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly retryService: RetryService,
+        private readonly kafkaIdRegistryService: KafkaIdRegistryService,
     ) {}
     
     /**
@@ -44,20 +48,19 @@ export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown
      * @returns Promise that resolves when consumer is ready
      */
     async onModuleInit(): Promise<void> {
+        this.readinessWatcherFactoryService.createWatcher(KafkaConsumerService.name)
         await this.retryService.retry(
             {
                 options: {
                     maxRetryTime: Infinity,
                 },
                 action: async () => {
-                    // create readiness watcher for this service
-                    this.readinessWatcherFactoryService.createWatcher(KafkaConsumerService.name)
                     // wait for admin service to be ready
                     await this.readinessWatcherFactoryService.waitUntilReady(KafkaAdminService.name)
                     // create consumer
                     this.consumer = this.kafka.consumer(
                         { 
-                            groupId: envConfig().k8s.global.podName,
+                            groupId: this.kafkaIdRegistryService.getId(),
                             allowAutoTopicCreation: true,
                             heartbeatInterval: envConfig().kafka.heartbeatInterval,
                             retry: {
@@ -68,11 +71,10 @@ export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown
                             },
                             readUncommitted: true,
                         })
-                    // mark this service as ready
-                    this.readinessWatcherFactoryService.setReady(KafkaConsumerService.name)
                 }
             }
         )
+        this.readinessWatcherFactoryService.setReady(KafkaConsumerService.name)
     }
 
     /**

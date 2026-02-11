@@ -603,7 +603,7 @@ export const envConfig = () => ({
             }),
             kafkaMessageDigest: parseEnvMs({
                 key: "CACHE_TTL_KAFKA_MESSAGE_DIGEST",
-                defaultValue: "10s"
+                defaultValue: "3s"
             }),
             withdraw: parseEnvMs({
                 key: "CACHE_TTL_WITHDRAW",

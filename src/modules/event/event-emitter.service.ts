@@ -16,6 +16,9 @@ import {
 import {
     KafkaMessageFactoryService, KafkaProducerService 
 } from "./kafka"
+import {
+    getEventName 
+} from "./utils"
 
 export interface EmitOptions {
     useKafka?: boolean
@@ -30,19 +33,7 @@ export class EventEmitterService {
         private readonly eventEmitter: EventEmitter2,
     ) {}
     
-    /**
-     * Get the event name.
-     */
-    getEventName<T extends EventName>(
-        event: T,
-        args?: Array<unknown>
-    ): T {
-        if (args) {
-            return `${event}.${args.map(arg => typeof arg === "string" ? arg : JSON.stringify(arg)).join(".")}` as T
-        }
-        return event
-    }
-    
+
     /**
      * Emit an event.
      */
@@ -56,7 +47,7 @@ export class EventEmitterService {
         }: EmitParams<T>
     ) {
         const config = configMap[event]
-        const eventName = this.getEventName(
+        const eventName = getEventName(
             event,
             args
         )
@@ -109,7 +100,7 @@ export class EventEmitterService {
             listener,
         }: OnParams<T>
     ) {
-        const eventName = this.getEventName(
+        const eventName = getEventName(
             event,
             args
         )
@@ -129,7 +120,7 @@ export class EventEmitterService {
             listener,
         }: OffParams<T>
     ) {
-        const eventName = this.getEventName(
+        const eventName = getEventName(
             event,
             args
         )

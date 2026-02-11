@@ -4,12 +4,14 @@ import {
 import {
     ClmmLiquidityPoolsSyncedMessage,
     DlmmLiquidityPoolsSyncedMessage,
+    LiquidityPoolsSyncedMessage,
     NotSyncedProcessClosePositionMessage,
     NotSyncedProcessOpenPositionMessage,
     OpenPositionSkippedBalanceSnapshotTooOldMessage,
     OpenPositionSkippedBotAlreadyHasActiveJobMessage,
     OpenPositionSkippedBotAlreadyHasActivePositionMessage,
     OpenPositionSkippedBotNotRunningMessage,
+    OpenPositionSkippedNoBalanceSnapshotMessage,
     OpenPositionSkippedNotEligibleMessage,
     RotationBotAssignmentsMessage,
     WinstonLevel,
@@ -1975,6 +1977,14 @@ export const configMap = {
         messageType: {
         } as OpenPositionSkippedNotEligibleMessage,
     },
+    // Open Position Skipped No Balance Snapshot
+    [WinstonLog.OpenPositionSkippedNoBalanceSnapshot]: {
+        name: WinstonLog.OpenPositionSkippedNoBalanceSnapshot,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as OpenPositionSkippedNoBalanceSnapshotMessage,
+    },
     // Open Position Skipped Balance Snapshot Too Old
     [WinstonLog.OpenPositionSkippedBalanceSnapshotTooOld]: {
         name: WinstonLog.OpenPositionSkippedBalanceSnapshotTooOld,
@@ -1982,6 +1992,14 @@ export const configMap = {
         loki: true,
         messageType: {
         } as OpenPositionSkippedBalanceSnapshotTooOldMessage,
+    },
+    // Liquidity Pools Synced
+    [WinstonLog.LiquidityPoolsSynced]: {
+        name: WinstonLog.LiquidityPoolsSynced,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as LiquidityPoolsSyncedMessage,
     },
     // Clmm Liquidity Pools Synced
     [WinstonLog.ClmmLiquidityPoolsSynced]: {

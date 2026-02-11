@@ -123,6 +123,13 @@ export class HandleOpenPositionService {
         }
         // Skip if no balance snapshot (need reconciled balance before opening)
         if (!bot.balanceSnapshots) {
+            this.winstonService.log(
+                WinstonLog.OpenPositionSkippedNoBalanceSnapshot,
+                {
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                }
+            )
             return
         }
         const { eligible } = await this.evalSnapshotService.eval(

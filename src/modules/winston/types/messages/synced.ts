@@ -19,6 +19,13 @@ export interface NotSyncedProcessClosePositionMessage {
 }
 
 /**
+ * Liquidity pools synced message.
+ */
+export interface LiquidityPoolsSyncedMessage {
+    displayIds: Array<LiquidityPoolId>
+}
+
+/**
  * Clmm liquidity pools synced message.
  */
 export interface ClmmLiquidityPoolsSyncedMessage {

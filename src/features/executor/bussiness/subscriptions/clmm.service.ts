@@ -112,11 +112,13 @@ export class ClmmSubscriptionService {
                 },
             })
         const liquidityPool =
-      this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
-          id: {
-              $eq: event.id,
-          },
-      })
+      this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
+          {
+              id: {
+                  $eq: event.id,
+              },
+          }
+      )
         if (!liquidityPool) {
             throw new LiquidityPoolNotFoundException({
                 id: event.id,

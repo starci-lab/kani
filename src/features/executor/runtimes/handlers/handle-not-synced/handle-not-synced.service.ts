@@ -34,6 +34,13 @@ import {
 import {
     LiquidityPoolNotFoundException 
 } from "@modules/exceptions"
+import {
+    EventName, 
+    LiquidityPoolsBecameReadyEventPayload
+} from "@modules/event"
+import {
+    OnEvent 
+} from "@nestjs/event-emitter"
 
 /**
  * Handle not synced service.
@@ -62,14 +69,41 @@ export class HandleNotSyncedService {
     markSynced(
         ids: Array<string>
     ) {
+        const snapshotAt = this.dayjsService.now()
         for (const id of ids) {
             this.results.set(
                 id,
                 {
-                    snapshotAt: this.dayjsService.now(),
+                    snapshotAt,
                 }
             )
         }
+    }
+
+    @OnEvent(EventName.LiquidityPoolsBecameReady)
+    handleLiquidityPoolsBecameReady(
+        { ids }: LiquidityPoolsBecameReadyEventPayload
+    ) {
+        // mark the liquidity pools as synced
+        this.markSynced(ids)
+        // log the liquidity pools became ready
+        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
+            {
+                id: {
+                    $in: ids,
+                },
+            }
+        )
+        if (!liquidityPools) {
+            return
+        }
+        // log the liquidity pools synced
+        this.winstonService.log(
+            WinstonLog.LiquidityPoolsSynced,
+            {
+                displayIds: liquidityPools.map(pool => pool.displayId),
+            }
+        )
     }
 
     /**

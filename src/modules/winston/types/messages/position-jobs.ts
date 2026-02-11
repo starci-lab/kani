@@ -227,6 +227,11 @@ export interface OpenPositionSkippedNotEligibleMessage {
     liquidityPoolId: LiquidityPoolId
 }
 
+export interface OpenPositionSkippedNoBalanceSnapshotMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+}
+
 export interface OpenPositionSkippedBalanceSnapshotTooOldMessage {
     botId: string
     liquidityPoolId: LiquidityPoolId

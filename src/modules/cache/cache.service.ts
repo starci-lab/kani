@@ -135,7 +135,7 @@ export class CacheService {
             const ttl =
                 cacheType === CacheType.Redis
                     ? configMap[key].ttl
-                    : configMap[key].ttl * 1000
+                    : configMap[key].ttl
 
             await cacheManager.set(
                 cacheKey,
