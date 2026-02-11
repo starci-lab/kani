@@ -153,14 +153,14 @@ export class HandleNotSyncedService {
         if (!botAssignment) {
             return
         }
-        // we filter the liquidity pools that are synced
-        const syncedPools = botAssignment.liquidityPoolIds.filter(id =>
-            this.isSynced(id)
+        // we filter the liquidity pools that are not synced
+        const notSyncedPools = botAssignment.liquidityPoolIds.filter(id =>
+            !this.isSynced(id)
         )
-        // if there are no synced liquidity pools, we return
-        if (syncedPools.length === 0) return   
+        // if there are no not synced liquidity pools, we return
+        if (notSyncedPools.length === 0) return   
         // we take a random synced liquidity pool
-        const botLiquidityPoolId = _.sample(syncedPools)
+        const botLiquidityPoolId = _.sample(notSyncedPools)
         if (!botLiquidityPoolId) return
         // we check the bot liquidity pool is valid
         const botLiquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
