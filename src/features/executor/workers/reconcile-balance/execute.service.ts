@@ -30,7 +30,7 @@ import {
     AsyncService,
 } from "@modules/mixin"
 import {
-    AbstractException,
+    TransactionSubmitFailedException,
     ExecuteReconcileBalanceTransactionResultNotFoundException,
     JobFailureException,
     JobFailureStrategy,
@@ -118,7 +118,7 @@ export class ExecuteService {
             ),
         )
         if (error) {
-            if ((error instanceof AbstractException) && isRetry) {
+            if ((error instanceof TransactionSubmitFailedException) && isRetry) {
                 throw new JobFailureException({
                     strategy: JobFailureStrategy.Fatal,
                     originalError: error,

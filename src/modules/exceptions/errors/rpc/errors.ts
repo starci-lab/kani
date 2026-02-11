@@ -49,6 +49,22 @@ export class SolanaRpcIgnorableException extends AbstractException {
     }
 }
 
+/** Solana RPC: transaction submit failed, do not retry; eject RPC */
+export interface TransactionSubmitFailedExceptionMetadata extends AbstractExceptionMetadata {
+    message: string
+}
+export class TransactionSubmitFailedException extends AbstractException {
+    constructor({ message, originalError}: TransactionSubmitFailedExceptionMetadata) {
+        super("Transaction submit failed error",
+            "TRANSACTION_SUBMIT_FAILED_EXCEPTION",
+            {
+                message, 
+                originalError 
+            }
+        )
+    }
+}
+
 /** Sui RPC: temporary failure, safe to retry with backoff */
 export class SuiRpcRetryableException extends AbstractException {
     constructor(message?: string, metadata?: AbstractExceptionMetadata) {

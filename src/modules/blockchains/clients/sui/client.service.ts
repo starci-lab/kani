@@ -24,6 +24,7 @@ import {
     SuiRpcRetryableException,
     SuiRpcFatalException,
     SuiRpcIgnorableException,
+    TransactionSubmitFailedException,
 } from "@modules/exceptions"
 import {
     WithSuiClientParams
@@ -84,44 +85,48 @@ export class SuiClientService {
                 })
                 
                 try {
-                    return await this.retryService.retry({
-                        options,
-                        action: async () => {
+                    return await this.retryService.retry(
+                        {
+                            options,
+                            action: async () => {
                             // resolve tuple of response and error
-                            const [
-                                result,
-                                error
-                            ] = await this.asyncService.resolveTuple(
-                                callback({
-                                    suiClient,
-                                    rpcUrl
+                                const [
+                                    result,
+                                    error
+                                ] = await this.asyncService.resolveTuple(
+                                    callback({
+                                        suiClient,
+                                        rpcUrl
+                                    })
+                                )
+                                // return result if available
+                                if (result !== null) {
+                                    return result
+                                }
+                            
+                                // handle null error case
+                                if (error === null) {
+                                    throw new AbortError(new SuiRpcIgnorableException("Unknown error"))
+                                }
+                                // classify and handle error
+                                const errorType = this.suiGetErrorTypesService.getErrorType({
+                                    error
                                 })
-                            )
-                            
-                            // return result if available
-                            if (result !== null) {
-                                return result
-                            }
-                            
-                            // handle null error case
-                            if (error === null) {
-                                throw new AbortError(new SuiRpcIgnorableException("Unknown error"))
-                            }
-                            
-                            // classify and handle error
-                            const errorType = this.suiGetErrorTypesService.getErrorType({
-                                error
-                            })
-                            switch (errorType) {
-                            case RpcErrorType.Fatal:
-                                throw new AbortError(new SuiRpcFatalException(error?.message))
-                            case RpcErrorType.Retryable:
-                                throw new SuiRpcRetryableException(error?.message)
-                            case RpcErrorType.Ignorable:
-                                throw new AbortError(new SuiRpcIgnorableException(error?.message))
-                            }
-                        },
-                    })
+                                switch (errorType) {
+                                case RpcErrorType.TransactionSubmitFailed:
+                                    throw new AbortError(new TransactionSubmitFailedException({
+                                        message: error?.message, originalError: error 
+                                    }))
+                                case RpcErrorType.Fatal:
+                                    throw new AbortError(new SuiRpcFatalException(error?.message))
+                                case RpcErrorType.Retryable:
+                                    throw new SuiRpcRetryableException(error?.message)
+                                case RpcErrorType.Ignorable:
+                                    throw new AbortError(new SuiRpcIgnorableException(error?.message))
+                                }
+                            },
+                        }
+                    )
                 } catch (error) {
                     // eject RPC on fatal errors
                     if (error instanceof SuiRpcFatalException) {

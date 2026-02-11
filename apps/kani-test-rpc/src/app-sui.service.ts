@@ -2,7 +2,8 @@ import {
     MountStorageService 
 } from "@modules/filesystem"
 import {
-    InjectPrivyClient, PrivyWalletService 
+    InjectPrivyClient, 
+    PrivyWalletService 
 } from "@modules/privy"
 import {
     SuiClient 

@@ -12,7 +12,7 @@ import {
 } from "../types"
 import {
     ClmmLiquidityPoolState
-} from "../../types/pool-state"
+} from "../../types"
 import {
     Transaction,
     TransactionDataBuilder 
@@ -52,6 +52,7 @@ import {
     SlippageToleranceExceededException,
     SuiSingleTransactionRequiredException,
     ErrorSuiSingleTransactionRequiredOperation,
+    TransactionSubmitFailedException,
 } from "@modules/exceptions"
 import Decimal from "decimal.js"
 import {
@@ -70,7 +71,10 @@ import {
     SuiEvent 
 } from "@mysten/sui/client"
 import {
-    MintNftEvent, parseTurbosSuiObjectPositionNFT, TurbosClmmPosition, TurbosSuiObjectPositionNFTFields 
+    MintNftEvent, 
+    parseTurbosSuiObjectPositionNFT, 
+    TurbosClmmPosition, 
+    TurbosSuiObjectPositionNFTFields 
 } from "./struct"
 import {
     envConfig 
@@ -246,79 +250,106 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             liquidityPool,
             tickUpper,
         })
-        return await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Write,
-            callback: async ({ suiClient }) => {
-                if (bot.version === AppVersion.V1) {
-                    return await this.signerService.withSuiSigner({
-                        bot,
-                        action: async (signer) => {
-                            const devInspect = await suiClient.devInspectTransactionBlock({
-                                transactionBlock: openPositionTxb,
-                                sender: bot.accountAddress,
-                            })
-                            if (devInspect.effects.status.status !== "success") {
-                                throw new TransactionValidationFailedException({
-                                    botId: bot.id,
-                                    txHash: devInspect.effects.transactionDigest,
-                                    liquidityPoolId: liquidityPool.displayId,
-                                    type: TransactionType.OpenPosition,
-                                })
-                            }
-                            const bytes = await openPositionTxb.build({
-                                client: suiClient,
-                            })
-                            const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
-                            const signatureWithBytes = await signer.signTransaction(bytes)
-                            return {
-                                prepareTxs: [
-                                    {
-                                        txHash,
-                                        signatureWithBytes,
-                                    },
-                                ],
-                                feeAmountA,
-                                feeAmountB,
-                                tickLower,
-                                tickUpper,
-                            }
-                        },
+        if (bot.version === AppVersion.V1) {
+            const devInspect = await this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Write,
+                callback: async ({ suiClient }) => {
+                    return await suiClient.devInspectTransactionBlock({
+                        transactionBlock: openPositionTxb,
+                        sender: bot.accountAddress,
                     })
-                } else {
-                    if (!bot.privyMetadata?.walletPublicKey) {
-                        throw new PrivyPublicKeyNotFoundException({
-                            botId: bot.id,
-                        })
-                    }
-                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
-                        throw new EncryptedPrivySignerPrivateKeyNotFoundException({
-                            botId: bot.id,
-                        })
-                    }
-                    const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction(
-                        {
-                            publicKeyHex: bot.privyMetadata?.walletPublicKey,
-                            client: suiClient,
-                            walletId: bot.privyMetadata?.walletId,
-                            transaction: openPositionTxb,
-                            encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
-                        }
-                    )
-                    return {
-                        prepareTxs: [
-                            {
-                                txHash,
-                                signatureWithBytes,
-                            },
-                        ],
-                        feeAmountA,
-                        feeAmountB,
-                        tickLower,
-                        tickUpper,
-                    }
-                }
-            },
-        })
+                },
+            })
+            
+            if (devInspect.effects.status.status !== "success") {
+                throw new TransactionSubmitFailedException({
+                    originalError: new TransactionValidationFailedException({
+                        botId: bot.id,
+                        txHash: devInspect.effects.transactionDigest,
+                        liquidityPoolId: liquidityPool.displayId,
+                        type: TransactionType.OpenPosition,
+                    }),
+                    message: devInspect.effects.status.error ?? "Unknown error",
+                })
+            }
+            
+            const bytes = await this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Write,
+                callback: async ({ suiClient }) => {
+                    return await openPositionTxb.build({
+                        client: suiClient,
+                    })
+                },
+            })
+            
+            const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
+            
+            const signatureWithBytes = await this.signerService.withSuiSigner({
+                bot,
+                action: async (signer) => {
+                    return await signer.signTransaction(bytes)
+                },
+            })
+            
+            return {
+                prepareTxs: [
+                    {
+                        txHash,
+                        signatureWithBytes,
+                    },
+                ],
+                feeAmountA,
+                feeAmountB,
+                tickLower,
+                tickUpper,
+            }
+        } else {
+            if (!bot.privyMetadata?.walletPublicKey) {
+                throw new PrivyPublicKeyNotFoundException({
+                    botId: bot.id,
+                })
+            }
+            if (!bot.privyMetadata?.walletId) {
+                throw new PrivyPublicKeyNotFoundException({
+                    botId: bot.id,
+                })
+            }
+            if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                    botId: bot.id,
+                })
+            }
+            
+            // store validated values for use in callback
+            const privyMetadata = bot.privyMetadata
+            const encryptedPrivySignerPrivateKey = bot.encryptedPrivySignerPrivateKeyPayload
+            
+            const { txHash, signatureWithBytes } = await this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Write,
+                callback: async ({ suiClient }) => {
+                    return await this.privySignService.signSuiTransaction({
+                        publicKeyHex: privyMetadata.walletPublicKey!,
+                        client: suiClient,
+                        walletId: privyMetadata.walletId!,
+                        transaction: openPositionTxb,
+                        encryptedPrivySignerPrivateKey: encryptedPrivySignerPrivateKey,
+                    })
+                },
+            })
+            
+            return {
+                prepareTxs: [
+                    {
+                        txHash,
+                        signatureWithBytes,
+                    },
+                ],
+                feeAmountA,
+                feeAmountB,
+                tickLower,
+                tickUpper,
+            }
+        }
     }
 
     async execute(
@@ -387,44 +418,54 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                 type: TransactionType.OpenPosition,
             })
         }
-        return await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Write,
-            callback: async ({ suiClient }) => {
-                if (stimulate) {
-                    const transactionBlock = Transaction.from(signatureWithBytes.bytes)
-                    const devInspect = await suiClient.devInspectTransactionBlock({
+        if (stimulate) {
+            const transactionBlock = Transaction.from(signatureWithBytes.bytes)
+            const devInspect = await this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Write,
+                callback: async ({ suiClient }) => {
+                    return await suiClient.devInspectTransactionBlock({
                         transactionBlock,
                         sender: bot.accountAddress,
                     })
-                    if (devInspect.effects.status.status !== "success") {
-                        throw new TransactionStimulatedFailedException({
-                            botId: bot.id,
-                            txHash: devInspect.effects.transactionDigest,
-                            liquidityPoolId: liquidityPool.displayId,
-                            type: TransactionType.OpenPosition,
-                        })
-                    }
-                    this.winstonService.log(
-                        WinstonLog.OpenPositionTransactionStimulated,
-                        {
-                            botId: bot.id,
-                            txHash,
-                            liquidityPoolId: liquidityPool.displayId,
-                        }
-                    )
-                    const { positionId } = this.parseMintEvents({
-                        bot,
-                        liquidityPool,
-                        txHash,
-                        state: _state,
-                        events: devInspect.events || [],
-                    })
-                    return {
-                        positionId,
-                        txHashes: [txHash],
-                    }
+                },
+            })
+            
+            if (devInspect.effects.status.status !== "success") {
+                throw new TransactionStimulatedFailedException({
+                    botId: bot.id,
+                    txHash: devInspect.effects.transactionDigest,
+                    liquidityPoolId: liquidityPool.displayId,
+                    type: TransactionType.OpenPosition,
+                })
+            }
+            
+            this.winstonService.log(
+                WinstonLog.OpenPositionTransactionStimulated,
+                {
+                    botId: bot.id,
+                    txHash,
+                    liquidityPoolId: liquidityPool.displayId,
                 }
-                const { digest, events, effects } = await suiClient.executeTransactionBlock({
+            )
+            
+            const { positionId } = this.parseMintEvents({
+                bot,
+                liquidityPool,
+                txHash,
+                state: _state,
+                events: devInspect.events || [],
+            })
+            
+            return {
+                positionId,
+                txHashes: [txHash],
+            }
+        }
+        
+        const { digest, events, effects } = await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Write,
+            callback: async ({ suiClient }) => {
+                return await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
                     signature: signatureWithBytes.signature,
                     options: {
@@ -432,37 +473,49 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         showEffects: true,
                     }
                 })
-                if (effects?.status?.status !== "success") {
-                    throw new TransactionExecutionFailedException({
-                        botId: bot.id,
-                        txHash,
-                        liquidityPoolId: liquidityPool.displayId,
-                    })
-                }
-                await suiClient.waitForTransaction({
-                    digest,
-                })
-                this.winstonService.log(
-                    WinstonLog.OpenPositionTransactionExecuted,
-                    {
-                        botId: bot.id,
-                        txHash: digest,
-                        liquidityPoolId: liquidityPool.displayId,
-                    }
-                )
-                const { positionId } = this.parseMintEvents({
-                    bot,
-                    liquidityPool,
-                    txHash,
-                    state: _state,
-                    events: events || [],
-                })
-                return {
-                    positionId,
-                    txHashes: [txHash],
-                }
             },
         })
+        
+        if (effects?.status?.status !== "success") {
+            throw new TransactionSubmitFailedException({
+                originalError: new TransactionExecutionFailedException({
+                    botId: bot.id,
+                    txHash,
+                    liquidityPoolId: liquidityPool.displayId,
+                }),
+                message: effects?.status?.error ?? "Unknown error",
+            })
+        }
+        
+        await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Write,
+            callback: async ({ suiClient }) => {
+                return await suiClient.waitForTransaction({
+                    digest,
+                })
+            },
+        })
+        
+        this.winstonService.log(
+            WinstonLog.OpenPositionTransactionExecuted,
+            {
+                botId: bot.id,
+                txHash: digest,
+                liquidityPoolId: liquidityPool.displayId,
+            }
+        )
+        
+        const { positionId } = this.parseMintEvents({
+            bot,
+            liquidityPool,
+            txHash,
+            state: _state,
+            events: events || [],
+        })
+        return {
+            positionId,
+            txHashes: [txHash],
+        }
     }
 
     private parseMintEvents(

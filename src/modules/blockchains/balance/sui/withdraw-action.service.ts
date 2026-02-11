@@ -19,6 +19,8 @@ import {
     TokenNotFoundException,
     TransactionNotFoundException,
     OutputCoinNotFoundException,
+    TransactionSubmitFailedException,
+    TransactionExecutionFailedException,
 } from "@modules/exceptions"
 import {
     AppVersion,
@@ -92,228 +94,241 @@ export class SuiWithdrawActionService {
      * const prepareTxs = await service.prepare({ bot, tokenInputs, toAddress, toUsdc: true })
      */
     public async prepare({ bot, tokenInputs, toAddress, toUsdc = false }: PrepareWithdrawTransactionParams): Promise<PrepareWithdrawTransactionResult> {
-        return await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Write,
-            callback: async ({ suiClient }) => {
-                // initialize transaction block
-                let txb = new Transaction()
-                txb.setSender(bot.accountAddress)
+        // initialize transaction block
+        let txb = new Transaction()
+        txb.setSender(bot.accountAddress)
 
-                // find USDC token if converting to USDC
-                const usdcToken = toUsdc
-                    ? this.primaryMemoryStorageService.tokenCollection.findOne({
-                        displayId: {
-                            $eq: TokenId.SuiUsdc,
-                        },
-                    })
-                    : null
+        // find USDC token if converting to USDC
+        const usdcToken = toUsdc
+            ? this.primaryMemoryStorageService.tokenCollection.findOne({
+                displayId: {
+                    $eq: TokenId.SuiUsdc,
+                },
+            })
+            : null
 
-                if (toUsdc && !usdcToken) {
-                    throw new TokenNotFoundException({
-                        displayId: TokenId.SuiUsdc,
-                    })
-                }
-                for (const tokenInput of tokenInputs) {
-                    if (toUsdc) {
-                        // swap to USDC if needed, then transfer
-                        if (tokenInput.token.displayId !== TokenId.SuiUsdc) {
-                            // fetch and merge input coins
-                            const { sourceCoin } = await this.selectCoinsService.fetchAndMergeCoins({
-                                txb,
-                                owner: bot.accountAddress,
-                                coinType: tokenInput.token.tokenAddress,
-                                requiredAmount: tokenInput.amount,
-                            })
-
-                            // get best quote from aggregator
-                            const { aggregatorId, response } = await this.suiAggregatorSelectorService.batchQuote({
-                                tokenIn: tokenInput.token,
-                                tokenOut: usdcToken!,
-                                amountIn: tokenInput.amount,
-                                senderAddress: bot.accountAddress,
-                            })
-
-                            // execute swap using selected aggregator
-                            const { outputCoin, txb: swapTxb } = await this.suiAggregatorSelectorService.selectorSwap({
-                                base: {
-                                    payload: response.payload,
-                                    tokenIn: tokenInput.token,
-                                    tokenOut: usdcToken!,
-                                    accountAddress: bot.accountAddress,
-                                    txb,
-                                    inputCoin: sourceCoin.coinArg,
-                                },
-                                aggregatorId,
-                            })
-
-                            // validate swap transaction was created
-                            if (!swapTxb) {
-                                throw new TransactionNotFoundException({
-                                })
-                            }
-                            txb = swapTxb
-
-                            // validate output coin exists
-                            if (!outputCoin) {
-                                throw new OutputCoinNotFoundException({
-                                    botId: bot.id,
-                                    type: TransactionType.Withdraw,
-                                })
-                            }
-                            
-                            // transfer USDC to recipient
-                            txb.transferObjects(
-                                [outputCoin],
-                                toAddress
-                            )
-                        } else {
-                            // token is already USDC, transfer directly
-                            const { sourceCoin } = await this.selectCoinsService.fetchAndMergeCoins({
-                                txb,
-                                owner: bot.accountAddress,
-                                coinType: tokenInput.token.tokenAddress,
-                                requiredAmount: tokenInput.amount,
-                            })  
-                            txb.transferObjects(
-                                [sourceCoin.coinArg],
-                                toAddress
-                            )
-                        }
-                        continue
-                    }
-                    
-                    // find target token for conversion
-                    const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-                        id: {
-                            $eq: bot.targetToken.toString()
-                        },
-                    })
-                    if (!targetToken) {
-                        throw new TokenNotFoundException({
-                            displayId: tokenInput.token.displayId,
-                        })
-                    }
-                    
-                    // swap to target token if needed
-                    if (tokenInput.token.displayId !== targetToken.displayId) {
-                        // fetch and merge input coins
-                        const { sourceCoin } = await this.selectCoinsService.fetchAndMergeCoins({
-                            txb,
-                            owner: bot.accountAddress,
-                            coinType: tokenInput.token.tokenAddress,
-                            requiredAmount: tokenInput.amount,
-                        })
-                        
-                        // get best quote from aggregator
-                        const { aggregatorId, response } = await this.suiAggregatorSelectorService.batchQuote({
-                            tokenIn: tokenInput.token,
-                            tokenOut: targetToken,
-                            amountIn: tokenInput.amount,
-                            senderAddress: bot.accountAddress,
-                        })
-                        
-                        // execute swap using selected aggregator
-                        const { outputCoin, txb: swapTxb } = await this.suiAggregatorSelectorService.selectorSwap({
-                            base: {
-                                payload: response.payload,
-                                tokenIn: tokenInput.token,
-                                tokenOut: targetToken,
-                                accountAddress: bot.accountAddress,
-                                txb,
-                                inputCoin: sourceCoin.coinArg,
-                            },
-                            aggregatorId,
-                        })
-                        
-                        // validate swap transaction was created
-                        if (!swapTxb) {
-                            throw new TransactionNotFoundException({
-                            })
-                        }
-                        txb = swapTxb
-                        
-                        // validate output coin exists
-                        if (!outputCoin) {
-                            throw new OutputCoinNotFoundException({
-                                botId: bot.id,
-                                type: TransactionType.Withdraw,
-                            })
-                        }
-                        
-                        // transfer target token to recipient
-                        txb.transferObjects(
-                            [outputCoin],
-                            toAddress
-                        )
-                        continue
-                    }
-                    
-                    // token matches target, transfer directly
+        if (toUsdc && !usdcToken) {
+            throw new TokenNotFoundException({
+                displayId: TokenId.SuiUsdc,
+            })
+        }
+        for (const tokenInput of tokenInputs) {
+            if (toUsdc) {
+                // swap to USDC if needed, then transfer
+                if (tokenInput.token.displayId !== TokenId.SuiUsdc) {
+                    // fetch and merge input coins
                     const { sourceCoin } = await this.selectCoinsService.fetchAndMergeCoins({
                         txb,
                         owner: bot.accountAddress,
                         coinType: tokenInput.token.tokenAddress,
                         requiredAmount: tokenInput.amount,
                     })
+
+                    // get best quote from aggregator
+                    const { aggregatorId, response } = await this.suiAggregatorSelectorService.batchQuote({
+                        tokenIn: tokenInput.token,
+                        tokenOut: usdcToken!,
+                        amountIn: tokenInput.amount,
+                        senderAddress: bot.accountAddress,
+                    })
+
+                    // execute swap using selected aggregator
+                    const { outputCoin, txb: swapTxb } = await this.suiAggregatorSelectorService.selectorSwap({
+                        base: {
+                            payload: response.payload,
+                            tokenIn: tokenInput.token,
+                            tokenOut: usdcToken!,
+                            accountAddress: bot.accountAddress,
+                            txb,
+                            inputCoin: sourceCoin.coinArg,
+                        },
+                        aggregatorId,
+                    })
+
+                    // validate swap transaction was created
+                    if (!swapTxb) {
+                        throw new TransactionNotFoundException({
+                        })
+                    }
+                    txb = swapTxb
+
+                    // validate output coin exists
+                    if (!outputCoin) {
+                        throw new OutputCoinNotFoundException({
+                            botId: bot.id,
+                            type: TransactionType.Withdraw,
+                        })
+                    }
+                    
+                    // transfer USDC to recipient
+                    txb.transferObjects(
+                        [outputCoin],
+                        toAddress
+                    )
+                } else {
+                    // token is already USDC, transfer directly
+                    const { sourceCoin } = await this.selectCoinsService.fetchAndMergeCoins({
+                        txb,
+                        owner: bot.accountAddress,
+                        coinType: tokenInput.token.tokenAddress,
+                        requiredAmount: tokenInput.amount,
+                    })  
                     txb.transferObjects(
                         [sourceCoin.coinArg],
                         toAddress
                     )
-                    continue
                 }
-
-                // build and sign transaction
-                let txHash: string
-                let signatureWithBytes: SignatureWithBytes | undefined
-
-                if (bot.version === AppVersion.V1) {
-                    // build transaction bytes
-                    const bytes = await txb.build({
-                        client: suiClient,
-                    })
-                    txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
-                    
-                    // sign with V1 signer
-                    signatureWithBytes = await this.signerService.withSuiSigner({
-                        bot,
-                        action: async (signer) => await signer.signTransaction(bytes),
-                    })
-                } else {
-                    // validate privy metadata for V2 bots
-                    if (!bot.privyMetadata?.walletPublicKey) {
-                        throw new PrivyPublicKeyNotFoundException({
-                            botId: bot.id,
-                        })
-                    }
-                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
-                        throw new EncryptedPrivySignerPrivateKeyNotFoundException({
-                            botId: bot.id,
-                        })
-                    }
-                    
-                    // sign with Privy gas sponsor
-                    const signed = await this.privySignService.signSuiTransaction({
-                        publicKeyHex: bot.privyMetadata.walletPublicKey,
-                        client: suiClient,
-                        walletId: bot.privyMetadata.walletId,
-                        transaction: txb,
-                        encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
-                    })
-                    txHash = signed.txHash
-                    signatureWithBytes = signed.signatureWithBytes
-                }
-
-                const prepareTxs: Array<PrepareTx> = [
-                    {
-                        txHash,
-                        signatureWithBytes,
+                continue
+            }
+            
+            // find target token for conversion
+            const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+                id: {
+                    $eq: bot.targetToken.toString()
+                },
+            })
+            if (!targetToken) {
+                throw new TokenNotFoundException({
+                    displayId: tokenInput.token.displayId,
+                })
+            }
+            
+            // swap to target token if needed
+            if (tokenInput.token.displayId !== targetToken.displayId) {
+                // fetch and merge input coins
+                const { sourceCoin } = await this.selectCoinsService.fetchAndMergeCoins({
+                    txb,
+                    owner: bot.accountAddress,
+                    coinType: tokenInput.token.tokenAddress,
+                    requiredAmount: tokenInput.amount,
+                })
+                
+                // get best quote from aggregator
+                const { aggregatorId, response } = await this.suiAggregatorSelectorService.batchQuote({
+                    tokenIn: tokenInput.token,
+                    tokenOut: targetToken,
+                    amountIn: tokenInput.amount,
+                    senderAddress: bot.accountAddress,
+                })
+                
+                // execute swap using selected aggregator
+                const { outputCoin, txb: swapTxb } = await this.suiAggregatorSelectorService.selectorSwap({
+                    base: {
+                        payload: response.payload,
+                        tokenIn: tokenInput.token,
+                        tokenOut: targetToken,
+                        accountAddress: bot.accountAddress,
+                        txb,
+                        inputCoin: sourceCoin.coinArg,
                     },
-                ]
-                return {
-                    prepareTxs,
+                    aggregatorId,
+                })
+                
+                // validate swap transaction was created
+                if (!swapTxb) {
+                    throw new TransactionNotFoundException({
+                    })
                 }
+                txb = swapTxb
+                
+                // validate output coin exists
+                if (!outputCoin) {
+                    throw new OutputCoinNotFoundException({
+                        botId: bot.id,
+                        type: TransactionType.Withdraw,
+                    })
+                }
+                
+                // transfer target token to recipient
+                txb.transferObjects(
+                    [outputCoin],
+                    toAddress
+                )
+                continue
+            }
+            
+            // token matches target, transfer directly
+            const { sourceCoin } = await this.selectCoinsService.fetchAndMergeCoins({
+                txb,
+                owner: bot.accountAddress,
+                coinType: tokenInput.token.tokenAddress,
+                requiredAmount: tokenInput.amount,
+            })
+            txb.transferObjects(
+                [sourceCoin.coinArg],
+                toAddress
+            )
+            continue
+        }
+
+        // build transaction bytes
+        const bytes = await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Write,
+            callback: async ({ suiClient }) => {
+                return await txb.build({
+                    client: suiClient,
+                })
             },
         })
+        
+        const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
+        
+        // sign transaction based on bot version
+        let signatureWithBytes: SignatureWithBytes | undefined
+
+        if (bot.version === AppVersion.V1) {
+            // sign with V1 signer
+            signatureWithBytes = await this.signerService.withSuiSigner({
+                bot,
+                action: async (signer) => await signer.signTransaction(bytes),
+            })
+        } else {
+            // validate privy metadata for V2 bots
+            if (!bot.privyMetadata?.walletPublicKey) {
+                throw new PrivyPublicKeyNotFoundException({
+                    botId: bot.id,
+                })
+            }
+            if (!bot.privyMetadata?.walletId) {
+                throw new PrivyPublicKeyNotFoundException({
+                    botId: bot.id,
+                })
+            }
+            if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                    botId: bot.id,
+                })
+            }
+            
+            // store validated values for use in callback
+            const privyMetadata = bot.privyMetadata
+            const encryptedPrivySignerPrivateKey = bot.encryptedPrivySignerPrivateKeyPayload
+            
+            // sign with Privy gas sponsor
+            const signed = await this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Write,
+                callback: async ({ suiClient }) => {
+                    return await this.privySignService.signSuiTransaction({
+                        publicKeyHex: privyMetadata.walletPublicKey!,
+                        client: suiClient,
+                        walletId: privyMetadata.walletId!,
+                        transaction: txb,
+                        encryptedPrivySignerPrivateKey: encryptedPrivySignerPrivateKey,
+                    })
+                },
+            })
+            signatureWithBytes = signed.signatureWithBytes
+        }
+
+        const prepareTxs: Array<PrepareTx> = [
+            {
+                txHash,
+                signatureWithBytes,
+            },
+        ]
+        return {
+            prepareTxs,
+        }
     }
 
     /**
@@ -375,55 +390,78 @@ export class SuiWithdrawActionService {
             }
 
             // execute or simulate transaction
-            await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
-                callback: async ({ suiClient }) => {
-                    if (stimulate) {
-                        // simulate transaction without sending
-                        const transactionBlock = Transaction.from(signatureWithBytes.bytes)
-                        const devInspect = await suiClient.devInspectTransactionBlock({
+            if (stimulate) {
+                // simulate transaction without sending
+                const transactionBlock = Transaction.from(signatureWithBytes.bytes)
+                const devInspect = await this.rpcExecutorService.withSuiClient({
+                    accessType: RpcAccessType.Write,
+                    callback: async ({ suiClient }) => {
+                        return await suiClient.devInspectTransactionBlock({
                             transactionBlock,
                             sender: bot.accountAddress,
                         })
-                        if (devInspect.effects.status.status !== "success") {
-                            throw new TransactionValidationFailedException({
-                                botId: bot.id,
-                                txHash: devInspect.effects.transactionDigest,
-                                type: TransactionType.Withdraw,
-                            })
-                        }
-                        this.winstonService.log(
-                            WinstonLog.WithdrawTransactionStimulated,
-                            {
-                                botId: bot.id,
-                                txHash: prepareTx.txHash,
+                    },
+                })
+                
+                if (devInspect.effects.status.status !== "success") {
+                    throw new TransactionValidationFailedException({
+                        botId: bot.id,
+                        txHash: devInspect.effects.transactionDigest,
+                        type: TransactionType.Withdraw,
+                    })
+                }
+                
+                this.winstonService.log(
+                    WinstonLog.WithdrawTransactionStimulated,
+                    {
+                        botId: bot.id,
+                        txHash: prepareTx.txHash,
+                    },
+                )
+                txHashes.push(prepareTx.txHash)
+            } else {
+                // execute transaction
+                const { digest, effects } = await this.rpcExecutorService.withSuiClient({
+                    accessType: RpcAccessType.Write,
+                    callback: async ({ suiClient }) => {
+                        return await suiClient.executeTransactionBlock({
+                            transactionBlock: signatureWithBytes.bytes,
+                            signature: signatureWithBytes.signature,
+                            options: {
+                                showEffects: true,
                             },
-                        )
-                        txHashes.push(prepareTx.txHash)
-                        return
-                    }
+                        })
+                    },
+                })  
 
-                    // execute transaction and wait for confirmation
-                    const { digest } = await suiClient.executeTransactionBlock({
-                        transactionBlock: signatureWithBytes.bytes,
-                        signature: signatureWithBytes.signature,
-                        options: {
-                            showEffects: true,
-                        },
-                    })
-                    await suiClient.waitForTransaction({
-                        digest
-                    })
-                    this.winstonService.log(
-                        WinstonLog.WithdrawTransactionExecuted,
-                        {
+                if (effects?.status?.status !== "success") {
+                    throw new TransactionSubmitFailedException({
+                        originalError: new TransactionExecutionFailedException({
                             botId: bot.id,
-                            txHash: prepareTx.txHash,
-                        },
-                    )
-                    txHashes.push(prepareTx.txHash)
-                },
-            })
+                            txHash: digest,
+                        }),
+                        message: effects?.status?.error ?? "Unknown error",
+                    })
+                }
+                // wait for transaction confirmation
+                await this.rpcExecutorService.withSuiClient({
+                    accessType: RpcAccessType.Write,
+                    callback: async ({ suiClient }) => {
+                        return await suiClient.waitForTransaction({
+                            digest
+                        })
+                    },
+                })
+                
+                this.winstonService.log(
+                    WinstonLog.WithdrawTransactionExecuted,
+                    {
+                        botId: bot.id,
+                        txHash: prepareTx.txHash,
+                    },
+                )
+                txHashes.push(prepareTx.txHash)
+            }
         }
 
         return {

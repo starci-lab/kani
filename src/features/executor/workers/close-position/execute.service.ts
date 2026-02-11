@@ -33,10 +33,10 @@ import {
     AsyncService,
 } from "@modules/mixin"
 import {
-    AbstractException,
     ExecuteClosePositionResultNotFoundException,
     JobFailureException,
     JobFailureStrategy,
+    TransactionSubmitFailedException,
 } from "@modules/exceptions"
 import {
     SerializerService,
@@ -116,7 +116,7 @@ export class ExecuteService {
             )
         )
         if (error) {
-            if ((error instanceof AbstractException) && isRetry) {
+            if ((error instanceof TransactionSubmitFailedException) && isRetry) {
                 throw new JobFailureException({
                     strategy: JobFailureStrategy.Fatal,
                     originalError: error,

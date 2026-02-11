@@ -35,10 +35,10 @@ import {
     AsyncService 
 } from "@modules/mixin"
 import {
-    AbstractException,
     ExecuteOpenPositionResultNotFoundException,
     JobFailureException,
     JobFailureStrategy,
+    TransactionSubmitFailedException,
 } from "@modules/exceptions"
 import {
     SerializerService 
@@ -121,8 +121,9 @@ export class ExecuteService {
             )
         )
         if (error) {
+            console.log(error)
             // if the error is throw intentionally, throw a fatal error to let BullMQ handle the retry
-            if ((error instanceof AbstractException) && isRetry) {
+            if ((error instanceof TransactionSubmitFailedException) && isRetry) {
                 throw new JobFailureException(
                     {
                         strategy: JobFailureStrategy.Fatal,

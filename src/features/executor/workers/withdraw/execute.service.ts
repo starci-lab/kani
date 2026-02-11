@@ -30,7 +30,7 @@ import {
     AsyncService,
 } from "@modules/mixin"
 import {
-    AbstractException,
+    TransactionSubmitFailedException,
     ExecuteWithdrawTransactionResultNotFoundException,
     JobFailureException,
     JobFailureStrategy,
@@ -95,7 +95,8 @@ export class ExecuteService {
                     botId: bot.id,
                     jobId: job.id,
                     ageMs: this.dayjsService.now().diff(job.createdAt,
-                        "millisecond"),
+                        "millisecond"
+                    ),
                 }
             )
             return {
@@ -118,7 +119,10 @@ export class ExecuteService {
             )
         )
         if (error) {
-            if ((error instanceof AbstractException) && isRetry) {
+            if (
+                (error instanceof TransactionSubmitFailedException) 
+                && isRetry
+            ) {
                 throw new JobFailureException(
                     {
                         strategy: JobFailureStrategy.Fatal,

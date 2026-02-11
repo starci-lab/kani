@@ -70,9 +70,8 @@ export class SolanaGetErrorTypesService {
         }
         
         // handle cluster / transaction runtime errors (7050000–7050015)
-        if (code >= 7050000 && code <= 7050015) {
-            // blockhash expired, account in use, cluster maintenance, etc.
-            return RpcErrorType.Ignorable
+        if (code >= 7050000 && code <= 7618999) {
+            return RpcErrorType.TransactionSubmitFailed
         }
         
         // handle RPC subscriptions errors (8190000–8190004)

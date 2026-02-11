@@ -29,6 +29,7 @@ import {
     TransactionExecutionFailedException,
     SuiSingleTransactionRequiredException,
     ErrorSuiSingleTransactionRequiredOperation,
+    TransactionSubmitFailedException,
 } from "@modules/exceptions"
 import {
     RpcExecutorService
@@ -106,73 +107,96 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
             liquidityPool,
         })
         
-        return await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Write,
-            callback: async ({ suiClient }) => {
-                if (bot.version === AppVersion.V1) {
-                    return await this.signerService.withSuiSigner({
-                        bot,
-                        action: async (signer) => {
-                            // dev inspect the transaction block
-                            const devInspect = await suiClient.devInspectTransactionBlock({
-                                transactionBlock: closePositionTxb,
-                                sender: bot.accountAddress,
-                            })
-                            if (devInspect.effects.status.status !== "success") {
-                                throw new TransactionValidationFailedException({
-                                    botId: bot.id,
-                                    txHash: devInspect.effects.transactionDigest,
-                                    type: TransactionType.ClosePosition,
-                                    liquidityPoolId: liquidityPool.displayId,
-                                })
-                            }
-                            
-                            // build transaction bytes and sign
-                            const bytes = await closePositionTxb.build({
-                                client: suiClient,
-                            })
-                            const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
-                            const signatureWithBytes = await signer.signTransaction(bytes)
-                            
-                            return {
-                                prepareTxs: [{
-                                    txHash,
-                                    signatureWithBytes,
-                                }],
-                            }
-                        },
+        if (bot.version === AppVersion.V1) {
+            // dev inspect the transaction block
+            const devInspect = await this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Write,
+                callback: async ({ suiClient }) => {
+                    return await suiClient.devInspectTransactionBlock({
+                        transactionBlock: closePositionTxb,
+                        sender: bot.accountAddress,
                     })
-                } else {
-                    // Stage: state validation (privy signing prerequisites)
-                    if (!bot.privyMetadata?.walletPublicKey) {
-                        throw new PrivyPublicKeyNotFoundException({
-                            botId: bot.id,
-                        })
-                    }
-                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
-                        throw new EncryptedPrivySignerPrivateKeyNotFoundException({
-                            botId: bot.id,
-                        })
-                    }
-                    
-                    // sign transaction with Privy
-                    const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction({
-                        publicKeyHex: bot.privyMetadata.walletPublicKey!,
+                },
+            })
+            
+            if (devInspect.effects.status.status !== "success") {
+                throw new TransactionValidationFailedException({
+                    botId: bot.id,
+                    txHash: devInspect.effects.transactionDigest,
+                    type: TransactionType.ClosePosition,
+                    liquidityPoolId: liquidityPool.displayId,
+                })
+            }
+            
+            // build transaction bytes
+            const bytes = await this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Write,
+                callback: async ({ suiClient }) => {
+                    return await closePositionTxb.build({
                         client: suiClient,
-                        walletId: bot.privyMetadata.walletId!,
-                        transaction: closePositionTxb,
-                        encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload!,
                     })
-                    
-                    return {
-                        prepareTxs: [{
-                            txHash,
-                            signatureWithBytes,
-                        }],
-                    }
-                }
-            },
-        })
+                },
+            })
+            
+            const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
+            
+            // sign transaction
+            const signatureWithBytes = await this.signerService.withSuiSigner({
+                bot,
+                action: async (signer) => {
+                    return await signer.signTransaction(bytes)
+                },
+            })
+            
+            return {
+                prepareTxs: [{
+                    txHash,
+                    signatureWithBytes,
+                }],
+            }
+        } else {
+            // Stage: state validation (privy signing prerequisites)
+            if (!bot.privyMetadata?.walletPublicKey) {
+                throw new PrivyPublicKeyNotFoundException({
+                    botId: bot.id,
+                })
+            }
+            if (!bot.privyMetadata?.walletId) {
+                throw new PrivyPublicKeyNotFoundException({
+                    botId: bot.id,
+                })
+            }
+            if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                    botId: bot.id,
+                })
+            }
+            
+            // store validated values for use in callback
+            const privyMetadata = bot.privyMetadata
+            const encryptedPrivySignerPrivateKey = bot.encryptedPrivySignerPrivateKeyPayload
+            
+            // sign transaction with Privy
+            const { txHash, signatureWithBytes } = await this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Write,
+                callback: async ({ suiClient }) => {
+                    return await this.privySignService.signSuiTransaction({
+                        publicKeyHex: privyMetadata.walletPublicKey!,
+                        client: suiClient,
+                        walletId: privyMetadata.walletId!,
+                        transaction: closePositionTxb,
+                        encryptedPrivySignerPrivateKey: encryptedPrivySignerPrivateKey,
+                    })
+                },
+            })
+            
+            return {
+                prepareTxs: [{
+                    txHash,
+                    signatureWithBytes,
+                }],
+            }
+        }
     }
 
     /**
@@ -250,69 +274,89 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
             })
         }
         
-        return await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Write,
-            callback: async ({ suiClient }) => {
-                if (stimulate) {
-                    // simulate transaction execution
-                    const transactionBlock = Transaction.from(signatureWithBytes.bytes)
-                    const devInspect = await suiClient.devInspectTransactionBlock({
+        if (stimulate) {
+            // simulate transaction execution
+            const transactionBlock = Transaction.from(signatureWithBytes.bytes)
+            const devInspect = await this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Write,
+                callback: async ({ suiClient }) => {
+                    return await suiClient.devInspectTransactionBlock({
                         transactionBlock,
                         sender: bot.accountAddress,
                     })
-                    if (devInspect.effects.status.status !== "success") {
-                        throw new TransactionStimulatedFailedException({
-                            botId: bot.id,
-                            txHash: devInspect.effects.transactionDigest,
-                            liquidityPoolId: liquidityPool.displayId,
-                            type: TransactionType.ClosePosition,
-                        })
-                    }
-                    this.winstonService.log(
-                        WinstonLog.ClosePositionTransactionStimulated,
-                        {
-                            botId: bot.id,
-                            txHash,
-                            liquidityPoolId: liquidityPool.displayId,
-                        }
-                    )
-                    return {
-                        txHashes: [txHash],
-                    }
+                },
+            })
+            
+            if (devInspect.effects.status.status !== "success") {
+                throw new TransactionSubmitFailedException({
+                    originalError: new TransactionStimulatedFailedException({
+                        botId: bot.id,
+                        txHash: devInspect.effects.transactionDigest,
+                        liquidityPoolId: liquidityPool.displayId,
+                        type: TransactionType.ClosePosition,
+                    }),
+                    message: devInspect.effects.status.error ?? "Unknown error",
+                })
+            }
+            
+            this.winstonService.log(
+                WinstonLog.ClosePositionTransactionStimulated,
+                {
+                    botId: bot.id,
+                    txHash,
+                    liquidityPoolId: liquidityPool.displayId,
                 }
-                
-                // execute transaction on-chain
-                const { digest, effects } = await suiClient.executeTransactionBlock({
+            )
+            return {
+                txHashes: [txHash],
+            }
+        }
+        
+        // execute transaction on-chain
+        const { digest, effects } = await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Write,
+            callback: async ({ suiClient }) => {
+                return await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
                     signature: signatureWithBytes.signature,
                     options: {
                         showEffects: true,
                     },
                 })
-                if (effects?.status?.status !== "success") {
-                    throw new TransactionExecutionFailedException({
-                        botId: bot.id,
-                        txHash: digest,
-                        liquidityPoolId: liquidityPool.displayId,
-                    })
-                }
-                
-                // wait for transaction confirmation
-                await suiClient.waitForTransaction({
-                    digest,
-                })
-                this.winstonService.log(
-                    WinstonLog.ClosePositionTransactionExecuted,
-                    {
-                        botId: bot.id,
-                        txHash: digest,
-                        liquidityPoolId: liquidityPool.displayId,
-                    }
-                )
-                return {
-                    txHashes: [digest],
-                }
             },
         })
+        
+        if (effects?.status?.status !== "success") {
+            throw new TransactionSubmitFailedException({
+                originalError: new TransactionExecutionFailedException({
+                    botId: bot.id,
+                    txHash: digest,
+                    liquidityPoolId: liquidityPool.displayId,
+                }),
+                message: effects?.status?.error ?? "Unknown error",
+            })
+        }
+        
+        // wait for transaction confirmation
+        await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Write,
+            callback: async ({ suiClient }) => {
+                return await suiClient.waitForTransaction({
+                    digest,
+                })
+            },
+        })
+        
+        this.winstonService.log(
+            WinstonLog.ClosePositionTransactionExecuted,
+            {
+                botId: bot.id,
+                txHash: digest,
+                liquidityPoolId: liquidityPool.displayId,
+            }
+        )
+        return {
+            txHashes: [digest],
+        }
     }
 }

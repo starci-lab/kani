@@ -8,13 +8,15 @@ import {
     ExecuteReconcileBalanceTransactionResult,
 } from "../types"
 import {
-    PrepareTx
+    PrepareTx,
+    SolanaTx
 } from "../../types"
 import {
     PrivyMetadataNotFoundException, 
     EncryptedPrivySignerPrivateKeyNotFoundException, 
     MissingSolanaTxParamException,
     TransactionValidationFailedException,
+    TransactionSubmitFailedException,
 } from "@modules/exceptions"
 import {
     AppVersion,
@@ -122,85 +124,87 @@ export class SolanaReconcileBalanceActionService {
             // extract swap instructions from transaction message
             const swapInstructions = swapTransactionMessage.instructions
             
-            // build and sign transaction
-            const transaction = await this.rpcExecutorService.withSolanaRpc({
+            // get latest blockhash for transaction lifetime
+            const { value: latestBlockhash } = await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
-                    // get latest blockhash for transaction lifetime
-                    const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
-                    // build transaction message with swap instructions
-                    const transactionMessage = pipe(
-                        createTransactionMessage({
-                            version: 0 
-                        }),
-                        (tx) => setTransactionMessageFeePayerSigner(
-                            createNoopSigner(address(bot.accountAddress)),
-                            tx
-                        ),
-                        (tx) => setTransactionMessageLifetimeUsingBlockhash(
-                            latestBlockhash,
-                            tx
-                        ),
-                        (tx) => appendTransactionMessageInstructions(
-                            swapInstructions,
-                            tx
-                        ),
-                    )
-                    const compiledTransaction = compileTransaction(transactionMessage)
-                    
-                    // sign transaction based on bot version
-                    if (bot.version === AppVersion.V1) {
-                        return await this.signerService.withSolanaSigner({
-                            bot,
-                            action: async (signer) => {
-                                const signedTransaction = await signTransaction(
-                                    [signer.keyPair],
-                                    compiledTransaction,
-                                ) 
-                                const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                                const txHash = transactionSignature.toString()
-                                
-                                // validate transaction before returning
-                                assertIsSendableTransaction(signedTransaction)
-                                assertIsTransactionWithinSizeLimit(signedTransaction)
-                                
-                                return {
-                                    txHash,
-                                    solanaTx: signedTransaction,
-                                }
-                            },
-                        })
-                    } else {
-                        // validate privy metadata for V2 bots
-                        if (!bot.privyMetadata) {
-                            throw new PrivyMetadataNotFoundException({
-                                botId: bot.id,
-                            })
-                        }
-                        if (!bot.encryptedPrivySignerPrivateKeyPayload) {
-                            throw new EncryptedPrivySignerPrivateKeyNotFoundException({
-                                botId: bot.id,
-                            })
-                        }
-                        
-                        // sign transaction with Privy gas sponsor
-                        const signedTransaction = await this.privySignService.signSolanaTransaction({
-                            lifetimeConstraint: {
-                                blockhash: latestBlockhash.blockhash,
-                                lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-                            },
-                            transaction: compiledTransaction,
-                            encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
-                            walletId: bot.privyMetadata.walletId,
-                        })
-
-                        return {
-                            txHash: signedTransaction.txHash,
-                            solanaTx: signedTransaction.signedTransaction,
-                        }
-                    }
+                    return await rpc.getLatestBlockhash().send()
                 },
             })
+            
+            // build transaction message with swap instructions
+            const transactionMessage = pipe(
+                createTransactionMessage({
+                    version: 0 
+                }),
+                (tx) => setTransactionMessageFeePayerSigner(
+                    createNoopSigner(address(bot.accountAddress)),
+                    tx
+                ),
+                (tx) => setTransactionMessageLifetimeUsingBlockhash(
+                    latestBlockhash,
+                    tx
+                ),
+                (tx) => appendTransactionMessageInstructions(
+                    swapInstructions,
+                    tx
+                ),
+            )
+            const compiledTransaction = compileTransaction(transactionMessage)
+            
+            // sign transaction based on bot version
+            let transaction: { txHash: string; solanaTx: SolanaTx }
+            if (bot.version === AppVersion.V1) {
+                const signedTransaction = await this.signerService.withSolanaSigner({
+                    bot,
+                    action: async (signer) => {
+                        return await signTransaction(
+                            [signer.keyPair],
+                            compiledTransaction,
+                        )
+                    },
+                })
+                
+                const transactionSignature = getSignatureFromTransaction(signedTransaction)
+                const txHash = transactionSignature.toString()
+                
+                // validate transaction before returning
+                assertIsSendableTransaction(signedTransaction)
+                assertIsTransactionWithinSizeLimit(signedTransaction)
+                
+                transaction = {
+                    txHash,
+                    solanaTx: signedTransaction,
+                }
+            } else {
+                // validate privy metadata for V2 bots
+                if (!bot.privyMetadata) {
+                    throw new PrivyMetadataNotFoundException({
+                        botId: bot.id,
+                    })
+                }
+                if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                    throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                        botId: bot.id,
+                    })
+                }
+                
+                // sign transaction with Privy gas sponsor
+                const signedTransaction = await this.privySignService.signSolanaTransaction({
+                    lifetimeConstraint: {
+                        blockhash: latestBlockhash.blockhash,
+                        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+                    },
+                    transaction: compiledTransaction,
+                    encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
+                    walletId: bot.privyMetadata.walletId,
+                })
+
+                transaction = {
+                    txHash: signedTransaction.txHash,
+                    solanaTx: signedTransaction.signedTransaction,
+                }
+            }
             prepareTxs.push({
                 txHash: transaction.txHash,
                 solanaTx: transaction.solanaTx,
@@ -269,57 +273,67 @@ export class SolanaReconcileBalanceActionService {
             }
             
             // execute or simulate transaction
-            await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Write,
-                callback: async ({ rpc, rpcSubscriptions }) => {
-                    if (stimulate) {
-                        // simulate transaction without sending
-                        const simulateTransactionResult = await rpc.simulateTransaction(
+            if (stimulate) {
+                // simulate transaction without sending
+                const simulateTransactionResult = await this.rpcExecutorService.withSolanaRpc({
+                    accessType: RpcAccessType.Write,
+                    callback: async ({ rpc }) => {
+                        return await rpc.simulateTransaction(
                             getBase64EncodedWireTransaction(solanaTx),
                             {
                                 encoding: "base64",
                                 commitment: "confirmed",
                             }).send()
-                        if (simulateTransactionResult.value.err) {
-                            throw new TransactionValidationFailedException({
-                                botId: bot.id,
-                                txHash: prepareTx.txHash,
-                                type: TransactionType.ReconcileBalance,
-                            })
-                        }
-                        this.winstonService.log(
-                            WinstonLog.ReconcileBalanceTransactionStimulated,
+                    },
+                })
+                
+                if (simulateTransactionResult.value.err) {
+                    throw new TransactionSubmitFailedException({
+                        originalError: new TransactionValidationFailedException({
+                            botId: bot.id,
+                            txHash: prepareTx.txHash,
+                            type: TransactionType.ReconcileBalance,
+                        }),
+                        message: simulateTransactionResult.value.err.toString(),
+                    })
+                }
+                
+                this.winstonService.log(
+                    WinstonLog.ReconcileBalanceTransactionStimulated,
+                    {
+                        botId: bot.id,
+                        txHash: prepareTx.txHash,
+                    }
+                )
+                txHashes.push(prepareTx.txHash)
+            } else {
+                // send and confirm transaction
+                await this.rpcExecutorService.withSolanaRpc({
+                    accessType: RpcAccessType.Write,
+                    callback: async ({ rpc, rpcSubscriptions }) => {
+                        const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
+                            rpc,
+                            rpcSubscriptions,
+                        })
+                        return await sendAndConfirmTransaction(
+                            solanaTx,
                             {
-                                botId: bot.id,
-                                txHash: prepareTx.txHash,
+                                commitment: "confirmed",
                             }
                         )
-                        txHashes.push(prepareTx.txHash)
-                        return
+                    },
+                })
+                
+                const transactionSignature = getSignatureFromTransaction(solanaTx)
+                this.winstonService.log(
+                    WinstonLog.ReconcileBalanceTransactionExecuted,
+                    {
+                        botId: bot.id,
+                        txHash: transactionSignature.toString(),
                     }
-                    
-                    // send and confirm transaction
-                    const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
-                        rpc,
-                        rpcSubscriptions,
-                    })
-                    const transactionSignature = getSignatureFromTransaction(solanaTx)
-                    await sendAndConfirmTransaction(
-                        solanaTx,
-                        {
-                            commitment: "confirmed",
-                        }
-                    )
-                    this.winstonService.log(
-                        WinstonLog.ReconcileBalanceTransactionExecuted,
-                        {
-                            botId: bot.id,
-                            txHash: transactionSignature.toString(),
-                        }
-                    )
-                    txHashes.push(prepareTx.txHash)
-                },
-            })    
+                )
+                txHashes.push(prepareTx.txHash)
+            }    
         } 
         return {
             txHashes,

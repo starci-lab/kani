@@ -1,117 +1,89 @@
 import {
     Injectable, OnModuleInit 
 } from "@nestjs/common"
-import * as fs from "fs"
-import * as path from "path"
 import {
-    BipartiteMatchingService 
-} from "@modules/graph"
-
-/* ================= APP ================= */
+    SuiClient, 
+    getFullnodeUrl, 
+    SuiHTTPStatusError 
+} from "@mysten/sui/client"
+import {
+    Transaction 
+} from "@mysten/sui/transactions"
+import {
+    Ed25519Keypair 
+} from "@mysten/sui/keypairs/ed25519"
 
 @Injectable()
 export class AppService implements OnModuleInit {
-    constructor(
-        private readonly bipartiteMatchingService: BipartiteMatchingService
-    ) {}
-    async onModuleInit() {
-        const filePath = path.join(process.cwd(),
-            "dataset.json")
-        const dataset: Record<string, string[]> = JSON.parse(
-            fs.readFileSync(filePath,
-                "utf-8")
-        )
+    private client: SuiClient
+    private keypair: Ed25519Keypair
 
-        const result = this.solve(dataset)
-        console.log("FINAL ASSIGNMENT:")
-        console.dir(result,
-            {
-                depth: null 
-            })
+    constructor() {
+        // fullnode mainnet
+        this.client = new SuiClient({
+            url: getFullnodeUrl("testnet"),
+        })
+
+        // TODO: thay bằng keypair thật của bạn (import từ secret key / mnemonic)
+        this.keypair = Ed25519Keypair.fromSecretKey("suiprivkey1qz7pmu7t34hmr77f59fj75snpjtky0qkenke0vqkzksf8jvsjmuzg3g62kl")
     }
 
-    solve(data: Record<string, string[]>) {
-        const MAX_PER_USER = 2
-        const users = Object.keys(data)
-      
-        // đếm food
-        const foodCounts: Record<string, number> = {
-        }
-        Object.values(data).flat().forEach(f => {
-            foodCounts[f] = (foodCounts[f] || 0) + 1
-        })
-      
-        const userSlots: string[] = []
-        const foodSlots: string[] = []
-      
-        users.forEach(u => {
-            for (let i = 0; i < MAX_PER_USER; i++) {
-                userSlots.push(`${u}#${i}`)
-            }
-        })
-      
-        Object.entries(foodCounts).forEach(([food,
-            count]) => {
-            for (let i = 0; i < count; i++) {
-                foodSlots.push(`${food}#${i}`)
-            }
-        })
-      
-        const U = userSlots.length
-        const V = foodSlots.length
-      
-        const uIndex = new Map<string, number>()
-        const vIndex = new Map<string, number>()
-      
-        userSlots.forEach((u, i) => uIndex.set(u,
-            i))
-        foodSlots.forEach((f, i) => vIndex.set(f,
-            i))
-      
-        // ===== BUILD EDGES (instead of adj) =====
-        const edges: number[][] = []
-      
-        for (const [user,
-            foods] of Object.entries(data)) {
-            for (let i = 0; i < MAX_PER_USER; i++) {
-                const uSlot = `${user}#${i}`
-                const u = uIndex.get(uSlot)!
-      
-                for (const food of foods) {
-                    for (let k = 0; k < foodCounts[food]; k++) {
-                        const vSlot = `${food}#${k}`
-                        const v = vIndex.get(vSlot)!
-                        edges.push([u,
-                            v])
-                    }
-                }
+    async onModuleInit() {
+        // gọi thử khi app start để test lỗi
+        try {
+            await this.transferSuiForTest({
+                to: "0x3533f536332929ea96db8903b6d5b608d9b65d05d89f42dcebc2d82ee334b8ac", // sửa để cố tình gây lỗi
+                amount: 1_000_000_000_000n,              // 0.001 SUI (nếu thiếu balance sẽ fail)
+            })
+        } catch (e) {
+            if (e instanceof SuiHTTPStatusError) {
+                console.log(e)
+                console.error(`error is JsonRpcError: ${e.status} - ${e.message}`)
+            } else {
+                console.log(e)
+                console.error(`error is not JsonRpcError: ${e}`)
             }
         }
-      
-        // ===== CALL SERVICE =====
-        const { result: matching } =
-          this.bipartiteMatchingService.find({
-              n: U,
-              m: V,
-              edges
-          })
-      
-        // ===== MAP BACK =====
-        const result: Record<string, string[]> = {
-        }
-        users.forEach(u => (result[u] = []))
-      
-        for (const [u,
-            v] of matching) {
-            const userSlot = userSlots[u]
-            const foodSlot = foodSlots[v]
-      
-            const user = userSlot.split("#")[0]
-            const food = foodSlot.split("#")[0]
-      
-            result[user].push(food)
-        }
-      
+    }
+
+    /**
+     * Hàm transfer SUI đơn giản để test error.
+     */
+    async transferSuiForTest(params: { to: string; amount: bigint }) {
+        const sender = this.keypair.getPublicKey().toSuiAddress()
+
+        const tx = new Transaction()
+        tx.setSender(sender)
+
+        // tách từ gas coin rồi transfer (theo ví dụ PTB trong docs)
+        // const [coin] = tx.splitCoins(
+        //     tx.gas,
+        //     [params.amount])
+        // tx.transferObjects([coin],
+        //     params.to)
+
+        tx.moveCall({
+            target: "0x22be4cade64bf2d02412c7e8d0e8beea2f78828b948118d46735315409371a3c::pool::add_deep_price_point",
+            typeArguments: ["0x2::sui::SUI",
+                "0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7::DBUSDC::DBUSDC",
+                "0x36dbef866a1d62bf7328989a10fb2f07d769f4ee587c0de4a0a256e57e0a58a8::deep::DEEP",
+                "0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7::DBUSDC::DBUSDC"
+            ],
+            arguments: [tx.object(params.to), tx.pure.u64(params.amount)],
+        })
+
+        // có thể cố tình set gasBudget nhỏ để test lỗi insufficient gas
+        // tx.setGasBudget(1)
+        const result = await this.client.signAndExecuteTransaction({
+            transaction: tx,
+            signer: this.keypair,
+            options: {
+                showEffects: true,
+                showBalanceChanges: true,
+                showObjectChanges: true,
+            },
+        })
+        console.log(result)
         return result
     }
 }

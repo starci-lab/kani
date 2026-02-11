@@ -12,11 +12,7 @@ import {
 /**
  * Set of JSON-RPC error codes that should trigger a retry.
  */
-const RETRYABLE_JSON_RPC_CODES = new Set<number>([
-    -32603, // InternalError
-    -32604, // ServerBusy
-    -32050, // TransientError
-    -32001, // UnknownError
+const TRANSACTION_SUBMIT_FAILED_JSON_RPC_CODES = new Set<number>([
     -32000, // CallExecutionFailed
 ])
 
@@ -60,19 +56,18 @@ export class SuiGetErrorTypesService {
                 403
             ]
             if (fatalStatusCodes.includes(error.status)) {
-                return RpcErrorType.Ignorable
+                return RpcErrorType.Fatal
             }
             return RpcErrorType.Ignorable
         }
         
         // handle JSON-RPC errors
         if (error instanceof JsonRpcError) {
-            if (RETRYABLE_JSON_RPC_CODES.has(error.code)) {
-                return RpcErrorType.Ignorable
+            if (TRANSACTION_SUBMIT_FAILED_JSON_RPC_CODES.has(error.code)) {
+                return RpcErrorType.TransactionSubmitFailed
             }
             return RpcErrorType.Ignorable
-        }
-        
+        }   
         // handle other errors
         return RpcErrorType.Ignorable
     }

@@ -8,4 +8,6 @@ export enum RpcErrorType {
     Retryable = "retryable",
     /** Error is fatal and should not be retried. */
     Fatal = "fatal",
+    /** Error is a transaction submit failed, do not retry; eject RPC. */
+    TransactionSubmitFailed = "transactionSubmitFailed",
 }
