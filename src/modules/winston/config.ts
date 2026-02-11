@@ -2040,7 +2040,7 @@ export const configMap = {
     // Rotation Bot Assignments
     [WinstonLog.RotationBotAssignments]: {
         name: WinstonLog.RotationBotAssignments,
-        level: WinstonLevel.Debug,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as RotationBotAssignmentsMessage,

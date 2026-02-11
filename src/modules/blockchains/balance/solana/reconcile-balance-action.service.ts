@@ -99,13 +99,21 @@ export class SolanaReconcileBalanceActionService {
             if (tokenInput.tokenIn.displayId === tokenInput.tokenOut.displayId) {
                 continue
             }
-            
             // get best quote from aggregator
-            const { response: { payload: serializedTransaction } } = await this.solanaAggregatorSelectorService.batchQuote({
+            const { response, aggregatorId } = await this.solanaAggregatorSelectorService.batchQuote({
                 tokenIn: tokenInput.tokenIn,
                 tokenOut: tokenInput.tokenOut,
                 amountIn: tokenInput.amount,
                 senderAddress: bot.accountAddress,
+            })
+            const { payload: serializedTransaction } = await this.solanaAggregatorSelectorService.selectorSwap({
+                aggregatorId,
+                base: {
+                    payload: response.payload,
+                    tokenIn: tokenInput.tokenIn,
+                    tokenOut: tokenInput.tokenOut,
+                    accountAddress: bot.accountAddress,  
+                },
             })
             // decode serialized transaction from aggregator
             const swapTransactionBytes = getBase64Encoder().encode(serializedTransaction as string)

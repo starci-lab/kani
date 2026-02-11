@@ -50,7 +50,6 @@ export class SolanaAggregatorSelectorService implements IAggregatorSelectorServi
      */
     async batchQuote(params: BatchQuoteParams): Promise<BatchQuoteResult> {
         const promises: Array<Promise<BatchQuoteResult>> = []
-
         // add Jupiter quote request if supported
         if (this.jupiterService.supportedChains().includes(ChainId.Solana)) {
             promises.push(

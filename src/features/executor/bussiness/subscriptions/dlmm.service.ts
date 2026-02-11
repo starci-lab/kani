@@ -102,6 +102,7 @@ export class DlmmSubscriptionService {
                     $exists: false,
                 },
             })
+            
         const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
             id: {
                 $eq: event.id,
@@ -125,7 +126,7 @@ export class DlmmSubscriptionService {
         for (const bot of idleDlmmBots) {
             this.eventEmitterService.emit(
                 {
-                    event: EventName.DlmmPositionCloseRequested,
+                    event: EventName.DlmmPositionOpenRequested,
                     args: [bot.id],
                     payload: event,
                 }
@@ -134,7 +135,7 @@ export class DlmmSubscriptionService {
         for (const bot of activeDlmmBots) {
             this.eventEmitterService.emit(
                 {
-                    event: EventName.DlmmPositionOpenRequested,
+                    event: EventName.DlmmPositionCloseRequested,
                     args: [bot.id],
                     payload: event,
                 }

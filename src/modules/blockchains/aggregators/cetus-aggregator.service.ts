@@ -8,9 +8,6 @@ import {
     AggregatorClient, RouterDataV3 
 } from "@cetusprotocol/aggregator-sdk"
 import {
-    PrimaryMemoryStorageService 
-} from "@modules/databases"
-import {
     RpcExecutorService 
 } from "@modules/blockchains"
 import {
@@ -51,7 +48,6 @@ import {
 @Injectable()
 export class CetusAggregatorService implements IAggregatorService {
     constructor(
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly retryService: RetryService,
     ) {}
@@ -75,39 +71,43 @@ export class CetusAggregatorService implements IAggregatorService {
      * @example
      * const quote = await service.quote({ tokenIn, tokenOut, amountIn, senderAddress })
      */
-    async quote({ tokenIn, amountIn, tokenOut }: QuoteParams): Promise<QuoteResult> {
+    async quote(
+        { 
+            tokenIn, 
+            amountIn, 
+            tokenOut 
+        }: QuoteParams): Promise<QuoteResult> {
         try {
             // execute quote request with Sui client
-            return await this.rpcExecutorService.withSuiClient({
+            const cetusAggregatorClient = await this.rpcExecutorService.withSuiClient({
                 accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     // create Cetus aggregator client
-                    const cetusAggregatorClient = this.createCetusAggregatorClient(suiClient)
-                    
-                    // find best routing path
-                    const quote = await cetusAggregatorClient.findRouters({
-                        from: tokenIn.tokenAddress,
-                        target: tokenOut.tokenAddress,
-                        amount: amountIn,
-                        byAmountIn: true,
-                    })
-                    
-                    // validate quote exists
-                    if (!quote) {
-                        throw new QuoteNotFoundException({
-                            from: tokenIn.tokenAddress,
-                            target: tokenOut.tokenAddress,
-                            amount: amountIn,
-                        })
-                    }
-                    
-                    // return formatted quote result
-                    return {
-                        amountOut: quote.amountOut,
-                        payload: quote,
-                    }
+                    return this.createCetusAggregatorClient(suiClient)
                 },
             })
+            // find best routing path
+            const quote = await cetusAggregatorClient.findRouters({
+                from: tokenIn.tokenAddress,
+                target: tokenOut.tokenAddress,
+                amount: amountIn,
+                byAmountIn: true,
+            })
+                    
+            // validate quote exists
+            if (!quote) {
+                throw new QuoteNotFoundException({
+                    from: tokenIn.tokenAddress,
+                    target: tokenOut.tokenAddress,
+                    amount: amountIn,
+                })
+            }
+                    
+            // return formatted quote result
+            return {
+                amountOut: quote.amountOut,
+                payload: quote,
+            }
         } catch (error) {
             // wrap error with aggregator context
             throw new AggregatorQuoteFailedException({

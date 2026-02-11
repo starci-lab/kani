@@ -76,54 +76,50 @@ export class JupiterService implements IAggregatorService {
     async quote({ tokenIn, tokenOut, amountIn }: QuoteParams): Promise<QuoteResult> {
         try {
             // execute quote request with retry mechanism
-            return await this.retryService.retry({
-                action: async () => {
-                    // find token instances from storage
-                    const tokenInInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
-                        displayId: {
-                            $eq: tokenIn,
-                        },
-                    })
-                    if (!tokenInInstance) {
-                        throw new TokenNotFoundException({
-                            displayId: tokenIn.displayId,
-                        })
-                    }
-                    
-                    const tokenOutInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
-                        displayId: {
-                            $eq: tokenOut.displayId,
-                        },
-                    })
-                    if (!tokenOutInstance) {
-                        throw new TokenNotFoundException({
-                            displayId: tokenOut.displayId,
-                        })
-                    }
-                    
-                    // create Jupiter client
-                    const client = this.createJupiterClient()
-                    
-                    // get fee and slippage configuration
-                    const { fees: { swapReferral: { solana: { bps } } } } = this.mountStorageService.appConfig
-                    const { transaction: { swap: { slippage } } } = envConfig()
-                    
-                    // request quote from Jupiter API
-                    const quote = await client.quoteGet({
-                        inputMint: tokenInInstance.tokenAddress || SOLANA_NATIVE_TOKEN_ADDRESS,
-                        outputMint: tokenOutInstance.tokenAddress || SOLANA_NATIVE_TOKEN_ADDRESS,
-                        amount: amountIn.toNumber(),
-                        platformFeeBps: bps,
-                        slippageBps: new Decimal(slippage).mul(10000).toNumber(),
-                    })
-                    
-                    // return formatted quote result
-                    return {
-                        amountOut: new BN(quote.outAmount),
-                        payload: quote,
-                    }
+            // find token instances from storage
+            const tokenInInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
+                id: {
+                    $eq: tokenIn.id,
                 },
             })
+            if (!tokenInInstance) {
+                throw new TokenNotFoundException({
+                    displayId: tokenIn.displayId,
+                })
+            }
+                    
+            const tokenOutInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
+                id: {
+                    $eq: tokenOut.id,
+                },
+            })
+            if (!tokenOutInstance) {
+                throw new TokenNotFoundException({
+                    displayId: tokenOut.displayId,
+                })
+            }
+                    
+            // create Jupiter client
+            const client = this.createJupiterClient()
+                    
+            // get fee and slippage configuration
+            const { fees: { swapReferral: { solana: { bps } } } } = this.mountStorageService.appConfig
+            const { transaction: { swap: { slippage } } } = envConfig()
+                
+            const quote = await client.quoteGet(
+                {
+                    inputMint: tokenInInstance.tokenAddress || SOLANA_NATIVE_TOKEN_ADDRESS,
+                    outputMint: tokenOutInstance.tokenAddress || SOLANA_NATIVE_TOKEN_ADDRESS,
+                    amount: amountIn.toNumber(),
+                    platformFeeBps: bps,
+                    slippageBps: new Decimal(slippage).mul(10000).toNumber(),
+                }
+            )  
+            // return formatted quote result
+            return {
+                amountOut: new BN(quote.outAmount),
+                payload: quote,
+            }
         } catch (error) {
             // wrap error with aggregator context
             throw new AggregatorQuoteFailedException({
@@ -151,8 +147,7 @@ export class JupiterService implements IAggregatorService {
             return await this.retryService.retry({
                 action: async () => {
                     // create Jupiter client
-                    const client = this.createJupiterClient()
-                    
+                    const client = this.createJupiterClient()  
                     // build swap transaction
                     const { swapTransaction } = await client.swapPost({
                         swapRequest: {
@@ -163,7 +158,6 @@ export class JupiterService implements IAggregatorService {
                             feeAccount: referralTokenAccount,   
                         } 
                     })
-                    
                     // return swap transaction
                     return {
                         payload: swapTransaction,

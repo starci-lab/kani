@@ -1,47 +1,47 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    IAggregatorService, QuoteParams, QuoteResult, SwapParams, SwapResult 
+    IAggregatorService, QuoteParams, QuoteResult, SwapParams, SwapResult
 } from "./types"
 import {
-    RetryService 
+    RetryService
 } from "@modules/mixin"
-import { 
+import {
     AggregatorQuoteFailedException,
     AggregatorSwapFailedException,
     TokenNotFoundException
 } from "@modules/exceptions"
 import {
-    Transaction 
+    Transaction
 } from "@mysten/sui/transactions"
 import {
-    ChainId 
+    ChainId
 } from "@modules/common"
 import SevenK, {
-    BluefinXTx, QuoteResponse as SevenKQuoteResponse 
+    BluefinXTx, QuoteResponse as SevenKQuoteResponse
 } from "@7kprotocol/sdk-ts"
 import {
-    PrimaryMemoryStorageService 
+    PrimaryMemoryStorageService
 } from "@modules/databases"
 import BN from "bn.js"
 import {
-    RpcExecutorService 
+    RpcExecutorService
 } from "@modules/blockchains"
 import {
-    RpcAccessType 
+    RpcAccessType
 } from "@modules/filesystem"
 import {
-    envConfig 
+    envConfig
 } from "@modules/env"
 import {
-    SelectCoinsService 
+    SelectCoinsService
 } from "../tx-builder"
 import {
-    MountStorageService 
+    MountStorageService
 } from "@modules/filesystem"
 import {
-    AggregatorId 
+    AggregatorId
 } from "./enums"
 
 /**
@@ -60,7 +60,7 @@ export class SevenKAggregatorService implements IAggregatorService {
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly selectCoinsService: SelectCoinsService,
         private readonly mountStorageService: MountStorageService,
-    ) {}
+    ) { }
 
     supportedChains(): Array<ChainId> {
         return [ChainId.Sui]
@@ -87,27 +87,25 @@ export class SevenKAggregatorService implements IAggregatorService {
     async quote({ tokenIn, amountIn, tokenOut }: QuoteParams): Promise<QuoteResult> {
         try {
             // execute quote request with Sui client
-            return await this.rpcExecutorService.withSuiClient({
+            await this.rpcExecutorService.withSuiClient({
                 accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     // configure 7K SDK with Sui client
                     SevenK.setSuiClient(suiClient)
-                    
-                    // request quote from 7K Protocol
-                    const quote = await SevenK.getQuote({
-                        amountIn: amountIn.toString(),
-                        tokenIn: tokenIn.tokenAddress,
-                        tokenOut: tokenOut.tokenAddress,    
-                        commissionBps: 2,   
-                    })
-                    
-                    // return formatted quote result
-                    return {
-                        amountOut: new BN(quote.returnAmountWithDecimal),
-                        payload: quote,
-                    }  
                 },
             })
+            // request quote from 7K Protocol
+            const quote = await SevenK.getQuote({
+                amountIn: amountIn.toString(),
+                tokenIn: tokenIn.tokenAddress,
+                tokenOut: tokenOut.tokenAddress,
+                commissionBps: 2,
+            })
+            // return formatted quote result
+            return {
+                amountOut: new BN(quote.returnAmountWithDecimal),
+                payload: quote,
+            }
         } catch (error) {
             // wrap error with aggregator context
             throw new AggregatorQuoteFailedException({
@@ -126,24 +124,24 @@ export class SevenKAggregatorService implements IAggregatorService {
      * @example
      * const result = await service.swap({ payload, tokenIn, tokenOut, accountAddress, txb })
      */
-    async swap({ payload, txb, accountAddress, tokenIn }: SwapParams): Promise<SwapResult> {
+    async swap({ payload, txb, accountAddress, tokenIn }: SwapParams): Promise < SwapResult > {
         try {
-            // cast payload to 7K quote response type
+        // cast payload to 7K quote response type
             const _payload = payload as SevenKQuoteResponse
             const _txb = txb || new Transaction()
-            
+
             // find token instance from storage
             const tokenInInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
                 displayId: {
                     $eq: tokenIn,
                 },
             })
-            if (!tokenInInstance) {
+            if(!tokenInInstance) {
                 throw new TokenNotFoundException({
                     displayId: tokenIn.displayId,
                 })
             }
-            
+
             // fetch and merge input coins
             const { sourceCoin: inputCoin } = await this.selectCoinsService.fetchAndMergeCoins({
                 txb: _txb,
@@ -151,22 +149,22 @@ export class SevenKAggregatorService implements IAggregatorService {
                 coinType: tokenInInstance.tokenAddress,
                 requiredAmount: new BN(_payload.swapAmountWithDecimal),
             })
-            
+
             // execute swap with retry mechanism
             return await this.retryService.retry({
                 action: async () => {
                     return await this.rpcExecutorService.withSuiClient({
                         accessType: RpcAccessType.Http,
                         callback: async ({ suiClient }) => {
-                            // configure 7K SDK with Sui client
+                        // configure 7K SDK with Sui client
                             SevenK.setSuiClient(suiClient)
                             const finalTxb = txb || new Transaction()
                             finalTxb.setSender(accountAddress)
-                            
+
                             // get commission configuration
                             const { fees: { swapReferral: { sui: { feeToAddress, bps } } } } = this.mountStorageService.appConfig
                             const { transaction: { swap: { slippage } } } = envConfig()
-                            
+
                             // build swap transaction
                             const { coinOut, tx } = await SevenK.buildTx({
                                 quoteResponse: _payload,
@@ -181,7 +179,7 @@ export class SevenKAggregatorService implements IAggregatorService {
                                     coinIn: inputCoin.coinArg,
                                 },
                             })
-                            
+
                             // convert transaction format if needed
                             return {
                                 outputCoin: coinOut,
@@ -189,11 +187,11 @@ export class SevenKAggregatorService implements IAggregatorService {
                                 txb: tx instanceof BluefinXTx ? Transaction.from(tx.txBytes) : (tx as Transaction),
                             }
                         }
-                    })     
+                    })
                 },
             })
-        } catch (error) {
-            // wrap error with aggregator context
+        } catch(error) {
+        // wrap error with aggregator context
             throw new AggregatorSwapFailedException({
                 aggregatorId: AggregatorId.SevenK,
                 originalError: error,

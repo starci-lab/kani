@@ -241,7 +241,9 @@ export class HandleOpenPositionService {
                     }
                 )(),
             ])
-        } catch {
+        } catch (error) {
+            console.log("error",
+                error)
             return
         }
         // Wait to ensure no job for this bot is already in the queue
