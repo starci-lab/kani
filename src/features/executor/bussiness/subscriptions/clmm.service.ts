@@ -59,6 +59,9 @@ export class ClmmSubscriptionService {
             activePosition: {
                 $exists: false,
             },
+            running: {
+                $eq: true,
+            },
             liquidityPools: {
                 $in: [new Types.ObjectId(event.id)] 
             },
