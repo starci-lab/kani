@@ -21,7 +21,7 @@ export interface NotSyncedProcessClosePositionMessage {
 /**
  * Liquidity pools synced message.
  */
-export interface LiquidityPoolsSyncedMessage {
+export interface LiquidityPoolsSyncedMarkedAsReadyMessage {
     displayIds: Array<LiquidityPoolId>
 }
 

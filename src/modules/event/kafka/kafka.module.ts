@@ -46,8 +46,8 @@ import {
     KafkaMessageFactoryService 
 } from "./kafka-message-factory.service"
 import {
-    KafkaIdRegistryService 
-} from "./kafka-id-registry.service"
+    InstanceService 
+} from "@modules/mixin"
 
 @Module({
 })
@@ -82,7 +82,7 @@ export class KafkaModule extends ConfigurableModuleClass {
             KafkaMessageFactoryService,
             KafkaConsumerService,
             KafkaBridgeService,
-            KafkaIdRegistryService
+            InstanceService
         ]
 
         return {

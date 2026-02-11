@@ -26,8 +26,8 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    KafkaIdRegistryService 
-} from "./kafka-id-registry.service"
+    InstanceService 
+} from "@modules/mixin"
 
 @Injectable()
 export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown {
@@ -37,7 +37,7 @@ export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown
         private readonly kafka: Kafka,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly retryService: RetryService,
-        private readonly kafkaIdRegistryService: KafkaIdRegistryService,
+        private readonly instanceService: InstanceService,
     ) {}
     
     /**
@@ -60,7 +60,7 @@ export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown
                     // create consumer
                     this.consumer = this.kafka.consumer(
                         { 
-                            groupId: this.kafkaIdRegistryService.getId(),
+                            groupId: this.instanceService.getId(),
                             allowAutoTopicCreation: true,
                             heartbeatInterval: envConfig().kafka.heartbeatInterval,
                             retry: {

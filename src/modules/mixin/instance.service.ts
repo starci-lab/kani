@@ -7,6 +7,10 @@ import dayjs, {
 import {
     v4 as uuidv4
 } from "uuid"
+import {
+    envConfig,
+    runInKubernetes
+} from "@modules/env"
 
 /**
  * Service for the current app instance.
@@ -20,7 +24,7 @@ export class InstanceService {
 
     constructor() {
         // instance id
-        this.id = uuidv4()
+        this.id = runInKubernetes() ? envConfig().k8s.global.podName : uuidv4()
         // instance created at
         this.createdAt = dayjs()
     }

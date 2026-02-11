@@ -1,7 +1,4 @@
 import {
-    envConfig 
-} from "@modules/env"
-import {
     InjectSuperJson 
 } from "@modules/mixin"
 import {
@@ -15,6 +12,9 @@ import {
     createHash 
 } from "@modules/common"
 import _ from "lodash"
+import {
+    InstanceService 
+} from "@modules/mixin"
 
 /**
  * Factory service for creating and parsing Kafka messages.
@@ -24,6 +24,7 @@ export class KafkaMessageFactoryService {
     constructor(
     @InjectSuperJson()
     private readonly superjson: SuperJSON,
+    private readonly instanceService: InstanceService,
     ) {}
 
     /**
@@ -40,7 +41,7 @@ export class KafkaMessageFactoryService {
                         ["snapshotAt"]
                     )
                 ),
-                podName: envConfig().k8s.global.podName,
+                id: this.instanceService.getId(),
             },
             _.isUndefined
         )

@@ -9,6 +9,6 @@ export interface KafkaMessage<T extends object> {
     data: T
     // digest of the data
     digest?: string
-    // pod name
-    podName: string
+    // instance id
+    id: string
 }

@@ -99,7 +99,7 @@ export class HandleNotSyncedService {
         }
         // log the liquidity pools synced
         this.winstonService.log(
-            WinstonLog.LiquidityPoolsSynced,
+            WinstonLog.LiquidityPoolsSyncedMarkedAsReady,
             {
                 displayIds: liquidityPools.map(pool => pool.displayId),
             }

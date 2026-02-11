@@ -35,6 +35,9 @@ import {
     DayjsService
 } from "@modules/mixin"
 import {
+    InstanceService 
+} from "@modules/mixin"
+import {
     RetryService,
     ReadinessWatcherFactoryService
 } from "@modules/mixin"
@@ -58,9 +61,6 @@ import {
 import {
     getEventName 
 } from "../utils"
-import {
-    KafkaIdRegistryService 
-} from "./kafka-id-registry.service"
 
 /**
      * Service that bridges Kafka messages to NestJS EventEmitter.
@@ -89,7 +89,7 @@ implements
         private readonly kafkaMessageFactoryService: KafkaMessageFactoryService,
         private readonly cacheService: CacheService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
-        private readonly kafkaIdRegistryService: KafkaIdRegistryService,
+        private readonly instanceService: InstanceService,
         @InjectKafkaAdmin()
         private readonly kafkaAdmin: Admin,
     ) { }
@@ -207,7 +207,7 @@ implements
                         const value = message.value?.toString() || "{}"
                         const data = this.kafkaMessageFactoryService.parse(value)
                         // skip messages from same instance to prevent loops
-                        if (data.podName === this.kafkaIdRegistryService.getId()) {
+                        if (data.id === this.instanceService.getId()) {
                             continue
                         }
                         // if topic is ping, skip it

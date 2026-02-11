@@ -222,7 +222,7 @@ export enum WinstonLog {
     OpenPositionSkippedNotEligible = "Open.Position.Skipped.Not.Eligible",
     OpenPositionSkippedNoBalanceSnapshot = "Open.Position.Skipped.No.Balance.Snapshot",
     OpenPositionSkippedBalanceSnapshotTooOld = "Open.Position.Skipped.Balance.Snapshot.Too.Old",
-    LiquidityPoolsSynced = "Liquidity.Pools.Synced",
+    LiquidityPoolsSyncedMarkedAsReady = "Liquidity.Pools.Synced.Marked.As.Ready",
     ClmmLiquidityPoolsSynced = "Clmm.Liquidity.Pools.Synced",
     DlmmLiquidityPoolsSynced = "Dlmm.Liquidity.Pools.Synced",
 }

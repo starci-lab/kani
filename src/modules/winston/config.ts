@@ -4,7 +4,7 @@ import {
 import {
     ClmmLiquidityPoolsSyncedMessage,
     DlmmLiquidityPoolsSyncedMessage,
-    LiquidityPoolsSyncedMessage,
+    LiquidityPoolsSyncedMarkedAsReadyMessage,
     NotSyncedProcessClosePositionMessage,
     NotSyncedProcessOpenPositionMessage,
     OpenPositionSkippedBalanceSnapshotTooOldMessage,
@@ -1994,12 +1994,12 @@ export const configMap = {
         } as OpenPositionSkippedBalanceSnapshotTooOldMessage,
     },
     // Liquidity Pools Synced
-    [WinstonLog.LiquidityPoolsSynced]: {
-        name: WinstonLog.LiquidityPoolsSynced,
+    [WinstonLog.LiquidityPoolsSyncedMarkedAsReady]: {
+        name: WinstonLog.LiquidityPoolsSyncedMarkedAsReady,
         level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
-        } as LiquidityPoolsSyncedMessage,
+        } as LiquidityPoolsSyncedMarkedAsReadyMessage,
     },
     // Clmm Liquidity Pools Synced
     [WinstonLog.ClmmLiquidityPoolsSynced]: {
