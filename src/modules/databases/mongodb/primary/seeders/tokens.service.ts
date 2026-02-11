@@ -37,6 +37,7 @@ export class TokensService implements Seeder {
     async seed(session?: ClientSession): Promise<void> {
         await this.connection.model<TokenSchema>(TokenSchema.name).create(data,
             {
+                ordered: true,
                 ...(session && {
                     session 
                 }) 

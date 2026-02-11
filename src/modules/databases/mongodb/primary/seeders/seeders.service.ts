@@ -12,7 +12,6 @@ import {
 } from "@nestjs/common"
 import {
     ReadinessWatcherFactoryService,
-    RetryService 
 } from "@modules/mixin"
 import {
     MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
@@ -41,7 +40,6 @@ export class SeedersService implements OnModuleInit {
         private readonly dexService: DexesService,
         private readonly liquidityPoolService: LiquidityPoolsService,
         private readonly configService: ConfigService,
-        private readonly retryService: RetryService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) { }
 

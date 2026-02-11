@@ -44,6 +44,7 @@ export class LiquidityPoolsService implements Seeder {
     async seed(session?: ClientSession): Promise<void> {
         await this.connection.model<LiquidityPoolSchema>(LiquidityPoolSchema.name).create(data,
             {
+                ordered: true,
                 ...(session && {
                     session 
                 }) 

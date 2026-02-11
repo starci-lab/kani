@@ -47,6 +47,7 @@ export class ConfigService implements Seeder {
     async seed(session?: ClientSession): Promise<void> {
         await this.connection.model<ConfigSchema>(ConfigSchema.name).create(data,
             {
+                ordered: true,
                 ...(session && {
                     session 
                 }) 

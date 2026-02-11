@@ -94,10 +94,12 @@ import {
         PrimaryMongoDbModule.register({
             isGlobal: true,
             memoryStorage: {
-                manualLoad: envConfig().databases.mongoose.primary.manualLoad,
+                //manualLoad: envConfig().databases.mongoose.primary.manualLoad,
+                manualLoad: false,
             },
             withSeeders: {
-                manualSeed: envConfig().databases.mongoose.primary.manualSeed,
+                //manualSeed: envConfig().databases.mongoose.primary.manualSeed,
+                manualSeed: false,
             },
             associate: true,
         }),
