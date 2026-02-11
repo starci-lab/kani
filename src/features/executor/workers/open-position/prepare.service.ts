@@ -92,9 +92,13 @@ export class PrepareService {
                     botId: bot.id,
                     jobId: job.id,
                     liquidityPoolId: liquidityPool.displayId,  
-                    txHashes: jobData?.prepareResult?.prepareTxs.map((prepareTx) => prepareTx.txHash) || [],
-                    ageMs: this.dayjsService.now().diff(job.createdAt,
-                        "millisecond"),
+                    txHashes: jobData?.prepareResult?.prepareTxs.map(
+                        (prepareTx) => prepareTx.txHash
+                    ) || [],
+                    ageMs: this.dayjsService.now().diff(
+                        job.createdAt,
+                        "millisecond"
+                    ),
                 }
             )
             return {

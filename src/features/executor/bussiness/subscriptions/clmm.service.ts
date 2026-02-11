@@ -104,11 +104,11 @@ export class ClmmSubscriptionService {
                     $exists: true,
                     $ne: null,
                 },
+                "activePosition.liquidityPool": {
+                    $eq: new Types.ObjectId(event.id),
+                },
                 activeJob: {
                     $exists: false,
-                },
-                liquidityPools: {
-                    $in: [new Types.ObjectId(event.id)],
                 },
             })
         const liquidityPool =

@@ -1880,7 +1880,7 @@ export const configMap = {
     // Reconcile Balance Skipped Bot Not Running
     [WinstonLog.ReconcileBalanceSkippedBotNotRunning]: {
         name: WinstonLog.ReconcileBalanceSkippedBotNotRunning,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as ReconcileBalanceSkippedBotNotRunningMessage,
@@ -1888,7 +1888,7 @@ export const configMap = {
     // Reconcile Balance Skipped Bot Already Has Active Position
     [WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActivePosition]: {
         name: WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActivePosition,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as ReconcileBalanceSkippedBotAlreadyHasActivePositionMessage,
@@ -1896,7 +1896,7 @@ export const configMap = {
     // Reconcile Balance Skipped Balance Snapshot Within Cooldown
     [WinstonLog.ReconcileBalanceSkippedBalanceSnapshotWithinCooldown]: {
         name: WinstonLog.ReconcileBalanceSkippedBalanceSnapshotWithinCooldown,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as ReconcileBalanceSkippedBalanceSnapshotWithinCooldownMessage,
@@ -1904,7 +1904,7 @@ export const configMap = {
     // Reconcile Balance Skipped Bot Already Has Active Job
     [WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActiveJob]: {
         name: WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActiveJob,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as ReconcileBalanceSkippedBotAlreadyHasActiveJobMessage,
@@ -1912,7 +1912,7 @@ export const configMap = {
     // Reconcile Balance Skipped Active Job Found In Queue
     [WinstonLog.ReconcileBalanceSkippedActiveJobFoundInQueue]: {
         name: WinstonLog.ReconcileBalanceSkippedActiveJobFoundInQueue,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as ReconcileBalanceSkippedActiveJobFoundInQueueMessage,
@@ -1920,7 +1920,7 @@ export const configMap = {
     // Reconcile Balance Lock Authority Not Acquired
     [WinstonLog.ReconcileBalanceLockAuthorityNotAcquired]: {
         name: WinstonLog.ReconcileBalanceLockAuthorityNotAcquired,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as ReconcileBalanceLockAuthorityNotAcquiredMessage,
@@ -1928,7 +1928,7 @@ export const configMap = {
     // Reconcile Balance Lock Authority Released
     [WinstonLog.ReconcileBalanceLockAuthorityReleased]: {
         name: WinstonLog.ReconcileBalanceLockAuthorityReleased,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as ReconcileBalanceLockAuthorityReleasedMessage,
@@ -1936,7 +1936,7 @@ export const configMap = {
     // Open Position Lock Authority Not Acquired
     [WinstonLog.OpenPositionLockAuthorityNotAcquired]: {
         name: WinstonLog.OpenPositionLockAuthorityNotAcquired,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as OpenPositionLockAuthorityNotAcquiredMessage,
@@ -1944,7 +1944,7 @@ export const configMap = {
     // Open Position Lock Authority Released
     [WinstonLog.OpenPositionLockAuthorityReleased]: {
         name: WinstonLog.OpenPositionLockAuthorityReleased,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as OpenPositionLockAuthorityReleasedMessage,
@@ -1952,7 +1952,7 @@ export const configMap = {
     // Close Position Lock Authority Not Acquired
     [WinstonLog.ClosePositionLockAuthorityNotAcquired]: {
         name: WinstonLog.ClosePositionLockAuthorityNotAcquired,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as ClosePositionLockAuthorityNotAcquiredMessage,
@@ -1960,7 +1960,7 @@ export const configMap = {
     // Close Position Lock Authority Released
     [WinstonLog.ClosePositionLockAuthorityReleased]: {
         name: WinstonLog.ClosePositionLockAuthorityReleased,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as ClosePositionLockAuthorityReleasedMessage,
@@ -1968,7 +1968,7 @@ export const configMap = {
     // Withdraw Lock Authority Released
     [WinstonLog.WithdrawLockAuthorityReleased]: {
         name: WinstonLog.WithdrawLockAuthorityReleased,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as WithdrawLockAuthorityReleasedMessage,
@@ -2016,7 +2016,7 @@ export const configMap = {
     // Close Position Skipped Bot Has No Active Position
     [WinstonLog.ClosePositionSkippedBotHasNoActivePosition]: {
         name: WinstonLog.ClosePositionSkippedBotHasNoActivePosition,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as ClosePositionSkippedBotHasNoActivePositionMessage,
@@ -2024,7 +2024,7 @@ export const configMap = {
     // Close Position Skipped Bot Already Has Active Job
     [WinstonLog.ClosePositionSkippedBotAlreadyHasActiveJob]: {
         name: WinstonLog.ClosePositionSkippedBotAlreadyHasActiveJob,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as ClosePositionSkippedBotAlreadyHasActiveJobMessage,
@@ -2032,7 +2032,7 @@ export const configMap = {
     // Close Position Skipped Active Job Found In Queue
     [WinstonLog.ClosePositionSkippedActiveJobFoundInQueue]: {
         name: WinstonLog.ClosePositionSkippedActiveJobFoundInQueue,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as ClosePositionSkippedActiveJobFoundInQueueMessage,
@@ -2040,7 +2040,7 @@ export const configMap = {
     // Rotation Bot Assignments
     [WinstonLog.RotationBotAssignments]: {
         name: WinstonLog.RotationBotAssignments,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as RotationBotAssignmentsMessage,
@@ -2048,7 +2048,7 @@ export const configMap = {
     // Open Position Skipped Bot Not Running
     [WinstonLog.OpenPositionSkippedBotNotRunning]: {
         name: WinstonLog.OpenPositionSkippedBotNotRunning,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as OpenPositionSkippedBotNotRunningMessage,
@@ -2056,7 +2056,7 @@ export const configMap = {
     // Open Position Skipped Bot Already Has Active Position
     [WinstonLog.OpenPositionSkippedBotAlreadyHasActivePosition]: {
         name: WinstonLog.OpenPositionSkippedBotAlreadyHasActivePosition,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as OpenPositionSkippedBotAlreadyHasActivePositionMessage,
@@ -2064,7 +2064,7 @@ export const configMap = {
     // Open Position Skipped Bot Already Has Active Job
     [WinstonLog.OpenPositionSkippedBotAlreadyHasActiveJob]: {
         name: WinstonLog.OpenPositionSkippedBotAlreadyHasActiveJob,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as OpenPositionSkippedBotAlreadyHasActiveJobMessage,
@@ -2072,7 +2072,7 @@ export const configMap = {
     // Open Position Skipped Not Eligible
     [WinstonLog.OpenPositionSkippedNotEligible]: {
         name: WinstonLog.OpenPositionSkippedNotEligible,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as OpenPositionSkippedNotEligibleMessage,
@@ -2080,7 +2080,7 @@ export const configMap = {
     // Open Position Skipped No Balance Snapshot
     [WinstonLog.OpenPositionSkippedNoBalanceSnapshot]: {
         name: WinstonLog.OpenPositionSkippedNoBalanceSnapshot,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as OpenPositionSkippedNoBalanceSnapshotMessage,
@@ -2088,7 +2088,7 @@ export const configMap = {
     // Open Position Skipped Balance Snapshot Too Old
     [WinstonLog.OpenPositionSkippedBalanceSnapshotTooOld]: {
         name: WinstonLog.OpenPositionSkippedBalanceSnapshotTooOld,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as OpenPositionSkippedBalanceSnapshotTooOldMessage,
@@ -2096,7 +2096,7 @@ export const configMap = {
     // Open Position Skipped Active Job Found In Queue
     [WinstonLog.OpenPositionSkippedActiveJobFoundInQueue]: {
         name: WinstonLog.OpenPositionSkippedActiveJobFoundInQueue,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as OpenPositionSkippedActiveJobFoundInQueueMessage,
@@ -2104,7 +2104,7 @@ export const configMap = {
     // Liquidity Pools Synced
     [WinstonLog.LiquidityPoolsSyncedMarkedAsReady]: {
         name: WinstonLog.LiquidityPoolsSyncedMarkedAsReady,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as LiquidityPoolsSyncedMarkedAsReadyMessage,
@@ -2112,7 +2112,7 @@ export const configMap = {
     // Clmm Liquidity Pools Synced
     [WinstonLog.ClmmLiquidityPoolsSynced]: {
         name: WinstonLog.ClmmLiquidityPoolsSynced,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as ClmmLiquidityPoolsSyncedMessage,
@@ -2120,7 +2120,7 @@ export const configMap = {
     // Dlmm Liquidity Pools Synced
     [WinstonLog.DlmmLiquidityPoolsSynced]: {
         name: WinstonLog.DlmmLiquidityPoolsSynced,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as DlmmLiquidityPoolsSyncedMessage,

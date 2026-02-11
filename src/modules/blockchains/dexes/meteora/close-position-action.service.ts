@@ -286,7 +286,6 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                         ).send()
                     },
                 })
-
                 // If transaction already executed, log and continue
                 if (transaction) {
                     this.winstonService.log(

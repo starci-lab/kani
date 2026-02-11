@@ -63,7 +63,6 @@ export class EvalSnapshotService {
                 eligible: false,
             }
         }
-
         // Extract balance amounts from snapshots
         const {
             targetBalanceAmount: targetBalanceAmountStr,

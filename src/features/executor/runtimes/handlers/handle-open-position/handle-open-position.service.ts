@@ -110,36 +110,10 @@ export class HandleOpenPositionService {
             )
             return
         }
-        // Skip if bot already has an active job
-        if (bot.activeJob) {
-            this.winstonService.log(
-                WinstonLog.OpenPositionSkippedBotAlreadyHasActiveJob,
-                {
-                    botId: bot.id,
-                    liquidityPoolId: liquidityPool.displayId,
-                }
-            )
-            return
-        }
         // Skip if no balance snapshot (need reconciled balance before opening)
         if (!bot.balanceSnapshots) {
             this.winstonService.log(
                 WinstonLog.OpenPositionSkippedNoBalanceSnapshot,
-                {
-                    botId: bot.id,
-                    liquidityPoolId: liquidityPool.displayId,
-                }
-            )
-            return
-        }
-        const { eligible } = await this.evalSnapshotService.eval(
-            {
-                bot,
-            }
-        )
-        if (!eligible) {
-            this.winstonService.log(
-                WinstonLog.OpenPositionSkippedNotEligible,
                 {
                     botId: bot.id,
                     liquidityPoolId: liquidityPool.displayId,
@@ -162,6 +136,34 @@ export class HandleOpenPositionService {
             )
             return
         }
+        // Skip if bot already has an active job
+        if (bot.activeJob) {
+            this.winstonService.log(
+                WinstonLog.OpenPositionSkippedBotAlreadyHasActiveJob,
+                {
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                }
+            )
+            return
+        }
+        // Skip if bot is not eligible
+        const { eligible } = await this.evalSnapshotService.eval(
+            {
+                bot,
+            }
+        )
+        if (!eligible) {
+            this.winstonService.log(
+                WinstonLog.OpenPositionSkippedNotEligible,
+                {
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                }
+            )
+            return
+        }
+        // Skip if dynamic liquidity pool info is not ready
         try {
             await this.asyncService.allMustDone([
                 (
