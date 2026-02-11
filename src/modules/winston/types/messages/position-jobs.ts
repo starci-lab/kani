@@ -206,3 +206,28 @@ export interface ClosePositionJobAlreadyEnqueuedMessage {
     bullmqJobId?: string
     liquidityPoolId: LiquidityPoolId
 }
+
+export interface OpenPositionSkippedBotNotRunningMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+export interface OpenPositionSkippedBotAlreadyHasActivePositionMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+export interface OpenPositionSkippedBotAlreadyHasActiveJobMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+export interface OpenPositionSkippedNotEligibleMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+export interface OpenPositionSkippedBalanceSnapshotTooOldMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+}

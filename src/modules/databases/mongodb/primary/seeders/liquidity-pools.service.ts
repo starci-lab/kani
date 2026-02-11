@@ -42,14 +42,25 @@ export class LiquidityPoolsService implements Seeder {
      * @returns void.
      */
     async seed(session?: ClientSession): Promise<void> {
-        await this.connection.model<LiquidityPoolSchema>(LiquidityPoolSchema.name).create(data, { ...(session && { session }) })
+        await this.connection.model<LiquidityPoolSchema>(LiquidityPoolSchema.name).create(data,
+            {
+                ...(session && {
+                    session 
+                }) 
+            })
     }
     /**
      * Drop the LiquidityPools.
      * @returns void.
      */
     async drop(session?: ClientSession): Promise<void> {
-        await this.connection.model<LiquidityPoolSchema>(LiquidityPoolSchema.name).deleteMany({}, { ...(session && { session }) })
+        await this.connection.model<LiquidityPoolSchema>(LiquidityPoolSchema.name).deleteMany({
+        },
+        {
+            ...(session && {
+                session 
+            }) 
+        })
     }
 }
 /**
@@ -85,7 +96,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         clmmState: {
             tickSpacing: 10,
-            tickMultiplier: 30,
+            tickMultiplier: 300,
         },
         metadata: {
             intergratePackageId: "0xfbb32ac0fa89a3cb0c56c745b688c6d2a53ac8e43447119ad822763997ffb9c3",

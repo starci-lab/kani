@@ -139,6 +139,9 @@ export class HandleNotSyncedService {
             )
             return
         }
+        if (bot.activePosition) {
+            return
+        }
         const botAssignment = this.rotationService.botAssignments.get(bot.id)
         if (!botAssignment) {
             return

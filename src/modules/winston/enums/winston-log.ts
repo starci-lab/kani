@@ -216,4 +216,9 @@ export enum WinstonLog {
     ConsulRegisterSuccessfully = "Consul.Register.Successfully",
     NotSyncedProcessOpenPosition = "Not.Synced.Process.Open.Position",
     NotSyncedProcessClosePosition = "Not.Synced.Process.Close.Position",
+    OpenPositionSkippedBotNotRunning = "Open.Position.Skipped.Bot.Not.Running",
+    OpenPositionSkippedBotAlreadyHasActivePosition = "Open.Position.Skipped.Bot.Already.Has.Active.Position",
+    OpenPositionSkippedBotAlreadyHasActiveJob = "Open.Position.Skipped.Bot.Already.Has.Active.Job",
+    OpenPositionSkippedNotEligible = "Open.Position.Skipped.Not.Eligible",
+    OpenPositionSkippedBalanceSnapshotTooOld = "Open.Position.Skipped.Balance.Snapshot.Too.Old",
 }

@@ -4,6 +4,11 @@ import {
 import {
     NotSyncedProcessClosePositionMessage,
     NotSyncedProcessOpenPositionMessage,
+    OpenPositionSkippedBalanceSnapshotTooOldMessage,
+    OpenPositionSkippedBotAlreadyHasActiveJobMessage,
+    OpenPositionSkippedBotAlreadyHasActivePositionMessage,
+    OpenPositionSkippedBotNotRunningMessage,
+    OpenPositionSkippedNotEligibleMessage,
     RotationBotAssignmentsMessage,
     WinstonLevel,
 } from "./types"
@@ -1935,5 +1940,45 @@ export const configMap = {
         loki: true,
         messageType: {
         } as RotationBotAssignmentsMessage,
+    },
+    // Open Position Skipped Bot Not Running
+    [WinstonLog.OpenPositionSkippedBotNotRunning]: {
+        name: WinstonLog.OpenPositionSkippedBotNotRunning,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as OpenPositionSkippedBotNotRunningMessage,
+    },
+    // Open Position Skipped Bot Already Has Active Position
+    [WinstonLog.OpenPositionSkippedBotAlreadyHasActivePosition]: {
+        name: WinstonLog.OpenPositionSkippedBotAlreadyHasActivePosition,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as OpenPositionSkippedBotAlreadyHasActivePositionMessage,
+    },
+    // Open Position Skipped Bot Already Has Active Job
+    [WinstonLog.OpenPositionSkippedBotAlreadyHasActiveJob]: {
+        name: WinstonLog.OpenPositionSkippedBotAlreadyHasActiveJob,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as OpenPositionSkippedBotAlreadyHasActiveJobMessage,
+    },
+    // Open Position Skipped Not Eligible
+    [WinstonLog.OpenPositionSkippedNotEligible]: {
+        name: WinstonLog.OpenPositionSkippedNotEligible,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as OpenPositionSkippedNotEligibleMessage,
+    },
+    // Open Position Skipped Balance Snapshot Too Old
+    [WinstonLog.OpenPositionSkippedBalanceSnapshotTooOld]: {
+        name: WinstonLog.OpenPositionSkippedBalanceSnapshotTooOld,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as OpenPositionSkippedBalanceSnapshotTooOldMessage,
     },
 }

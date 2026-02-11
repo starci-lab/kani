@@ -11,7 +11,8 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    InvalidPoolTokensException 
+    InvalidPoolTokensException, 
+    LiquidityPoolClmmStateNotFoundException
 } from "@modules/exceptions"
 import {
     TargetOperationalGasAmountNotFoundException 
@@ -24,6 +25,7 @@ import {
 } from "../../../tx-builder"
 import BN from "bn.js"
 import {
+    adjustSlippage,
     ChainId 
 } from "@modules/common"
 import {
@@ -36,6 +38,13 @@ import {
 import {
     MountStorageService 
 } from "@modules/filesystem"
+import {
+    ClmmLiquidityFormulaService 
+} from "../../../formulas"
+import {
+    envConfig 
+} from "@modules/env"
+import Decimal from "decimal.js"
 
 @Injectable()
 export class OpenPositionTxbService {
@@ -44,6 +53,7 @@ export class OpenPositionTxbService {
         private readonly feeService: FeeService,
         private readonly selectCoinsService: SelectCoinsService,
         private readonly mountStorageService: MountStorageService,
+        private readonly clmmLiquidityFormulaService: ClmmLiquidityFormulaService,
     ) { }
 
     async createOpenPositionTxb(
@@ -55,6 +65,7 @@ export class OpenPositionTxbService {
             amountAMax,
             amountBMax,
             bot,
+            state
         }: CreateOpenPositionTxbParams
     ): Promise<CreateOpenPositionTxbResult> {
         txb = txb ?? new Transaction()
@@ -95,6 +106,20 @@ export class OpenPositionTxbService {
         } = this.feeService.splitAmount({
             amount: amountBMax,
             chainId: bot.chainId,
+        })
+        if (!liquidityPool.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException(
+                {
+                    liquidityPoolId: liquidityPool.displayId,
+                }
+            )
+        }
+        const liquidity = this.clmmLiquidityFormulaService.computeLiquidity({
+            amountA: new BN(amountAMax),
+            amountB: new BN(amountBMax),
+            tickLower: new BN(tickLower),
+            tickUpper: new BN(tickUpper),
+            tickCurrent: new BN(state.tickCurrent),
         })
         // we check balances of tokenA and tokenB
         const targetOperationalAmount = this.primaryMemoryStorageService.
@@ -157,7 +182,7 @@ export class OpenPositionTxbService {
             globalConfigObject,
         } = liquidityPool.metadata as CetusLiquidityPoolMetadata
         txb.moveCall({
-            target: `${intergratePackageId}::pool_script_v2::open_position_with_liquidity_by_fix_coin`,
+            target: `${intergratePackageId}::pool_script_v2::open_position_with_liquidity`,
             typeArguments: [
                 tokenA.tokenAddress,
                 tokenB.tokenAddress,
@@ -171,7 +196,11 @@ export class OpenPositionTxbService {
                 txb.object(sourceCoinB.coinArg),
                 txb.pure.u64(remainingAmountA.toString()),
                 txb.pure.u64(remainingAmountB.toString()),
-                txb.pure.bool(true),
+                txb.pure.u128(adjustSlippage({
+                    bn: liquidity,
+                    slippage: new Decimal(envConfig().dexes.cetus.openPosition.slippage),
+                    isRoundUp: false,
+                }).toString()),
                 txb.object(SUI_CLOCK_OBJECT_ID)
             ],
         })

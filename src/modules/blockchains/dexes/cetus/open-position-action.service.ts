@@ -266,7 +266,12 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             quoteBalanceAmount: new BN(snapshotQuoteBalanceAmount),
             targetIsA,
         })
-        
+        console.log("tickLower",
+            tickLower.toString())
+        console.log("tickUpper",
+            tickUpper.toString())
+        console.log("utilizationPercentage",
+            utilizationPercentage.toString())
         // validate slippage tolerance
         const slippage = new Decimal(envConfig().dexes.cetus.openPosition.slippage)
         if (utilizationPercentage.lt(new Decimal(1).sub(slippage))) {
@@ -278,7 +283,6 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         // calculate max amounts for each token
         const amountAMax = targetIsA ? snapshotTargetBalanceAmount : snapshotQuoteBalanceAmount
         const amountBMax = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount
-        
         // create open position transaction builder
         const { txb: openPositionTxb, feeAmountA, feeAmountB } = await this.openPositionTxbService.createOpenPositionTxb({
             bot,

@@ -242,7 +242,7 @@ export const envConfig = () => ({
             },
             openPosition: {
                 slippage: parseEnvFloat({
-                    key: "DEXES_CETUS_OPEN_POSITION_SLIPPAGE", defaultValue: 0.05 
+                    key: "DEXES_CETUS_OPEN_POSITION_SLIPPAGE", defaultValue: 0.2
                 }), 
             },
         },
@@ -276,7 +276,7 @@ export const envConfig = () => ({
             },
             openPosition: {
                 slippage: parseEnvFloat({
-                    key: "DEXES_MOMENTUM_OPEN_POSITION_SLIPPAGE", defaultValue: 0.05 
+                    key: "DEXES_MOMENTUM_OPEN_POSITION_SLIPPAGE", defaultValue: 0.5
                 }),
             },
         },
@@ -293,7 +293,7 @@ export const envConfig = () => ({
             },
             openPosition: {
                 slippage: parseEnvFloat({
-                    key: "DEXES_TURBOS_OPEN_POSITION_SLIPPAGE", defaultValue: 0.1 
+                    key: "DEXES_TURBOS_OPEN_POSITION_SLIPPAGE", defaultValue: 0.5
                 }),
             },
         },

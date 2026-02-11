@@ -90,12 +90,35 @@ export class HandleOpenPositionService {
     ) {
         // Skip if bot is not running
         if (!bot.running) {
+            this.winstonService.log(
+                WinstonLog.OpenPositionSkippedBotNotRunning,
+                {
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                }
+            )
             return
         }
         // Skip if bot already has an active position
-        if (bot.activePosition) return
+        if (bot.activePosition) {
+            this.winstonService.log(
+                WinstonLog.OpenPositionSkippedBotAlreadyHasActivePosition,
+                {
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                }
+            )
+            return
+        }
         // Skip if bot already has an active job
         if (bot.activeJob) {
+            this.winstonService.log(
+                WinstonLog.OpenPositionSkippedBotAlreadyHasActiveJob,
+                {
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                }
+            )
             return
         }
         // Skip if no balance snapshot (need reconciled balance before opening)
@@ -108,6 +131,13 @@ export class HandleOpenPositionService {
             }
         )
         if (!eligible) {
+            this.winstonService.log(
+                WinstonLog.OpenPositionSkippedNotEligible,
+                {
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                }
+            )
             return
         }
         // Skip if balance snapshot is too old (outside rescan cooldown)
@@ -116,6 +146,13 @@ export class HandleOpenPositionService {
             "millisecond"
         )
         if (diffMs > envConfig().executor.runtime.operation.reconcileBalance.cooldown.rescan) {
+            this.winstonService.log(
+                WinstonLog.OpenPositionSkippedBalanceSnapshotTooOld,
+                {
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                }
+            )
             return
         }
         try {

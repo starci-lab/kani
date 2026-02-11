@@ -73,8 +73,9 @@ export class RotationService implements OnModuleInit {
             key: CacheKey.RotationBotAssignments,
             args: [],
         })
-
+        const disableCache = true
         if (
+            !disableCache &&
             cachedResult &&
             cachedResult.results.length > 0 &&
             this.dayjsService
@@ -98,8 +99,8 @@ export class RotationService implements OnModuleInit {
             .model<BotSchema>(BotSchema.name)
             .find({
                 executor: envConfig().executor.id 
-            })
-
+            }
+            )
         // collect liquidity pools
         const liquidityPoolSet = new Set<string>()
         for (const bot of bots) {
@@ -137,7 +138,7 @@ export class RotationService implements OnModuleInit {
 
                 for (const pool of bot.liquidityPools ?? []) {
                     const v = poolIndex.get(String(pool))
-                    if (v === undefined) continue // ✅ tránh crash
+                    if (v === undefined) continue //
                     edges.push([u,
                         v])
                 }
@@ -178,7 +179,7 @@ export class RotationService implements OnModuleInit {
         }
 
         // build results
-        const results: RotationBotAssignment[] = Array.from(botMap.values()).map(
+        const results: Array<RotationBotAssignment> = Array.from(botMap.values()).map(
             (bot) => ({
                 botId: bot.id,
                 liquidityPoolIds: bot.liquidityPools.map((p) => p.toString()),
