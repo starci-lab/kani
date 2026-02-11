@@ -55,7 +55,7 @@ import {
         WinstonModule.register({
             isGlobal: true,
             serviceName: ServiceName.KaniCLI,
-            level: WinstonLevel.Info,
+            level: envConfig().winston.level as WinstonLevel,
         }),
         MixinModule.register({
             isGlobal: true,

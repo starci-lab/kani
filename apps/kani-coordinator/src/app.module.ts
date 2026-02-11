@@ -76,7 +76,7 @@ import {
         WinstonModule.register({
             isGlobal: true,
             serviceName: ServiceName.KaniCoordinator,
-            level: WinstonLevel.Verbose,
+            level: envConfig().winston.level as WinstonLevel,
         }),
         ScheduleModule.forRoot(),
         StreamAsyncIteratorModule.register({

@@ -17,6 +17,7 @@ import {
     MixinModule 
 } from "@modules/mixin"
 import {
+    envConfig,
     EnvModule 
 } from "@modules/env"
 import {
@@ -31,6 +32,10 @@ import {
 import {
     CacheModule 
 } from "@modules/cache"
+import {
+    ServiceName 
+} from "@modules/common"
+
 @Module({
     imports: [
         EnvModule.forRoot(),
@@ -43,7 +48,7 @@ import {
         WinstonModule.register({
             isGlobal: true,
             serviceName: ServiceName.KaniObserver,
-            level: WinstonLevel.Info,
+            level: envConfig().winston.level as WinstonLevel,
         }),
         EventEmitterModule.forRoot(),
         MixinModule.register({

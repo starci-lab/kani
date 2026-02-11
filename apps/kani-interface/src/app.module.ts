@@ -211,7 +211,7 @@ import {
         WinstonModule.register({
             isGlobal: true,
             serviceName: ServiceName.KaniInterface,
-            level: WinstonLevel.Info,
+            level: envConfig().winston.level as WinstonLevel,
         }),
         SentryModule.register({
             isGlobal: true,

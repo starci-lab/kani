@@ -578,6 +578,12 @@ export const envConfig = () => ({
             },
         },
     },
+    /** Winston log level. */
+    winston: {
+        level: parseEnvString({
+            key: "WINSTON_LEVEL", defaultValue: "verbose" 
+        }),
+    },
     /** Cache: debug flags/TTL, key TTLs (withdraw, session, pool analytics, etc.), stale price max age. */
     cache: {
         debug: {

@@ -100,7 +100,7 @@ import {
         WinstonModule.register({
             isGlobal: true,
             serviceName: ServiceName.KaniObserver,
-            level: WinstonLevel.Info,
+            level: envConfig().winston.level as WinstonLevel,
         }),
         IoRedisModule.register({
             isGlobal: true,

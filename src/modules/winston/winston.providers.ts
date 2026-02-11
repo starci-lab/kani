@@ -17,9 +17,6 @@ import {
 import {
     buildAppName,
 } from "./utils"
-import {
-    WinstonLevel 
-} from "./types"
 
 export const createConsoleTransport = (
     options: typeof OPTIONS_TYPE
@@ -77,7 +74,7 @@ export const createConsoleWinstonProvider = () => {
         ) => {
             return createLogger(
                 {
-                    level: envConfig().isProduction ? WinstonLevel.Error : options.level,
+                    level: options.level,
                     transports: [
                         createConsoleTransport(options),
                     ],
@@ -96,7 +93,7 @@ export const createLokiWinstonProvider = () => {
         ) => {
             return createLogger(
                 {
-                    level: envConfig().isProduction ? WinstonLevel.Error : options.level,
+                    level: options.level,
                     transports: [
                         createConsoleTransport(options),
                         createLokiTransport(options),
