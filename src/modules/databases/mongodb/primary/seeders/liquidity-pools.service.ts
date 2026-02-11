@@ -41,7 +41,9 @@ export class LiquidityPoolsService implements Seeder {
      * Seed the LiquidityPools.
      * @returns void.
      */
-    async seed(session?: ClientSession): Promise<void> {
+    async seed(
+        session?: ClientSession
+    ): Promise<void> {
         await this.connection.model<LiquidityPoolSchema>(LiquidityPoolSchema.name).create(data,
             {
                 ordered: true,
@@ -54,7 +56,9 @@ export class LiquidityPoolsService implements Seeder {
      * Drop the LiquidityPools.
      * @returns void.
      */
-    async drop(session?: ClientSession): Promise<void> {
+    async drop(
+        session?: ClientSession
+    ): Promise<void> {
         await this.connection.model<LiquidityPoolSchema>(LiquidityPoolSchema.name).deleteMany({
         },
         {

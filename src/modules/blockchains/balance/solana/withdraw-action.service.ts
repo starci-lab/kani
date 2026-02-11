@@ -23,7 +23,9 @@ import {
     MissingSolanaTxParamException,
     PrivyMetadataNotFoundException,
     TokenNotFoundException,
-    TransactionValidationFailedException,
+    TransactionStimulatedFailedException,
+    TransactionSubmitFailedException,
+    TransactionExecutionFailedException,
 } from "@modules/exceptions"
 import {
     getCompiledTransactionMessageDecoder,
@@ -72,6 +74,9 @@ import {
     WinstonLog,
     WinstonService 
 } from "@modules/winston"
+import {
+    AsyncService 
+} from "@modules/mixin"
 
 /**
  * Service for handling withdraw transactions on Solana.
@@ -92,6 +97,7 @@ export class SolanaWithdrawActionService {
         private readonly transferInstructionService: TransferInstructionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly winstonService: WinstonService,
+        private readonly asyncService: AsyncService,
     ) { }
 
     /**
@@ -310,7 +316,8 @@ export class SolanaWithdrawActionService {
                             {
                                 commitment: "confirmed", 
                                 encoding: "base58" 
-                            }).send()
+                            }
+                        ).send()
                     },
                 })
                 
@@ -348,16 +355,22 @@ export class SolanaWithdrawActionService {
                             {
                                 encoding: "base64",
                                 commitment: "confirmed",
-                            }).send()
+                            }
+                        ).send()
                     },
                 })
                 
                 if (simulateTransactionResult.value.err) {
-                    throw new TransactionValidationFailedException({
-                        botId: bot.id,
-                        txHash: prepareTx.txHash,
-                        type: TransactionType.Withdraw,
-                    })
+                    throw new TransactionSubmitFailedException(
+                        {
+                            message: simulateTransactionResult.value.err.toString(),
+                            originalError: new TransactionStimulatedFailedException({
+                                botId: bot.id,
+                                txHash: prepareTx.txHash,
+                                type: TransactionType.Withdraw,
+                            })
+                        }
+                    )
                 }
                 
                 this.winstonService.log(
@@ -370,20 +383,32 @@ export class SolanaWithdrawActionService {
                 txHashes.push(prepareTx.txHash)
             } else {
                 // send and confirm transaction
-                await this.rpcExecutorService.withSolanaRpc({
+                const sendAndConfirmTransaction = await this.rpcExecutorService.withSolanaRpc({
                     accessType: RpcAccessType.Write,
                     callback: async ({ rpc, rpcSubscriptions }) => {
-                        const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
+                        return sendAndConfirmTransactionFactory({
                             rpc,
                             rpcSubscriptions,
                         })
-                        return await sendAndConfirmTransaction(solanaTx,
-                            {
-                                commitment: "confirmed",
-                            })
                     },
                 })
-                
+                const [, error] = await this.asyncService.resolveTuple(
+                    sendAndConfirmTransaction(
+                        solanaTx,
+                        {
+                            commitment: "confirmed",
+                        },
+                    ))
+                if (error) {
+                    throw new TransactionSubmitFailedException({
+                        message: error.toString(),
+                        originalError: new TransactionExecutionFailedException({
+                            botId: bot.id,
+                            txHash: prepareTx.txHash,
+                            type: TransactionType.Withdraw,
+                        })
+                    })
+                }
                 const transactionSignature = getSignatureFromTransaction(solanaTx)
                 this.winstonService.log(
                     WinstonLog.WithdrawTransactionExecuted,

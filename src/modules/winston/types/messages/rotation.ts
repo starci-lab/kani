@@ -1,8 +1,8 @@
 import type {
-    RotationBotAssignment 
-} from "@modules/cache"
+    LiquidityPoolId
+} from "@modules/databases"
 
 /** Rotation bot assignments message. */
 export interface RotationBotAssignmentsMessage {
-    results: Record<string, Omit<RotationBotAssignment, "botId">>
+    results: Record<string, Array<LiquidityPoolId>>
 }

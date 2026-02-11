@@ -74,8 +74,24 @@ export class HandleClosePositionService {
         }: HandleClosePositionParams
     ) {
         // Skip if bot has no active position to close
-        if (!bot.activePosition) return
+        if (!bot.activePosition) {
+            this.winstonService.log(
+                WinstonLog.ClosePositionSkippedBotHasNoActivePosition,
+                {
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                }
+            )
+            return
+        }
         if (bot.activeJob) {
+            this.winstonService.log(
+                WinstonLog.ClosePositionSkippedBotAlreadyHasActiveJob,
+                {
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                }
+            )
             return
         }
         await this.positionAssociateService.associateActivePosition({
@@ -115,14 +131,31 @@ export class HandleClosePositionService {
                 }
             }
         )
-        if (!noActiveJobFound) return
+        if (!noActiveJobFound) {
+            this.winstonService.log(
+                WinstonLog.ClosePositionSkippedActiveJobFoundInQueue,
+                {
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                }
+            )
+            return
+        }
         // Acquire lock authority; return if not acquired
         const acquired = await this.lockAuthorityService.acquire(
             {
                 botId: bot.id,
             }
         )
-        if (!acquired) return
+        if (!acquired) {
+            this.winstonService.log(
+                WinstonLog.ClosePositionLockAuthorityNotAcquired,
+                {
+                    botId: bot.id,
+                }
+            )
+            return
+        }
         // Enqueue the close-position job
         try {
             const bullmqJob = await this.closePositionEnqueueService.enqueue(

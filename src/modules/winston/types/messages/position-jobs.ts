@@ -71,6 +71,21 @@ export interface ClosePositionJobRequeueFailedMessage {
     error: string
 }
 
+export interface ClosePositionSkippedBotHasNoActivePositionMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+export interface ClosePositionSkippedBotAlreadyHasActiveJobMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+export interface ClosePositionSkippedActiveJobFoundInQueueMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+}
+
 export interface OpenPositionJobAlreadyPreparedMessage {
     botId: string
     jobId: string
@@ -233,6 +248,11 @@ export interface OpenPositionSkippedNoBalanceSnapshotMessage {
 }
 
 export interface OpenPositionSkippedBalanceSnapshotTooOldMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+export interface OpenPositionSkippedActiveJobFoundInQueueMessage {
     botId: string
     liquidityPoolId: LiquidityPoolId
 }

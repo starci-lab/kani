@@ -345,6 +345,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                     botId: bot.id,
                     txHash: digest,
                     liquidityPoolId: liquidityPool.displayId,
+                    type: TransactionType.ClosePosition,
                 }),
                 message: effects?.status?.error ?? "Unknown error",
             })

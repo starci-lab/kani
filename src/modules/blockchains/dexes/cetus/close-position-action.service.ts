@@ -337,6 +337,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                     botId: bot.id,
                     txHash: digest,
                     liquidityPoolId: liquidityPool.displayId,
+                    type: TransactionType.ClosePosition,
                 }),
                 message: effects?.status?.error ?? "Unknown error",
             })

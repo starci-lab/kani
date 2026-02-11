@@ -24,6 +24,7 @@ import {
     BalanceSnapshotsNotFoundException,
     MissingPositionIdParamException,
     TransactionType,
+    TransactionStimulatedFailedException,
     SolanaAccountNotFoundException,
     ErrorSolanaAccountKind,
     EncryptedPrivySignerPrivateKeyNotFoundException,
@@ -32,6 +33,8 @@ import {
     PositionClmmStateNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
     MissingSolanaTxParamException,
+    TransactionSubmitFailedException,
+    TransactionExecutionFailedException,
 } from "@modules/exceptions"
 import {
     TickMathService 
@@ -81,6 +84,9 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import {
+    AsyncService 
+} from "@modules/mixin"
 
 /**
  * Service responsible for opening positions on Raydium DEX.
@@ -100,6 +106,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly privySignService: PrivySignService,
         private readonly winstonService: WinstonService,
+        private readonly asyncService: AsyncService,
     ) { }
 
     /**
@@ -219,97 +226,47 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             liquidityPool,
         })
 
-        return await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Write,
+        const latestBlockhashResult = await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
-                // Get latest blockhash for transaction lifetime
-                const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+                return await rpc.getLatestBlockhash().send()
+            },
+        })
+        const latestBlockhash = latestBlockhashResult.value
 
-                // Build transaction message
-                const transactionMessage = pipe(
-                    createTransactionMessage({
-                        version: 0 
-                    }),
-                    (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)),
-                        tx),
-                    (tx) => appendTransactionMessageInstructions(openPositionInstructions,
-                        tx),
-                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash,
-                        tx),
-                )
-                const transaction = compileTransaction(transactionMessage)
+        const transactionMessage = pipe(
+            createTransactionMessage({
+                version: 0 
+            }),
+            (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)),
+                tx),
+            (tx) => appendTransactionMessageInstructions(openPositionInstructions,
+                tx),
+            (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash,
+                tx),
+        )
+        const transaction = compileTransaction(transactionMessage)
 
-                if (bot.version === AppVersion.V1) {
-                    return await this.signerService.withSolanaSigner({
-                        bot,
-                        action: async (signer) => {
-                            // Sign transaction with V1 signer and mint keypair
-                            const signedTransaction = await signTransaction([signer.keyPair,
-                                mintKeyPair.keyPair],
-                            transaction)
-                            const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                            const txHash = transactionSignature.toString()
-
-                            // Validate transaction before returning
-                            assertIsSendableTransaction(signedTransaction)
-                            assertIsTransactionWithinSizeLimit(signedTransaction)
-
-                            // Get the Raydium position metadata
-                            const metadata: RaydiumPositionMetadata = {
-                                nftMintAddress: mintKeyPair.address.toString(),
-                                ataAddress: ataAddress.toString(),
-                            }
-                            return {
-                                prepareTxs: [{
-                                    txHash,
-                                    solanaTx: signedTransaction,
-                                }],
-                                feeAmountA,
-                                feeAmountB,
-                                tickLower,
-                                tickUpper,
-                                amountA,
-                                amountB,
-                                metadata,
-                                positionId: personalPosition.toString(),
-                            }
-                        },
-                    })
-                } else {
-                    // Stage: state validation (Privy signing prerequisites for V2 bots)
-                    if (!bot.privyMetadata) {
-                        throw new PrivyMetadataNotFoundException({
-                            botId: bot.id,
-                        })
-                    }
-                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
-                        throw new EncryptedPrivySignerPrivateKeyNotFoundException({
-                            botId: bot.id,
-                        })
-                    }
-
-                    // Partially sign with mint keypair, then sign with Privy
-                    const partialSignedTransaction = await partiallySignTransaction([mintKeyPair.keyPair],
-                        transaction)
-                    const signedTransaction = await this.privySignService.signSolanaTransaction({
-                        lifetimeConstraint: {
-                            blockhash: latestBlockhash.blockhash,
-                            lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-                        },
-                        transaction: partialSignedTransaction,
-                        encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
-                        walletId: bot.privyMetadata.walletId,
-                    })
-
-                    // Get the Raydium position metadata
+        if (bot.version === AppVersion.V1) {
+            return await this.signerService.withSolanaSigner({
+                bot,
+                action: async (signer) => {
+                    const signedTransaction = await signTransaction(
+                        [signer.keyPair,
+                            mintKeyPair.keyPair],
+                        transaction,
+                    )
+                    const transactionSignature = getSignatureFromTransaction(signedTransaction)
+                    const txHash = transactionSignature.toString()
+                    assertIsSendableTransaction(signedTransaction)
+                    assertIsTransactionWithinSizeLimit(signedTransaction)
                     const metadata: RaydiumPositionMetadata = {
                         nftMintAddress: mintKeyPair.address.toString(),
                         ataAddress: ataAddress.toString(),
                     }
                     return {
                         prepareTxs: [{
-                            txHash: signedTransaction.txHash.toString(),
-                            solanaTx: signedTransaction.signedTransaction,
+                            txHash, solanaTx: signedTransaction 
                         }],
                         feeAmountA,
                         feeAmountB,
@@ -320,9 +277,52 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                         metadata,
                         positionId: personalPosition.toString(),
                     }
-                }
+                },
+            })
+        }
+
+        if (!bot.privyMetadata) {
+            throw new PrivyMetadataNotFoundException({
+                botId: bot.id 
+            })
+        }
+        if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+            throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                botId: bot.id 
+            })
+        }
+
+        const partialSignedTransaction = await partiallySignTransaction([mintKeyPair.keyPair],
+            transaction)
+        const signedTransaction = await this.privySignService.signSolanaTransaction({
+            lifetimeConstraint: {
+                blockhash: latestBlockhash.blockhash,
+                lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
             },
+            transaction: partialSignedTransaction,
+            encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
+            walletId: bot.privyMetadata.walletId,
         })
+        const metadata: RaydiumPositionMetadata = {
+            nftMintAddress: mintKeyPair.address.toString(),
+            ataAddress: ataAddress.toString(),
+        }
+        return {
+            prepareTxs: [
+                {
+                    txHash: signedTransaction.txHash.toString(),
+                    solanaTx: signedTransaction.signedTransaction,
+                }
+            ],
+            feeAmountA,
+            feeAmountB,
+            tickLower,
+            tickUpper,
+            amountA,
+            amountB,
+            metadata,
+            positionId: personalPosition.toString(),
+        }
     }
 
     /**
@@ -398,55 +398,79 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                 })
             }
 
-            await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Write,
-                callback: async ({ rpc, rpcSubscriptions }) => {
-                    if (stimulate) {
-                        // Simulate transaction execution
-                        const transaction = await rpc.simulateTransaction(
+            if (stimulate) {
+                const transaction = await this.rpcExecutorService.withSolanaRpc({
+                    accessType: RpcAccessType.Write,
+                    callback: async ({ rpc }) => {
+                        return await rpc.simulateTransaction(
                             getBase64EncodedWireTransaction(solanaTx),
                             {
                                 encoding: "base64",
                                 commitment: "confirmed",
-                            }).send()
-
-                        // If simulation succeeds, log and continue
-                        if (!transaction.value.err) {
-                            this.winstonService.log(
-                                WinstonLog.OpenPositionTransactionStimulated,
-                                {
-                                    botId: bot.id,
-                                    txHash: prepareTx.txHash,
-                                    liquidityPoolId: liquidityPool.displayId,
-                                }
-                            )
-                            txHashes.push(prepareTx.txHash)
-                            return
-                        }
-                    }
-                    // Execute transaction on-chain
-                    const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
-                        rpc,
-                        rpcSubscriptions,
-                    })
-                    await sendAndConfirmTransaction(
-                        solanaTx, 
+                            },
+                        ).send()
+                    },
+                })
+                if (transaction.value.err) {
+                    throw new TransactionSubmitFailedException(
                         {
-                            commitment: "confirmed",
+                            message: transaction.value.err.toString(),
+                            originalError: new TransactionStimulatedFailedException({
+                                botId: bot.id,
+                                txHash: prepareTx.txHash,
+                                liquidityPoolId: liquidityPool.displayId,
+                                type: TransactionType.OpenPosition,
+                            })
                         }
                     )
-                    // Log successful execution
-                    this.winstonService.log(
-                        WinstonLog.OpenPositionTransactionExecuted,
+                }
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionStimulated,
+                    {
+                        botId: bot.id,
+                        txHash: prepareTx.txHash,
+                        liquidityPoolId: liquidityPool.displayId,
+                    },
+                )
+                txHashes.push(prepareTx.txHash)
+            } else {
+                const sendAndConfirmTransaction = await this.rpcExecutorService.withSolanaRpc({
+                    accessType: RpcAccessType.Write,
+                    callback: async ({ rpc, rpcSubscriptions }) => {
+                        return sendAndConfirmTransactionFactory({
+                            rpc,
+                            rpcSubscriptions,
+                        })
+                    },
+                })
+                const [, error] = await this.asyncService.resolveTuple(
+                    sendAndConfirmTransaction(
+                        solanaTx,
                         {
+                            commitment: "confirmed" 
+                        },
+                    ))
+                if (error) {
+                    throw new TransactionSubmitFailedException({
+                        message: error.toString(),
+                        originalError: new TransactionExecutionFailedException({
                             botId: bot.id,
                             txHash: prepareTx.txHash,
                             liquidityPoolId: liquidityPool.displayId,
-                        }
-                    )
-                    txHashes.push(prepareTx.txHash)
-                },
-            })
+                            type: TransactionType.OpenPosition,
+                        })
+                    })
+                }
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionExecuted,
+                    {
+                        botId: bot.id,
+                        txHash: prepareTx.txHash,
+                        liquidityPoolId: liquidityPool.displayId,
+                    },
+                )
+                txHashes.push(prepareTx.txHash)
+            }
         }
         return {
             positionId: positionId.toString(),

@@ -54,11 +54,23 @@ export interface LockAuthoritySendHeartbeatFailedMessage {
     error: string
 }
 
+export interface ReconcileBalanceLockAuthorityNotAcquiredMessage {
+    botId: string
+}
+
 export interface ReconcileBalanceLockAuthorityReleasedMessage {
     botId: string
 }
 
+export interface OpenPositionLockAuthorityNotAcquiredMessage {
+    botId: string
+}
+
 export interface OpenPositionLockAuthorityReleasedMessage {
+    botId: string
+}
+
+export interface ClosePositionLockAuthorityNotAcquiredMessage {
     botId: string
 }
 

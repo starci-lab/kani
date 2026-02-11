@@ -46,9 +46,12 @@ export class DexesService implements Seeder {
     async seed(session?: ClientSession): Promise<void> {
         await this.connection.model<DexSchema>(DexSchema.name).create(data,
             {
-                ordered: true, ...(session && {
-                    session 
-                }) 
+                ordered: true, 
+                ...(
+                    session && {
+                        session 
+                    }
+                ) 
             })
     }
 
@@ -56,7 +59,9 @@ export class DexesService implements Seeder {
      * Drop the Dexes.
      * @returns void.
      */
-    async drop(session?: ClientSession): Promise<void> {
+    async drop(
+        session?: ClientSession
+    ): Promise<void> {
         await this.connection.model<DexSchema>(DexSchema.name).deleteMany({
         },
         {

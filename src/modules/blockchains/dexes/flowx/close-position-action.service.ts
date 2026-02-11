@@ -342,13 +342,12 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
         // Stage: transaction execution validation
         if (effects?.status?.status !== "success") {
             throw new TransactionSubmitFailedException({
-                originalError: new TransactionExecutionFailedException(
-                    {
+                originalError: new TransactionExecutionFailedException({
                         botId: bot.id,
                         txHash: digest,
                         liquidityPoolId: liquidityPool.displayId,
-                    }
-                ),
+                        type: TransactionType.ClosePosition,
+                    }),
                 message: effects?.status?.error ?? "Unknown error",
             })
         }

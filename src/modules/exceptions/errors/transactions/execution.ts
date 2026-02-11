@@ -12,12 +12,16 @@ import {
 import type {
     LiquidityPoolId 
 } from "@modules/databases"
+import type {
+    TransactionType 
+} from "../../enums"
 
 /** Thrown when transaction execution fails on-chain */
 export interface TransactionExecutionFailedExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
     txHash: string
     liquidityPoolId?: LiquidityPoolId
+    type?: TransactionType
 }
 
 /** Thrown when transaction execution fails on-chain. */
@@ -27,6 +31,7 @@ export class TransactionExecutionFailedException extends AbstractException {
             botId,
             txHash,
             liquidityPoolId,
+            type,
             originalError,
         }: TransactionExecutionFailedExceptionMetadata
     ) {
@@ -37,6 +42,7 @@ export class TransactionExecutionFailedException extends AbstractException {
                 botId,
                 txHash,
                 liquidityPoolId,
+                type,
                 originalError,
             }
         )

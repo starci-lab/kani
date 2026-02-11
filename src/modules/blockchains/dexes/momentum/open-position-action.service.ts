@@ -518,6 +518,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                     botId: bot.id,
                     txHash,
                     liquidityPoolId: liquidityPool.displayId,
+                    type: TransactionType.OpenPosition,
                 }),
                 message: effects?.status?.error ?? "Unknown error",
             })

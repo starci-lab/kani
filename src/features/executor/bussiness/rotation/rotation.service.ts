@@ -15,7 +15,9 @@ import {
 } from "@modules/env"
 import {
     BotSchema, 
-    InjectPrimaryMongoose
+    InjectPrimaryMongoose,
+    LiquidityPoolId,
+    PrimaryMemoryStorageService
 } from "@modules/databases"
 import {
     BipartiteMatchingService 
@@ -55,6 +57,7 @@ export class RotationService implements OnModuleInit {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     async onModuleInit() {
@@ -100,9 +103,6 @@ export class RotationService implements OnModuleInit {
             .find({
                 executor: {
                     $eq: envConfig().executor.id,
-                },
-                running: {
-                    $eq: true,
                 },
             }
             )
@@ -214,11 +214,44 @@ export class RotationService implements OnModuleInit {
 
     async rotate() {
         await this.processRotation()
+        const assignedPoolIds = Array.from(this.botAssignments.values())
+            .flatMap(a => a.liquidityPoolIds)
+
+        const liquidityPools =
+        this.primaryMemoryStorageService.liquidityPoolCollection.find({
+            id: {
+                $in: assignedPoolIds 
+            },
+        })
+
+        // build fast lookup map: poolId -> displayId
+        const liquidityPoolDisplayIdMap = new Map<string, LiquidityPoolId>()
+        for (const liquidityPool of liquidityPools) {
+            liquidityPoolDisplayIdMap.set(
+                liquidityPool.id,
+                liquidityPool.displayId
+            )
+        }
+        // build log results
+        const logResults = Object.fromEntries(
+            Array.from(
+                this.botAssignments.entries())
+                .map(
+                    ([botId,
+                        assignment]) => [
+                        botId,
+                        assignment.liquidityPoolIds.map(
+                            id => liquidityPoolDisplayIdMap.get(id)!
+                        ),
+                    ],
+                ),
+        )
+        // log
         this.winstonService.log(
-            WinstonLog.RotationBotAssignments, 
+            WinstonLog.RotationBotAssignments,
             {
-                results: Object.fromEntries(this.botAssignments.entries()),
-            }
+                results: logResults 
+            },
         )
     }
 

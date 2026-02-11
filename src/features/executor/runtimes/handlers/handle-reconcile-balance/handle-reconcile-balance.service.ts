@@ -65,9 +65,25 @@ export class HandleReconcileBalanceService {
         bot: BotSchema,
     ) {
         // Skip if bot is not running
-        if (!bot.running) return
+        if (!bot.running) {
+            this.winstonService.log(
+                WinstonLog.ReconcileBalanceSkippedBotNotRunning,
+                {
+                    botId: bot.id,
+                }
+            )
+            return
+        }
         // Skip if bot has an active position
-        if (bot.activePosition) return
+        if (bot.activePosition) {
+            this.winstonService.log(
+                WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActivePosition,
+                {
+                    botId: bot.id,
+                }
+            )
+            return
+        }
         // Skip if balance snapshot is within cooldown (avoid rescan too soon)
         if (bot.balanceSnapshots?.snapshotAt) {
             const diffMs = this.dayjsService.now().diff(
@@ -75,11 +91,23 @@ export class HandleReconcileBalanceService {
                 "millisecond"
             )
             if (diffMs <= envConfig().executor.runtime.operation.reconcileBalance.cooldown.rescan) {
+                this.winstonService.log(
+                    WinstonLog.ReconcileBalanceSkippedBalanceSnapshotWithinCooldown,
+                    {
+                        botId: bot.id,
+                    }
+                )
                 return
             }
         }
         // Skip if bot already has an active job
         if (bot.activeJob) {
+            this.winstonService.log(
+                WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActiveJob,
+                {
+                    botId: bot.id,
+                }
+            )
             return
         }
         // Wait to ensure no job for this bot is already in the queue
@@ -91,14 +119,30 @@ export class HandleReconcileBalanceService {
                 }
             }
         )
-        if (!noActiveJobFound) return
+        if (!noActiveJobFound) {
+            this.winstonService.log(
+                WinstonLog.ReconcileBalanceSkippedActiveJobFoundInQueue,
+                {
+                    botId: bot.id,
+                }
+            )
+            return
+        }
         // Acquire lock authority; return if not acquired
         const acquired = await this.lockAuthorityService.acquire(
             {
                 botId: bot.id,
             }
         )
-        if (!acquired) return
+        if (!acquired) {
+            this.winstonService.log(
+                WinstonLog.ReconcileBalanceLockAuthorityNotAcquired,
+                {
+                    botId: bot.id,
+                }
+            )
+            return
+        }
         const jobId = new Types.ObjectId().toString()
         // Enqueue the reconcile-balance job
         try {

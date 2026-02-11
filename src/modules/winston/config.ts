@@ -7,6 +7,7 @@ import {
     LiquidityPoolsSyncedMarkedAsReadyMessage,
     NotSyncedProcessClosePositionMessage,
     NotSyncedProcessOpenPositionMessage,
+    OpenPositionSkippedActiveJobFoundInQueueMessage,
     OpenPositionSkippedBalanceSnapshotTooOldMessage,
     OpenPositionSkippedBotAlreadyHasActiveJobMessage,
     OpenPositionSkippedBotAlreadyHasActivePositionMessage,
@@ -207,9 +208,20 @@ import {
     ReconcileBalanceJobEnqueuedMessage,
     ReconcileBalanceJobRequeuedMessage,
     ReconcileBalanceJobRequeueFailedMessage,
+    ReconcileBalanceLockAuthorityNotAcquiredMessage,
     ReconcileBalanceLockAuthorityReleasedMessage,
+    ReconcileBalanceSkippedActiveJobFoundInQueueMessage,
+    ReconcileBalanceSkippedBalanceSnapshotWithinCooldownMessage,
+    ReconcileBalanceSkippedBotAlreadyHasActiveJobMessage,
+    ReconcileBalanceSkippedBotAlreadyHasActivePositionMessage,
+    ReconcileBalanceSkippedBotNotRunningMessage,
+    OpenPositionLockAuthorityNotAcquiredMessage,
     OpenPositionLockAuthorityReleasedMessage,
+    ClosePositionLockAuthorityNotAcquiredMessage,
     ClosePositionLockAuthorityReleasedMessage,
+    ClosePositionSkippedActiveJobFoundInQueueMessage,
+    ClosePositionSkippedBotAlreadyHasActiveJobMessage,
+    ClosePositionSkippedBotHasNoActivePositionMessage,
     WithdrawLockAuthorityReleasedMessage,
     ConsulRegisterFailedMessage,
     ConsulRegisterSuccessfullyMessage,
@@ -1865,6 +1877,54 @@ export const configMap = {
         messageType: {
         } as ReconcileBalanceTransactionFoundMessage,
     },
+    // Reconcile Balance Skipped Bot Not Running
+    [WinstonLog.ReconcileBalanceSkippedBotNotRunning]: {
+        name: WinstonLog.ReconcileBalanceSkippedBotNotRunning,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceSkippedBotNotRunningMessage,
+    },
+    // Reconcile Balance Skipped Bot Already Has Active Position
+    [WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActivePosition]: {
+        name: WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActivePosition,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceSkippedBotAlreadyHasActivePositionMessage,
+    },
+    // Reconcile Balance Skipped Balance Snapshot Within Cooldown
+    [WinstonLog.ReconcileBalanceSkippedBalanceSnapshotWithinCooldown]: {
+        name: WinstonLog.ReconcileBalanceSkippedBalanceSnapshotWithinCooldown,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceSkippedBalanceSnapshotWithinCooldownMessage,
+    },
+    // Reconcile Balance Skipped Bot Already Has Active Job
+    [WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActiveJob]: {
+        name: WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActiveJob,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceSkippedBotAlreadyHasActiveJobMessage,
+    },
+    // Reconcile Balance Skipped Active Job Found In Queue
+    [WinstonLog.ReconcileBalanceSkippedActiveJobFoundInQueue]: {
+        name: WinstonLog.ReconcileBalanceSkippedActiveJobFoundInQueue,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceSkippedActiveJobFoundInQueueMessage,
+    },
+    // Reconcile Balance Lock Authority Not Acquired
+    [WinstonLog.ReconcileBalanceLockAuthorityNotAcquired]: {
+        name: WinstonLog.ReconcileBalanceLockAuthorityNotAcquired,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceLockAuthorityNotAcquiredMessage,
+    },
     // Reconcile Balance Lock Authority Released
     [WinstonLog.ReconcileBalanceLockAuthorityReleased]: {
         name: WinstonLog.ReconcileBalanceLockAuthorityReleased,
@@ -1873,6 +1933,14 @@ export const configMap = {
         messageType: {
         } as ReconcileBalanceLockAuthorityReleasedMessage,
     },
+    // Open Position Lock Authority Not Acquired
+    [WinstonLog.OpenPositionLockAuthorityNotAcquired]: {
+        name: WinstonLog.OpenPositionLockAuthorityNotAcquired,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as OpenPositionLockAuthorityNotAcquiredMessage,
+    },
     // Open Position Lock Authority Released
     [WinstonLog.OpenPositionLockAuthorityReleased]: {
         name: WinstonLog.OpenPositionLockAuthorityReleased,
@@ -1880,6 +1948,14 @@ export const configMap = {
         loki: true,
         messageType: {
         } as OpenPositionLockAuthorityReleasedMessage,
+    },
+    // Close Position Lock Authority Not Acquired
+    [WinstonLog.ClosePositionLockAuthorityNotAcquired]: {
+        name: WinstonLog.ClosePositionLockAuthorityNotAcquired,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ClosePositionLockAuthorityNotAcquiredMessage,
     },
     // Close Position Lock Authority Released
     [WinstonLog.ClosePositionLockAuthorityReleased]: {
@@ -1937,6 +2013,30 @@ export const configMap = {
         messageType: {
         } as NotSyncedProcessClosePositionMessage,
     },
+    // Close Position Skipped Bot Has No Active Position
+    [WinstonLog.ClosePositionSkippedBotHasNoActivePosition]: {
+        name: WinstonLog.ClosePositionSkippedBotHasNoActivePosition,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ClosePositionSkippedBotHasNoActivePositionMessage,
+    },
+    // Close Position Skipped Bot Already Has Active Job
+    [WinstonLog.ClosePositionSkippedBotAlreadyHasActiveJob]: {
+        name: WinstonLog.ClosePositionSkippedBotAlreadyHasActiveJob,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ClosePositionSkippedBotAlreadyHasActiveJobMessage,
+    },
+    // Close Position Skipped Active Job Found In Queue
+    [WinstonLog.ClosePositionSkippedActiveJobFoundInQueue]: {
+        name: WinstonLog.ClosePositionSkippedActiveJobFoundInQueue,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ClosePositionSkippedActiveJobFoundInQueueMessage,
+    },
     // Rotation Bot Assignments
     [WinstonLog.RotationBotAssignments]: {
         name: WinstonLog.RotationBotAssignments,
@@ -1992,6 +2092,14 @@ export const configMap = {
         loki: true,
         messageType: {
         } as OpenPositionSkippedBalanceSnapshotTooOldMessage,
+    },
+    // Open Position Skipped Active Job Found In Queue
+    [WinstonLog.OpenPositionSkippedActiveJobFoundInQueue]: {
+        name: WinstonLog.OpenPositionSkippedActiveJobFoundInQueue,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as OpenPositionSkippedActiveJobFoundInQueueMessage,
     },
     // Liquidity Pools Synced
     [WinstonLog.LiquidityPoolsSyncedMarkedAsReady]: {

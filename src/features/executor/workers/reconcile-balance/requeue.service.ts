@@ -78,12 +78,15 @@ export class RequeueService implements OnApplicationBootstrap {
             const ttl = envConfig().executor.runtime.operation.reconcileBalance.requeue.interval
             // find bots with stale active jobs
             const bots = await this.connection.model<BotSchema>(BotSchema.name).find({
-                executor: envConfig().executor.id,
-                activeJob: {
-                    $exists: true,
-                    $ne: null,
+                executor: {
+                    $eq: envConfig().executor.id,
                 },
-                "activeJob.jobType": JobType.ReconcileBalance,
+                activePosition: {
+                    $exists: false,
+                },
+                "activeJob.jobType": {
+                    $eq: JobType.ReconcileBalance,
+                },
                 "activeJob.queuedAt": {
                     $exists: true,
                     $lt: this.dayjsService.now()

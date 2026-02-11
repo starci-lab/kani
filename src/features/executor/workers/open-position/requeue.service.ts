@@ -45,6 +45,9 @@ import {
 import {
     Connection 
 } from "mongoose"
+import {
+    LiquidityPoolNotFoundException 
+} from "@modules/exceptions"
 
 /**
  * Service for requeueing open-position jobs when active jobs exceed TTL.
@@ -84,12 +87,16 @@ export class RequeueService implements OnApplicationBootstrap {
             const ttl = envConfig().executor.runtime.operation.openPosition.requeue.interval
             // find bots with stale active jobs
             const bots = await this.connection.model<BotSchema>(BotSchema.name).find({
-                executor: envConfig().executor.id,
-                activeJob: {
+                executor: {
+                    $eq: envConfig().executor.id,
+                },
+                activePosition: {
                     $exists: true,
                     $ne: null,
                 },
-                "activeJob.jobType": JobType.OpenPosition,
+                "activeJob.jobType": {
+                    $eq: JobType.OpenPosition,
+                },
                 "activeJob.queuedAt": {
                     $exists: true,
                     $lt: this.dayjsService.now()
@@ -107,11 +114,20 @@ export class RequeueService implements OnApplicationBootstrap {
                         }
                     })
                     if (!liquidityPool) {
-                        return
+                        throw new LiquidityPoolNotFoundException({
+                            id: bot.activeJob?.liquidityPool?.toString() ?? "",
+                        })
                     }
                     const bullmqJob = await this.openPositionQueue.getJob(bot.id)
                     if (bullmqJob) {
                         // we can add additional logic here
+                        this.winstonService.log(
+                            WinstonLog.OpenPositionSkippedActiveJobFoundInQueue,
+                            {
+                                botId: bot.id,
+                                liquidityPoolId: liquidityPool.displayId,
+                            }
+                        )
                         return
                     }
                     const acquired = await this.lockAuthorityService.acquire(
@@ -119,7 +135,15 @@ export class RequeueService implements OnApplicationBootstrap {
                             botId: bot.id,
                         }
                     )
-                    if (!acquired) return
+                    if (!acquired) {
+                        this.winstonService.log(
+                            WinstonLog.OpenPositionLockAuthorityNotAcquired,
+                            {
+                                botId: bot.id,
+                            }
+                        )
+                        return
+                    }
                     try {
                         const state = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
                         const bullmqJob = await this.openPositionEnqueueService.enqueue(

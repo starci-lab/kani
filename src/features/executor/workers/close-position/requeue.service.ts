@@ -43,11 +43,11 @@ import {
     SettlementService
 } from "@modules/blockchains"
 import {
-    BotsLoaderService 
-} from "../../loaders"
-import {
     LockAuthorityService 
 } from "../../bussiness"
+import {
+    LiquidityPoolNotFoundException 
+} from "@modules/exceptions"
 
 /**
  * Service for requeueing close-position jobs when active jobs exceed TTL.
@@ -63,7 +63,6 @@ export class RequeueService implements OnApplicationBootstrap {
         private readonly closePositionQueue: Queue<string>,
         private readonly dayjsService: DayjsService,
         private readonly winstonService: WinstonService,
-        private readonly botsLoaderService: BotsLoaderService,
         private readonly asyncService: AsyncService,
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
@@ -89,21 +88,27 @@ export class RequeueService implements OnApplicationBootstrap {
             // get TTL from config
             const ttl = envConfig().executor.runtime.operation.closePosition.requeue.interval
             // find bots with stale active jobs
-            const bots = await this.connection.model<BotSchema>(BotSchema.name).find({
-                executor: envConfig().executor.id,
-                activeJob: {
-                    $exists: true,
-                    $ne: null,
-                },
-                "activeJob.jobType": JobType.ReconcileBalance,
-                "activeJob.queuedAt": {
-                    $exists: true,
-                    $lt: this.dayjsService.now()
-                        .subtract(ttl,
-                            "millisecond")
-                        .toDate(),
-                },
-            })
+            const bots = await this.connection.model<BotSchema>(BotSchema.name).find(
+                {
+                    executor: {
+                        $eq: envConfig().executor.id,
+                    },
+                    activePosition: {
+                        $exists: true,
+                        $ne: null,
+                    },
+                    "activeJob.jobType": {
+                        $eq: JobType.ClosePosition,
+                    },
+                    "activeJob.queuedAt": {
+                        $exists: true,
+                        $lt: this.dayjsService.now()
+                            .subtract(ttl,
+                                "millisecond")
+                            .toDate(),
+                    },
+                }
+            )
             // requeue each stale bot
             const promises = bots.map(
                 async (bot) => {
@@ -116,11 +121,20 @@ export class RequeueService implements OnApplicationBootstrap {
                         }
                     })
                     if (!liquidityPool) {
-                        return
+                        throw new LiquidityPoolNotFoundException({
+                            id: bot.activeJob?.liquidityPool?.toString() ?? "",
+                        })
                     }
                     const bullmqJob = await this.closePositionQueue.getJob(bot.id)
                     if (bullmqJob) {
                         // skip if job already in queue
+                        this.winstonService.log(
+                            WinstonLog.ClosePositionSkippedActiveJobFoundInQueue,
+                            {
+                                botId: bot.id,
+                                liquidityPoolId: liquidityPool.displayId,
+                            }
+                        )
                         return
                     }
                     const state = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
@@ -149,7 +163,15 @@ export class RequeueService implements OnApplicationBootstrap {
                             botId: bot.id,
                         }
                     )
-                    if (!acquired) return
+                    if (!acquired) {
+                        this.winstonService.log(
+                            WinstonLog.ClosePositionLockAuthorityNotAcquired,
+                            {
+                                botId: bot.id,
+                            }
+                        )
+                        return
+                    }
                     try {
                         await this.closePositionEnqueueService.enqueue(
                             {

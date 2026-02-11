@@ -15,8 +15,9 @@ import {
     PrivyMetadataNotFoundException, 
     EncryptedPrivySignerPrivateKeyNotFoundException, 
     MissingSolanaTxParamException,
-    TransactionValidationFailedException,
+    TransactionStimulatedFailedException,
     TransactionSubmitFailedException,
+    TransactionExecutionFailedException,
 } from "@modules/exceptions"
 import {
     AppVersion,
@@ -58,6 +59,9 @@ import {
     WinstonLog,
     WinstonService 
 } from "@modules/winston"
+import {
+    AsyncService 
+} from "@modules/mixin"
 
 /**
  * Service for handling balance reconciliation on Solana.
@@ -76,6 +80,7 @@ export class SolanaReconcileBalanceActionService {
         private readonly privySignService: PrivySignService,
         private readonly signerService: SignerService,
         private readonly winstonService: WinstonService,
+        private readonly asyncService: AsyncService,
     ) { }
 
     /**
@@ -289,7 +294,7 @@ export class SolanaReconcileBalanceActionService {
                 
                 if (simulateTransactionResult.value.err) {
                     throw new TransactionSubmitFailedException({
-                        originalError: new TransactionValidationFailedException({
+                        originalError: new TransactionStimulatedFailedException({
                             botId: bot.id,
                             txHash: prepareTx.txHash,
                             type: TransactionType.ReconcileBalance,
@@ -308,22 +313,32 @@ export class SolanaReconcileBalanceActionService {
                 txHashes.push(prepareTx.txHash)
             } else {
                 // send and confirm transaction
-                await this.rpcExecutorService.withSolanaRpc({
+                const sendAndConfirmTransaction = await this.rpcExecutorService.withSolanaRpc({
                     accessType: RpcAccessType.Write,
                     callback: async ({ rpc, rpcSubscriptions }) => {
-                        const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
+                        return sendAndConfirmTransactionFactory({
                             rpc,
                             rpcSubscriptions,
                         })
-                        return await sendAndConfirmTransaction(
-                            solanaTx,
-                            {
-                                commitment: "confirmed",
-                            }
-                        )
                     },
                 })
-                
+                const [, error] = await this.asyncService.resolveTuple(
+                    sendAndConfirmTransaction(
+                        solanaTx,
+                        {
+                            commitment: "confirmed",
+                        },
+                    ))
+                if (error) {
+                    throw new TransactionSubmitFailedException({
+                        message: error.toString(),
+                        originalError: new TransactionExecutionFailedException({
+                            botId: bot.id,
+                            txHash: prepareTx.txHash,
+                            type: TransactionType.ReconcileBalance,
+                        })
+                    })
+                }
                 const transactionSignature = getSignatureFromTransaction(solanaTx)
                 this.winstonService.log(
                     WinstonLog.ReconcileBalanceTransactionExecuted,

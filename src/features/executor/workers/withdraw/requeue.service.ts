@@ -36,9 +36,6 @@ import {
     WithdrawEnqueueService 
 } from "@modules/blockchains/balance"
 import {
-    BotsLoaderService 
-} from "../../loaders"
-import {
     LockAuthorityService    
 } from "../../bussiness"
 import {
@@ -68,7 +65,6 @@ export class RequeueService implements OnApplicationBootstrap {
         private readonly withdrawQueue: Queue<string>,
         private readonly dayjsService: DayjsService,
         private readonly winstonService: WinstonService,
-        private readonly botsLoaderService: BotsLoaderService,
         private readonly asyncService: AsyncService,
         private readonly withdrawEnqueueService: WithdrawEnqueueService,
         private readonly lockAuthorityService: LockAuthorityService,
@@ -94,12 +90,15 @@ export class RequeueService implements OnApplicationBootstrap {
             // find bots with stale active jobs
             // find bots with stale active jobs
             const bots = await this.connection.model<BotSchema>(BotSchema.name).find({
-                executor: envConfig().executor.id,
-                activeJob: {
-                    $exists: true,
-                    $ne: null,
+                executor: {
+                    $eq: envConfig().executor.id,
                 },
-                "activeJob.jobType": JobType.Withdraw,
+                activePosition: {
+                    $exists: false,
+                },
+                "activeJob.jobType": {
+                    $eq: JobType.Withdraw,
+                },
                 "activeJob.queuedAt": {
                     $exists: true,
                     $lt: this.dayjsService.now()

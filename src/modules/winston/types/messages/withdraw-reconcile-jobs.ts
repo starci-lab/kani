@@ -95,6 +95,26 @@ export interface ReconcileBalanceBootstrappingFailedMessage {
     bullmqJobId?: string
 }
 
+export interface ReconcileBalanceSkippedBotNotRunningMessage {
+    botId: string
+}
+
+export interface ReconcileBalanceSkippedBotAlreadyHasActivePositionMessage {
+    botId: string
+}
+
+export interface ReconcileBalanceSkippedBalanceSnapshotWithinCooldownMessage {
+    botId: string
+}
+
+export interface ReconcileBalanceSkippedBotAlreadyHasActiveJobMessage {
+    botId: string
+}
+
+export interface ReconcileBalanceSkippedActiveJobFoundInQueueMessage {
+    botId: string
+}
+
 export interface ReconcileBalanceJobAlreadyEnqueuedMessage {
     botId: string
     jobId: string

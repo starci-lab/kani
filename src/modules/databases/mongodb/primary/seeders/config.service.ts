@@ -44,7 +44,9 @@ export class ConfigService implements Seeder {
      * Seed the Config.
      * @returns void.
      */
-    async seed(session?: ClientSession): Promise<void> {
+    async seed(
+        session?: ClientSession
+    ): Promise<void> {
         await this.connection.model<ConfigSchema>(ConfigSchema.name).create(data,
             {
                 ordered: true,
@@ -58,7 +60,9 @@ export class ConfigService implements Seeder {
      * Drop the Config.
      * @returns void.
      */
-    async drop(session?: ClientSession): Promise<void> {
+    async drop(
+        session?: ClientSession
+    ): Promise<void> {
         await this.connection.model<ConfigSchema>(ConfigSchema.name).deleteMany({
         },
         {

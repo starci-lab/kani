@@ -448,6 +448,7 @@ export class SuiWithdrawActionService {
                         originalError: new TransactionExecutionFailedException({
                             botId: bot.id,
                             txHash: digest,
+                            type: TransactionType.Withdraw,
                         }),
                         message: effects?.status?.error ?? "Unknown error",
                     })

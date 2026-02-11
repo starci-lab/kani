@@ -342,6 +342,7 @@ export class SuiReconcileBalanceActionService {
                         originalError: new TransactionExecutionFailedException({
                             botId: bot.id,
                             txHash: digest,
+                            type: TransactionType.ReconcileBalance,
                         }),
                         message: effects?.status?.error ?? "Unknown error",
                     })

@@ -251,14 +251,31 @@ export class HandleOpenPositionService {
                 }
             }
         )
-        if (!noActiveJobFound) return
+        if (!noActiveJobFound) {
+            this.winstonService.log(
+                WinstonLog.OpenPositionSkippedActiveJobFoundInQueue,
+                {
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                }
+            )
+            return
+        }
         // Acquire lock authority; return if not acquired
         const acquired = await this.lockAuthorityService.acquire(
             {
                 botId: bot.id,
             }
         )
-        if (!acquired) return
+        if (!acquired) {
+            this.winstonService.log(
+                WinstonLog.OpenPositionLockAuthorityNotAcquired,
+                {
+                    botId: bot.id,
+                }
+            )
+            return
+        }
         const jobId = new Types.ObjectId().toString()
         // Enqueue the open-position job
         try {
