@@ -31,6 +31,9 @@ import {
 import {
     InstanceService 
 } from "@modules/mixin"
+import {
+    LiquidityPoolNotFoundException 
+} from "@modules/exceptions"
 
 /**
  * Handle not synced service.
@@ -119,10 +122,12 @@ export class HandleNotSyncedService {
             )
             // check the liquidity pool is valid
             if (!liquidityPool) {
-                return
+                throw new LiquidityPoolNotFoundException({
+                    id: bot.activePosition.liquidityPool.toString(),
+                })
             }
             // check the liquidity pool is not synced
-            if (this.isSynced(liquidityPool.displayId)) {
+            if (this.isSynced(liquidityPool.id)) {
                 return
             }
             this.winstonService.log(
@@ -148,10 +153,15 @@ export class HandleNotSyncedService {
         if (!botAssignment) {
             return
         }
-        // we take a random bot liquidity pool
-        const botLiquidityPoolId = _.sample(botAssignment.liquidityPoolIds)
+        // we filter the liquidity pools that are synced
+        const syncedPools = botAssignment.liquidityPoolIds.filter(id =>
+            this.isSynced(id)
+        )
+        // if there are no synced liquidity pools, we return
+        if (syncedPools.length === 0) return   
+        // we take a random synced liquidity pool
+        const botLiquidityPoolId = _.sample(syncedPools)
         if (!botLiquidityPoolId) return
-        if (this.isSynced(botLiquidityPoolId)) return
         // we check the bot liquidity pool is valid
         const botLiquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
             id: {
