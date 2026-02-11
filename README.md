@@ -1,75 +1,137 @@
+# Kani — Automated Liquidity Bot for CLMM & DLMM
+
 <p align="center">
   <img src="https://r2.kanibot.xyz/protocols/solana.png" width="96" alt="Kani" />
 </p>
 
-<h2 align="center">Kani — Automated Liquidity Bot for Ultra-Thin CLMM Ranges</h2>
-
 <p align="center">
-Amplify capital efficiency with ultra-thin ranges and a smart exit engine powered by CEX + oracle insights.<br />
-Originally built on Sui with the NestJS framework, now evolving toward Solana for lower latency and higher scalability.
+  Amplify capital efficiency with ultra-thin ranges and a smart exit engine powered by CEX + oracle insights.<br />
+  Built with NestJS; supports <strong>Sui</strong> (Cetus, Turbos, Momentum, FlowX) and <strong>Solana</strong> (Raydium, Orca, Meteora).
 </p>
 
 ---
 
-### Contents
-- Overview
-- Architecture & Direction (Sui → Solana)
-- Codebase Structure (Monorepo)
-- Installation & Quick Start
-- Environment Configuration
-- Solana Roadmap
-- Related Documents
+## Contents
+
+- [Overview](#overview)
+- [Applications (Monorepo)](#applications-monorepo)
+- [Codebase structure](#codebase-structure)
+- [Installation & quick start](#installation--quick-start)
+- [Environment configuration](#environment-configuration)
+- [Related documents](#related-documents)
 
 ---
 
-### Overview
-Kani is an automated liquidity bot designed to open and maintain CLMM (Concentrated Liquidity Market Maker) positions with ultra-thin ranges — maximizing APR as a natural leverage effect.  
-The bot uses multi-source data (CEX order books, on-chain data, and oracles) to detect market anomalies and exit positions **before DEX price adjustments occur**.
+## Overview
 
-**Key highlights**
-- Ultra-thin ranges updated with low latency.
-- Pool scoring based on liquidity depth, volatility, and yield stability.
-- Risk module with multi-source triggers (CEX leads, oracle deltas, swap pressure).
+Kani is an automated liquidity bot that opens and maintains **CLMM** (Concentrated Liquidity Market Maker) and **DLMM** (Dynamic Liquidity Market Maker) positions with ultra-thin ranges to maximize APR. It uses multi-source data (CEX order books, on-chain data, oracles) to detect market moves and exit positions before DEX price fully adjusts.
 
----
+**Highlights**
 
-### Architecture & Direction
-- Initially launched on **Sui**, with adapters for: Cetus, Turbos, Momentum, and FlowX.
-- Currently migrating to **Solana**, leveraging its high TPS, lower latency, and richer CLMM ecosystem (Raydium, Orca, Meteora).
-- Modular architecture: each DEX is implemented as an independent adapter (fetch/metadata/action) dynamically wired through the `DexesModule` and `LiquidityPoolService`.
-
-For full technical details, see `app/ARCHITECTURE.md`.
+- Ultra-thin ranges with low-latency updates.
+- Pool scoring (liquidity depth, volatility, yield stability).
+- Risk logic with CEX leads, oracle deltas, and swap pressure.
+- Modular DEX adapters per chain; CEX feeds (Binance, Gate, Bybit) and oracles (Pyth, CoinGecko, CoinMarketCap).
 
 ---
 
-### Codebase Structure (Monorepo)
-Key directories under `app/`:
+## Applications (Monorepo)
 
-- `src/modules/blockchains/dexes/`: DEX adapters (Sui + Solana)
-  - Existing: `cetus/`, `turbos/`, `momentum/`, `flowx/`
-  - New (Solana, scaffold): `raydium/`, `orca/`, `meteora/`
-- `src/modules/blockchains/dexes/dexes.module.ts`: Dynamic registration of DEXes via `DexId`.
-- `src/modules/blockchains/dexes/liquidity-pool.service.ts`: Returns adapter lists by `chainId` (Sui/Solana).
-- `src/modules/databases/enums/ids.ts`: Contains all enums such as `DexId`, `ChainId`, etc.
-- `src/modules/env/config.ts`: Runtime configuration (DB, RPC, Redis, etc.).
+Applications live under `apps/` and share `src/modules` and `src/features`:
+
+| App | Description |
+|-----|-------------|
+| **kani-executor** | Runs bots: open/close position workers, reconcile balance, withdraw. Subscribes to CLMM/DLMM sync events (Kafka), enqueues BullMQ jobs. |
+| **kani-coordinator** | Orchestrates executors (e.g. Kubernetes), load balancing, event fan-out. Uses Kafka, Redis, MongoDB. |
+| **kani-interface** | User-facing API: GraphQL (Apollo), REST, auth (Passport, Privy, TOTP). Manages bots, pools, keypairs. |
+| **kani-observer** | Observability and monitoring. |
+| **kani-inspector** | Inspection and debugging utilities. |
+| **kani-algorithm-tests** | Algorithm and math tests (CLMM/DLMM, RPC). |
+
+Default ports (overridable via env): **Interface** 3001, **Coordinator** 3002, **Executor** 3003.
 
 ---
 
-### Installation & Quick Start
-**Requirements:** Node.js 18+, pnpm/npm, MongoDB/SQLite, Redis (optional), and RPC endpoints (Sui/Solana).
+## Codebase structure
+
+```
+kani/
+├── apps/                    # NestJS applications
+│   ├── kani-executor/       # Bot runtime (workers, runtimes, handlers)
+│   ├── kani-coordinator/    # Executor orchestration, K8s
+│   ├── kani-interface/      # GraphQL + REST API
+│   ├── kani-cli/            # CLI (db, keys)
+│   └── ...
+├── src/
+│   ├── modules/             # Shared modules
+│   │   ├── blockchains/     # DEX adapters, balance, signers, formulas, price-feeds, tx-builder
+│   │   ├── databases/       # MongoDB (primary), schemas, enums (DexId, TokenId, …)
+│   │   ├── event/           # Event emitter + Kafka
+│   │   ├── env/             # Runtime config (envConfig)
+│   │   ├── winston/         # Logging (Loki, levels, message types)
+│   │   ├── bullmq/          # Queues (open-position, close-position, reconcile-balance, withdraw)
+│   │   └── ...
+│   └── features/            # Feature domains
+│       ├── executor/        # Loaders, runtimes (handle open/close/not-synced), workers
+│       ├── coordinator/     # Loaders, runtimes, K8s integration
+│       ├── interface/       # GraphQL resolvers, REST, auth
+│       └── cli/             # Commands (database, key)
+├── scripts/                 # Shell/PowerShell scripts
+├── .containers/             # Container / K8s manifests
+└── package.json
+```
+
+**DEX adapters** (`src/modules/blockchains/dexes/`): Cetus, Turbos, Momentum, FlowX (Sui); Raydium, Orca, Meteora (Solana). Wired via `DexesModule` and `DexId` in `src/modules/databases/mongodb/primary/enums/ids.ts`.
+
+**Executor flow**: Diagnostics sync CLMM/DLMM pools → events (e.g. `ClmmLiquidityPoolsSynced`) → runtimes (e.g. `HandleOpenPositionService`) → BullMQ (open/close position, reconcile balance) → workers execute on-chain actions.
+
+---
+
+## Installation & quick start
+
+**Requirements:** Node.js 18+, npm/pnpm, **MongoDB**, **Redis** (cache, BullMQ, lock authority), **Kafka** (coordinator/executor events). RPC endpoints for Sui and/or Solana as needed.
 
 ```bash
-# Install dependencies (inside app/)
+# Install dependencies (project root)
 npm install
 
-# Development
-npm run start:dev
+# Development (single app, e.g. executor)
+npx nest start kani-executor --watch
 
-# Build + Production
+# Or build and run production
 npm run build
-npm run start:prod
+node dist/apps/kani-executor/main    # or kani-coordinator, kani-interface
 
-# Lint & Test
+# CLI (e.g. database seed)
+npm run cli
+```
+
+**Lint & tests**
+
+```bash
 npm run lint
 npm run test
 npm run test:e2e
+```
+
+---
+
+## Environment configuration
+
+Configuration is built from environment variables in `src/modules/env/config.ts` (via `envConfig()`). Main areas:
+
+- **Ports:** `KANI_INTERFACE_PORT` (3001), `KANI_COORDINATOR_PORT` (3002), `KANI_EXECUTOR_PORT` (3003).
+- **Databases:** MongoDB primary (connection, seed, in-memory storage flags).
+- **Redis:** Cache, BullMQ, lock authority, throttler (instance keys in config).
+- **Kafka:** Brokers, topics (e.g. `ClmmLiquidityPoolsSynced`, `DlmmLiquidityPoolsSynced`), SASL, retries.
+- **Executor:** `executor.id` for instance identity, runtime/operation cooldowns (e.g. reconcile balance rescan).
+- **RPC / CEX / Oracles:** Per-module (blockchains, cexes, price-feeds) timeouts, retries, API keys (prefer env/secrets, not hardcoded).
+
+See `src/modules/env/` for the full schema and defaults.
+
+---
+
+## Related documents
+
+- **README.Docker.md** — Building and running with Docker.
+- **.containers/** — Kubernetes/manifest examples for deployment.
