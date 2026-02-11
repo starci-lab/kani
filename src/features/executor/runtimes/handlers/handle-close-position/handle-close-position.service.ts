@@ -100,7 +100,10 @@ export class HandleClosePositionService {
         const jobId = new Types.ObjectId().toString()
         // Settle the position to determine if we should close
         const state = eventPayload ?? await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
-        const { settled, strategyResults } = await this.settlementService.settle(
+        const { 
+            settled, 
+            strategyResults 
+        } = await this.settlementService.settle(
             {
                 bot,
                 liquidityPool,

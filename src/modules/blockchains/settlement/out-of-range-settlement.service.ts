@@ -42,10 +42,12 @@ export class OutOfRangeSettlementService implements ISettlementStrategyService {
         if (isClmm) {
             const _state = state as ClmmLiquidityPoolState
             if (!bot.activePosition.associatedPosition.clmmState) {
-                throw new PositionClmmStateNotFoundException({
-                    positionId: bot.activePosition.associatedPosition.id,
-                    botId: bot.id,
-                })
+                throw new PositionClmmStateNotFoundException(
+                    {
+                        positionId: bot.activePosition.associatedPosition.id,
+                        botId: bot.id,
+                    }
+                )
             }
             if (
                 _state.tickCurrent.lt(new BN(bot.activePosition.associatedPosition.clmmState.tickLower)) 

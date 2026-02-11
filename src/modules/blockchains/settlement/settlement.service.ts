@@ -24,9 +24,13 @@ export class SettlementService {
     ): Promise<SettleResult> {
         const strategyResults: Array<SettleStrategyResult> = []
         // check if the position is out of range
-        const outOfRangeSettleStrategyResult = await this.outOfRangeSettlementService.settle({
-            bot, state, liquidityPool 
-        })
+        const outOfRangeSettleStrategyResult = await this.outOfRangeSettlementService.settle(
+            {
+                bot, 
+                state, 
+                liquidityPool 
+            }
+        )
         strategyResults.push(outOfRangeSettleStrategyResult)
         const settled = strategyResults.some(result => result.settled)
         return {
