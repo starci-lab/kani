@@ -258,7 +258,7 @@ implements
         // Consumer disconnect is handled by KafkaConsumerService.onApplicationShutdown
         this.kafkaConsumerService.consumer.disconnect()
         // Delete the group from Kafka
-        this.kafkaAdmin.deleteGroups([envConfig().k8s.global.podName])
+        this.kafkaAdmin.deleteGroups([this.instanceService.getId()])
     }
 }
 
