@@ -221,4 +221,6 @@ export enum WinstonLog {
     OpenPositionSkippedBotAlreadyHasActiveJob = "Open.Position.Skipped.Bot.Already.Has.Active.Job",
     OpenPositionSkippedNotEligible = "Open.Position.Skipped.Not.Eligible",
     OpenPositionSkippedBalanceSnapshotTooOld = "Open.Position.Skipped.Balance.Snapshot.Too.Old",
+    ClmmLiquidityPoolsSynced = "Clmm.Liquidity.Pools.Synced",
+    DlmmLiquidityPoolsSynced = "Dlmm.Liquidity.Pools.Synced",
 }

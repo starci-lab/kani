@@ -1,5 +1,5 @@
 import {
-    EventName, 
+    EventName,
     ClmmLiquidityPoolsSyncedEventPayload,
 } from "@modules/event"
 import {
@@ -19,7 +19,8 @@ import {
 } from "mongoose"
 import {
     BotSchema, 
-    InjectPrimaryMongoose
+    InjectPrimaryMongoose,
+    PrimaryMemoryStorageService
 } from "@modules/databases"
 import {
     envConfig 
@@ -27,94 +28,123 @@ import {
 import {
     Types 
 } from "mongoose"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
+import {
+    LiquidityPoolNotFoundException 
+} from "@modules/exceptions"
 
 @Injectable()
 export class ClmmSubscriptionService {
     constructor(
-        private readonly eventEmitterService: EventEmitterService,
-        private readonly rotationService: RotationService,
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
+    private readonly eventEmitterService: EventEmitterService,
+    private readonly rotationService: RotationService,
+    @InjectPrimaryMongoose()
+    private readonly connection: Connection,
+    private readonly winstonService: WinstonService,
+    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
-    
-    /**
-     * Triggered when CLMM liquidity pools are fetched.
-     *
-     * Intent:
-     * - Fan-out the opportunity to open positions
-     * - Bots are currently IDLE (no active liquidity pool)
-     *
-     * Pattern:
-     * - BROADCAST (not load-balancing)
-     * - Deterministic fan-out
-     */
-    @OnEvent(EventName.ClmmLiquidityPoolsSynced)
+
+  /**
+   * Triggered when CLMM liquidity pools are fetched.
+   *
+   * Intent:
+   * - Fan-out the opportunity to open positions
+   * - Bots are currently IDLE (no active liquidity pool)
+   *
+   * Pattern:
+   * - BROADCAST (not load-balancing)
+   * - Deterministic fan-out
+   */
+  @OnEvent(EventName.ClmmLiquidityPoolsSynced)
     async handleClmmLiquidityPoolsSynced(
-        event: ClmmLiquidityPoolsSyncedEventPayload
+        event: ClmmLiquidityPoolsSyncedEventPayload,
     ) {
-        const idleClmmBots = await this.connection.model<BotSchema>(BotSchema.name).find({
-            // match executor
-            executor: {
-                $eq: envConfig().executor.id,
-            },
-            // no position assigned
-            activePosition: {
-                $exists: false,
-            },
-            activeJob: {
-                $exists: false,
-            },
-            running: {
-                $eq: true,
-            },
-            liquidityPools: {
-                $in: [new Types.ObjectId(event.id)] 
-            },
-            // where liquidity pools assigned
-            $or: Array.from(this.rotationService.botAssignments.entries()).map(([
-                botId, 
-                botAssignment
-            ]) => ({
-                _id: new Types.ObjectId(botId),
-                liquidityPools: { 
-                    $in: botAssignment.liquidityPoolIds.map(id => new Types.ObjectId(id)) 
-                }
-            }))
-        })
-        const activeClmmBots = await this.connection.model<BotSchema>(BotSchema.name).find({
-            executor: {
-                $eq: envConfig().executor.id,
-            },
-            activePosition: {
-                $exists: true,
-                $ne: null,
-            },
-            activeJob: {
-                $exists: false,
-            },
-            liquidityPools: {
-                $in: [new Types.ObjectId(event.id)] 
-            },
-        })
+        const idleClmmBots = await this.connection
+            .model<BotSchema>(BotSchema.name)
+            .find({
+                // match executor
+                executor: {
+                    $eq: envConfig().executor.id,
+                },
+                // no position assigned
+                activePosition: {
+                    $exists: false,
+                },
+                activeJob: {
+                    $exists: false,
+                },
+                running: {
+                    $eq: true,
+                },
+                liquidityPools: {
+                    $in: [new Types.ObjectId(event.id)],
+                },
+                // where liquidity pools assigned
+                $or: Array.from(this.rotationService.botAssignments.entries()).map(
+                    ([botId,
+                        botAssignment]) => ({
+                        _id: new Types.ObjectId(botId),
+                        liquidityPools: {
+                            $in: botAssignment.liquidityPoolIds.map(
+                                (id) => new Types.ObjectId(id),
+                            ),
+                        },
+                    }),
+                ),
+            })
+        const activeClmmBots = await this.connection
+            .model<BotSchema>(BotSchema.name)
+            .find({
+                executor: {
+                    $eq: envConfig().executor.id,
+                },
+                activePosition: {
+                    $exists: true,
+                    $ne: null,
+                },
+                activeJob: {
+                    $exists: false,
+                },
+                liquidityPools: {
+                    $in: [new Types.ObjectId(event.id)],
+                },
+            })
+        const liquidityPool =
+      this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
+          id: {
+              $eq: event.id,
+          },
+      })
+        if (!liquidityPool) {
+            throw new LiquidityPoolNotFoundException({
+                id: event.id,
+            })
+        }
+        this.winstonService.log(
+            WinstonLog.ClmmLiquidityPoolsSynced,
+            {
+                liquidityPoolId: liquidityPool.displayId,
+                idleClmmBots: idleClmmBots.length,
+                activeClmmBots: activeClmmBots.length,
+            }
+        )
         // Broadcast open-position request to all idle bots on this pool.
         // No round-robin: each bot owns and opens its own position.
         for (const bot of idleClmmBots) {
-            this.eventEmitterService.emit(
-                {
-                    event: EventName.ClmmPositionOpenRequested,
-                    args: [bot.id],
-                    payload: event,
-                }
-            )
+            this.eventEmitterService.emit({
+                event: EventName.ClmmPositionOpenRequested,
+                args: [bot.id],
+                payload: event,
+            })
         }
         for (const bot of activeClmmBots) {
-            this.eventEmitterService.emit(
-                {
-                    event: EventName.ClmmPositionCloseRequested,
-                    args: [bot.id],
-                    payload: event,
-                }
-            )
+            this.eventEmitterService.emit({
+                event: EventName.ClmmPositionCloseRequested,
+                args: [bot.id],
+                payload: event,
+            })
         }
     }
 }

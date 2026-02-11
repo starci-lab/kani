@@ -2,6 +2,8 @@ import {
     WinstonLog,
 } from "./enums"
 import {
+    ClmmLiquidityPoolsSyncedMessage,
+    DlmmLiquidityPoolsSyncedMessage,
     NotSyncedProcessClosePositionMessage,
     NotSyncedProcessOpenPositionMessage,
     OpenPositionSkippedBalanceSnapshotTooOldMessage,
@@ -1980,5 +1982,21 @@ export const configMap = {
         loki: true,
         messageType: {
         } as OpenPositionSkippedBalanceSnapshotTooOldMessage,
+    },
+    // Clmm Liquidity Pools Synced
+    [WinstonLog.ClmmLiquidityPoolsSynced]: {
+        name: WinstonLog.ClmmLiquidityPoolsSynced,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ClmmLiquidityPoolsSyncedMessage,
+    },
+    // Dlmm Liquidity Pools Synced
+    [WinstonLog.DlmmLiquidityPoolsSynced]: {
+        name: WinstonLog.DlmmLiquidityPoolsSynced,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as DlmmLiquidityPoolsSyncedMessage,
     },
 }

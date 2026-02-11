@@ -17,3 +17,21 @@ export interface NotSyncedProcessClosePositionMessage {
     botId: string
     liquidityPoolId: LiquidityPoolId
 }
+
+/**
+ * Clmm liquidity pools synced message.
+ */
+export interface ClmmLiquidityPoolsSyncedMessage {
+    liquidityPoolId: LiquidityPoolId
+    idleClmmBots: number
+    activeClmmBots: number
+}
+
+/**
+ * Dlmm liquidity pools synced message.
+ */
+export interface DlmmLiquidityPoolsSyncedMessage {
+    liquidityPoolId: LiquidityPoolId
+    idleDlmmBots: number
+    activeDlmmBots: number
+}

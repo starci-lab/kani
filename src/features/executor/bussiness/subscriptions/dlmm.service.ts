@@ -16,7 +16,8 @@ import {
 } from "../rotation/rotation.service"
 import {
     BotSchema, 
-    InjectPrimaryMongoose
+    InjectPrimaryMongoose,
+    PrimaryMemoryStorageService
 } from "@modules/databases"
 import {
     envConfig 
@@ -25,6 +26,12 @@ import {
     Types,
     Connection
 } from "mongoose"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
+import {
+    LiquidityPoolNotFoundException 
+} from "@modules/exceptions"
 
 @Injectable()
 export class DlmmSubscriptionService {
@@ -33,6 +40,8 @@ export class DlmmSubscriptionService {
         private readonly rotationService: RotationService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly winstonService: WinstonService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) { }
 
     /**
@@ -93,6 +102,24 @@ export class DlmmSubscriptionService {
                     $in: [new Types.ObjectId(event.id)] 
                 },
             })
+        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
+            id: {
+                $eq: event.id,
+            },
+        })
+        if (!liquidityPool) {
+            throw new LiquidityPoolNotFoundException({
+                id: event.id,
+            })
+        }
+        this.winstonService.log(
+            WinstonLog.DlmmLiquidityPoolsSynced,
+            {
+                liquidityPoolId: liquidityPool.displayId,
+                idleDlmmBots: idleDlmmBots.length,
+                activeDlmmBots: activeDlmmBots.length,
+            }
+        )
         // Broadcast close-position request to all idle bots on this pool.
         // No round-robin: each bot owns and closes its own position.
         for (const bot of idleDlmmBots) {
