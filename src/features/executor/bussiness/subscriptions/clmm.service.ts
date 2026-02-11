@@ -59,6 +59,9 @@ export class ClmmSubscriptionService {
             activePosition: {
                 $exists: false,
             },
+            liquidityPools: {
+                $in: [new Types.ObjectId(event.id)] 
+            },
             // where liquidity pools assigned
             $or: Array.from(this.rotationService.botAssignments.entries()).map(([
                 botId, 
@@ -75,6 +78,9 @@ export class ClmmSubscriptionService {
             activePosition: {
                 $exists: true,
                 $ne: null,
+            },
+            liquidityPools: {
+                $in: [new Types.ObjectId(event.id)] 
             },
             $or: Array.from(this.rotationService.botAssignments.entries()).map(([
                 botId, 

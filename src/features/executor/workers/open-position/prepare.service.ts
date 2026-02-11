@@ -114,8 +114,6 @@ export class PrepareService {
             )
         )
         if (error) {
-            console.log("error",
-                error)
             throw new JobFailureException({
                 strategy: JobFailureStrategy.Fatal,
                 originalError: new OpenPositionJobPreparedFailedException({

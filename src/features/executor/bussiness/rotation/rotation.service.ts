@@ -73,7 +73,7 @@ export class RotationService implements OnModuleInit {
             key: CacheKey.RotationBotAssignments,
             args: [],
         })
-        const disableCache = true
+        const disableCache = false
         if (
             !disableCache &&
             cachedResult &&
@@ -198,10 +198,10 @@ export class RotationService implements OnModuleInit {
 
         // build in-memory map
         this.botAssignments = new Map(
-            results.map((r) => [
-                r.botId,
+            results.map((result) => [
+                result.botId,
                 {
-                    liquidityPoolIds: r.liquidityPoolIds 
+                    liquidityPoolIds: result.liquidityPoolIds 
                 },
             ])
         )
