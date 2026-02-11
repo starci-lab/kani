@@ -106,6 +106,8 @@ export class HandleNotSyncedService {
     ) {
         // return if bot is not running
         if (!bot.running) return
+        // return if bot has an active job
+        if (bot.activeJob) return
         // we check the bot have a position
         if (bot.activePosition) {
             const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(

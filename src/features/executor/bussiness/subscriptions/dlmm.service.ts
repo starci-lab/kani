@@ -61,6 +61,9 @@ export class DlmmSubscriptionService {
             running: {
                 $eq: true,
             },
+            activeJob: {
+                $exists: false,
+            },
             liquidityPools: {
                 $in: [new Types.ObjectId(event.id)] 
             },
@@ -82,6 +85,9 @@ export class DlmmSubscriptionService {
                 activePosition: {
                     $exists: true,
                     $ne: null,
+                },
+                activeJob: {
+                    $exists: false,
                 },
                 liquidityPools: {
                     $in: [new Types.ObjectId(event.id)] 
