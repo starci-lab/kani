@@ -9,7 +9,6 @@ import {
 } from "../types"
 import {
     PrepareTx,
-    SolanaTx
 } from "../../types"
 import {
     PrivyMetadataNotFoundException, 
@@ -158,7 +157,7 @@ export class SolanaReconcileBalanceActionService {
             const compiledTransaction = compileTransaction(transactionMessage)
             
             // sign transaction based on bot version
-            let transaction: { txHash: string; solanaTx: SolanaTx }
+            let prepareTx: PrepareTx
             if (bot.version === AppVersion.V1) {
                 const signedTransaction = await this.signerService.withSolanaSigner({
                     bot,
@@ -177,9 +176,34 @@ export class SolanaReconcileBalanceActionService {
                 assertIsSendableTransaction(signedTransaction)
                 assertIsTransactionWithinSizeLimit(signedTransaction)
                 
-                transaction = {
+                prepareTx = {
                     txHash,
                     solanaTx: signedTransaction,
+                }
+
+                const simulateResult = await this.rpcExecutorService.withSolanaRpc({
+                    accessType: RpcAccessType.Write,
+                    callback: async (
+                        { rpc }
+                    ) => {
+                        return await rpc.simulateTransaction(
+                            getBase64EncodedWireTransaction(prepareTx.solanaTx!),
+                            {
+                                encoding: "base64",
+                                commitment: "confirmed",
+                            },
+                        ).send()
+                    },
+                })
+                if (simulateResult.value.err) {
+                    throw new TransactionSubmitFailedException({
+                        message: simulateResult.value.err.toString(),
+                        originalError: new TransactionStimulatedFailedException({
+                            botId: bot.id,
+                            txHash: prepareTx.txHash,
+                            type: TransactionType.ReconcileBalance,
+                        }),
+                    })
                 }
             } else {
                 // validate privy metadata for V2 bots
@@ -205,39 +229,31 @@ export class SolanaReconcileBalanceActionService {
                     walletId: bot.privyMetadata.walletId,
                 })
 
-                transaction = {
+                prepareTx = {
                     txHash: signedTransaction.txHash,
                     solanaTx: signedTransaction.signedTransaction,
                 }
-            }
-            const simulateResult = await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Write,
-                callback: async ({ rpc }) => {
-                    return await rpc.simulateTransaction(
-                        getBase64EncodedWireTransaction(transaction.solanaTx),
-                        {
-                            encoding: "base64",
-                            commitment: "confirmed",
-                        },
-                    ).send()
-                },
-            })
-            if (simulateResult.value.err) {
-                throw new TransactionSubmitFailedException({
-                    message: simulateResult.value.err.toString(),
-                    originalError: new TransactionStimulatedFailedException(
-                        {
-                            botId: bot.id,
-                            txHash: transaction.txHash,
-                            type: TransactionType.ReconcileBalance,
-                        },
-                    ),
+                const simulateResult = await this.rpcExecutorService.withSolanaRpc({
+                    accessType: RpcAccessType.Write,
+                    callback: async ({ rpc }) => {
+                        return await rpc.simulateTransaction(
+                            getBase64EncodedWireTransaction(prepareTx.solanaTx!),
+                            {
+                                encoding: "base64",
+                                commitment: "confirmed",
+                            },
+                        ).send()
+                    },
                 })
+                if (simulateResult.value.err) {
+                    throw new TransactionStimulatedFailedException({
+                        botId: bot.id,
+                        txHash: prepareTx.txHash,
+                        type: TransactionType.ReconcileBalance,
+                    })
+                }
             }
-            prepareTxs.push({
-                txHash: transaction.txHash,
-                solanaTx: transaction.solanaTx,
-            })
+            prepareTxs.push(prepareTx)
         }
         return {
             prepareTxs,

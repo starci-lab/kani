@@ -7,7 +7,6 @@ import {
 } from "../types"
 import {
     PrepareTx,
-    SolanaTx
 } from "../../types"
 import {
     ExecuteWithdrawTransactionParams,
@@ -110,7 +109,13 @@ export class SolanaWithdrawActionService {
      * @example
      * const prepareTxs = await service.prepare({ bot, tokenInputs, toAddress, toUsdc: true })
      */
-    public async prepare({ bot, tokenInputs, toAddress, toUsdc = false }: PrepareWithdrawTransactionParams): Promise<PrepareWithdrawTransactionResult> {
+    public async prepare(
+        { 
+            bot, 
+            tokenInputs, 
+            toAddress, 
+            toUsdc = false 
+        }: PrepareWithdrawTransactionParams): Promise<PrepareWithdrawTransactionResult> {
         const prepareTxs: Array<PrepareTx> = []
         for (const tokenInput of tokenInputs) {
             const instructions: Array<Instruction> = []
@@ -233,7 +238,7 @@ export class SolanaWithdrawActionService {
             const compiledTransaction = compileTransaction(transactionMessage)
             
             // sign transaction based on bot version
-            let transaction: { txHash: string; solanaTx: SolanaTx }
+            let prepareTx: PrepareTx
             if (bot.version === AppVersion.V1) {
                 const signedTransaction = await this.signerService.withSolanaSigner({
                     bot,
@@ -252,9 +257,31 @@ export class SolanaWithdrawActionService {
                 assertIsSendableTransaction(signedTransaction)
                 assertIsTransactionWithinSizeLimit(signedTransaction)
                 
-                transaction = {
+                prepareTx = {
                     txHash,
                     solanaTx: signedTransaction,
+                }
+                const simulateResult = await this.rpcExecutorService.withSolanaRpc({
+                    accessType: RpcAccessType.Write,
+                    callback: async ({ rpc }) => {
+                        return await rpc.simulateTransaction(
+                            getBase64EncodedWireTransaction(prepareTx.solanaTx!),
+                            {
+                                encoding: "base64",
+                                commitment: "confirmed",
+                            },
+                        ).send()
+                    },
+                })
+                if (simulateResult.value.err) {
+                    throw new TransactionSubmitFailedException({
+                        message: simulateResult.value.err.toString(),
+                        originalError: new TransactionStimulatedFailedException({
+                            botId: bot.id,
+                            txHash: prepareTx.txHash,
+                            type: TransactionType.Withdraw,
+                        }),
+                    })
                 }
             } else {
                 // validate privy metadata for V2 bots
@@ -280,39 +307,37 @@ export class SolanaWithdrawActionService {
                     walletId: bot.privyMetadata.walletId,
                 })
 
-                transaction = {
+                prepareTx = {
                     txHash: signedTransaction.txHash,
                     solanaTx: signedTransaction.signedTransaction,
                 }
-            }
-            const simulateResult = await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Write,
-                callback: async ({ rpc }) => {
-                    return await rpc.simulateTransaction(
-                        getBase64EncodedWireTransaction(transaction.solanaTx),
-                        {
-                            encoding: "base64",
-                            commitment: "confirmed",
-                        },
-                    ).send()
-                },
-            })
-            if (simulateResult.value.err) {
-                throw new TransactionSubmitFailedException({
-                    message: simulateResult.value.err.toString(),
-                    originalError: new TransactionStimulatedFailedException(
-                        {
-                            botId: bot.id,
-                            txHash: transaction.txHash,
-                            type: TransactionType.Withdraw,
-                        },
-                    ),
+
+                const simulateResult = await this.rpcExecutorService.withSolanaRpc({
+                    accessType: RpcAccessType.Write,
+                    callback: async ({ rpc }) => {
+                        return await rpc.simulateTransaction(
+                            getBase64EncodedWireTransaction(prepareTx.solanaTx!),
+                            {
+                                encoding: "base64",
+                                commitment: "confirmed",
+                            },
+                        ).send()
+                    },
                 })
+                if (simulateResult.value.err) {
+                    throw new TransactionSubmitFailedException({
+                        message: simulateResult.value.err.toString(),
+                        originalError: new TransactionStimulatedFailedException(
+                            {
+                                botId: bot.id,
+                                txHash: prepareTx.txHash,
+                                type: TransactionType.Withdraw,
+                            },
+                        ),
+                    })
+                }
             }
-            prepareTxs.push({
-                txHash: transaction.txHash,
-                solanaTx: transaction.solanaTx,
-            })
+            prepareTxs.push(prepareTx)
         }
         return {
             prepareTxs,
