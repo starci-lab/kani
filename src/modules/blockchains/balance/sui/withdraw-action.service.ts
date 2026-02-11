@@ -15,12 +15,12 @@ import {
     EncryptedPrivySignerPrivateKeyNotFoundException,
     MissingSuiMessageWithBytesParamException,
     TransactionType,
-    TransactionValidationFailedException,
     TokenNotFoundException,
     TransactionNotFoundException,
     OutputCoinNotFoundException,
     TransactionSubmitFailedException,
     TransactionExecutionFailedException,
+    TransactionStimulatedFailedException,
 } from "@modules/exceptions"
 import {
     AppVersion,
@@ -340,7 +340,13 @@ export class SuiWithdrawActionService {
      * @example
      * const txHashes = await service.execute({ bot, prepareTxs })
      */
-    public async execute({ bot, prepareTxs, isRetry = false, stimulate = false }: ExecuteWithdrawTransactionParams): Promise<ExecuteWithdrawTransactionResult> {
+    public async execute(
+        { 
+            bot, 
+            prepareTxs, 
+            isRetry = false, 
+            stimulate = false 
+        }: ExecuteWithdrawTransactionParams): Promise<ExecuteWithdrawTransactionResult> {
         if (prepareTxs.length === 0) {
             return {
                 txHashes: [],
@@ -404,10 +410,13 @@ export class SuiWithdrawActionService {
                 })
                 
                 if (devInspect.effects.status.status !== "success") {
-                    throw new TransactionValidationFailedException({
-                        botId: bot.id,
-                        txHash: devInspect.effects.transactionDigest,
-                        type: TransactionType.Withdraw,
+                    throw new TransactionSubmitFailedException({
+                        originalError: new TransactionStimulatedFailedException({
+                            botId: bot.id,
+                            txHash: devInspect.effects.transactionDigest,
+                            type: TransactionType.Withdraw,
+                        }),
+                        message: devInspect.effects.status.error ?? "Unknown error",
                     })
                 }
                 

@@ -12,11 +12,11 @@ import {
     EncryptedPrivySignerPrivateKeyNotFoundException,
     MissingSuiMessageWithBytesParamException,
     TransactionType,
-    TransactionValidationFailedException,
     TransactionNotFoundException,
     OutputCoinNotFoundException,
     TransactionExecutionFailedException,
     TransactionSubmitFailedException,
+    TransactionStimulatedFailedException,
 } from "@modules/exceptions"
 import {
     AppVersion
@@ -50,6 +50,9 @@ import {
 import {
     AsyncService
 } from "@modules/mixin"
+import type {
+    SignatureWithBytes 
+} from "@mysten/sui/cryptography"
 
 /**
  * Service for handling balance reconciliation on Sui.
@@ -82,23 +85,25 @@ export class SuiReconcileBalanceActionService {
      * @example
      * const prepareTxs = await service.prepare({ bot, tokenInputs })
      */
-    public async prepare({ bot, tokenInputs }: PrepareReconcileBalanceTransactionParams): Promise<PrepareReconcileBalanceTransactionResult> {
+    public async prepare(
+        { 
+            bot, 
+            tokenInputs 
+        }: PrepareReconcileBalanceTransactionParams
+    ): Promise<PrepareReconcileBalanceTransactionResult> {
         if (tokenInputs.length === 0) {
             return {
                 prepareTxs: [],
             }
         }
-        
         // initialize transaction block
         let txb = new Transaction()
         txb.setSender(bot.accountAddress)
-        
         for (const tokenInput of tokenInputs) {
             // skip swap if tokenIn and tokenOut are the same
             if (tokenInput.tokenIn.displayId === tokenInput.tokenOut.displayId) {
                 continue
             }
-            
             // fetch and merge input coins
             const { sourceCoin } = await this.selectCoinsService.fetchAndMergeCoins({
                 txb,
@@ -160,7 +165,8 @@ export class SuiReconcileBalanceActionService {
         const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
         
         // sign transaction based on bot version
-        let signatureWithBytes
+        let signatureWithBytes: SignatureWithBytes | undefined
+
         if (bot.version === AppVersion.V1) {
             // sign with V1 signer
             signatureWithBytes = await this.signerService.withSuiSigner({
@@ -231,7 +237,13 @@ export class SuiReconcileBalanceActionService {
      * @example
      * const txHashes = await service.execute({ bot, prepareTxs })
      */
-    public async execute({ bot, prepareTxs, isRetry = false, stimulate = false }: ExecuteReconcileBalanceTransactionParams): Promise<ExecuteReconcileBalanceTransactionResult> {
+    public async execute(
+        { 
+            bot, 
+            prepareTxs, 
+            isRetry = false, 
+            stimulate = false 
+        }: ExecuteReconcileBalanceTransactionParams): Promise<ExecuteReconcileBalanceTransactionResult> {
         const txHashes: Array<string> = []
         for (const prepareTx of prepareTxs) {
             // check if transaction already exists on chain (for retries)
@@ -278,21 +290,27 @@ export class SuiReconcileBalanceActionService {
             if (stimulate) {
                 // simulate transaction without sending
                 const transactionBlock = Transaction.from(signatureWithBytes.bytes)
-                const devInspect = await this.rpcExecutorService.withSuiClient({
-                    accessType: RpcAccessType.Write,
-                    callback: async ({ suiClient }) => {
-                        return await suiClient.devInspectTransactionBlock({
-                            transactionBlock,
-                            sender: bot.accountAddress,
-                        })
-                    },
-                })
+                const devInspect = await this.rpcExecutorService.withSuiClient(
+                    {
+                        accessType: RpcAccessType.Write,
+                        callback: async ({ suiClient }) => {
+                            return await suiClient.devInspectTransactionBlock(
+                                {
+                                    transactionBlock,
+                                    sender: bot.accountAddress,
+                                }
+                            )
+                        },
+                    })
                 
                 if (devInspect.effects.status.status !== "success") {
-                    throw new TransactionValidationFailedException({
-                        botId: bot.id,
-                        txHash: devInspect.effects.transactionDigest,
-                        type: TransactionType.ReconcileBalance,
+                    throw new TransactionSubmitFailedException({
+                        originalError: new TransactionStimulatedFailedException({
+                            botId: bot.id,
+                            txHash: devInspect.effects.transactionDigest,
+                            type: TransactionType.ReconcileBalance,
+                        }),
+                        message: devInspect.effects.status.error ?? "Unknown error",
                     })
                 }
                 
