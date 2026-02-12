@@ -246,9 +246,9 @@ export class RotationService implements OnModuleInit {
         })
 
         // build fast lookup map: poolId -> displayId
-        const liquidityPoolDisplayIdMap = new Map<string, LiquidityPoolId>()
+        const liquidityPoolIdMap = new Map<string, LiquidityPoolId>()
         for (const liquidityPool of liquidityPools) {
-            liquidityPoolDisplayIdMap.set(
+            liquidityPoolIdMap.set(
                 liquidityPool.id,
                 liquidityPool.displayId
             )
@@ -262,7 +262,7 @@ export class RotationService implements OnModuleInit {
                         assignment]) => [
                         botId,
                         assignment.liquidityPoolIds.map(
-                            id => liquidityPoolDisplayIdMap.get(id)!
+                            id => liquidityPoolIdMap.get(id)!
                         ),
                     ],
                 ),
@@ -276,6 +276,9 @@ export class RotationService implements OnModuleInit {
         )
     }
 
+    /**
+     * Rotate the bots to the liquidity pools at interval.
+     */
     @Interval(envConfig().executor.interval.rotate)
     async rotateInterval() {
         await this.rotate()
