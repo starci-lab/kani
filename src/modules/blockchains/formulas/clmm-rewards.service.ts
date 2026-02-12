@@ -240,30 +240,31 @@ export class ClmmRewardsFormulaService {
         emissionsPerSecond,         // emissions_per_second_x64
         lastUpdateMs,              // last_update_time (SECONDS)
         totalLiquidity,             // pool liquidity
-        decimals,
+        decimals,                   // token decimals
+        expired,                    // reward expired
     }: ComputeRewardParams): Decimal {
-        
+        // if reward expired, return 0
+        if (expired) {
+            return new Decimal(0)
+        }
+        // get current time in seconds
         const nowSec = new BN(Math.floor(Date.now() / 1000))
-      
+        // update rewardGrowthGlobal like on-chain
         let global = rewardGrowthGlobal
-      
-        // ===== 1. update rewardGrowthGlobal like on-chain =====
+        // if current time is greater than last update time and total liquidity is not zero, update rewardGrowthGlobal
         if (nowSec.gt(lastUpdateMs) && !totalLiquidity.isZero()) {
+            // compute delta time in seconds
             const dt = nowSec.sub(lastUpdateMs)
-      
+            // compute increment = dt * emissionsPerSecond / totalLiquidity
             const increment = dt
                 .mul(emissionsPerSecond) // emissions_per_second_x64
                 .div(totalLiquidity)
-            // Raydium uses u128 wrap
+            // Raydium uses u128 wrap addition
             global = this.clmmUtilsService.wrapAdd(
                 global,
                 increment,
                 Q128, // wrap modulus = 2^128
             )
-            console.log({
-                global: global.toString(),
-                increment: increment.toString(),
-            })
         }
       
         // ===== 2. compute growthInsideNow =====
@@ -292,19 +293,16 @@ export class ClmmRewardsFormulaService {
                 Q128,
             )
         }
-      
         // ===== 3. deltaGrowthInside =====
         const deltaGrowthInside = this.clmmUtilsService.wrapSub(
             growthInsideNow,
             rewardGrowthInsideLast,
             Q128,
         )
-      
         // ===== 4. rewardDelta = liquidity * deltaGrowth / Q64 =====
         const rewardDelta = liquidity
             .mul(deltaGrowthInside)
             .div(Q64) // IMPORTANT: divide by Q64, NOT Q128
-      
         // ===== 5. total reward =====
         return toDecimalAmount({
             amount: rewardOwned.add(rewardDelta),

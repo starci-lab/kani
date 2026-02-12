@@ -117,7 +117,6 @@ export class OpenPositionSnapshotService {
             targetAmount: feeTargetAmount.toString(),
             quoteAmount: feeQuoteAmount.toString(),
         }
-
         // create position document with open snapshot and protocol state
         const [positionRaw] = await this.connection.model<PositionSchema>(
             PositionSchema.name
@@ -141,9 +140,7 @@ export class OpenPositionSnapshotService {
                 session,
             }
         )
-
         const position = positionRaw.toJSON<PositionSchema>()
-
         // set bot activePosition to new position
         await this.connection.model<BotSchema>(BotSchema.name).updateOne(
             {

@@ -248,7 +248,6 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
         ) {
             throw new Error("Lower tick index out of range")
         }
-
         if (
             tickUpperIndex.lessThan(0) ||
             tickUpperIndex.greaterThanOrEqualTo(
@@ -262,7 +261,6 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
             tickArrayLower.ticks[tickLowerIndex.toNumber()]
         const tickUpperData =
             tickArrayUpper.ticks[tickUpperIndex.toNumber()]
-
         if (!positionState.liquidity) {
             throw new MissingActivePositionLiquidityException({
                 botId: bot.id,
@@ -311,7 +309,6 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
             decimalsA: new Decimal(tokenA.decimals),
             decimalsB: new Decimal(tokenB.decimals),
         })
-
         // ----------------------------
         // Rewards (CLMM time-based)
         // ----------------------------
@@ -327,38 +324,24 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
                 }
                 const posReward = positionState.rewardInfos[index]
                 const lastUpdateMs = clmmReward.lastUpdateTimeMs ?? _state.rewardLastUpdatedTimeMs ?? new BN(0)
-                console.log({
-                    rewardGrowthGlobal: new BN(clmmReward.growthGlobal.toString()).toString(),
-                    rewardGrowthOutsideLower: new BN(tickLowerData.rewardGrowthsOutsideX64[index].toString()).toString(),
-                    rewardGrowthOutsideUpper: new BN(tickUpperData.rewardGrowthsOutsideX64[index].toString()).toString(),
-                    tickCurrent: _state.tickCurrent.toString(),
-                    tickLower: tickLower.toString(),
-                    tickUpper: tickUpper.toString(),
-                    rewardGrowthInsideLast: new BN(posReward.growthInsideLastX64.toString()).toString(),
-                    liquidity: liquidity.toString(),
-                    decimals: new Decimal(token.decimals).toString(),
-                    rewardOwned: new BN(posReward.rewardAmountOwed.toString()).toString(),
-                    emissionsPerSecond: new BN(clmmReward.emissionPerSecond.toString()).toString(),
-                    lastUpdateMs: lastUpdateMs.toString(),
-                    totalLiquidity: new BN(_state.liquidity.toString()).toString(),
-                })
-                console.log(tickLowerData)
-                console.log(tickUpperData)
-                const rewardAmount = this.clmmRewardsFormulaService.computeRewardRaydium({
-                    rewardGrowthGlobal: new BN(clmmReward.growthGlobal.toString()),
-                    rewardGrowthOutsideLower: new BN(tickLowerData.rewardGrowthsOutsideX64[index].toString()),
-                    rewardGrowthOutsideUpper: new BN(tickUpperData.rewardGrowthsOutsideX64[index].toString()),
-                    tickCurrent: _state.tickCurrent,
-                    tickLower,
-                    tickUpper,
-                    rewardGrowthInsideLast: new BN(posReward.growthInsideLastX64.toString()),
-                    liquidity,
-                    decimals: new Decimal(token.decimals),
-                    rewardOwned: new BN(posReward.rewardAmountOwed.toString()),
-                    emissionsPerSecond: new BN(clmmReward.emissionPerSecond.toString()),
-                    lastUpdateMs,
-                    totalLiquidity: new BN(_state.liquidity.toString()),
-                })
+                const rewardAmount = this.clmmRewardsFormulaService.computeRewardRaydium(
+                    {
+                        rewardGrowthGlobal: new BN(clmmReward.growthGlobal.toString()),
+                        rewardGrowthOutsideLower: new BN(tickLowerData.rewardGrowthsOutsideX64[index].toString()),
+                        rewardGrowthOutsideUpper: new BN(tickUpperData.rewardGrowthsOutsideX64[index].toString()),
+                        tickCurrent: _state.tickCurrent,
+                        tickLower,
+                        tickUpper,
+                        rewardGrowthInsideLast: new BN(posReward.growthInsideLastX64.toString()),
+                        liquidity,
+                        decimals: new Decimal(token.decimals),
+                        rewardOwned: new BN(posReward.rewardAmountOwed.toString()),
+                        emissionsPerSecond: new BN(clmmReward.emissionPerSecond.toString()),
+                        lastUpdateMs,
+                        totalLiquidity: new BN(_state.liquidity.toString()),
+                        expired: clmmReward.expired,
+                    }
+                )
                 return [
                     token.id,
                     rewardAmount,

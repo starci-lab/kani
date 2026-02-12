@@ -10,6 +10,7 @@ export interface DynamicClmmRewardInfo {
     growthGlobal: BN
     vaultAddress?: string
     lastUpdateTimeMs?: BN
+    expired?: boolean
 }
 
 /** Dynamic CLMM liquidity pool info cache result. */

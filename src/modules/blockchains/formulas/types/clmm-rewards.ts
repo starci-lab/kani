@@ -104,4 +104,8 @@ export interface ComputeRewardParams {
     lastUpdateMs: BN
     /** total pool liquidity */
     totalLiquidity: BN
+    /**
+     * Expired
+     */
+    expired?: boolean
 }

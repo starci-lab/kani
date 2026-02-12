@@ -50,7 +50,6 @@ export class ComputeSwapAmountsService implements OnApplicationBootstrap {
         if (!targetToken || !quoteToken || !gasToken) {
             throw new Error("Target, quote or gas token not found")
         }
-        await sleep(3000)
         const scenarios = [
             {
                 inputs: {

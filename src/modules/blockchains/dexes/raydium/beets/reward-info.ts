@@ -32,8 +32,8 @@ export class RewardInfo {
         readonly tokenMint: PublicKey,
         /** Public key of the reward token vault. */
         readonly tokenVault: PublicKey,
-        /** Authority (u128). */
-        readonly authority: bignum,
+        /** Authority. */
+        readonly authority: PublicKey,
         /** Reward growth global in Q64.64 format (u128). */
         readonly rewardGrowthGlobalX64: bignum,
     ) {}
@@ -59,7 +59,7 @@ export class RewardInfo {
             ["tokenVault",
                 publicKey],
             ["authority",
-                u128],
+                publicKey],
             ["rewardGrowthGlobalX64",
                 u128],
         ],

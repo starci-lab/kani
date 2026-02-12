@@ -48,6 +48,15 @@ export class DayjsService {
     }
 
     /**
+     * Create a date and time from a number of seconds.
+     * @param seconds - The number of seconds.
+     * @returns The date and time.
+     */
+    fromSeconds(seconds: number) {
+        return dayjs.unix(seconds).utc()
+    }
+
+    /**
      * Align a time to an interval boundary in UTC for a given timezone.
      * @param params - The parameters for aligning the time to the interval.
      * @returns The aligned time.

@@ -316,13 +316,15 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
         const { digest, effects } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
-                return await suiClient.executeTransactionBlock({
-                    transactionBlock: signatureWithBytes.bytes,
-                    signature: signatureWithBytes.signature,
-                    options: {
-                        showEffects: true,
-                    },
-                })
+                return await suiClient.executeTransactionBlock(
+                    {
+                        transactionBlock: signatureWithBytes.bytes,
+                        signature: signatureWithBytes.signature,
+                        options: {
+                            showEffects: true,
+                        },
+                    }
+                )
             },
         })
         

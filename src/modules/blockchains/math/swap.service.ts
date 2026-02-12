@@ -115,20 +115,18 @@ export class SwapMathService {
                 {
                     amount: targetBalanceAmount,
                     currentRatio: quoteRatioResult.quoteRatio,
-                    targetRatio: new Decimal(envConfig().quote.ratio.expected.below),
+                    targetRatio: new Decimal(envConfig().quote.ratio.expected.above),
                     targetToken,
                     quoteToken,
                     direction: RebalanceDirection.TargetToQuote,
                     relativePrice: quoteRatioResult.relativePrice,
                 }
             )
-
             swapSteps.push({
                 direction: SwapDirection.TargetToQuote,
                 usedAmount: usedAmount,
                 swappedAmount: swappedAmount,
             })
-
             return {
                 swapSteps,
                 quoteRatioResult,
@@ -152,13 +150,13 @@ export class SwapMathService {
                     relativePrice: quoteRatioResult.relativePrice,
                 }
             )
-
-            swapSteps.push({
-                direction: SwapDirection.QuoteToTarget,
-                usedAmount: usedAmount,
-                swappedAmount: swappedAmount,
-            })
-
+            swapSteps.push(
+                {
+                    direction: SwapDirection.QuoteToTarget,
+                    usedAmount: usedAmount,
+                    swappedAmount: swappedAmount,
+                }
+            )
             return {
                 swapSteps,
                 quoteRatioResult,

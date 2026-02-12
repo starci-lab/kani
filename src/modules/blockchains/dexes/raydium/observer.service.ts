@@ -146,9 +146,6 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
         liquidityPool: LiquidityPoolSchema,
         state: PoolState
     ) {
-        console.log({
-            state,
-        })
         // Parse dynamic CLMM liquidity pool information
         const parsed: DynamicClmmLiquidityPoolInfoCacheResult = {
             tickCurrent: new BN(state.tickCurrent),
@@ -163,12 +160,15 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
                     growthGlobal: new BN(rewardInfo.rewardGrowthGlobalX64.toString()),
                     lastUpdateTimeMs: new BN(rewardInfo.lastUpdateTime.toString()),
                     vaultAddress: rewardInfo.tokenVault?.toString() ?? "",
+                    expired: this.dayjsService
+                        .now()
+                        .isAfter(this.dayjsService
+                            .fromSeconds(new BN(rewardInfo.endTime.toString()).toNumber())),
                 })),
             feeGrowthGlobalA: new BN(state.feeGrowthGlobal0X64.toString()),
             feeGrowthGlobalB: new BN(state.feeGrowthGlobal1X64.toString()),
             snapshotAt: this.dayjsService.now(),
         }
-
         // Store in cache and emit event concurrently
         await this.asyncService.allIgnoreError([
             // Store the parsed information in cache
