@@ -214,7 +214,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         if (bot.version === AppVersion.V1) {
             // dev inspect the transaction block
             const devInspect = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await suiClient.devInspectTransactionBlock({
                         transactionBlock: openPositionTxb,
@@ -234,7 +234,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
             
             // build transaction
             const bytes = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await openPositionTxb.build({
                         client: suiClient,
@@ -277,7 +277,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
             const encryptedPrivySignerPrivateKey = bot.encryptedPrivySignerPrivateKeyPayload
             
             const { txHash, signatureWithBytes } = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await this.privySignService.signSuiTransaction({
                         publicKeyHex: privyMetadata.walletPublicKey!,
@@ -370,7 +370,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         if (stimulate) {
             const transactionBlock = Transaction.from(signatureWithBytes.bytes)
             const devInspect = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await suiClient.devInspectTransactionBlock({
                         transactionBlock,
@@ -440,7 +440,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         }
         
         await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Write,
+            accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 return await suiClient.waitForTransaction({
                     digest,

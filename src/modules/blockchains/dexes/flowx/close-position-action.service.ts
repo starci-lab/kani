@@ -110,7 +110,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
         if (bot.version === AppVersion.V1) {
             // Dev inspect the transaction block to validate
             const devInspect = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await suiClient.devInspectTransactionBlock({
                         transactionBlock: closePositionTxb,
@@ -131,7 +131,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
             
             // Build transaction
             const bytes = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await closePositionTxb.build({
                         client: suiClient,
@@ -180,7 +180,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                 txHash,
                 signatureWithBytes
             } = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await this.privySignService.signSuiTransaction({
                         publicKeyHex: privyMetadata.walletPublicKey!,
@@ -193,7 +193,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
             })
             // stimulate transaction
             const simulateResult = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await suiClient.devInspectTransactionBlock({
                         transactionBlock: closePositionTxb,
@@ -303,7 +303,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
             // Simulate transaction execution
             const transactionBlock = Transaction.from(signatureWithBytes.bytes)
             const devInspect = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await suiClient.devInspectTransactionBlock({
                         transactionBlock,
@@ -371,7 +371,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
 
         // Wait for transaction confirmation
         await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Write,
+            accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 return await suiClient.waitForTransaction({
                     digest,

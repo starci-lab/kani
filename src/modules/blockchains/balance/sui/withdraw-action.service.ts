@@ -263,7 +263,7 @@ export class SuiWithdrawActionService {
 
         // build transaction bytes
         const bytes = await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Write,
+            accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 return await txb.build({
                     client: suiClient,
@@ -306,7 +306,7 @@ export class SuiWithdrawActionService {
             
             // sign with Privy gas sponsor
             const signed = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await this.privySignService.signSuiTransaction({
                         publicKeyHex: privyMetadata.walletPublicKey!,
@@ -400,7 +400,7 @@ export class SuiWithdrawActionService {
                 // simulate transaction without sending
                 const transactionBlock = Transaction.from(signatureWithBytes.bytes)
                 const devInspect = await this.rpcExecutorService.withSuiClient({
-                    accessType: RpcAccessType.Write,
+                    accessType: RpcAccessType.Http,
                     callback: async ({ suiClient }) => {
                         return await suiClient.devInspectTransactionBlock({
                             transactionBlock,
@@ -455,7 +455,7 @@ export class SuiWithdrawActionService {
                 }
                 // wait for transaction confirmation
                 await this.rpcExecutorService.withSuiClient({
-                    accessType: RpcAccessType.Write,
+                    accessType: RpcAccessType.Http,
                     callback: async ({ suiClient }) => {
                         return await suiClient.waitForTransaction({
                             digest

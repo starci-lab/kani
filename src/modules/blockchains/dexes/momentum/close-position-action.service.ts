@@ -110,7 +110,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
         if (bot.version === AppVersion.V1) {
             // Dev inspect the transaction block to validate
             const devInspect = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await suiClient.devInspectTransactionBlock({
                         transactionBlock: closePositionTxb,
@@ -131,7 +131,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
             
             // Build transaction
             const bytes = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await closePositionTxb.build({
                         client: suiClient,
@@ -180,7 +180,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                 txHash,
                 signatureWithBytes
             } = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await this.privySignService.signSuiTransaction({
                         publicKeyHex: privyMetadata.walletPublicKey!,
@@ -285,7 +285,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
             // Simulate transaction execution
             const transactionBlock = Transaction.from(signatureWithBytes.bytes)
             const devInspect = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await suiClient.devInspectTransactionBlock({
                         transactionBlock,
@@ -353,7 +353,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
 
         // Wait for transaction confirmation
         await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Write,
+            accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 return await suiClient.waitForTransaction({
                     digest,

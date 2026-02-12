@@ -190,7 +190,7 @@ export class SolanaReconcileBalanceActionService {
                 }
 
                 const simulateResult = await this.rpcExecutorService.withSolanaRpc({
-                    accessType: RpcAccessType.Write,
+                    accessType: RpcAccessType.Http,
                     callback: async (
                         { rpc }
                     ) => {
@@ -242,7 +242,7 @@ export class SolanaReconcileBalanceActionService {
                     solanaTx: signedTransaction.signedTransaction,
                 }
                 const simulateResult = await this.rpcExecutorService.withSolanaRpc({
-                    accessType: RpcAccessType.Write,
+                    accessType: RpcAccessType.Http,
                     callback: async ({ rpc }) => {
                         return await rpc.simulateTransaction(
                             getBase64EncodedWireTransaction(prepareTx.solanaTx!),
@@ -330,7 +330,7 @@ export class SolanaReconcileBalanceActionService {
             if (stimulate) {
                 // simulate transaction without sending
                 const simulateTransactionResult = await this.rpcExecutorService.withSolanaRpc({
-                    accessType: RpcAccessType.Write,
+                    accessType: RpcAccessType.Http,
                     callback: async ({ rpc }) => {
                         return await rpc.simulateTransaction(
                             getBase64EncodedWireTransaction(solanaTx),

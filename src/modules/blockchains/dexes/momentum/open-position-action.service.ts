@@ -247,7 +247,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         if (bot.version === AppVersion.V1) {
             // Dev inspect the transaction block to validate
             const devInspect = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await suiClient.devInspectTransactionBlock({
                         transactionBlock: openPositionTxb,
@@ -268,7 +268,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
             
             // Build transaction
             const bytes = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await openPositionTxb.build({
                         client: suiClient,
@@ -317,7 +317,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                 txHash,
                 signatureWithBytes
             } = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await this.privySignService.signSuiTransaction({
                         publicKeyHex: privyMetadata.walletPublicKey!,
@@ -330,7 +330,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
             })
             // stimulate transaction
             const simulateResult = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await suiClient.devInspectTransactionBlock({
                         transactionBlock: openPositionTxb,
@@ -458,7 +458,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
             // Simulate transaction execution
             const transactionBlock = Transaction.from(signatureWithBytes.bytes)
             const devInspect = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await suiClient.devInspectTransactionBlock({
                         transactionBlock,
@@ -538,7 +538,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
 
         // Wait for transaction confirmation
         await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Write,
+            accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 return await suiClient.waitForTransaction({
                     digest,

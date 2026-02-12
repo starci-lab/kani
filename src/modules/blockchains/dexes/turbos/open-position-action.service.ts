@@ -252,7 +252,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         })
         if (bot.version === AppVersion.V1) {
             const devInspect = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await suiClient.devInspectTransactionBlock({
                         transactionBlock: openPositionTxb,
@@ -274,7 +274,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             }
             
             const bytes = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await openPositionTxb.build({
                         client: suiClient,
@@ -325,7 +325,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             const encryptedPrivySignerPrivateKey = bot.encryptedPrivySignerPrivateKeyPayload
             
             const { txHash, signatureWithBytes } = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await this.privySignService.signSuiTransaction({
                         publicKeyHex: privyMetadata.walletPublicKey!,
@@ -421,7 +421,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         if (stimulate) {
             const transactionBlock = Transaction.from(signatureWithBytes.bytes)
             const devInspect = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await suiClient.devInspectTransactionBlock({
                         transactionBlock,
@@ -489,7 +489,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         }
         
         await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Write,
+            accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 return await suiClient.waitForTransaction({
                     digest,

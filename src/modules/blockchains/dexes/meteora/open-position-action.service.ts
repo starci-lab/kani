@@ -163,7 +163,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         })
 
         const lastedBlockhashResult = await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Write,
+            accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
                 // Get latest blockhash for transaction lifetime
                 return await rpc.getLatestBlockhash().send()
@@ -207,7 +207,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
             }
             // Stimulate before returning
             const simulateResult = await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     return await rpc.simulateTransaction(
                         getBase64EncodedWireTransaction(solanaTx!),
@@ -257,7 +257,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
             )
             // stimulate transaction
             const stimulateTransaction = await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     return await rpc.simulateTransaction(
                         getBase64EncodedWireTransaction(signedTransaction.signedTransaction),
@@ -283,7 +283,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
             }
             // Stimulate before returning
             const simulateResult = await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     return await rpc.simulateTransaction(
                         getBase64EncodedWireTransaction(signedTransaction.signedTransaction),
@@ -391,7 +391,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
             }
             if (stimulate) {
                 const transaction = await this.rpcExecutorService.withSolanaRpc({
-                    accessType: RpcAccessType.Write,
+                    accessType: RpcAccessType.Http,
                     callback: async ({ rpc }) => {
                         return await rpc.simulateTransaction(
                             getBase64EncodedWireTransaction(solanaTx),

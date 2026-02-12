@@ -199,7 +199,7 @@ export class SuiReconcileBalanceActionService {
             
             // sign with Privy gas sponsor
             const signed = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await this.privySignService.signSuiTransaction({
                         publicKeyHex: privyMetadata.walletPublicKey!,
@@ -292,7 +292,7 @@ export class SuiReconcileBalanceActionService {
                 const transactionBlock = Transaction.from(signatureWithBytes.bytes)
                 const devInspect = await this.rpcExecutorService.withSuiClient(
                     {
-                        accessType: RpcAccessType.Write,
+                        accessType: RpcAccessType.Http,
                         callback: async ({ suiClient }) => {
                             return await suiClient.devInspectTransactionBlock(
                                 {
@@ -349,7 +349,7 @@ export class SuiReconcileBalanceActionService {
                 }
                 // wait for transaction confirmation
                 await this.rpcExecutorService.withSuiClient({
-                    accessType: RpcAccessType.Write,
+                    accessType: RpcAccessType.Http,
                     callback: async ({ suiClient }) => {
                         return await suiClient.waitForTransaction({
                             digest 

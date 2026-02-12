@@ -111,7 +111,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
         if (bot.version === AppVersion.V1) {
             // dev inspect the transaction block
             const devInspect = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await suiClient.devInspectTransactionBlock({
                         transactionBlock: closePositionTxb,
@@ -133,7 +133,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
             
             // build transaction
             const bytes = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await closePositionTxb.build({
                         client: suiClient,
@@ -185,7 +185,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
             
             // sign transaction with Privy
             const { txHash, signatureWithBytes } = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await this.privySignService.signSuiTransaction({
                         publicKeyHex: privyMetadata.walletPublicKey!,
@@ -198,7 +198,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
             })
             // stimulate transaction
             const simulateResult = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await suiClient.devInspectTransactionBlock({
                         transactionBlock: closePositionTxb,
@@ -297,7 +297,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
             // simulate transaction execution
             const transactionBlock = Transaction.from(signatureWithBytes.bytes)
             const devInspect = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await suiClient.devInspectTransactionBlock({
                         transactionBlock,
@@ -362,7 +362,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
         
         // wait for transaction confirmation
         await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Write,
+            accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 return await suiClient.waitForTransaction({
                     digest,

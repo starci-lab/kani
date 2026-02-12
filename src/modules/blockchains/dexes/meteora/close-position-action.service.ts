@@ -175,7 +175,7 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
             }
             // Stimulate before returning
             const simulateResult = await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     return await rpc.simulateTransaction(
                         getBase64EncodedWireTransaction(prepareTx.solanaTx!),
@@ -222,7 +222,7 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
             }
             // Stimulate before returning
             const simulateResult = await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     return await rpc.simulateTransaction(
                         getBase64EncodedWireTransaction(prepareTx.solanaTx!),
@@ -314,7 +314,7 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
             }
             if (stimulate) {
                 const transaction = await this.rpcExecutorService.withSolanaRpc({
-                    accessType: RpcAccessType.Write,
+                    accessType: RpcAccessType.Http,
                     callback: async ({ rpc }) => {
                     // Simulate transaction execution
                         return await rpc.simulateTransaction(

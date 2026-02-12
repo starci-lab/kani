@@ -110,7 +110,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
         if (bot.version === AppVersion.V1) {
             // dev inspect the transaction block
             const devInspect = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await suiClient.devInspectTransactionBlock({
                         transactionBlock: closePositionTxb,
@@ -130,7 +130,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
             
             // build transaction bytes
             const bytes = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await closePositionTxb.build({
                         client: suiClient,
@@ -178,7 +178,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
             
             // sign transaction with Privy
             const { txHash, signatureWithBytes } = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await this.privySignService.signSuiTransaction({
                         publicKeyHex: privyMetadata.walletPublicKey!,
@@ -278,7 +278,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
             // simulate transaction execution
             const transactionBlock = Transaction.from(signatureWithBytes.bytes)
             const devInspect = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Write,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await suiClient.devInspectTransactionBlock({
                         transactionBlock,
@@ -340,7 +340,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
         
         // wait for transaction confirmation
         await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Write,
+            accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 return await suiClient.waitForTransaction({
                     digest,
