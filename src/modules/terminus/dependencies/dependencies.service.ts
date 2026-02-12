@@ -70,10 +70,10 @@ export class DependenciesService {
                 promises.push(() => this.redisService.pingThrottlerRedis())
                 break
             case DependencyName.Disk:
-                promises.push(() => this.diskService.pingDisk())
+                //promises.push(() => this.diskService.pingDisk())
                 break
             case DependencyName.Memory:
-                promises.push(() => this.memoryService.pingMemory())
+                //promises.push(() => this.memoryService.pingMemory())
                 break
             case DependencyName.LockAuthorityRedis:
                 promises.push(() => this.redisService.pingLockAuthorityRedis())
