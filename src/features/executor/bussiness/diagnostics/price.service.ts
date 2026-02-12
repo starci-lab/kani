@@ -36,7 +36,7 @@ import type {
 
 @Injectable()
 export class PriceDiagnosticService
-    implements OnModuleInit, OnApplicationBootstrap {
+implements OnModuleInit, OnApplicationBootstrap {
     private tokenCollection: Collection<TokenSchema>
     private results: Collection<PriceDiagnosticReadinessResult>
 
