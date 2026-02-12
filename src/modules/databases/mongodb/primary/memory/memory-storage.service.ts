@@ -29,10 +29,13 @@ import {
     ConfigSchema
 } from "../schemas"
 import {
-    ConfigId
+    ConfigId,
+    TokenId
 } from "../enums"
 import {
-    createObjectId
+    createObjectId,
+    isSolanaWrapped,
+    isSuiCoin
 } from "@modules/common"
 import {
     AccountLimitsConfigNotFoundException,
@@ -167,5 +170,34 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
      */
     async load(): Promise<LoadResult> {
         await this.process()
+    }
+
+    /**
+     * Get a token by its address.
+     * @param tokenAddress - The address of the token.
+     * @returns The token.
+     */
+    getTokenByAddress(
+        tokenAddress: string
+    ): TokenSchema | null {
+        if (isSuiCoin(tokenAddress)) {
+            return this.tokenCollection.findOne({
+                displayId: {
+                    $eq: TokenId.SuiNative,
+                },
+            })
+        } else if (isSolanaWrapped(tokenAddress)) {
+            return this.tokenCollection.findOne({
+                displayId: {
+                    $eq: TokenId.SolNative,
+                },
+            })
+        } else {
+            return this.tokenCollection.findOne({
+                tokenAddress: {
+                    $eq: tokenAddress,
+                },
+            })
+        }
     }
 }   

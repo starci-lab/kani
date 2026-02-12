@@ -269,9 +269,10 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             tickMultiplier: 30,
         },
         metadata: { 
-            ticksId: "0x9f32239c50285ce8fbf9b97c52be85088d70fbcb01727c3fc0750185086ffc3c",
+            ticksId: "0x43d75dd45a86f40c9f0704757aed155960a6b5cf98a679ceb42e5a261982e077",
             packageId: "0xcf60a40f45d46fc1e828871a647c1e25a0915dec860d2662eb10fdb382c3c1d1",
             versionObject: "0x2375a0b1ec12010aaea3b2545acfa2ad34cfbba03ce4b59f4c39e1e25eed1b2a",
+            i32Type: "0x70285592c97965e811e0c6f98dccc3a9c2b4ad854b3594faab9597ada267b860::i32::I32",
         },
         url: "https://app.mmt.finance/liquidity/0x455cf8d2ac91e7cb883f515874af750ed3cd18195c970b7a2d46235ac2b0c388",
         staleMs: ms("20s")

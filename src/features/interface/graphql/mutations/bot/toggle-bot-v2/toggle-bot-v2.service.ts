@@ -87,19 +87,21 @@ export class ToggleBotV2Service {
                 id,
             })
         }
-        // evaluate the balance
-        const { status } = await this.evalBalanceService.eval(
-            {
-                bot,
-            }
-        )
-        if (status !== BalanceEvalStatus.Ok) {
-            throw new CannotToggleBotRunningStateException(
+        // evaluate the balance when toggle running state
+        if (running) {
+            const { status } = await this.evalBalanceService.eval(
                 {
-                    id,
-                    status,
+                    bot,
                 }
             )
+            if (status !== BalanceEvalStatus.Ok) {
+                throw new CannotToggleBotRunningStateException(
+                    {
+                        id,
+                        status,
+                    }
+                )
+            }
         }
         // we toggle the bot running state
         await this.connection.model<BotSchema>(BotSchema.name)

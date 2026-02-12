@@ -146,6 +146,9 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
         liquidityPool: LiquidityPoolSchema,
         state: PoolState
     ) {
+        console.log({
+            state,
+        })
         // Parse dynamic CLMM liquidity pool information
         const parsed: DynamicClmmLiquidityPoolInfoCacheResult = {
             tickCurrent: new BN(state.tickCurrent),

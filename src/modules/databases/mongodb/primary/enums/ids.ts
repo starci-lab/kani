@@ -13,6 +13,7 @@ export enum TokenId {
     SuiWalrus = "suiWalrus",
     SuiCetus = "suiCetus",
     SuiAlkimi = "suiAlkimi",
+    SuiFlowx = "suiFlowx",
     SuiDeep = "suiDeep",
     SuiEth = "suiEth",
     SuiXStakedSui = "suiXStakedSui",
@@ -51,6 +52,9 @@ registerEnumType(GraphQLTypeTokenId,
             },
             [TokenId.SuiAlkimi]: {
                 description: "Alkimi token on Sui.",
+            },
+            [TokenId.SuiFlowx]: {
+                description: "FlowX token on Sui.",
             },
             [TokenId.SuiDeep]: {
                 description: "Deep token on Sui.",

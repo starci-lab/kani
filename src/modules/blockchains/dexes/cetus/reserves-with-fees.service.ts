@@ -267,19 +267,14 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
             clmmRewards.map((clmmReward, index) => {
                 // fetch token metadata for reward
                 const { tokenAddress } = clmmReward
-                const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-                    tokenAddress: {
-                        $eq: tokenAddress,
-                    },
-                })
-                
+                // if token address is SuiNative, return sui
+                const token = this.primaryMemoryStorageService.getTokenByAddress(tokenAddress)
                 // validate token exists
                 if (!token) {
                     throw new TokenNotFoundException({
                         tokenAddress,
                     })
                 }
-                
                 // compute reward amount
                 const posReward = positionInfoData.rewards[index]
                 const rewardAmount = this.clmmRewardsFormulaService.computeReward({
@@ -296,8 +291,10 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
                     emissionsPerSecond: new BN(clmmReward.emissionPerSecond.toString()),
                     lastUpdateMs: _state.rewardLastUpdatedTimeMs ?? new BN(0),
                     totalLiquidity: new BN(_state.liquidity.toString()),
+                    outsideDeltaWrapModulus: Q128,
+                    insideDeltaWrapModulus: Q128,
+                    resultDiv: Q64,
                 })
-                
                 return [
                     token.id,
                     rewardAmount,

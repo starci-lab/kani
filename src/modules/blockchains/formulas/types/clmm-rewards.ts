@@ -76,6 +76,11 @@ export interface ComputeRewardParams {
      * Decimals
      */
     decimals: Decimal
+
+    /**
+     * Wrapping modulus for reward growth global
+     */
+    wrapModulus?: typeof Q128 | typeof Q64
     /**
      * Wrapping modulus for outside growth delta
      */

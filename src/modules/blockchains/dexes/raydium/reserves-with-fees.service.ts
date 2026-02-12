@@ -319,11 +319,7 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
         const rewards = Object.fromEntries(
             clmmRewards.map((clmmReward, index) => {
                 const tokenAddress = clmmReward.tokenAddress
-                const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-                    tokenAddress: {
-                        $eq: tokenAddress,
-                    },
-                })
+                const token = this.primaryMemoryStorageService.getTokenByAddress(tokenAddress)
                 if (!token) {
                     throw new TokenNotFoundException({
                         tokenAddress,
@@ -331,7 +327,24 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
                 }
                 const posReward = positionState.rewardInfos[index]
                 const lastUpdateMs = clmmReward.lastUpdateTimeMs ?? _state.rewardLastUpdatedTimeMs ?? new BN(0)
-                const rewardAmount = this.clmmRewardsFormulaService.computeReward({
+                console.log({
+                    rewardGrowthGlobal: new BN(clmmReward.growthGlobal.toString()).toString(),
+                    rewardGrowthOutsideLower: new BN(tickLowerData.rewardGrowthsOutsideX64[index].toString()).toString(),
+                    rewardGrowthOutsideUpper: new BN(tickUpperData.rewardGrowthsOutsideX64[index].toString()).toString(),
+                    tickCurrent: _state.tickCurrent.toString(),
+                    tickLower: tickLower.toString(),
+                    tickUpper: tickUpper.toString(),
+                    rewardGrowthInsideLast: new BN(posReward.growthInsideLastX64.toString()).toString(),
+                    liquidity: liquidity.toString(),
+                    decimals: new Decimal(token.decimals).toString(),
+                    rewardOwned: new BN(posReward.rewardAmountOwed.toString()).toString(),
+                    emissionsPerSecond: new BN(clmmReward.emissionPerSecond.toString()).toString(),
+                    lastUpdateMs: lastUpdateMs.toString(),
+                    totalLiquidity: new BN(_state.liquidity.toString()).toString(),
+                })
+                console.log(tickLowerData)
+                console.log(tickUpperData)
+                const rewardAmount = this.clmmRewardsFormulaService.computeRewardRaydium({
                     rewardGrowthGlobal: new BN(clmmReward.growthGlobal.toString()),
                     rewardGrowthOutsideLower: new BN(tickLowerData.rewardGrowthsOutsideX64[index].toString()),
                     rewardGrowthOutsideUpper: new BN(tickUpperData.rewardGrowthsOutsideX64[index].toString()),

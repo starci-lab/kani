@@ -87,7 +87,7 @@ export class ClmmRewardsFormulaService {
      * @param param - Parameters for computing reward
      * @returns Reward amount in decimal format
      */
-    public computeReward({
+    public computeRewardTurbos({
         rewardGrowthGlobal,
         rewardGrowthOutsideLower,
         rewardGrowthOutsideUpper,
@@ -156,6 +156,156 @@ export class ClmmRewardsFormulaService {
         const rewardDelta = liquidity.mul(deltaGrowthInside).div(resultDiv)
 
         // Step 4: Add already owned reward and convert to decimal
+        return toDecimalAmount({
+            amount: rewardOwned.add(rewardDelta),
+            decimals,
+        })
+    }
+
+    /**
+     * Cetus-style reward computation:
+     * - rewardGrowthGlobal đã được update ở ngoài (pool)
+     * - chỉ tính growthInside và rewardDelta
+     */
+    public computeReward({
+        rewardGrowthGlobal,
+        rewardGrowthOutsideLower,
+        rewardGrowthOutsideUpper,
+        tickCurrent,
+        tickLower,
+        tickUpper,
+        rewardGrowthInsideLast,
+        liquidity,
+        rewardOwned = new BN(0),
+        wrapModulus = Q128,
+        resultDiv = Q64,
+        decimals,
+    }: ComputeRewardParams): Decimal {
+
+        // Step 1: compute growthInsideNow (giống Cetus)
+        let growthInsideNow: BN
+
+        if (tickCurrent.lt(tickLower)) {
+            growthInsideNow = this.clmmUtilsService.wrapSub(
+                rewardGrowthOutsideLower,
+                rewardGrowthOutsideUpper,
+                wrapModulus,
+            )
+        } else if (tickCurrent.gte(tickUpper)) {
+            growthInsideNow = this.clmmUtilsService.wrapSub(
+                rewardGrowthOutsideUpper,
+                rewardGrowthOutsideLower,
+                wrapModulus,
+            )
+        } else {
+            growthInsideNow = this.clmmUtilsService.wrapSub(
+                this.clmmUtilsService.wrapSub(
+                    rewardGrowthGlobal,
+                    rewardGrowthOutsideLower,
+                    wrapModulus,
+                ),
+                rewardGrowthOutsideUpper,
+                wrapModulus,
+            )
+        }
+        // Step 2: delta growth (wrapping)
+        const deltaGrowthInside = this.clmmUtilsService.wrapSub(
+            growthInsideNow,
+            rewardGrowthInsideLast,
+            wrapModulus,
+        )
+        const rewardDelta = liquidity.mul(deltaGrowthInside).div(resultDiv)
+        return toDecimalAmount({
+            amount: rewardOwned.add(rewardDelta),
+            decimals,
+        })
+    }
+
+    /**
+     * Computes reward for a position (time-based emissions) for Raydium.
+     *
+     * @param param - Parameters for computing reward
+     * @returns Reward amount in decimal format
+     */
+    public computeRewardRaydium({
+        rewardGrowthGlobal,         // reward_growth_global_x64 (u128)
+        rewardGrowthOutsideLower,   // reward_growth_outside_lower_x64 (u128)
+        rewardGrowthOutsideUpper,   // reward_growth_outside_upper_x64 (u128)
+        tickCurrent,
+        tickLower,
+        tickUpper,
+        rewardGrowthInsideLast,     // reward_growth_inside_last_x64 (u128)
+        liquidity,                  // position liquidity
+        rewardOwned = new BN(0),    // reward already owned (raw integer)
+        emissionsPerSecond,         // emissions_per_second_x64
+        lastUpdateMs,              // last_update_time (SECONDS)
+        totalLiquidity,             // pool liquidity
+        decimals,
+    }: ComputeRewardParams): Decimal {
+        
+        const nowSec = new BN(Math.floor(Date.now() / 1000))
+      
+        let global = rewardGrowthGlobal
+      
+        // ===== 1. update rewardGrowthGlobal like on-chain =====
+        if (nowSec.gt(lastUpdateMs) && !totalLiquidity.isZero()) {
+            const dt = nowSec.sub(lastUpdateMs)
+      
+            const increment = dt
+                .mul(emissionsPerSecond) // emissions_per_second_x64
+                .div(totalLiquidity)
+            // Raydium uses u128 wrap
+            global = this.clmmUtilsService.wrapAdd(
+                global,
+                increment,
+                Q128, // wrap modulus = 2^128
+            )
+            console.log({
+                global: global.toString(),
+                increment: increment.toString(),
+            })
+        }
+      
+        // ===== 2. compute growthInsideNow =====
+        let growthInsideNow: BN
+      
+        if (tickCurrent.lt(tickLower)) {
+            growthInsideNow = this.clmmUtilsService.wrapSub(
+                rewardGrowthOutsideLower,
+                rewardGrowthOutsideUpper,
+                Q128,
+            )
+        } else if (tickCurrent.gte(tickUpper)) {
+            growthInsideNow = this.clmmUtilsService.wrapSub(
+                rewardGrowthOutsideUpper,
+                rewardGrowthOutsideLower,
+                Q128,
+            )
+        } else {
+            growthInsideNow = this.clmmUtilsService.wrapSub(
+                this.clmmUtilsService.wrapSub(
+                    global,
+                    rewardGrowthOutsideLower,
+                    Q128,
+                ),
+                rewardGrowthOutsideUpper,
+                Q128,
+            )
+        }
+      
+        // ===== 3. deltaGrowthInside =====
+        const deltaGrowthInside = this.clmmUtilsService.wrapSub(
+            growthInsideNow,
+            rewardGrowthInsideLast,
+            Q128,
+        )
+      
+        // ===== 4. rewardDelta = liquidity * deltaGrowth / Q64 =====
+        const rewardDelta = liquidity
+            .mul(deltaGrowthInside)
+            .div(Q64) // IMPORTANT: divide by Q64, NOT Q128
+      
+        // ===== 5. total reward =====
         return toDecimalAmount({
             amount: rewardOwned.add(rewardDelta),
             decimals,

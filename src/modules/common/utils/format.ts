@@ -13,3 +13,11 @@ export const isSuiCoin = (type: string): boolean => {
     }
     return false
 }
+
+export const isSolanaWrapped = (tokenAddress: string): boolean => {
+    const wsolMintAddress = "So11111111111111111111111111111111111111112"
+    if (tokenAddress.toLowerCase() === wsolMintAddress.toLowerCase()) {
+        return true
+    }
+    return false
+}

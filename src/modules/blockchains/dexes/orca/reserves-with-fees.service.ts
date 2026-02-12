@@ -316,11 +316,7 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
                 const {
                     tokenAddress
                 } = clmmReward
-                const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-                    tokenAddress: {
-                        $eq: tokenAddress,
-                    },
-                })
+                const token = this.primaryMemoryStorageService.getTokenByAddress(tokenAddress)
                 if (!token) {
                     throw new TokenNotFoundException({
                         tokenAddress,

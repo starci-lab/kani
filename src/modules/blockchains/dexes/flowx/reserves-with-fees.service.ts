@@ -131,7 +131,11 @@ export class FlowXReservesWithFeesService implements IReservesWithFeesService {
             i32Type)
         const tickUpperName = serializeSuiI32(new BN(tickUpper.toString()),
             i32Type)
-
+        console.log({
+            tickLowerName,
+            tickUpperName,
+            ticksId,
+        })
         // Stage: on-chain fetch (tick lower dynamic field)
         const { data: tickLowerDataRaw } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
@@ -273,11 +277,7 @@ export class FlowXReservesWithFeesService implements IReservesWithFeesService {
                 const {
                     tokenAddress
                 } = clmmReward
-                const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-                    tokenAddress: {
-                        $eq: tokenAddress,
-                    },
-                })
+                const token = this.primaryMemoryStorageService.getTokenByAddress(tokenAddress)
                 if (!token) {
                     throw new TokenNotFoundException({
                         tokenAddress,

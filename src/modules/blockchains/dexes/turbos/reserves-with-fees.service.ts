@@ -327,7 +327,7 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
                         tokenAddress,
                     })
                 }
-                const rewardAmount = this.clmmRewardsFormulaService.computeReward({
+                const rewardAmount = this.clmmRewardsFormulaService.computeRewardTurbos({
                     rewardGrowthGlobal: new BN(clmmReward.growthGlobal.toString()),
                     rewardGrowthOutsideLower: new BN(tickLowerData.rewardGrowthsOutside[index].toString()),
                     rewardGrowthOutsideUpper: new BN(tickUpperData.rewardGrowthsOutside[index].toString()),

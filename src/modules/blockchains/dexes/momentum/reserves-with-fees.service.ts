@@ -142,8 +142,6 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
             i32Type)
         const tickUpperName = serializeSuiI32(new BN(tickUpper.toString()),
             i32Type)
-
-        // Stage: on-chain fetch (tick lower dynamic field)
         const { data: tickLowerDataRaw } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -172,18 +170,20 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
         const tickLowerData = parseMomentumTickInfo(_tickLowerData.content.fields.value.fields)
 
         // Stage: on-chain fetch (tick upper dynamic field)
-        const { data: tickUpperDataRaw } = await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Http,
-            callback: async ({ suiClient }) => {
-                return suiClient.getDynamicFieldObject({
-                    parentId: ticksId,
-                    name: {
-                        type: tickUpperName.type,
-                        value: tickUpperName.fields,
-                    },
-                })
-            },
-        })
+        const { data: tickUpperDataRaw } = await this.rpcExecutorService.withSuiClient(
+            {
+                accessType: RpcAccessType.Http,
+                callback: async ({ suiClient }) => {
+                    return suiClient.getDynamicFieldObject({
+                        parentId: ticksId,
+                        name: {
+                            type: tickUpperName.type,
+                            value: tickUpperName.fields,
+                        },
+                    })
+                },
+            }
+        )
         // Stage: on-chain fetch validation
         if (!tickUpperDataRaw) {
             throw new SuiObjectNotFoundException({
@@ -279,16 +279,12 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
         // Rewards (CLMM time-based)
         // ----------------------------
         const clmmRewards = _state.rewards as Array<DynamicClmmRewardInfo>
-        const rewards = Object.fromEntries(
+        const rewards = Object.fromEntries( 
             clmmRewards.map((clmmReward, index) => {
                 const {
                     tokenAddress
                 } = clmmReward
-                const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-                    tokenAddress: {
-                        $eq: tokenAddress,
-                    },
-                })
+                const token = this.primaryMemoryStorageService.getTokenByAddress(tokenAddress)
                 if (!token) {
                     throw new TokenNotFoundException({
                         tokenAddress,
@@ -310,6 +306,21 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
                     emissionsPerSecond: new BN(clmmReward.emissionPerSecond.toString()),
                     lastUpdateMs,
                     totalLiquidity: new BN(_state.liquidity.toString()),
+                })
+                console.log({
+                    rewardGrowthGlobal: new BN(clmmReward.growthGlobal.toString()).toString(),
+                    rewardGrowthOutsideLower: new BN(tickLowerData.rewardGrowthsOutside[index].toString()).toString(),
+                    rewardGrowthOutsideUpper: new BN(tickUpperData.rewardGrowthsOutside[index].toString()).toString(),
+                    tickCurrent: _state.tickCurrent.toString(),
+                    tickLower: tickLower.toString(),
+                    tickUpper: tickUpper.toString(),
+                    rewardGrowthInsideLast: posReward.rewardGrowthInsideLast.toString(),
+                    liquidity: position.liquidity.toString(),
+                    decimals: new Decimal(token.decimals).toString(),
+                    rewardOwned: posReward.coinsOwedReward.toString(),
+                    emissionsPerSecond: new BN(clmmReward.emissionPerSecond.toString()).toString(),
+                    lastUpdateMs: lastUpdateMs.toString(),
+                    totalLiquidity: new BN(_state.liquidity.toString()).toString(),
                 })
                 return [
                     token.id,
