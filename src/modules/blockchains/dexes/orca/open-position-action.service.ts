@@ -79,6 +79,12 @@ import {
 import {
     AsyncService 
 } from "@modules/mixin"
+import {
+    adjustSlippage 
+} from "@modules/common"
+import {
+    envConfig 
+} from "@modules/env"
 
 /**
  * Service responsible for opening positions on Orca DEX.
@@ -181,6 +187,12 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         const amountA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
         const amountB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
 
+        // Adjust liquidity for slippage
+        const liquidityAdjusted = adjustSlippage({
+            bn: liquidity,
+            slippage: new Decimal(envConfig().dexes.orca.openPosition.slippage),
+            isRoundUp: false,
+        })
         // Create open position instructions
         const {
             mintKeyPair,
@@ -193,7 +205,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             bot,
             state: _state,
             liquidityPool,
-            liquidity,
+            liquidity: liquidityAdjusted,
             amountA,
             amountB,
             tickLower,
@@ -221,9 +233,13 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         )
         const transaction = compileTransaction(transactionMessage)
 
-        let result: PrepareOpenPositionResult
+        let prepareTx: PrepareTx
+        const metadata: OrcaPositionMetadata = {
+            nftMintAddress: mintKeyPair.address.toString(),
+            ataAddress: ataAddress.toString(),
+        }
         if (bot.version === AppVersion.V1) {
-            result = await this.signerService.withSolanaSigner({
+            const { txHash, solanaTx } = await this.signerService.withSolanaSigner({
                 bot,
                 action: async (signer) => {
                     const signedTransaction = await signTransaction(
@@ -232,51 +248,40 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                         transaction,
                     )
                     const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                    assertIsSendableTransaction(signedTransaction)
-                    assertIsTransactionWithinSizeLimit(signedTransaction)
                     const txHash = transactionSignature.toString()
-                    const metadata: OrcaPositionMetadata = {
-                        nftMintAddress: mintKeyPair.address.toString(),
-                        ataAddress: ataAddress.toString(),
-                    }
-                    const prepareTx: PrepareTx = {
+                    return {
                         txHash,
                         solanaTx: signedTransaction,
                     }
-                    // Stimulate before returning
-                    const simulateResult = await this.rpcExecutorService.withSolanaRpc({
-                        accessType: RpcAccessType.Write,
-                        callback: async ({ rpc }) => {
-                            return await rpc.simulateTransaction(
-                                getBase64EncodedWireTransaction(prepareTx.solanaTx!),
-                                {
-                                    encoding: "base64",
-                                    commitment: "confirmed",
-                                },
-                            ).send()
-                        },
-                    })
-                    if (simulateResult.value.err) {
-                        throw new TransactionStimulatedFailedException({
-                            botId: bot.id,
-                            txHash: prepareTx.txHash,
-                            liquidityPoolId: liquidityPool.displayId,
-                            type: TransactionType.OpenPosition,
-                        })
-                    }
-                    return {
-                        prepareTxs: [prepareTx],
-                        feeAmountA,
-                        feeAmountB,
-                        tickLower,
-                        tickUpper,
-                        amountA,
-                        amountB,
-                        metadata,
-                        positionId: personalPosition.toString(),
-                    }
                 },
             })
+            assertIsSendableTransaction(solanaTx)
+            assertIsTransactionWithinSizeLimit(solanaTx)
+            // Stimulate before returning
+            const simulateResult = await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Write,
+                callback: async ({ rpc }) => {
+                    return await rpc.simulateTransaction(
+                        getBase64EncodedWireTransaction(solanaTx!),
+                        {
+                            encoding: "base64",
+                            commitment: "confirmed",
+                        },
+                    ).send()
+                },
+            })
+            if (simulateResult.value.err) {
+                throw new TransactionStimulatedFailedException({
+                    botId: bot.id,
+                    txHash,
+                    liquidityPoolId: liquidityPool.displayId,
+                    type: TransactionType.OpenPosition,
+                })
+            }
+            prepareTx = {
+                txHash,
+                solanaTx,
+            }
         } else {
             if (!bot.privyMetadata) {
                 throw new PrivyMetadataNotFoundException({
@@ -299,11 +304,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                 encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                 walletId: bot.privyMetadata.walletId,
             })
-            const metadata: OrcaPositionMetadata = {
-                nftMintAddress: mintKeyPair.address.toString(),
-                ataAddress: ataAddress.toString(),
-            }
-            const prepareTx: PrepareTx = {
+            prepareTx = {
                 txHash: signedTransaction.txHash,
                 solanaTx: signedTransaction.signedTransaction,
             }
@@ -327,20 +328,19 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                     liquidityPoolId: liquidityPool.displayId,
                     type: TransactionType.OpenPosition,
                 })
-            }
-            result = {
-                prepareTxs: [prepareTx],
-                feeAmountA,
-                feeAmountB,
-                tickLower,
-                tickUpper,
-                amountA,
-                amountB,
-                metadata,
-                positionId: personalPosition.toString(),
-            }
+            }   
         }
-        return result
+        return {
+            prepareTxs: [prepareTx],
+            feeAmountA,
+            feeAmountB,
+            tickLower,
+            tickUpper,
+            amountA,
+            amountB,
+            metadata,
+            positionId: personalPosition.toString(),
+        }
     }
 
     /**
@@ -388,6 +388,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                             {
                                 commitment: "confirmed",
                                 encoding: "base58",
+                                maxSupportedTransactionVersion: 0,
                             },
                         ).send()
                     },

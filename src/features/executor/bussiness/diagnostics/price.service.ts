@@ -86,17 +86,17 @@ implements OnModuleInit, OnApplicationBootstrap {
                 })
                 .data({
                     removeMeta: true
-                })
-
+                }
+                )
         this.tokenCollection.insert(tokens)
-
         this.results =
             await this.lokiJSService.createCollection<PriceDiagnosticReadinessResult>({
                 name: "price-diagnostic-results",
                 options: {
                     indices: ["id"],
                 },
-            })
+            }
+            )
     }
 
     /* ================= CORE ================= */
@@ -115,7 +115,6 @@ implements OnModuleInit, OnApplicationBootstrap {
 
     async diagnose(): Promise<Array<PriceDiagnosticReadinessResult>> {
         const tokens = this.tokenCollection.find()
-
         const promises: Array<
             Promise<PriceDiagnosticReadinessResult>
         > = tokens.map(async (token) => {

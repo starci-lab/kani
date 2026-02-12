@@ -83,13 +83,12 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
         this.tokenCollection = await this.lokiJSService.createCollection<TokenSchema>({
             name: "token-collection",
             options: {
-                indices: ["tokenAddress",
+                indices: [
                     "displayId",
                     "id"] 
             },
         })
-        this.tokenCollection.insert(tokens.map(t => t.toJSON()))
-    
+        this.tokenCollection.insert(tokens.map(token => token.toJSON()))
         const liquidityPools = await this.connection
             .model<LiquidityPoolSchema>(LiquidityPoolSchema.name)
             .find()

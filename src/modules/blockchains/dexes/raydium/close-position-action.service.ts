@@ -10,6 +10,7 @@ import {
 } from "../types"
 import {
     ClmmLiquidityPoolState,
+    PrepareTx,
 } from "../../types"
 import {
     SignerService 
@@ -155,9 +156,9 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
         )
         const transaction = compileTransaction(transactionMessage)
 
-        let prepareTxs: PrepareClosePositionResult["prepareTxs"]
+        let prepareTx: PrepareTx
         if (bot.version === AppVersion.V1) {
-            const result = await this.signerService.withSolanaSigner({
+            const txHash = await this.signerService.withSolanaSigner({
                 bot,
                 action: async (signer) => {
                     const signedTransaction = await signTransaction(
@@ -168,15 +169,45 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                     const txHash = transactionSignature.toString()
                     assertIsSendableTransaction(signedTransaction)
                     assertIsTransactionWithinSizeLimit(signedTransaction)
-                    return {
-                        prepareTxs: [{
-                            txHash,
-                            solanaTx: signedTransaction,
-                        }],
-                    }
+                    return txHash
                 },
             })
-            prepareTxs = result.prepareTxs
+            const signedTransaction = await this.signerService.withSolanaSigner({
+                bot,
+                action: async (signer) => {
+                    return await signTransaction(
+                        [signer.keyPair],
+                        transaction,
+                    )
+                },
+            })
+            assertIsSendableTransaction(signedTransaction)
+            assertIsTransactionWithinSizeLimit(signedTransaction)
+            prepareTx = {
+                txHash,
+                solanaTx: signedTransaction,
+            }
+            // Stimulate before returning
+            const simulateResult = await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Write,
+                callback: async ({ rpc }) => {
+                    return await rpc.simulateTransaction(
+                        getBase64EncodedWireTransaction(prepareTx.solanaTx!),
+                        {
+                            encoding: "base64",
+                            commitment: "confirmed",
+                        },
+                    ).send()
+                },
+            })
+            if (simulateResult.value.err) {
+                throw new TransactionStimulatedFailedException({
+                    botId: bot.id,
+                    txHash: prepareTx.txHash,
+                    liquidityPoolId: liquidityPool.displayId,
+                    type: TransactionType.ClosePosition,
+                })
+            }
         } else {
             if (!bot.encryptedPrivySignerPrivateKeyPayload) {
                 throw new EncryptedPrivySignerPrivateKeyNotFoundException({
@@ -197,40 +228,34 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                 encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                 walletId: bot.privyMetadata.walletId,
             })
-            prepareTxs = [
-                {
-                    txHash: signedTransaction.txHash,
-                    solanaTx: signedTransaction.signedTransaction,
+            prepareTx = {
+                txHash: signedTransaction.txHash,
+                solanaTx: signedTransaction.signedTransaction,
+            }
+            // Stimulate before returning
+            const simulateResult = await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Write,
+                callback: async ({ rpc }) => {
+                    return await rpc.simulateTransaction(
+                        getBase64EncodedWireTransaction(prepareTx.solanaTx!),
+                        {
+                            encoding: "base64",
+                            commitment: "confirmed",
+                        },
+                    ).send()
                 },
-            ]
-        }
-        const simulateResult = await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Write,
-            callback: async ({ rpc }) => {
-                return await rpc.simulateTransaction(
-                    getBase64EncodedWireTransaction(prepareTxs[0].solanaTx!),
-                    {
-                        encoding: "base64",
-                        commitment: "confirmed",
-                    },
-                ).send()
-            },
-        })
-        if (simulateResult.value.err) {
-            throw new TransactionSubmitFailedException({
-                message: simulateResult.value.err.toString(),
-                originalError: new TransactionStimulatedFailedException(
-                    {
-                        botId: bot.id,
-                        txHash: prepareTxs[0].txHash,
-                        liquidityPoolId: liquidityPool.displayId,
-                        type: TransactionType.ClosePosition,
-                    },
-                ),
             })
+            if (simulateResult.value.err) {
+                throw new TransactionStimulatedFailedException({
+                    botId: bot.id,
+                    txHash: prepareTx.txHash,
+                    liquidityPoolId: liquidityPool.displayId,
+                    type: TransactionType.ClosePosition,
+                })  
+            }
         }
         return {
-            prepareTxs,
+            prepareTxs: [prepareTx],
         }
     }
 
@@ -269,6 +294,7 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                             {
                                 commitment: "confirmed",
                                 encoding: "base58",
+                                maxSupportedTransactionVersion: 0,
                             },
                         ).send()
                     },

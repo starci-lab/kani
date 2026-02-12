@@ -96,6 +96,10 @@ export class RequeueService implements OnApplicationBootstrap {
                 activePosition: {
                     $exists: false,
                 },
+                activeJob: {
+                    $exists: true,
+                    $ne: null,
+                },
                 "activeJob.jobType": {
                     $eq: JobType.Withdraw,
                 },

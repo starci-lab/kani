@@ -117,11 +117,11 @@ export class ExecuteService {
                     liquidityPool,
                     txCheck: isRetry || (payload.isRetry ?? false),
                     stimulate,
+                    positionId: prepareResult.data.prepareResult?.positionId ?? "",
                 }
             )
         )
         if (error) {
-            console.log(error)
             // if the error is throw intentionally, throw a fatal error to let BullMQ handle the retry
             if ((error instanceof TransactionSubmitFailedException) && isRetry) {
                 throw new JobFailureException(

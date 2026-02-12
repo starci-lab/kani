@@ -150,9 +150,9 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
         )
         const transaction = compileTransaction(transactionMessage)
 
-        let prepareTxs: Array<PrepareTx>
+        let prepareTx: PrepareTx
         if (bot.version === AppVersion.V1) {
-            const prepareTx: PrepareTx = await this.signerService.withSolanaSigner({
+            const { txHash, solanaTx } = await this.signerService.withSolanaSigner({
                 bot,
                 action: async (signer) => {
                     const signedTransaction = await signTransaction(
@@ -161,14 +161,18 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                     )
                     const transactionSignature = getSignatureFromTransaction(signedTransaction)
                     const txHash = transactionSignature.toString()
-                    assertIsSendableTransaction(signedTransaction)
-                    assertIsTransactionWithinSizeLimit(signedTransaction)
                     return {
                         txHash,
                         solanaTx: signedTransaction,
                     }
                 },
             })
+            assertIsSendableTransaction(solanaTx)
+            assertIsTransactionWithinSizeLimit(solanaTx)
+            prepareTx = {
+                txHash,
+                solanaTx,
+            }
             // Stimulate before returning
             const simulateResult = await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Write,
@@ -192,7 +196,6 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                     }
                 )
             }
-            prepareTxs = [prepareTx]
         } else {
             if (!bot.privyMetadata) {
                 throw new PrivyMetadataNotFoundException({
@@ -213,7 +216,7 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                 encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                 walletId: bot.privyMetadata.walletId,
             })
-            const prepareTx: PrepareTx = {
+            prepareTx = {
                 txHash: signedTransaction.txHash,
                 solanaTx: signedTransaction.signedTransaction,
             }
@@ -239,10 +242,9 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                 }
                 )
             }
-            prepareTxs = [prepareTx]
         }
         return {
-            prepareTxs,
+            prepareTxs: [prepareTx],
         }
     }
 
@@ -282,6 +284,7 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                             {
                                 commitment: "confirmed",
                                 encoding: "base58",
+                                maxSupportedTransactionVersion: 0,
                             },
                         ).send()
                     },

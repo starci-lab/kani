@@ -91,6 +91,9 @@ export class RequeueService implements OnApplicationBootstrap {
                     $eq: envConfig().executor.id,
                 },
                 activePosition: {
+                    $exists: false,
+                },
+                activeJob: {
                     $exists: true,
                     $ne: null,
                 },
@@ -120,7 +123,6 @@ export class RequeueService implements OnApplicationBootstrap {
                     }
                     const bullmqJob = await this.openPositionQueue.getJob(bot.id)
                     if (bullmqJob) {
-                        // we can add additional logic here
                         this.winstonService.log(
                             WinstonLog.OpenPositionSkippedActiveJobFoundInQueue,
                             {

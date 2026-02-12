@@ -97,6 +97,10 @@ export class RequeueService implements OnApplicationBootstrap {
                         $exists: true,
                         $ne: null,
                     },
+                    activeJob: {
+                        $exists: true,
+                        $ne: null,
+                    },
                     "activeJob.jobType": {
                         $eq: JobType.ClosePosition,
                     },

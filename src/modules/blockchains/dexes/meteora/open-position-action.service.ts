@@ -12,6 +12,7 @@ import {
 } from "../types"
 import {
     DlmmLiquidityPoolState,
+    PrepareTx,
 } from "../../types"
 import {
     SignerService
@@ -29,7 +30,6 @@ import {
     MissingSolanaTxParamException,
     SolanaAccountNotFoundException,
     ErrorSolanaAccountKind,
-    ActivePositionNotFoundException,
     TransactionSubmitFailedException,
     TransactionStimulatedFailedException,
 } from "@modules/exceptions"
@@ -109,12 +109,6 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
     }: PrepareOpenPositionParams): Promise<PrepareOpenPositionResult> {
         const _state = state as DlmmLiquidityPoolState
         const targetIsA = bot.targetToken.toString() === liquidityPool.tokenA.toString()
-        // Stage: state validation (open-position requires an active position context)
-        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
-            throw new ActivePositionNotFoundException({
-                botId: bot.id,
-            })
-        }
         // Stage: state validation (requires balance snapshots for sizing)
         if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
@@ -188,59 +182,50 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                 tx),
         )
         const transaction = compileTransaction(transactionMessage)
+        let prepareTx: PrepareTx
         if (bot.version === AppVersion.V1) {
-            return await this.signerService.withSolanaSigner({
+            const { txHash, solanaTx } = await this.signerService.withSolanaSigner({
                 bot,
                 action: async (signer) => {
                     // Sign transaction with V1 signer and position keypair
                     const signedTransaction = await signTransaction([signer.keyPair,
                         positionKeyPair.keyPair],
                     transaction)
-                    // Validate transaction before returning
-                    assertIsSendableTransaction(signedTransaction)
-                    assertIsTransactionWithinSizeLimit(signedTransaction)
                     const transactionSignature = getSignatureFromTransaction(signedTransaction)
                     const txHash = transactionSignature.toString()
-                    // stimulate transaction
-                    const stimulateTransaction = await this.rpcExecutorService.withSolanaRpc({
-                        accessType: RpcAccessType.Write,
-                        callback: async ({ rpc }) => {
-                            return await rpc.simulateTransaction(
-                                getBase64EncodedWireTransaction(signedTransaction),
-                                {
-                                    encoding: "base64",
-                                    commitment: "confirmed",
-                                },
-                            ).send()
-                        }
-                    })
-                    if (stimulateTransaction.value.err) {
-                        throw new TransactionStimulatedFailedException(
-                            {
-                                botId: bot.id,
-                                txHash: txHash,
-                                type: TransactionType.OpenPosition,
-                            }
-                        )
-                    }
                     return {
-                        prepareTxs: [
-                            {
-                                txHash,
-                                solanaTx: signedTransaction,
-                            }
-                        ],
-                        feeAmountA,
-                        feeAmountB,
-                        amountA,
-                        amountB,
-                        minBinId,
-                        maxBinId,
-                        positionId: positionKeyPair.address.toString(),
-                        positionKeyPair,
+                        txHash,
+                        solanaTx: signedTransaction,
                     }
+                }
+            })
+            assertIsSendableTransaction(solanaTx)
+            assertIsTransactionWithinSizeLimit(solanaTx)
+            prepareTx = {
+                txHash,
+                solanaTx,
+            }
+            // Stimulate before returning
+            const simulateResult = await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Write,
+                callback: async ({ rpc }) => {
+                    return await rpc.simulateTransaction(
+                        getBase64EncodedWireTransaction(solanaTx!),
+                        {
+                            encoding: "base64",
+                            commitment: "confirmed",
+                        },
+                    ).send()
                 },
             })
+            if (simulateResult.value.err) {
+                throw new TransactionStimulatedFailedException({
+                    botId: bot.id,
+                    txHash,
+                    liquidityPoolId: liquidityPool.displayId,
+                    type: TransactionType.OpenPosition,
+                })
+            }
         } else {
             // Stage: state validation (Privy signing prerequisites for V2 bots)
             if (!bot.privyMetadata) {
@@ -255,8 +240,10 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
             }
 
             // Partially sign with position keypair, then sign with Privy
-            const partialSignedTransaction = await partiallySignTransaction([positionKeyPair.keyPair],
-                transaction)
+            const partialSignedTransaction = await partiallySignTransaction(
+                [positionKeyPair.keyPair],
+                transaction
+            )
             const signedTransaction = await this.privySignService.signSolanaTransaction(
                 {
                     lifetimeConstraint: {
@@ -282,27 +269,48 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                 }
             })
             if (stimulateTransaction.value.err) {
+                throw new TransactionStimulatedFailedException(
+                    {
+                        botId: bot.id,
+                        txHash: signedTransaction.txHash,
+                        type: TransactionType.OpenPosition,
+                    }
+                )
+            }
+            prepareTx = {
+                txHash: signedTransaction.txHash,
+                solanaTx: signedTransaction.signedTransaction,
+            }
+            // Stimulate before returning
+            const simulateResult = await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Write,
+                callback: async ({ rpc }) => {
+                    return await rpc.simulateTransaction(
+                        getBase64EncodedWireTransaction(signedTransaction.signedTransaction),
+                        {
+                            encoding: "base64",
+                            commitment: "confirmed",
+                        },
+                    ).send()
+                },
+            })
+            if (simulateResult.value.err) {
                 throw new TransactionStimulatedFailedException({
                     botId: bot.id,
                     txHash: signedTransaction.txHash,
+                    liquidityPoolId: liquidityPool.displayId,
                     type: TransactionType.OpenPosition,
                 })
             }
-            return {
-                prepareTxs: [
-                    {
-                        txHash: signedTransaction.txHash,
-                        solanaTx: signedTransaction.signedTransaction,
-                    }
-                ],
-                feeAmountA,
-                feeAmountB,
-                amountA,
-                amountB,
-                minBinId,
-                maxBinId,
-                positionId: positionKeyPair.address.toString(),
-            }
+        }
+        return {
+            prepareTxs: [prepareTx],
+            feeAmountA,
+            feeAmountB,
+            amountA,
+            amountB,
+            minBinId,
+            maxBinId,
         }
     }
 
@@ -351,6 +359,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                             {
                                 commitment: "confirmed",
                                 encoding: "base58",
+                                maxSupportedTransactionVersion: 0,
                             },
                         ).send()
                     },

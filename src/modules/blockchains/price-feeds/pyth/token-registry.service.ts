@@ -66,30 +66,33 @@ export class PythTokenRegistryService {
         tokenPriceData: Array<PythTokenPriceData>
     ): Array<PythTokenPrice> {
         // Find all tokens with Pyth market listings
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
-            marketListings: {
-                $elemMatch: {
-                    id: MarketListingId.Pyth
+        const tokens = this.primaryMemoryStorageService.tokenCollection.find(
+            {
+                marketListings: {
+                    $elemMatch: {
+                        id: MarketListingId.Pyth
+                    }
                 }
             }
-        }
         )
         // Map tokens to prices by matching feed IDs
-        return tokens.map(token => {
+        return tokens.map(
+            token => {
             // Find matching price feed for this token
-            const priceFeed = tokenPriceData.find(
-                feed => token.marketListings.some(
-                    marketListing => marketListing.symbol.includes(feed.feedId)
+                const priceFeed = tokenPriceData.find(
+                    feed => token.marketListings.some(
+                        marketListing => marketListing.symbol.includes(feed.feedId)
+                    )
                 )
-            )
-            if (!priceFeed) return undefined
-            // Return resolved token price
-            return {
-                tokenId: token.displayId,
-                id: token.id,
-                price: priceFeed.price,
+                if (!priceFeed) return undefined
+                // Return resolved token price
+                return {
+                    tokenId: token.displayId,
+                    id: token.id,
+                    price: priceFeed.price,
+                }
             }
-        })
+        )
             .filter(Boolean) as Array<PythTokenPrice>
     }
 }

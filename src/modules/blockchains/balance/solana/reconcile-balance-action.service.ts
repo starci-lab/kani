@@ -296,7 +296,8 @@ export class SolanaReconcileBalanceActionService {
                             signature(prepareTx.txHash),
                             {
                                 commitment: "confirmed", 
-                                encoding: "base58" 
+                                encoding: "base58",
+                                maxSupportedTransactionVersion: 0,
                             }
                         ).send()
                     },

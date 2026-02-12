@@ -157,29 +157,29 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
         )
         const transaction = compileTransaction(transactionMessage)
 
-        let prepareTxs: Array<PrepareTx>
+        let prepareTx: PrepareTx
         if (bot.version === AppVersion.V1) {
-            const prepareTx: PrepareTx = await this.signerService.withSolanaSigner({
+            const { txHash, solanaTx } = await this.signerService.withSolanaSigner({
                 bot,
                 action: async (signer) => {
                     const signedTransaction = await signTransaction([signer.keyPair],
                         transaction)
                     const transactionSignature = getSignatureFromTransaction(signedTransaction)
                     const txHash = transactionSignature.toString()
-                    assertIsSendableTransaction(signedTransaction)
-                    assertIsTransactionWithinSizeLimit(signedTransaction)
                     return {
-                        txHash, 
-                        solanaTx: signedTransaction 
+                        txHash,
+                        solanaTx: signedTransaction,
                     }
                 },
             })
+            assertIsSendableTransaction(solanaTx)
+            assertIsTransactionWithinSizeLimit(solanaTx)
             // Stimulate before returning
             const simulateResult = await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Write,
                 callback: async ({ rpc }) => {
                     return await rpc.simulateTransaction(
-                        getBase64EncodedWireTransaction(prepareTx.solanaTx!),
+                        getBase64EncodedWireTransaction(solanaTx!),
                         {
                             encoding: "base64",
                             commitment: "confirmed",
@@ -190,12 +190,15 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
             if (simulateResult.value.err) {
                 throw new TransactionStimulatedFailedException({
                     botId: bot.id,
-                    txHash: prepareTx.txHash,
+                    txHash,
                     liquidityPoolId: liquidityPool.displayId,
                     type: TransactionType.ClosePosition,
                 })
             }
-            prepareTxs = [prepareTx]
+            prepareTx = {
+                txHash,
+                solanaTx,
+            }
         } else {
             if (!bot.encryptedPrivySignerPrivateKeyPayload) {
                 throw new EncryptedPrivySignerPrivateKeyNotFoundException({
@@ -216,7 +219,7 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                 encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                 walletId: bot.privyMetadata.walletId,
             })
-            const prepareTx: PrepareTx = {
+            prepareTx = {
                 txHash: signedTransaction.txHash,
                 solanaTx: signedTransaction.signedTransaction,
             }
@@ -241,10 +244,9 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                     type: TransactionType.ClosePosition,
                 })
             }
-            prepareTxs = [prepareTx]
         }
         return {
-            prepareTxs 
+            prepareTxs: [prepareTx],
         }
     }
 
@@ -299,6 +301,7 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                             {
                                 commitment: "confirmed",
                                 encoding: "base58",
+                                maxSupportedTransactionVersion: 0,
                             },
                         ).send()
                     },

@@ -441,6 +441,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         name: "USDC",
         symbol: "USDC",
         decimals: 6,
+        selectable: true,
         chainId: ChainId.Solana,
         tokenAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
         marketListings: [
@@ -478,7 +479,6 @@ const data: Array<DeepPartial<TokenSchema>> = [
         iconUrl: "https://r2.kanibot.xyz/tokens/usdc.png",
         projectUrl: "https://www.centre.io/",
         type: TokenType.StableUsdc,
-        selectable: false,
     },
     {
         _id: createObjectId(TokenId.SolUsdt),
@@ -508,7 +508,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         iconUrl: "https://r2.kanibot.xyz/tokens/usdt.png",
         projectUrl: "https://tether.to/",
         type: TokenType.StableUsdc,
-        selectable: false,
+        selectable: true,
     },
     {
         _id: createObjectId(TokenId.SolRay),
