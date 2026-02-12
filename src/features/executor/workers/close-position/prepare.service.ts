@@ -108,6 +108,7 @@ export class PrepareService {
             )
         )
         if (error) {
+            console.error(error)
             throw new JobFailureException({
                 originalError: error,
                 strategy: JobFailureStrategy.Fatal,

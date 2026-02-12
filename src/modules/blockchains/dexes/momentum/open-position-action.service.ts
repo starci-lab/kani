@@ -12,6 +12,7 @@ import {
 } from "../types"
 import {
     ClmmLiquidityPoolState,
+    PrepareTx,
 } from "../../types"
 import {
     Transaction, TransactionDataBuilder 
@@ -169,6 +170,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
         const txb = new Transaction()
+        let prepareTx: PrepareTx
         const _state = state as ClmmLiquidityPoolState
         // Stage: state validation (requires balance snapshots for sizing)
         if (!bot.balanceSnapshots) {
@@ -283,18 +285,10 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                     return await signer.signTransaction(bytes)
                 },
             })
-            
-            return {
-                prepareTxs: [{
-                    txHash,
-                    signatureWithBytes,
-                }],
-                feeAmountA,
-                feeAmountB,
-                tickLower,
-                tickUpper,
-                amountA,
-                amountB,
+             
+            prepareTx = {
+                txHash,
+                signatureWithBytes,
             }
         } else {
             // Stage: state validation (Privy signing prerequisites for V2 bots)
@@ -334,19 +328,37 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                     })
                 },
             })
-            
-            return {
-                prepareTxs: [{
+            // stimulate transaction
+            const simulateResult = await this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Write,
+                callback: async ({ suiClient }) => {
+                    return await suiClient.devInspectTransactionBlock({
+                        transactionBlock: openPositionTxb,
+                        sender: bot.accountAddress,
+                    })
+                },
+            })
+            if (simulateResult.effects.status.status !== "success") {
+                throw new TransactionStimulatedFailedException({
+                    botId: bot.id,
                     txHash,
-                    signatureWithBytes,
-                }],
-                feeAmountA,
-                feeAmountB,
-                tickLower,
-                tickUpper,
-                amountA,
-                amountB,
+                    liquidityPoolId: liquidityPool.displayId,
+                    type: TransactionType.OpenPosition,
+                })
             }
+            prepareTx = {
+                txHash,
+                signatureWithBytes,
+            }
+        }
+        return {
+            prepareTxs: [prepareTx],
+            feeAmountA,
+            feeAmountB,
+            tickLower,
+            tickUpper,
+            amountA,
+            amountB,
         }
     }
 

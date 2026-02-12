@@ -311,6 +311,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
             amountB,
             minBinId,
             maxBinId,
+            positionId: positionKeyPair.address.toString(),
         }
     }
 

@@ -12,6 +12,7 @@ import {
 } from "../types"
 import {
     ClmmLiquidityPoolState,
+    PrepareTx,
 } from "../../types"
 import {
     Transaction, TransactionDataBuilder 
@@ -209,6 +210,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
             liquidityPool,
             tickUpper,
         })
+        let prepareTx: PrepareTx
         if (bot.version === AppVersion.V1) {
             // dev inspect the transaction block
             const devInspect = await this.rpcExecutorService.withSuiClient({
@@ -249,18 +251,9 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                     return await signer.signTransaction(bytes)
                 },
             })
-            
-            return {
-                prepareTxs: [
-                    {
-                        txHash,
-                        signatureWithBytes,
-                    },
-                ],
-                feeAmountA,
-                feeAmountB,
-                tickLower,
-                tickUpper,
+            prepareTx = {
+                txHash,
+                signatureWithBytes,
             }
         } else {
             if (!bot.privyMetadata?.walletPublicKey) {
@@ -296,18 +289,17 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                 },
             })
             
-            return {
-                prepareTxs: [
-                    {
-                        txHash,
-                        signatureWithBytes,
-                    },
-                ],
-                feeAmountA,
-                feeAmountB,
-                tickLower,
-                tickUpper,
+            prepareTx = {
+                txHash,
+                signatureWithBytes,
             }
+        }
+        return {
+            prepareTxs: [prepareTx],
+            feeAmountA,
+            feeAmountB,
+            tickLower,
+            tickUpper,
         }
     }
 

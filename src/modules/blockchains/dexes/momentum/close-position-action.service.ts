@@ -10,6 +10,7 @@ import {
 } from "../types"
 import {
     ClmmLiquidityPoolState,
+    PrepareTx,
 } from "../../types"
 import {
     Transaction,
@@ -28,7 +29,6 @@ import {
     EncryptedPrivySignerPrivateKeyNotFoundException,
     TransactionType,
     TransactionStimulatedFailedException,
-    TransactionValidationFailedException,
     TransactionExecutionFailedException,
     SuiSingleTransactionRequiredException,
     ErrorSuiSingleTransactionRequiredOperation,
@@ -105,7 +105,8 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
             state: _state,
             liquidityPool,
         })
-
+ 
+        let prepareTx: PrepareTx
         if (bot.version === AppVersion.V1) {
             // Dev inspect the transaction block to validate
             const devInspect = await this.rpcExecutorService.withSuiClient({
@@ -120,7 +121,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
             
             // Stage: transaction validation (dev inspect must succeed)
             if (devInspect.effects.status.status !== "success") {
-                throw new TransactionValidationFailedException({
+                throw new TransactionStimulatedFailedException({
                     botId: bot.id,
                     txHash: devInspect.effects.transactionDigest,
                     type: TransactionType.ClosePosition,
@@ -148,11 +149,9 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                 },
             })
             
-            return {
-                prepareTxs: [{
-                    txHash,
-                    signatureWithBytes,
-                }],
+            prepareTx = {
+                txHash,
+                signatureWithBytes,
             }
         } else {
             // Stage: state validation (Privy signing prerequisites for V2 bots)
@@ -193,12 +192,13 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                 },
             })
             
-            return {
-                prepareTxs: [{
-                    txHash,
-                    signatureWithBytes,
-                }],
+            prepareTx = {
+                txHash,
+                signatureWithBytes,
             }
+        }
+        return {
+            prepareTxs: [prepareTx],
         }
     }
 

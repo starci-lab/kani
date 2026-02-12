@@ -21,7 +21,6 @@ import {
 import {
     ActivePositionNotFoundException,
     TransactionNotPreparedException,
-    TransactionValidationFailedException,
     TransactionStimulatedFailedException,
     TransactionExecutionFailedException,
     PrivyPublicKeyNotFoundException,
@@ -33,6 +32,7 @@ import {
 } from "@modules/exceptions"
 import {
     ClmmLiquidityPoolState,
+    PrepareTx,
 } from "../../types"
 import {
     RpcExecutorService 
@@ -105,7 +105,8 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
             state: _state,
             liquidityPool,
         })
-
+ 
+        let prepareTx: PrepareTx
         if (bot.version === AppVersion.V1) {
             // Dev inspect the transaction block to validate
             const devInspect = await this.rpcExecutorService.withSuiClient({
@@ -120,7 +121,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
             
             // Stage: transaction validation (dev inspect must succeed)
             if (devInspect.effects.status.status !== "success") {
-                throw new TransactionValidationFailedException({
+                throw new TransactionStimulatedFailedException({
                     botId: bot.id,
                     txHash: devInspect.effects.transactionDigest,
                     liquidityPoolId: liquidityPool.displayId,
@@ -148,11 +149,9 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                 },
             })
             
-            return {
-                prepareTxs: [{
-                    txHash,
-                    signatureWithBytes,
-                }],
+            prepareTx = {
+                txHash,
+                signatureWithBytes,
             }
         } else {
             // Stage: state validation (Privy signing prerequisites for V2 bots)
@@ -192,13 +191,31 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                     })
                 },
             })
-            
-            return {
-                prepareTxs: [{
+            // stimulate transaction
+            const simulateResult = await this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Write,
+                callback: async ({ suiClient }) => {
+                    return await suiClient.devInspectTransactionBlock({
+                        transactionBlock: closePositionTxb,
+                        sender: bot.accountAddress,
+                    })
+                },
+            })
+            if (simulateResult.effects.status.status !== "success") {
+                throw new TransactionStimulatedFailedException({
+                    botId: bot.id,
                     txHash,
-                    signatureWithBytes,
-                }],
+                    liquidityPoolId: liquidityPool.displayId,
+                    type: TransactionType.ClosePosition,
+                })
             }
+            prepareTx = {
+                txHash,
+                signatureWithBytes,
+            }
+        }
+        return {
+            prepareTxs: [prepareTx],
         }
     }
 

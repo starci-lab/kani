@@ -11,6 +11,7 @@ import {
 } from "../types"
 import {
     ClmmLiquidityPoolState,
+    PrepareTx,
 } from "../../types"
 import {
     Transaction,
@@ -34,7 +35,6 @@ import {
     BalanceSnapshotsNotFoundException,
     TransactionEventNotFoundException,
     TransactionNotPreparedException,
-    TransactionValidationFailedException,
     TransactionStimulatedFailedException,
     TransactionExecutionFailedException,
     PrivyPublicKeyNotFoundException,
@@ -289,7 +289,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             liquidityPool,
             tickUpper,
         })
-        
+        let prepareTx: PrepareTx
         if (bot.version === AppVersion.V1) {
             // dev inspect transaction for validation
             const devInspect = await this.rpcExecutorService.withSuiClient({
@@ -301,10 +301,9 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     })
                 },
             })
-            
             // validate transaction effects
             if (devInspect.effects.status.status !== "success") {
-                throw new TransactionValidationFailedException({
+                throw new TransactionStimulatedFailedException({
                     type: TransactionType.OpenPosition,
                     botId: bot.id,
                     txHash: devInspect.effects.transactionDigest,
@@ -323,7 +322,6 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             })
             
             const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
-            
             // sign transaction
             const signatureWithBytes = await this.signerService.withSuiSigner({
                 bot,
@@ -331,16 +329,9 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     return await signer.signTransaction(bytes)
                 },
             })
-            
-            return {
-                prepareTxs: [{
-                    txHash,
-                    signatureWithBytes,
-                }],
-                feeAmountA,
-                feeAmountB,
-                tickLower,
-                tickUpper,
+            prepareTx = {
+                txHash,
+                signatureWithBytes,
             }
         } else {
             // validate privy signing prerequisites
@@ -363,7 +354,6 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             // store validated values for use in callback
             const privyMetadata = bot.privyMetadata
             const encryptedPrivySignerPrivateKey = bot.encryptedPrivySignerPrivateKeyPayload
-            
             // sign transaction with Privy
             const { txHash, signatureWithBytes } = await this.rpcExecutorService.withSuiClient({
                 accessType: RpcAccessType.Write,
@@ -377,16 +367,35 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     })
                 },
             })
-            return {
-                prepareTxs: [{
-                    txHash,
-                    signatureWithBytes,
-                }],
-                feeAmountA,
-                feeAmountB,
-                tickLower,
-                tickUpper,
+            prepareTx = {
+                txHash,
+                signatureWithBytes,
             }
+            // stimulate transaction
+            const simulateResult = await this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Write,
+                callback: async ({ suiClient }) => {
+                    return await suiClient.devInspectTransactionBlock({
+                        transactionBlock: openPositionTxb,
+                        sender: bot.accountAddress,
+                    })
+                },
+            })
+            if (simulateResult.effects.status.status !== "success") {
+                throw new TransactionStimulatedFailedException({
+                    botId: bot.id,
+                    txHash,
+                    liquidityPoolId: liquidityPool.displayId,
+                    type: TransactionType.OpenPosition,
+                })
+            }
+        }
+        return {
+            prepareTxs: [prepareTx],
+            feeAmountA,
+            feeAmountB,
+            tickLower,
+            tickUpper,
         }
     }
     
