@@ -352,3 +352,60 @@ registerEnumType(GraphQLTypeAuthenticationFactor,
         }
     }
 )
+
+export enum TaskType {
+    OpenPosition = "openPosition",
+    ClosePosition = "closePosition",
+    ReconcileBalance = "reconcileBalance",
+    Withdraw = "withdraw",
+    ExitUsdc = "exitUsdc",
+}
+
+export const GraphQLTypeTaskType = createEnumType(TaskType)
+
+registerEnumType(
+    GraphQLTypeTaskType,
+    {
+        name: "TaskType",
+        description: "The id of the task",
+        valuesMap: {
+            [TaskType.OpenPosition]: {
+                description: "The open position task"
+            },
+            [TaskType.ClosePosition]: {
+                description: "The close position task"
+            },
+            [TaskType.ReconcileBalance]: {
+                description: "The reconcile balance task"
+            },
+            [TaskType.Withdraw]: {
+                description: "The withdraw task"
+            },
+            [TaskType.ExitUsdc]: {
+                description: "The exit USDC task"
+            }
+        }
+    }
+)
+
+export enum StepType {
+    Sign = "sign",
+    Send = "send",
+}
+
+export const GraphQLTypeStepType = createEnumType(StepType)
+
+registerEnumType(GraphQLTypeStepType,
+    {
+        name: "StepType",
+        description: "The type of the step",
+        valuesMap: {
+            [StepType.Sign]: {
+                description: "The sign step"
+            },
+            [StepType.Send]: {
+                description: "The send step"
+            }
+        }
+    }
+)

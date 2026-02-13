@@ -7,52 +7,28 @@ import {
     PrepareClosePositionParams,
     PrepareClosePositionResult,
     ExecuteClosePositionResult,
+    SignClosePositionParams,
+    SignClosePositionResult,
 } from "../types"
-import {
-    Transaction,
-    TransactionDataBuilder
-} from "@mysten/sui/transactions"
-import {
-    SignerService
-} from "../../signers"
 import {
     ClosePositionTxbService,
 } from "./transactions"
 import {
     ActivePositionNotFoundException,
-    TransactionNotPreparedException,
-    PrivyPublicKeyNotFoundException,
-    EncryptedPrivySignerPrivateKeyNotFoundException,
     TransactionType,
-    TransactionValidationFailedException,   
-    TransactionStimulatedFailedException,
-    TransactionExecutionFailedException,
-    SuiSingleTransactionRequiredException,
-    ErrorSuiSingleTransactionRequiredOperation,
-    TransactionSubmitFailedException,
 } from "@modules/exceptions"
 import {
-    RpcExecutorService
+    SuiExecuteService,
+    SuiFetchService,
+    SuiStimulateService,
+    SuiTxService,
 } from "../../clients"
-import {
-    RpcAccessType
-} from "@modules/filesystem"
-import {
-    WinstonLog, WinstonService
-} from "@modules/winston"
-import {
-    AsyncService
-} from "@modules/mixin"
-import {
-    PrivySignService
-} from "@modules/privy"
-import {
-    AppVersion
-} from "@modules/databases"
 import {
     ClmmLiquidityPoolState 
 } from "../../types"
-
+import {
+    ChainId 
+} from "@modules/common"
 /**
  * Service responsible for closing positions on Turbos DEX.
  * Handles position closure, transaction preparation, validation, and execution.
@@ -64,13 +40,32 @@ import {
 @Injectable()
 export class TurbosClosePositionActionService implements IClosePositionActionService {
     constructor(
-        private readonly signerService: SignerService,
         private readonly closePositionTxbService: ClosePositionTxbService,
-        private readonly asyncService: AsyncService,
-        private readonly rpcExecutorService: RpcExecutorService,
-        private readonly privySignService: PrivySignService,
-        private readonly winstonService: WinstonService,
+        private readonly suiStimulateService: SuiStimulateService,
+        private readonly suiFetchService: SuiFetchService,
+        private readonly suiExecuteService: SuiExecuteService,
+        private readonly suiTxService: SuiTxService,
     ) { }
+
+    /**
+     * Signs a close position transaction.
+     *
+     * @param param - Parameters for signing close position
+     * @param param.bot - Bot schema
+     * @param param.prepareTx - Prepared transaction
+     * @returns Signed transaction
+     */
+    async sign({
+        bot,
+        prepareTx,
+    }: SignClosePositionParams): Promise<SignClosePositionResult> {
+        return {
+            signedTx: await this.suiTxService.signTx({
+                bot,
+                prepareTx,
+            }),
+        }
+    }
 
     /**
      * Prepares a close position transaction.
@@ -90,14 +85,12 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
         liquidityPool,
     }: PrepareClosePositionParams): Promise<PrepareClosePositionResult> {
         const _state = state as ClmmLiquidityPoolState
-        
         // Stage: state validation (close requires an active position)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
-        }
-        
+        }  
         // create close position transaction builder
         const {
             txb: closePositionTxb,
@@ -106,96 +99,13 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
             state: _state,
             liquidityPool,
         })
-        
-        if (bot.version === AppVersion.V1) {
-            // dev inspect the transaction block
-            const devInspect = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Http,
-                callback: async ({ suiClient }) => {
-                    return await suiClient.devInspectTransactionBlock({
-                        transactionBlock: closePositionTxb,
-                        sender: bot.accountAddress,
-                    })
+        return {
+            prepareTxs: [
+                {
+                    chainId: ChainId.Sui,
+                    serializedTx: await closePositionTxb.toJSON(),
                 },
-            })
-            
-            if (devInspect.effects.status.status !== "success") {
-                throw new TransactionValidationFailedException({
-                    botId: bot.id,
-                    txHash: devInspect.effects.transactionDigest,
-                    type: TransactionType.ClosePosition,
-                    liquidityPoolId: liquidityPool.displayId,
-                })
-            }
-            
-            // build transaction bytes
-            const bytes = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Http,
-                callback: async ({ suiClient }) => {
-                    return await closePositionTxb.build({
-                        client: suiClient,
-                    })
-                },
-            })
-            
-            const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
-            
-            // sign transaction
-            const signatureWithBytes = await this.signerService.withSuiSigner({
-                bot,
-                action: async (signer) => {
-                    return await signer.signTransaction(bytes)
-                },
-            })
-            
-            return {
-                prepareTxs: [{
-                    txHash,
-                    signatureWithBytes,
-                }],
-            }
-        } else {
-            // Stage: state validation (privy signing prerequisites)
-            if (!bot.privyMetadata?.walletPublicKey) {
-                throw new PrivyPublicKeyNotFoundException({
-                    botId: bot.id,
-                })
-            }
-            if (!bot.privyMetadata?.walletId) {
-                throw new PrivyPublicKeyNotFoundException({
-                    botId: bot.id,
-                })
-            }
-            if (!bot.encryptedPrivySignerPrivateKeyPayload) {
-                throw new EncryptedPrivySignerPrivateKeyNotFoundException({
-                    botId: bot.id,
-                })
-            }
-            
-            // store validated values for use in callback
-            const privyMetadata = bot.privyMetadata
-            const encryptedPrivySignerPrivateKey = bot.encryptedPrivySignerPrivateKeyPayload
-            
-            // sign transaction with Privy
-            const { txHash, signatureWithBytes } = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Http,
-                callback: async ({ suiClient }) => {
-                    return await this.privySignService.signSuiTransaction({
-                        publicKeyHex: privyMetadata.walletPublicKey!,
-                        client: suiClient,
-                        walletId: privyMetadata.walletId!,
-                        transaction: closePositionTxb,
-                        encryptedPrivySignerPrivateKey: encryptedPrivySignerPrivateKey,
-                    })
-                },
-            })
-            
-            return {
-                prepareTxs: [{
-                    txHash,
-                    signatureWithBytes,
-                }],
-            }
+            ],
         }
     }
 
@@ -218,148 +128,43 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
         bot,
         txCheck,
         stimulate,
-        prepareTxs,
+        signedTx,
         liquidityPool,
     }: ExecuteClosePositionParams): Promise<ExecuteClosePositionResult> {
-        // Sui requires exactly one transaction per execution
-        if (prepareTxs.length !== 1) {
-            throw new SuiSingleTransactionRequiredException({
-                operation: ErrorSuiSingleTransactionRequiredOperation.ClosePosition,
-                numTxs: prepareTxs.length,
-            })
-        }
-        
-        // extract prepared transaction
-        const [prepareTx] = prepareTxs
-        const txHash = prepareTx.txHash
-        const signatureWithBytes = prepareTx.signatureWithBytes
-        
-        // check if transaction already exists on-chain
+        // Stage: idempotency check (optional)
         if (txCheck && !stimulate) {
-            const [txBlock] = await this.asyncService.resolveTuple(
-                this.rpcExecutorService.withSuiClient({
-                    accessType: RpcAccessType.Http,
-                    callback: async ({ suiClient }) => {
-                        return suiClient.getTransactionBlock({
-                            digest: txHash,
-                            options: {
-                                showEffects: true,
-                            },
-                        })
-                    },
-                })
-            )
-            if (txBlock !== null && txBlock.effects?.status?.status === "success") {
-                this.winstonService.log(
-                    WinstonLog.ClosePositionTransactionFound,
-                    {
-                        botId: bot.id,
-                        txHash,
-                        liquidityPoolId: liquidityPool.displayId,
-                    }
-                )
+            const txBlock = await this.suiFetchService.fetchTransactionBlock({
+                txHash: signedTx.txHash,
+            })
+            if (txBlock) {
                 return {
-                    txHashes: [txHash],
+                    txHash: signedTx.txHash,
                 }
             }
         }
-        
-        // validate transaction is prepared
-        if (!signatureWithBytes) {
-            throw new TransactionNotPreparedException({
-                botId: bot.id,
-                txHash,
-                liquidityPoolId: liquidityPool.displayId,
-                type: TransactionType.ClosePosition,
-            })
-        }
-        
+        // Stage: simulation (optional)
         if (stimulate) {
-            // simulate transaction execution
-            const transactionBlock = Transaction.from(signatureWithBytes.bytes)
-            const devInspect = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Http,
-                callback: async ({ suiClient }) => {
-                    return await suiClient.devInspectTransactionBlock({
-                        transactionBlock,
-                        sender: bot.accountAddress,
-                    })
-                },
+            const { txHash } = await this.suiStimulateService.stimulate({
+                signedTx,
+                bot,
+                transactionType: TransactionType.ClosePosition,
+                liquidityPool,
             })
-            
-            if (devInspect.effects.status.status !== "success") {
-                throw new TransactionSubmitFailedException({
-                    originalError: new TransactionStimulatedFailedException({
-                        botId: bot.id,
-                        txHash: devInspect.effects.transactionDigest,
-                        liquidityPoolId: liquidityPool.displayId,
-                        type: TransactionType.ClosePosition,
-                    }),
-                    message: devInspect.effects.status.error ?? "Unknown error",
-                })
-            }
-            
-            this.winstonService.log(
-                WinstonLog.ClosePositionTransactionStimulated,
-                {
-                    botId: bot.id,
-                    txHash,
-                    liquidityPoolId: liquidityPool.displayId,
-                }
-            )
+            // Stage: return result
             return {
-                txHashes: [txHash],
+                txHash,
             }
         }
-        
-        // execute transaction on-chain
-        const { digest, effects } = await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Write,
-            callback: async ({ suiClient }) => {
-                return await suiClient.executeTransactionBlock(
-                    {
-                        transactionBlock: signatureWithBytes.bytes,
-                        signature: signatureWithBytes.signature,
-                        options: {
-                            showEffects: true,
-                        },
-                    }
-                )
-            },
+        // Stage: execution
+        const { txHash } = await this.suiExecuteService.execute({
+            signedTx,
+            bot,
+            transactionType: TransactionType.ClosePosition,
+            liquidityPool,
         })
-        
-        if (effects?.status?.status !== "success") {
-            throw new TransactionSubmitFailedException({
-                originalError: new TransactionExecutionFailedException({
-                    botId: bot.id,
-                    txHash: digest,
-                    liquidityPoolId: liquidityPool.displayId,
-                    type: TransactionType.ClosePosition,
-                }),
-                message: effects?.status?.error ?? "Unknown error",
-            })
-        }
-        
-        // wait for transaction confirmation
-        await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Http,
-            callback: async ({ suiClient }) => {
-                return await suiClient.waitForTransaction({
-                    digest,
-                })
-            },
-        })
-        
-        this.winstonService.log(
-            WinstonLog.ClosePositionTransactionExecuted,
-            {
-                botId: bot.id,
-                txHash: digest,
-                liquidityPoolId: liquidityPool.displayId,
-            }
-        )
+        // Stage: return result
         return {
-            txHashes: [digest],
+            txHash,
         }
     }
 }

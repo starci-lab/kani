@@ -29,6 +29,9 @@ import {
 import {
     PrimaryMongoDbCollectionRef,
 } from "../enums"
+import {
+    TaskSchema, TaskSchemaClass 
+} from "./task.schema"
 
 @ObjectType({
     description: "Represents a job",
@@ -137,6 +140,16 @@ export class JobSchema extends AbstractSchema {
         type: Date, required: false 
     })
         startedAt?: Date
+
+    @Field(() => [TaskSchema],
+        {
+            description: "The tasks of the job",
+        }
+    )
+    @Prop({
+        type: [TaskSchemaClass], required: true 
+    })
+        tasks: Array<TaskSchema>
 }
 
 export const JobSchemaClass = SchemaFactory.createForClass(JobSchema)

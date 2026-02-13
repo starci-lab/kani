@@ -9,6 +9,8 @@ import {
     IOpenActionService,
     PrepareOpenPositionParams,
     PrepareOpenPositionResult,
+    SignOpenPositionParams,
+    SignOpenPositionResult,
 } from "../types"
 import {
     ClmmLiquidityPoolState 
@@ -30,8 +32,6 @@ import {
     TransactionType,
     LiquidityPoolClmmStateNotFoundException,
     SlippageToleranceExceededException,
-    SuiSingleTransactionRequiredException,
-    MissingSuiMessageWithBytesParamException,
 } from "@modules/exceptions"
 import Decimal from "decimal.js"
 import {
@@ -52,10 +52,31 @@ import {
     ParseIncreaseLiquidityEventParams,
     ParseIncreaseLiquidityEventResult,
 } from "./types"
+import {
+    ChainId 
+} from "@modules/common"
+import {
+    InjectSuperJson 
+} from "@modules/mixin"
+import SuperJSON from "superjson"
 
 /**
- * Service responsible for opening positions on FlowX DEX.
- * Mirrors CetusOpenPositionActionService structure & conventions.
+ * Service responsible for opening liquidity positions on FlowX DEX.
+ *
+ * Responsibilities:
+ * - Confirm an existing position (on-chain fetch & validation)
+ * - Prepare unsigned transaction(s) (tick-range calculation + sizing + validations)
+ * - Sign prepared transaction(s)
+ * - Execute signed transaction (idempotency check, optional simulation, on-chain execution)
+ *
+ * Execution stages (DEX action convention):
+ * - confirm -> prepare -> sign -> execute
+ *
+ * Error-handling convention:
+ * - Input/state validation failures throw immediately
+ * - On-chain fetch failures throw immediately
+ * - Simulation/execution failures propagate from underlying Sui services
+ * - Event parsing failures throw explicitly (required event missing)
  */
 @Injectable()
 export class FlowXOpenPositionActionService implements IOpenActionService {
@@ -67,10 +88,23 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         private readonly suiTxService: SuiTxService,
         private readonly suiExecuteService: SuiExecuteService,
         private readonly suiStimulateService: SuiStimulateService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
     ) {}
 
     /**
-     * Confirms an open position by fetching and validating position data.
+     * Confirms an existing FlowX position by fetching on-chain position data.
+     *
+     * Stage: on-chain fetch
+     * - Fetch position object and return its liquidity
+     *
+     * @param param - Confirmation parameters
+     * @param param.positionId - On-chain position object ID
+     * @param param.liquidityPool - Liquidity pool context
+     *
+     * @returns Confirmed liquidity for the position
+     *
+     * @throws If the position object cannot be fetched or parsed by SuiFetchService
      */
     async confirm(
         { positionId, liquidityPool }: ConfirmOpenPositionParams
@@ -81,22 +115,31 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
             dexId: DexId.FlowX,
             liquidityPool,
         })
-
         return {
             liquidity: new BN(liquidity),
         }
     }
 
     /**
-     * Parses increase liquidity event from transaction events (FlowX specific).
+     * Parses FlowX IncreaseLiquidity event from transaction events.
+     *
+     * Stage: event parsing
+     * - Locate FlowX IncreaseLiquidity event emitted by the position manager
+     * - Extract and return the created/updated position ID
+     *
+     * @param param - Event parsing parameters
+     * @param param.bot - Bot executing the transaction
+     * @param param.txHash - Transaction hash
+     * @param param.events - Transaction events
+     * @param param.liquidityPool - Liquidity pool context
+     *
+     * @returns Parsed position ID
+     *
+     * @throws {TransactionEventNotFoundException}
+     * If the expected IncreaseLiquidity event cannot be found
      */
     private parseIncreaseLiquidityEvent(
-        {
-            bot,
-            txHash,
-            events,
-            liquidityPool,
-        }: ParseIncreaseLiquidityEventParams
+        { bot, txHash, events, liquidityPool }: ParseIncreaseLiquidityEventParams
     ): ParseIncreaseLiquidityEventResult {
         const eventType = "::position_manager::IncreaseLiquidity"
         const event = events?.find((e) => e.type.includes(eventType))
@@ -117,37 +160,59 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
     }
 
     /**
-     * Prepares an open position transaction.
-     * Calculates tick range, validates slippage, builds tx, and signs it.
+     * Prepares unsigned open position transaction(s) for FlowX CLMM.
+     *
+     * Stage: input/state validation
+     * - Requires bot.balanceSnapshots for sizing
+     * - Requires liquidityPool.clmmState for tick params
+     *
+     * Stage: computation
+     * - Compute optimal tick range using TickMathService
+     * - Validate utilization against configured slippage tolerance
+     *
+     * Stage: tx building
+     * - Build unsigned transaction data using OpenPositionTxbService
+     *
+     * NOTE:
+     * - This stage returns serialized unsigned tx only.
+     * - Signing is handled by sign().
+     *
+     * @param param - Preparation parameters
+     * @param param.bot - Bot configuration
+     * @param param.state - Current CLMM pool state
+     * @param param.liquidityPool - Liquidity pool metadata
+     *
+     * @returns Prepared unsigned tx(s) + derived values (fees, ticks)
+     *
+     * @throws {BalanceSnapshotsNotFoundException}
+     * @throws {LiquidityPoolClmmStateNotFoundException}
+     * @throws {InvalidPoolTokensException}
+     * @throws {SlippageToleranceExceededException}
      */
     async prepare(
-        {
-            bot,
-            state,
-            liquidityPool,
-        }: PrepareOpenPositionParams
+        { bot, state, liquidityPool }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
 
-        // validate balance snapshots exist
+        // Stage: state validation (requires balance snapshots for sizing)
         if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
             })
         }
 
-        // validate CLMM state exists
+        // Stage: state validation (pool must have CLMM static state)
         if (!liquidityPool.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
                 liquidityPoolId: liquidityPool.displayId,
             })
         }
 
-        // extract balance amounts
+        // Extract balance amounts from snapshots
         const snapshotTargetBalanceAmount = new BN(bot.balanceSnapshots.targetBalanceAmount)
         const snapshotQuoteBalanceAmount = new BN(bot.balanceSnapshots.quoteBalanceAmount)
 
-        // fetch pool token metadata
+        // Stage: metadata validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: liquidityPool.tokenA.toString() 
@@ -159,31 +224,27 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
             },
         })
 
-        // validate tokens exist
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: liquidityPool.displayId,
             })
         }
 
-        // determine if target token is token A
+        // Determine if target token is token A
         const targetIsA = bot.targetToken.toString() === liquidityPool.tokenA.toString()
 
-        // find optimal tick range
-        const {
-            tickLower,
-            tickUpper,
-            utilizationPercentage,
-        } = await this.tickMathService.findOptimalTickRange({
-            tickCurrent: _state.tickCurrent,
-            tickSpacing: new Decimal(liquidityPool.clmmState.tickSpacing),
-            tickMultiplier: new Decimal(liquidityPool.clmmState.tickMultiplier),
-            targetBalanceAmount: new BN(snapshotTargetBalanceAmount),
-            quoteBalanceAmount: new BN(snapshotQuoteBalanceAmount),
-            targetIsA,
-        })
+        // Compute optimal tick range
+        const { tickLower, tickUpper, utilizationPercentage } =
+            await this.tickMathService.findOptimalTickRange({
+                tickCurrent: _state.tickCurrent,
+                tickSpacing: new Decimal(liquidityPool.clmmState.tickSpacing),
+                tickMultiplier: new Decimal(liquidityPool.clmmState.tickMultiplier),
+                targetBalanceAmount: snapshotTargetBalanceAmount,
+                quoteBalanceAmount: snapshotQuoteBalanceAmount,
+                targetIsA,
+            })
 
-        // validate slippage tolerance (same rule as Cetus)
+        // Stage: risk validation (slippage tolerance)
         const slippage = new Decimal(envConfig().dexes.flowx.openPosition.slippage)
         if (utilizationPercentage.lt(new Decimal(1).sub(slippage))) {
             throw new SlippageToleranceExceededException({
@@ -191,34 +252,30 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
             })
         }
 
-        // calculate max amounts for each token
+        // Size max amounts
         const amountAMax = targetIsA ? snapshotTargetBalanceAmount : snapshotQuoteBalanceAmount
         const amountBMax = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount
 
-        // create open position transaction builder
-        const {
-            txb: openPositionTxb,
-            feeAmountA,
-            feeAmountB,
-        } = await this.openPositionTxbService.createOpenPositionTxb({
-            bot,
-            amountA: new BN(amountAMax),
-            amountB: new BN(amountBMax),
-            liquidity: new BN(0),
-            tickLower,
-            state: _state,
-            liquidityPool,
-            tickUpper,
-        })
-
-        // sign transaction
-        const signedTx = await this.suiTxService.signTx({
-            bot,
-            tx: openPositionTxb,
-        })
+        // Stage: tx building (unsigned)
+        const { txb, feeAmountA, feeAmountB } =
+            await this.openPositionTxbService.createOpenPositionTxb({
+                bot,
+                amountA: amountAMax,
+                amountB: amountBMax,
+                liquidity: new BN(0),
+                tickLower,
+                state: _state,
+                liquidityPool,
+                tickUpper,
+            })
 
         return {
-            signedTxs: [signedTx],
+            prepareTxs: [
+                {
+                    chainId: ChainId.Sui,
+                    serializedTx: await txb.toJSON(),
+                },
+            ],
             feeAmountA,
             feeAmountB,
             tickLower,
@@ -227,38 +284,76 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
     }
 
     /**
-     * Executes an open position transaction.
-     * Handles tx check, stimulation, and execution.
+     * Signs a prepared FlowX open position transaction.
+     *
+     * Stage: signing
+     * - Convert prepared tx (serialized) into a signed tx
+     * - Delegates signing to SuiTxService
+     *
+     * @param param - Signing parameters
+     * @param param.bot - Bot signer context
+     * @param param.prepareTx - Prepared transaction (serialized)
+     *
+     * @returns Signed transaction
+     *
+     * @throws If signing fails in SuiTxService
+     */
+    async sign(
+        { bot, prepareTx }: SignOpenPositionParams
+    ): Promise<SignOpenPositionResult> {
+        const signedTx = await this.suiTxService.signTx({
+            bot,
+            prepareTx,
+        })
+
+        return {
+            signedTx 
+        }
+    }
+
+    /**
+     * Executes a signed FlowX open position transaction.
+     *
+     * Stage: idempotency check (optional)
+     * - If txCheck is enabled and not stimulating, attempt to fetch transaction block
+     * - If found, parse events and return immediately
+     *
+     * Stage: simulation (optional)
+     * - If stimulate is enabled, dev-inspect/stimulate and parse events
+     *
+     * Stage: execution
+     * - Execute on-chain and parse events to extract position ID
+     *
+     * @param param - Execution parameters
+     * @param param.bot - Bot context
+     * @param param.txCheck - Whether to check if the tx already exists on-chain
+     * @param param.stimulate - Whether to simulate instead of executing on-chain
+     * @param param.signedTx - Signed transaction to execute
+     * @param param.state - Current CLMM state (for context)
+     * @param param.liquidityPool - Liquidity pool context
+     *
+     * @returns Position ID and transaction hash
+     *
+     * @throws {TransactionEventNotFoundException} If expected event is missing
+     * @throws Execution-related exceptions thrown by Sui services
      */
     async execute(
-        {
-            bot,
-            txCheck,
-            stimulate,
-            signedTxs,
-            state,
-            liquidityPool,
+        { 
+            bot, 
+            txCheck, 
+            stimulate, 
+            signedTx, 
+            state, 
+            liquidityPool 
         }: ExecuteOpenPositionParams
     ): Promise<ExecuteOpenPositionResult> {
-        // Sui requires exactly 1 transaction
-        if (signedTxs.length !== 1) {
-            throw new SuiSingleTransactionRequiredException({
-                botId: bot.id,
-                type: TransactionType.OpenPosition,
-                numTxs: signedTxs.length,
-            })
-        }
-
-        const [signedTx] = signedTxs
         const _state = state as ClmmLiquidityPoolState
-
-        // check if transaction already exists on-chain
+        // Stage: idempotency check (optional)
         if (txCheck && !stimulate) {
             const txBlock = await this.suiFetchService.fetchTransactionBlock({
                 txHash: signedTx.txHash,
             })
 
-            // return if transaction already executed successfully
             if (txBlock) {
                 const { positionId } = this.parseIncreaseLiquidityEvent({
                     state: _state,
@@ -270,29 +365,20 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
 
                 return {
                     positionId,
-                    txHashes: [signedTx.txHash],
+                    txHash: signedTx.txHash,
                 }
             }
         }
 
-        // must have messageWithBytes / signatureWithBytes
-        if (!signedTx.signatureWithBytes) {
-            throw new MissingSuiMessageWithBytesParamException({
-                botId: bot.id,
-                type: TransactionType.OpenPosition,
-            })
-        }
-
-        // stimulate
+        // Stage: simulation (optional)
         if (stimulate) {
-            const result = await this.suiStimulateService.stimulate({
+            const { txHash, events } = await this.suiStimulateService.stimulate({
                 signedTx,
                 bot,
                 transactionType: TransactionType.OpenPosition,
                 liquidityPool,
             })
 
-            const { txHash, events } = result
             const { positionId } = this.parseIncreaseLiquidityEvent({
                 state: _state,
                 bot,
@@ -303,11 +389,11 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
 
             return {
                 positionId,
-                txHashes: [txHash],
+                txHash,
             }
         }
 
-        // execute on-chain
+        // Stage: execution
         const { txHash, events } = await this.suiExecuteService.execute({
             signedTx,
             bot,
@@ -325,7 +411,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
 
         return {
             positionId,
-            txHashes: [txHash],
+            txHash,
         }
     }
 }

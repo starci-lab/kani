@@ -6,54 +6,32 @@ import {
     PrepareReconcileBalanceTransactionResult,
     ExecuteReconcileBalanceTransactionParams,
     ExecuteReconcileBalanceTransactionResult,
+    SignReconcileBalanceTransactionParams,
+    SignReconcileBalanceTransactionResult,
 } from "../types"
 import {
-    PrivyPublicKeyNotFoundException,
-    EncryptedPrivySignerPrivateKeyNotFoundException,
-    MissingSuiMessageWithBytesParamException,
     TransactionType,
     TransactionNotFoundException,
     OutputCoinNotFoundException,
-    TransactionExecutionFailedException,
-    TransactionSubmitFailedException,
-    TransactionStimulatedFailedException,
 } from "@modules/exceptions"
 import {
-    AppVersion
-} from "@modules/databases"
-import {
-    RpcAccessType 
-} from "@modules/filesystem"
-import {
     Transaction,
-    TransactionDataBuilder 
 } from "@mysten/sui/transactions"
 import {
     SuiAggregatorSelectorService,
 } from "../../aggregators"
 import {
-    RpcExecutorService,
+    SuiTxService,
+    SuiFetchService,
+    SuiStimulateService,
+    SuiExecuteService,
 } from "../../clients"
-import {
-    SignerService,
-} from "../../signers"
 import {
     SelectCoinsService,
 } from "../../tx-builder"
 import {
-    PrivySignService 
-} from "@modules/privy"
-import {
-    WinstonLog,
-    WinstonService 
-} from "@modules/winston"
-import {
-    AsyncService
-} from "@modules/mixin"
-import type {
-    SignatureWithBytes 
-} from "@mysten/sui/cryptography"
-
+    ChainId 
+} from "@modules/common"
 /**
  * Service for handling balance reconciliation on Sui.
  * Orchestrates swap transactions to reconcile balances between tokens.
@@ -67,12 +45,11 @@ import type {
 export class SuiReconcileBalanceActionService {
     constructor(
         private readonly suiAggregatorSelectorService: SuiAggregatorSelectorService,
-        private readonly rpcExecutorService: RpcExecutorService,
-        private readonly privySignService: PrivySignService,
-        private readonly signerService: SignerService,
-        private readonly winstonService: WinstonService,
         private readonly selectCoinsService: SelectCoinsService,
-        private readonly asyncService: AsyncService,
+        private readonly suiTxService: SuiTxService,
+        private readonly suiFetchService: SuiFetchService,
+        private readonly suiStimulateService: SuiStimulateService,
+        private readonly suiExecuteService: SuiExecuteService,
     ) { }
 
     /**
@@ -152,82 +129,37 @@ export class SuiReconcileBalanceActionService {
                 bot.accountAddress)
         }
         
-        // build transaction bytes
-        const bytes = await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Http,
-            callback: async ({ suiClient }) => {
-                return await txb.build({
-                    client: suiClient,
-                })
-            },
-        })
-        
-        const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
-        
-        // sign transaction based on bot version
-        let signatureWithBytes: SignatureWithBytes | undefined
-
-        if (bot.version === AppVersion.V1) {
-            // sign with V1 signer
-            signatureWithBytes = await this.signerService.withSuiSigner({
-                bot,
-                action: async (signer) => {
-                    return await signer.signTransaction(bytes)
-                },
-            })
-        } else {
-            // validate privy metadata for V2 bots
-            if (!bot.privyMetadata?.walletPublicKey) {
-                throw new PrivyPublicKeyNotFoundException({
-                    botId: bot.id,
-                })
-            }
-            if (!bot.privyMetadata?.walletId) {
-                throw new PrivyPublicKeyNotFoundException({
-                    botId: bot.id,
-                })
-            }
-            if (!bot.encryptedPrivySignerPrivateKeyPayload) {
-                throw new EncryptedPrivySignerPrivateKeyNotFoundException({
-                    botId: bot.id,
-                })
-            }
-            
-            // store validated values for use in callback
-            const privyMetadata = bot.privyMetadata
-            const encryptedPrivySignerPrivateKey = bot.encryptedPrivySignerPrivateKeyPayload
-            
-            // sign with Privy gas sponsor
-            const signed = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Http,
-                callback: async ({ suiClient }) => {
-                    return await this.privySignService.signSuiTransaction({
-                        publicKeyHex: privyMetadata.walletPublicKey!,
-                        client: suiClient,
-                        walletId: privyMetadata.walletId!,
-                        transaction: txb,
-                        encryptedPrivySignerPrivateKey: encryptedPrivySignerPrivateKey,
-                    })
-                },
-            })
-            signatureWithBytes = signed.signatureWithBytes
-        }
-        
-        const transaction = {
-            txHash,
-            signatureWithBytes,
-        }
-        const prepareTxs = [
-            {
-                txHash: transaction.txHash,
-                signatureWithBytes: transaction.signatureWithBytes,
-            }
-        ]
         return {
-            prepareTxs,
+            prepareTxs: [
+                {
+                    chainId: ChainId.Sui,
+                    serializedTx: await txb.toJSON(),
+                },
+            ],
         }
     }
 
+    /**
+     * Signs a reconcile balance transaction.
+     *
+     * @param param - Parameters for signing reconcile balance transaction
+     * @returns Signed transaction
+     *
+     * @example
+     * const signedTx = await service.sign({ bot, prepareTx })
+     */
+    public async sign(
+        { 
+            bot, 
+            prepareTx 
+        }: SignReconcileBalanceTransactionParams
+    ): Promise<SignReconcileBalanceTransactionResult> {
+        return {
+            signedTx: await this.suiTxService.signTx({
+                bot, prepareTx 
+            })
+        }
+    }
     /**
      * Executes swap transactions for balance reconciliation.
      *
@@ -240,135 +172,44 @@ export class SuiReconcileBalanceActionService {
     public async execute(
         { 
             bot, 
-            prepareTxs, 
+            signedTx, 
             isRetry = false, 
             stimulate = false 
         }: ExecuteReconcileBalanceTransactionParams): Promise<ExecuteReconcileBalanceTransactionResult> {
-        const txHashes: Array<string> = []
-        for (const prepareTx of prepareTxs) {
-            // check if transaction already exists on chain (for retries)
-            if (isRetry && !stimulate) {
-                const transaction = await this.rpcExecutorService.withSuiClient({
-                    accessType: RpcAccessType.Http,
-                    callback: async ({ suiClient }) => {
-                        const [transaction] = await this.asyncService.resolveTuple( 
-                            suiClient.getTransactionBlock({
-                                digest: prepareTx.txHash,
-                                options: {
-                                    showEffects: true,
-                                },
-                            })
-                        )
-                        return transaction
-                    },
-                })
-                
-                // skip if transaction already exists and is successful
-                if (transaction && transaction.effects?.status?.status === "success") {
-                    this.winstonService.log(
-                        WinstonLog.ReconcileBalanceTransactionFound,
-                        {
-                            botId: bot.id,
-                            txHash: prepareTx.txHash,
-                        }
-                    )
-                    txHashes.push(prepareTx.txHash)
-                    continue
+        // check if transaction already exists on chain (for retries)
+        if (isRetry && !stimulate) {
+            const txBlock = await this.suiFetchService.fetchTransactionBlock({
+                txHash: signedTx.txHash,
+            })
+            if (txBlock) {
+                return {
+                    txHash: signedTx.txHash,
                 }
-            }
-            
-            // validate signature exists
-            const { signatureWithBytes } = prepareTx
-            if (!signatureWithBytes) {
-                throw new MissingSuiMessageWithBytesParamException({
-                    botId: bot.id,
-                    type: TransactionType.ReconcileBalance,
-                })
-            }
-            
-            // execute or simulate transaction
-            if (stimulate) {
-                // simulate transaction without sending
-                const transactionBlock = Transaction.from(signatureWithBytes.bytes)
-                const devInspect = await this.rpcExecutorService.withSuiClient(
-                    {
-                        accessType: RpcAccessType.Http,
-                        callback: async ({ suiClient }) => {
-                            return await suiClient.devInspectTransactionBlock(
-                                {
-                                    transactionBlock,
-                                    sender: bot.accountAddress,
-                                }
-                            )
-                        },
-                    })
-                
-                if (devInspect.effects.status.status !== "success") {
-                    throw new TransactionSubmitFailedException({
-                        originalError: new TransactionStimulatedFailedException({
-                            botId: bot.id,
-                            txHash: devInspect.effects.transactionDigest,
-                            type: TransactionType.ReconcileBalance,
-                        }),
-                        message: devInspect.effects.status.error ?? "Unknown error",
-                    })
-                }
-                
-                this.winstonService.log(
-                    WinstonLog.ReconcileBalanceTransactionStimulated,
-                    {
-                        botId: bot.id,
-                        txHash: prepareTx.txHash,
-                    }
-                )
-                txHashes.push(prepareTx.txHash)
-            } else {
-                // execute transaction
-                const { digest, effects } = await this.rpcExecutorService.withSuiClient({
-                    accessType: RpcAccessType.Write,
-                    callback: async ({ suiClient }) => {
-                        return await suiClient.executeTransactionBlock({
-                            transactionBlock: signatureWithBytes.bytes,
-                            signature: signatureWithBytes.signature,
-                            options: {
-                                showEffects: true,
-                            },
-                        })
-                    },
-                })
-                
-                if (effects?.status?.status !== "success") {
-                    throw new TransactionSubmitFailedException({
-                        originalError: new TransactionExecutionFailedException({
-                            botId: bot.id,
-                            txHash: digest,
-                            type: TransactionType.ReconcileBalance,
-                        }),
-                        message: effects?.status?.error ?? "Unknown error",
-                    })
-                }
-                // wait for transaction confirmation
-                await this.rpcExecutorService.withSuiClient({
-                    accessType: RpcAccessType.Http,
-                    callback: async ({ suiClient }) => {
-                        return await suiClient.waitForTransaction({
-                            digest 
-                        })
-                    },
-                })
-                
-                this.winstonService.log(
-                    WinstonLog.ReconcileBalanceTransactionExecuted,
-                    {
-                        botId: bot.id,
-                        txHash: prepareTx.txHash,
-                    }
-                )
-                txHashes.push(prepareTx.txHash)
             }
         }
-        return {
-            txHashes,
+        
+      
+        // execute or simulate transaction
+        if (stimulate) {
+            const { txHash } = await this.suiStimulateService.stimulate({
+                signedTx,
+                bot,
+                transactionType: TransactionType.ReconcileBalance,
+            })
+            return {
+                txHash,
+            }
+        } else {
+            // execute transaction
+            const { txHash } = await this.suiExecuteService.execute({
+                signedTx,
+                bot,
+                transactionType: TransactionType.ReconcileBalance,
+            })
+
+            return {
+                txHash,
+            }
         }
     }
 }

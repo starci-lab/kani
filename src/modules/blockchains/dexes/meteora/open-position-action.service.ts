@@ -68,6 +68,7 @@ import {
 import {
     PrivySignService
 } from "@modules/privy"
+import { ChainId } from "@modules/common"
 
 /**
  * Service responsible for opening positions on Meteora DEX.
@@ -224,6 +225,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                     txHash,
                     liquidityPoolId: liquidityPool.displayId,
                     type: TransactionType.OpenPosition,
+                    chainId: ChainId.Solana,
                 })
             }
         } else {
@@ -274,6 +276,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                         botId: bot.id,
                         txHash: signedTransaction.txHash,
                         type: TransactionType.OpenPosition,
+                        chainId: ChainId.Solana,
                     }
                 )
             }
@@ -300,6 +303,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                     txHash: signedTransaction.txHash,
                     liquidityPoolId: liquidityPool.displayId,
                     type: TransactionType.OpenPosition,
+                    chainId: ChainId.Solana,
                 })
             }
         }
@@ -336,7 +340,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         txCheck,
         positionId,
         stimulate,
-        prepareTxs,
+        signedTx,
         liquidityPool,
     }: ExecuteOpenPositionParams): Promise < ExecuteOpenPositionResult > {
     // Stage: input validation (position ID must be provided)
@@ -348,8 +352,6 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         }
         const txHashes: Array<string> =[]
 
-        // Process each prepared transaction
-        for(const prepareTx of prepareTxs) {
         // Stage: transaction checking (if txCheck is enabled and not stimulating)
             if (txCheck && !stimulate) {
                 const transaction = await this.rpcExecutorService.withSolanaRpc({

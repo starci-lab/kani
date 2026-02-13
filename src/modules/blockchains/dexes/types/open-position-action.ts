@@ -8,6 +8,7 @@ import {
 } from "decimal.js"
 import {
     LiquidityPoolState,
+    PrepareTx,
     SignedTx
 } from "../../types"
 
@@ -24,7 +25,7 @@ export interface PrepareOpenPositionParams {
  * Result of preparing an open position transaction.
  */
 export interface PrepareOpenPositionResult {
-    signedTxs: Array<SignedTx>
+    prepareTxs: Array<PrepareTx>
     feeAmountA: BN
     feeAmountB: BN
     tickLower?: BN
@@ -44,7 +45,7 @@ export interface ExecuteOpenPositionParams {
     bot: BotSchema
     state: LiquidityPoolState
     txCheck: boolean
-    signedTxs: Array<SignedTx>
+    signedTx: SignedTx
     positionId?: string
     stimulate?: boolean
     liquidityPool: LiquidityPoolSchema
@@ -55,7 +56,7 @@ export interface ExecuteOpenPositionParams {
  */
 export interface ExecuteOpenPositionResult {
     positionId: string
-    txHashes: Array<string>
+    txHash: string
 } 
 
 /**
@@ -117,4 +118,34 @@ export interface ConfirmOpenPositionParams {
  */
 export interface ConfirmOpenPositionResult {
     liquidity?: BN
+}
+
+/**
+ * Parameters for signing an open position.
+ */
+export interface SignOpenPositionParams {
+    prepareTx: PrepareTx
+    bot: BotSchema
+}
+
+/**
+ * Result of signing an open position.
+ */
+export interface SignOpenPositionResult {
+    signedTx: SignedTx
+}
+    
+/**
+ * Parameters for signing an open position.
+ */
+export interface SignClosePositionParams {
+    prepareTx: PrepareTx
+    bot: BotSchema
+}
+
+/**
+ * Result of signing an open position.
+ */
+export interface SignClosePositionResult {
+    signedTx: SignedTx
 }

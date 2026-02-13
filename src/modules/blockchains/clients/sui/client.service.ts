@@ -24,7 +24,7 @@ import {
     SuiRpcRetryableException,
     SuiRpcFatalException,
     SuiRpcIgnorableException,
-    TransactionSubmitFailedException,
+    RpcClientFatalException,
 } from "@modules/exceptions"
 import {
     WithSuiClientParams
@@ -114,9 +114,13 @@ export class SuiClientService {
                                 })
                                 switch (errorType) {
                                 case RpcErrorType.TransactionSubmitFailed:
-                                    throw new AbortError(new TransactionSubmitFailedException({
-                                        message: error?.message, originalError: error 
-                                    }))
+                                    throw new AbortError(
+                                        new RpcClientFatalException(
+                                            {
+                                                message: error?.message, 
+                                                originalError: error 
+                                            }
+                                        ))
                                 case RpcErrorType.Fatal:
                                     throw new AbortError(new SuiRpcFatalException(error?.message))
                                 case RpcErrorType.Retryable:

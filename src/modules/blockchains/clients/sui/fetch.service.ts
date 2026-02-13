@@ -20,7 +20,7 @@ import {
 } from "@modules/mixin"
 import {
     SuiTransactionBlockResponse 
-} from "@mysten/sui/dist/cjs/client"
+} from "@mysten/sui/client"
 
 /**
  * Service for fetching a Sui object by ID.

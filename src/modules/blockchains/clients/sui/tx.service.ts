@@ -17,6 +17,7 @@ import {
     SignSuiTransactionParams
 } from "./types"
 import {
+    Transaction,
     TransactionDataBuilder 
 } from "@mysten/sui/transactions"
 import {
@@ -30,6 +31,13 @@ import {
     PrivyMetadataNotFoundException, 
     PrivyPublicKeyNotFoundException 
 } from "@modules/exceptions"
+import {
+    InjectSuperJson 
+} from "@modules/mixin"
+import SuperJSON from "superjson"
+import {
+    ChainId 
+} from "@modules/common"
 /**
  * Service for building Sui transactions.
  */
@@ -39,6 +47,8 @@ export class SuiTxService {
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly signerService: SignerService,
         private readonly privySignService: PrivySignService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
     ) {}
     /**
      * Builds a Sui transaction.
@@ -50,16 +60,20 @@ export class SuiTxService {
     async signTx(
         { 
             bot, 
-            tx 
+            prepareTx 
         }: SignSuiTransactionParams
     ): Promise<SignedTx> {
+        // parse transaction from serialized tx
+        const txb = Transaction.from(prepareTx.serializedTx)
         // build transaction bytes
         const bytes = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
-                return await tx.build({
-                    client: suiClient,
-                })
+                return await txb.build(
+                    {
+                        client: suiClient,
+                    }
+                )
             },
         })
         // sign transaction bytes
@@ -75,7 +89,8 @@ export class SuiTxService {
             const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
             signedTx = {
                 txHash,
-                signatureWithBytes
+                signedSerializedTx: this.superJson.stringify(signatureWithBytes),
+                chainId: ChainId.Sui,
             }
         } else {
             // sign with Privy signer
@@ -103,7 +118,7 @@ export class SuiTxService {
                             publicKeyHex: bot.privyMetadata.walletPublicKey,
                             client: suiClient,
                             walletId: bot.privyMetadata.walletId,
-                            transaction: tx,
+                            transaction: txb,
                             encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                         }
                     )
@@ -115,7 +130,8 @@ export class SuiTxService {
             })
             signedTx = {
                 txHash,
-                signatureWithBytes,
+                signedSerializedTx: this.superJson.stringify(signatureWithBytes),
+                chainId: ChainId.Sui,
             }
         }
         return signedTx

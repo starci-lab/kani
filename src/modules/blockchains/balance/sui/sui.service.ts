@@ -45,7 +45,9 @@ export class SuiBalanceService implements IBalanceActionService {
      * @example
      * const result = await service.prepareReconcileBalanceTransaction({ bot, tokenInputs })
      */
-    public async prepareReconcileBalanceTransaction(param: PrepareReconcileBalanceTransactionParams): Promise<PrepareReconcileBalanceTransactionResult> {
+    public async prepareReconcileBalanceTransaction(
+        param: PrepareReconcileBalanceTransactionParams
+    ): Promise<PrepareReconcileBalanceTransactionResult> {
         return await this.suiReconcileBalanceActionService.prepare(param)
     }
 
@@ -58,7 +60,9 @@ export class SuiBalanceService implements IBalanceActionService {
      * @example
      * const result = await service.executeReconcileBalanceTransaction({ bot, prepareTxs })
      */
-    public async executeReconcileBalanceTransaction(param: ExecuteReconcileBalanceTransactionParams): Promise<ExecuteReconcileBalanceTransactionResult> {
+    public async executeReconcileBalanceTransaction(
+        param: ExecuteReconcileBalanceTransactionParams
+    ): Promise<ExecuteReconcileBalanceTransactionResult> {
         return await this.suiReconcileBalanceActionService.execute(param)
     }
 
@@ -71,7 +75,9 @@ export class SuiBalanceService implements IBalanceActionService {
      * @example
      * const result = await service.prepareWithdrawTransaction({ bot, tokenInputs, toAddress })
      */
-    public async prepareWithdrawTransaction(param: PrepareWithdrawTransactionParams): Promise<PrepareWithdrawTransactionResult> {
+    public async prepareWithdrawTransaction(
+        param: PrepareWithdrawTransactionParams
+    ): Promise<PrepareWithdrawTransactionResult> {
         return await this.suiWithdrawActionService.prepare(param)
     }
 
@@ -84,7 +90,9 @@ export class SuiBalanceService implements IBalanceActionService {
      * @example
      * const result = await service.executeWithdrawTransaction({ bot, prepareTxs })
      */
-    public async executeWithdrawTransaction(param: ExecuteWithdrawTransactionParams): Promise<ExecuteWithdrawTransactionResult> {
+    public async executeWithdrawTransaction(
+        param: ExecuteWithdrawTransactionParams
+    ): Promise<ExecuteWithdrawTransactionResult> {
         return await this.suiWithdrawActionService.execute(param)
     }
 }

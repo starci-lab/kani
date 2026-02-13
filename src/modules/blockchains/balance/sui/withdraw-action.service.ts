@@ -8,57 +8,32 @@ import {
     ExecuteWithdrawTransactionResult,
 } from "../types"
 import {
-    PrepareTx,
-} from "../../types"
-import {
-    PrivyPublicKeyNotFoundException,
-    EncryptedPrivySignerPrivateKeyNotFoundException,
-    MissingSuiMessageWithBytesParamException,
     TransactionType,
     TokenNotFoundException,
     TransactionNotFoundException,
     OutputCoinNotFoundException,
-    TransactionSubmitFailedException,
-    TransactionExecutionFailedException,
-    TransactionStimulatedFailedException,
 } from "@modules/exceptions"
 import {
-    AppVersion,
     TokenId,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
-    RpcAccessType,
-} from "@modules/filesystem"
-import {
     Transaction,
-    TransactionDataBuilder,
 } from "@mysten/sui/transactions"
 import {
     SuiAggregatorSelectorService,
 } from "../../aggregators"
 import {
-    RpcExecutorService,
+    SuiFetchService,
+    SuiStimulateService,
+    SuiExecuteService,
 } from "../../clients"
-import {
-    SignerService,
-} from "../../signers"
 import {
     SelectCoinsService,
 } from "../../tx-builder"
 import {
-    PrivySignService,
-} from "@modules/privy"
-import {
-    WinstonLog,
-    WinstonService,
-} from "@modules/winston"
-import {
-    AsyncService,
-} from "@modules/mixin"
-import {
-    SignatureWithBytes,
-} from "@mysten/sui/cryptography"
+    ChainId,
+} from "@modules/common"
 
 /**
  * Service for handling withdraw transactions on Sui.
@@ -72,14 +47,12 @@ import {
 @Injectable()
 export class SuiWithdrawActionService {
     constructor(
-        private readonly rpcExecutorService: RpcExecutorService,
         private readonly suiAggregatorSelectorService: SuiAggregatorSelectorService,
-        private readonly signerService: SignerService,
-        private readonly privySignService: PrivySignService,
-        private readonly winstonService: WinstonService,
         private readonly selectCoinsService: SelectCoinsService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly asyncService: AsyncService,
+        private readonly suiFetchService: SuiFetchService,
+        private readonly suiStimulateService: SuiStimulateService,
+        private readonly suiExecuteService: SuiExecuteService,
     ) {
     }
 
@@ -93,7 +66,13 @@ export class SuiWithdrawActionService {
      * @example
      * const prepareTxs = await service.prepare({ bot, tokenInputs, toAddress, toUsdc: true })
      */
-    public async prepare({ bot, tokenInputs, toAddress, toUsdc = false }: PrepareWithdrawTransactionParams): Promise<PrepareWithdrawTransactionResult> {
+    public async prepare(
+        { 
+            bot, 
+            tokenInputs, 
+            toAddress, 
+            toUsdc = false 
+        }: PrepareWithdrawTransactionParams): Promise<PrepareWithdrawTransactionResult> {
         // initialize transaction block
         let txb = new Transaction()
         txb.setSender(bot.accountAddress)
@@ -261,73 +240,13 @@ export class SuiWithdrawActionService {
             continue
         }
 
-        // build transaction bytes
-        const bytes = await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Http,
-            callback: async ({ suiClient }) => {
-                return await txb.build({
-                    client: suiClient,
-                })
-            },
-        })
-        
-        const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
-        
-        // sign transaction based on bot version
-        let signatureWithBytes: SignatureWithBytes | undefined
-
-        if (bot.version === AppVersion.V1) {
-            // sign with V1 signer
-            signatureWithBytes = await this.signerService.withSuiSigner({
-                bot,
-                action: async (signer) => await signer.signTransaction(bytes),
-            })
-        } else {
-            // validate privy metadata for V2 bots
-            if (!bot.privyMetadata?.walletPublicKey) {
-                throw new PrivyPublicKeyNotFoundException({
-                    botId: bot.id,
-                })
-            }
-            if (!bot.privyMetadata?.walletId) {
-                throw new PrivyPublicKeyNotFoundException({
-                    botId: bot.id,
-                })
-            }
-            if (!bot.encryptedPrivySignerPrivateKeyPayload) {
-                throw new EncryptedPrivySignerPrivateKeyNotFoundException({
-                    botId: bot.id,
-                })
-            }
-            
-            // store validated values for use in callback
-            const privyMetadata = bot.privyMetadata
-            const encryptedPrivySignerPrivateKey = bot.encryptedPrivySignerPrivateKeyPayload
-            
-            // sign with Privy gas sponsor
-            const signed = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Http,
-                callback: async ({ suiClient }) => {
-                    return await this.privySignService.signSuiTransaction({
-                        publicKeyHex: privyMetadata.walletPublicKey!,
-                        client: suiClient,
-                        walletId: privyMetadata.walletId!,
-                        transaction: txb,
-                        encryptedPrivySignerPrivateKey: encryptedPrivySignerPrivateKey,
-                    })
-                },
-            })
-            signatureWithBytes = signed.signatureWithBytes
-        }
-
-        const prepareTxs: Array<PrepareTx> = [
-            {
-                txHash,
-                signatureWithBytes,
-            },
-        ]
         return {
-            prepareTxs,
+            prepareTxs: [
+                {
+                    chainId: ChainId.Sui,
+                    serializedTx: await txb.toJSON(),
+                },
+            ],
         }
     }
 
@@ -335,147 +254,50 @@ export class SuiWithdrawActionService {
      * Executes withdraw transactions.
      *
      * @param param - Parameters for executing withdraw transaction
-     * @returns Array of transaction hashes
+     * @returns Transaction hash
      *
      * @example
-     * const txHashes = await service.execute({ bot, prepareTxs })
+     * const txHash = await service.execute({ bot, signedTx })
      */
     public async execute(
         { 
             bot, 
-            prepareTxs, 
+            signedTx, 
             isRetry = false, 
             stimulate = false 
-        }: ExecuteWithdrawTransactionParams): Promise<ExecuteWithdrawTransactionResult> {
-        if (prepareTxs.length === 0) {
-            return {
-                txHashes: [],
+        }: ExecuteWithdrawTransactionParams): 
+        Promise<ExecuteWithdrawTransactionResult> {
+        // check if transaction already exists on chain (for retries)
+        if (isRetry && !stimulate) {
+            const txBlock = await this.suiFetchService.fetchTransactionBlock({
+                txHash: signedTx.txHash,
+            })
+            if (txBlock) {
+                return {
+                    txHash: signedTx.txHash,
+                }
             }
         }
         
-        const txHashes: Array<string> = []
-        for (const prepareTx of prepareTxs) {
-            // check if transaction already exists on chain (for retries)
-            if (isRetry && !stimulate) {
-                const transaction = await this.rpcExecutorService.withSuiClient({
-                    accessType: RpcAccessType.Http,
-                    callback: async ({ suiClient }) => {
-                        const [transaction] = await this.asyncService.resolveTuple(
-                            suiClient.getTransactionBlock({
-                                digest: prepareTx.txHash,
-                                options: {
-                                    showEffects: true,
-                                },
-                            }),
-                        )
-                        return transaction
-                    },
-                })
-                
-                // skip if transaction already exists and is successful
-                if (transaction && transaction.effects?.status?.status === "success") {
-                    this.winstonService.log(
-                        WinstonLog.WithdrawTransactionFound,
-                        {
-                            botId: bot.id,
-                            txHash: prepareTx.txHash,
-                        },
-                    )
-                    txHashes.push(prepareTx.txHash)
-                    continue
-                }
-            }
-
-            // validate signature exists
-            const { signatureWithBytes } = prepareTx
-            if (!signatureWithBytes) {
-                throw new MissingSuiMessageWithBytesParamException({
-                    botId: bot.id,
-                    type: TransactionType.Withdraw,
-                })
-            }
-
-            // execute or simulate transaction
-            if (stimulate) {
-                // simulate transaction without sending
-                const transactionBlock = Transaction.from(signatureWithBytes.bytes)
-                const devInspect = await this.rpcExecutorService.withSuiClient({
-                    accessType: RpcAccessType.Http,
-                    callback: async ({ suiClient }) => {
-                        return await suiClient.devInspectTransactionBlock({
-                            transactionBlock,
-                            sender: bot.accountAddress,
-                        })
-                    },
-                })
-                
-                if (devInspect.effects.status.status !== "success") {
-                    throw new TransactionSubmitFailedException({
-                        originalError: new TransactionStimulatedFailedException({
-                            botId: bot.id,
-                            txHash: devInspect.effects.transactionDigest,
-                            type: TransactionType.Withdraw,
-                        }),
-                        message: devInspect.effects.status.error ?? "Unknown error",
-                    })
-                }
-                
-                this.winstonService.log(
-                    WinstonLog.WithdrawTransactionStimulated,
-                    {
-                        botId: bot.id,
-                        txHash: prepareTx.txHash,
-                    },
-                )
-                txHashes.push(prepareTx.txHash)
-            } else {
-                // execute transaction
-                const { digest, effects } = await this.rpcExecutorService.withSuiClient({
-                    accessType: RpcAccessType.Write,
-                    callback: async ({ suiClient }) => {
-                        return await suiClient.executeTransactionBlock({
-                            transactionBlock: signatureWithBytes.bytes,
-                            signature: signatureWithBytes.signature,
-                            options: {
-                                showEffects: true,
-                            },
-                        })
-                    },
-                })  
-
-                if (effects?.status?.status !== "success") {
-                    throw new TransactionSubmitFailedException({
-                        originalError: new TransactionExecutionFailedException({
-                            botId: bot.id,
-                            txHash: digest,
-                            type: TransactionType.Withdraw,
-                        }),
-                        message: effects?.status?.error ?? "Unknown error",
-                    })
-                }
-                // wait for transaction confirmation
-                await this.rpcExecutorService.withSuiClient({
-                    accessType: RpcAccessType.Http,
-                    callback: async ({ suiClient }) => {
-                        return await suiClient.waitForTransaction({
-                            digest
-                        })
-                    },
-                })
-                
-                this.winstonService.log(
-                    WinstonLog.WithdrawTransactionExecuted,
-                    {
-                        botId: bot.id,
-                        txHash: prepareTx.txHash,
-                    },
-                )
-                txHashes.push(prepareTx.txHash)
+        // execute or simulate transaction
+        if (stimulate) {
+            const { txHash } = await this.suiStimulateService.stimulate({
+                signedTx,
+                bot,
+                transactionType: TransactionType.Withdraw,
+            })
+            return {
+                txHash,
             }
         }
-
+        // execute transaction
+        const { txHash } = await this.suiExecuteService.execute({
+            signedTx,
+            bot,
+            transactionType: TransactionType.Withdraw,
+        })
         return {
-            txHashes,
+            txHash,
         }
     }
 }

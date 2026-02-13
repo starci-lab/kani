@@ -15,7 +15,6 @@ import {
     EncryptedPrivySignerPrivateKeyNotFoundException, 
     MissingSolanaTxParamException,
     TransactionStimulatedFailedException,
-    TransactionSubmitFailedException,
     TransactionExecutionFailedException,
 } from "@modules/exceptions"
 import {
@@ -204,7 +203,7 @@ export class SolanaReconcileBalanceActionService {
                     },
                 })
                 if (simulateResult.value.err) {
-                    throw new TransactionSubmitFailedException({
+                    throw new TransactionStimulateFailedException({
                         message: simulateResult.value.err.toString(),
                         originalError: new TransactionStimulatedFailedException({
                             botId: bot.id,

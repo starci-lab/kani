@@ -1,5 +1,5 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
     ExecuteClosePositionParams,
@@ -7,27 +7,30 @@ import {
     PrepareClosePositionParams,
     PrepareClosePositionResult,
     ExecuteClosePositionResult,
+    SignClosePositionParams,
+    SignClosePositionResult,
 } from "../types"
-import { 
-    ClosePositionTxbService, 
+import {
+    ClosePositionTxbService,
 } from "./transactions"
-import { 
+import {
     ActivePositionNotFoundException,
-    TransactionNotPreparedException,
     TransactionType,
-    SuiSingleTransactionRequiredException,
 } from "@modules/exceptions"
 import {
-    SuiTxService,
     SuiStimulateService,
     SuiExecuteService,
+    SuiTxService,
 } from "../../clients"
 import {
-    SuiFetchService 
+    SuiFetchService
 } from "../../clients"
 import {
     ClmmLiquidityPoolState,
 } from "../../types"
+import {
+    ChainId
+} from "@modules/common"
 
 /**
  * Service responsible for closing positions on Cetus DEX.
@@ -41,11 +44,11 @@ import {
 export class CetusClosePositionActionService implements IClosePositionActionService {
     constructor(
         private readonly closePositionTxbService: ClosePositionTxbService,
-        private readonly suiTxService: SuiTxService,
         private readonly suiStimulateService: SuiStimulateService,
         private readonly suiFetchService: SuiFetchService,
         private readonly suiExecuteService: SuiExecuteService,
-    ) {}
+        private readonly suiTxService: SuiTxService,
+    ) { }
 
     /**
      * Prepares a close position transaction.
@@ -61,19 +64,17 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
      * const result = await service.prepare({ bot, state })
      */
     async prepare(
-        { 
-            bot, 
-            state, 
-            liquidityPool 
+        {
+            bot,
+            state,
+            liquidityPool
         }: PrepareClosePositionParams): Promise<PrepareClosePositionResult> {
         const _state = state as ClmmLiquidityPoolState
         // Stage: state validation (close requires an active position)
-        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
-            throw new ActivePositionNotFoundException(
-                {
-                    botId: bot.id,
-                }
-            )
+        if (!bot.activePosition) {
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
         }
         // create close position transaction builder
         const {
@@ -83,15 +84,35 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
             state: _state,
             liquidityPool,
         })
-        // sign transaction
-        const signedTx = await this.suiTxService.signTx(
-            {
-                bot,
-                tx: closePositionTxb,
-            }
-        )   
         return {
-            signedTxs: [signedTx],
+            prepareTxs: [
+                {
+                    chainId: ChainId.Sui,
+                    serializedTx: await closePositionTxb.toJSON()
+                }
+            ]
+        }
+    }
+
+    /**
+     * Signs a close position transaction.
+     *
+     * @param param - Parameters for signing close position
+     * @param param.bot - Bot schema
+     * @param param.prepareTx - Prepared transaction
+     * @returns Signed transaction
+     */
+    async sign(
+        {
+            bot, 
+            prepareTx
+        }: SignClosePositionParams
+    ): Promise<SignClosePositionResult> {
+        return {
+            signedTx: await this.suiTxService.signTx({
+                bot,
+                prepareTx,
+            }),
         }
     }
 
@@ -111,27 +132,15 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
      * const result = await service.execute({ bot, state, prepareTxs, txCheck, stimulate })
      */
     async execute(
-        { 
-            bot, 
-            txCheck, 
-            signedTxs, 
-            stimulate, 
-            liquidityPool 
-        }: ExecuteClosePositionParams): Promise<ExecuteClosePositionResult> {
-        // Sui requires exactly 1 transaction
-        if (signedTxs.length !== 1) {
-            throw new SuiSingleTransactionRequiredException(
-                {
-                    botId: bot.id,
-                    type: TransactionType.ClosePosition,
-                    numTxs: signedTxs.length,
-                }
-            )
-        }
-        // extract transaction details
-        const [signedTx] = signedTxs
+        {
+            bot,
+            txCheck,
+            signedTx,
+            stimulate,
+            liquidityPool
+        }: ExecuteClosePositionParams): Promise < ExecuteClosePositionResult > {
         // check if transaction already exists on-chain
-        if (txCheck && !stimulate) {
+        if(txCheck && !stimulate) {
             const txBlock = await this.suiFetchService.fetchTransactionBlock(
                 {
                     txHash: signedTx.txHash,
@@ -139,21 +148,12 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
             )
             if (txBlock) {
                 return {
-                    txHashes: [signedTx.txHash],
+                    txHash: signedTx.txHash,
                 }
             }
         }
-        
-        // validate signature exists
-        if (!signedTx.signatureWithBytes) {
-            throw new TransactionNotPreparedException({
-                botId: bot.id,
-                txHash: signedTx.txHash,
-                liquidityPoolId: liquidityPool.displayId,
-                type: TransactionType.ClosePosition,
-            })
-        }
-        
+
+        // Stage: simulation (optional)
         if (stimulate) {
             const result = await this.suiStimulateService.stimulate({
                 signedTx,
@@ -162,21 +162,23 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                 liquidityPool,
             })
             const { txHash } = result
+            // Stage: return result
             return {
-                txHashes: [txHash],
+                txHash,
             }
         }
-        
         // execute transaction on-chain
-        const { txHash } = await this.suiExecuteService.execute({
-            signedTx,
-            bot,
-            transactionType: TransactionType.ClosePosition,
-            liquidityPool,
-        })
-        
+        const { txHash } = await this.suiExecuteService.execute(
+            {
+                signedTx,
+                bot,
+                transactionType: TransactionType.ClosePosition,
+                liquidityPool,
+            }
+        )
+        // Stage: return result
         return {
-            txHashes: [txHash],
+            txHash,
         }
     }
 }

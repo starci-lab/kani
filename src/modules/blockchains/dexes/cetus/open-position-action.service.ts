@@ -8,6 +8,8 @@ import {
     IOpenActionService,
     PrepareOpenPositionParams,
     PrepareOpenPositionResult,
+    SignOpenPositionParams,
+    SignOpenPositionResult,
 } from "../types"
 import {
     ClmmLiquidityPoolState,
@@ -31,8 +33,6 @@ import {
     TransactionType,
     LiquidityPoolClmmStateNotFoundException,
     SlippageToleranceExceededException,
-    SuiSingleTransactionRequiredException,
-    MissingSuiMessageWithBytesParamException,
 } from "@modules/exceptions"
 import Decimal from "decimal.js"
 import {
@@ -40,10 +40,10 @@ import {
 } from "../types"
 import {
     SuiObjectKind,
-    SuiTxService,
     SuiFetchService,
     SuiStimulateService,
     SuiExecuteService,
+    SuiTxService,
 } from "../../clients"
 import {
     envConfig 
@@ -56,6 +56,13 @@ import {
     ParseAddLiquidityEventParams,
     ParseAddLiquidityEventResult
 } from "./types"
+import {
+    ChainId 
+} from "@modules/common"
+import {
+    InjectSuperJson 
+} from "@modules/mixin"
+import SuperJSON from "superjson"
 
 /**
  * Service responsible for opening positions on Cetus DEX.
@@ -72,9 +79,11 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         private readonly openPositionTxbService: OpenPositionTxbService,
         private readonly tickMathService: TickMathService,
         private readonly suiFetchService: SuiFetchService,
-        private readonly suiTxService: SuiTxService,
         private readonly suiExecuteService: SuiExecuteService,
         private readonly suiStimulateService: SuiStimulateService,
+        private readonly suiTxService: SuiTxService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
     ) {}
 
     /**
@@ -131,6 +140,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
      * @param param.txHash - Transaction hash
      * @param param.events - Array of Sui events
      * @returns Parsed event result with position ID
+     * @throws {TransactionEventNotFoundException} If add liquidity event is not found
      */
     private parseAddLiquidityEvent(
         { 
@@ -183,19 +193,20 @@ export class CetusOpenPositionActionService implements IOpenActionService {
      */
     async prepare(
         { 
-            bot, 
+            bot,
             state, 
             liquidityPool 
         }: PrepareOpenPositionParams
-    ): 
-        Promise<PrepareOpenPositionResult> {
+    ): Promise<PrepareOpenPositionResult> {
         // state
         const _state = state as ClmmLiquidityPoolState
         // validate balance snapshots exist
         if (!bot.balanceSnapshots) {
-            throw new BalanceSnapshotsNotFoundException({   
-                botId: bot.id,
-            })
+            throw new BalanceSnapshotsNotFoundException(
+                {   
+                    botId: bot.id,
+                }
+            )
         }
         // validate CLMM state exists
         if (
@@ -267,21 +278,48 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             liquidityPool,
             tickUpper,
         })
-        // sign transaction
-        const signedTx = await this.suiTxService.signTx(
-            {
-                bot,
-                tx: openPositionTxb,
-            }
-        )
         return {
-            signedTxs: [signedTx],
+            prepareTxs: [
+                {
+                    chainId: ChainId.Sui,
+                    serializedTx: this.superJson.stringify(
+                        openPositionTxb.getData()
+                    ),
+                }
+            ],
             feeAmountA,
             feeAmountB,
             tickLower,
             tickUpper,
         }
     }   
+
+    /**
+     * Signs an open position transaction.
+     *
+     * @param param - Parameters for signing open position
+     * @param param.bot - Bot schema
+     * @param param.prepareTx - Prepared transaction
+     * @returns Signed transaction
+     */
+    async sign(
+        {
+            bot,
+            prepareTx,
+        }: SignOpenPositionParams
+    ): Promise<SignOpenPositionResult> {
+        // sign transaction
+        const signedTx = await this.suiTxService.signTx(
+            {
+                bot,
+                prepareTx,
+            }
+        )
+        // return signed transaction
+        return {
+            signedTx,
+        }
+    }
     /**
      * Executes an open position transaction.
      * Handles transaction checking, stimulation, and execution.
@@ -302,23 +340,11 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             bot, 
             txCheck, 
             stimulate, 
-            signedTxs, 
+            signedTx, 
             state, 
             liquidityPool 
         }: ExecuteOpenPositionParams
     ): Promise<ExecuteOpenPositionResult> {
-        // Sui requires exactly 1 transaction
-        if (signedTxs.length !== 1) {
-            throw new SuiSingleTransactionRequiredException(
-                {
-                    botId: bot.id,
-                    type: TransactionType.OpenPosition,
-                    numTxs: signedTxs.length,
-                }
-            )
-        }
-        // extract transaction details
-        const [signedTx] = signedTxs
         const _state = state as ClmmLiquidityPoolState
         // check if transaction already exists on-chain
         if (txCheck && !stimulate) {
@@ -340,17 +366,9 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                 )
                 return {
                     positionId,
-                    txHashes: [signedTx.txHash],
+                    txHash: signedTx.txHash,
                 }
             }
-        }
-        if (!signedTx.signatureWithBytes) {
-            throw new MissingSuiMessageWithBytesParamException(
-                {
-                    botId: bot.id,
-                    type: TransactionType.OpenPosition,
-                }
-            )
         }
         // execute transaction on-chain
         if (stimulate) {
@@ -370,7 +388,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             })
             return {
                 positionId,
-                txHashes: [txHash],
+                txHash,
             }
         }
         const { txHash, events } = await this.suiExecuteService.execute({
@@ -391,7 +409,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         )
         return {
             positionId,
-            txHashes: [txHash],
+            txHash,
         }
     }
 }

@@ -3,7 +3,8 @@ import {
 } from "@modules/databases"
 import BN from "bn.js"
 import {
-    PrepareTx
+    PrepareTx,
+    SignedTx
 } from "../../types"
 import {
     SwapStep,
@@ -27,14 +28,14 @@ export interface PrepareReconcileBalanceTransactionResult {
 /** Parameters for executing a reconcile balance transaction. */
 export interface ExecuteReconcileBalanceTransactionParams {
     bot: BotSchema
-    prepareTxs: Array<PrepareTx>
+    signedTx: SignedTx
     isRetry?: boolean
     stimulate?: boolean
 }
 
 /** Result of executing a reconcile balance transaction. */
 export interface ExecuteReconcileBalanceTransactionResult {
-    txHashes: Array<string>
+    txHash: string
 }
 
 /** Parameters for enqueuing a reconcile balance job. */
@@ -57,4 +58,15 @@ export interface DetermineReconcileBalancePlanParams {
 export interface DetermineReconcileBalancePlanResult {
     swapSteps: Array<SwapStep>
     quoteRatioResult: ComputeQuoteRatioResult
+}
+
+/** Parameters for signing a reconcile balance transaction. */
+export interface SignReconcileBalanceTransactionParams {
+    bot: BotSchema
+    prepareTx: PrepareTx
+}
+
+/** Result of signing a reconcile balance transaction. */
+export interface SignReconcileBalanceTransactionResult {
+    signedTx: SignedTx
 }

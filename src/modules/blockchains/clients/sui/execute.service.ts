@@ -8,7 +8,6 @@ import {
     RpcAccessType
 } from "@modules/filesystem"
 import {
-    TransactionNotPreparedException,
     TransactionExecutionFailedException,
     RpcClientFatalException,
 } from "@modules/exceptions"
@@ -23,7 +22,13 @@ import {
 import {
     ChainId 
 } from "@modules/common"
-
+import {
+    InjectSuperJson 
+} from "@modules/mixin"
+import SuperJSON from "superjson"
+import {
+    SignatureWithBytes 
+} from "@mysten/sui/cryptography"
 /**
  * Service responsible for executing (sending and waiting for) Sui transactions on-chain.
  * Accepts prepareTx and bot; throws on missing signatureWithBytes or execution failure.
@@ -36,6 +41,8 @@ export class SuiExecuteService {
     constructor(
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly winstonService: WinstonService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
     ) {}
 
     /**
@@ -48,19 +55,8 @@ export class SuiExecuteService {
         liquidityPool,
     }: ExecuteSuiTransactionParams): Promise<ExecuteSuiTransactionResult> {
         // stage: validation
-        const { signatureWithBytes } = signedTx
-        /**
-         * If signature with bytes is not found, throw an exception.
-         */
-        if (!signatureWithBytes) {
-            throw new TransactionNotPreparedException({
-                botId: bot.id,
-                txHash: signedTx.txHash,
-                liquidityPoolId: liquidityPool?.displayId,
-                type: transactionType,
-            })
-        }
-
+        const { signedSerializedTx } = signedTx
+        const signatureWithBytes = this.superJson.parse<SignatureWithBytes>(signedSerializedTx)
         // stage: execution
         const { digest, effects, events } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,

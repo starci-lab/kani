@@ -2,7 +2,8 @@ import {
     BotSchema, 
 } from "@modules/databases"
 import {
-    PrepareTx
+    PrepareTx,
+    SignedTx
 } from "../../types"
 import {
     WithdrawCacheResult 
@@ -27,14 +28,14 @@ export interface PrepareWithdrawTransactionResult {
 /** Parameters for executing a withdraw transaction. */
 export interface ExecuteWithdrawTransactionParams {
     bot: BotSchema
-    prepareTxs: Array<PrepareTx>
+    signedTx: SignedTx
     isRetry?: boolean
     stimulate?: boolean
 }
 
 /** Result of executing a withdraw transaction. */
 export interface ExecuteWithdrawTransactionResult {
-    txHashes: Array<string>
+    txHash: string
 }
 
 /** Parameters for enqueuing a withdraw job. */

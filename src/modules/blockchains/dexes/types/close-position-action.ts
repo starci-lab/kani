@@ -2,15 +2,16 @@ import {
     BotSchema 
 } from "@modules/databases"
 import {
-    LiquidityPoolState 
+    LiquidityPoolState, 
+    PrepareTx,
+    SignedTx,
 } from "../../types"
 import {
     LiquidityPoolSchema
 } from "@modules/databases"
 import {
-    SignedTx
-} from "../../types"
-
+    SignClosePositionParams, SignClosePositionResult 
+} from "./open-position-action"
 /**
  * Parameters for preparing a close position transaction.
  */
@@ -24,14 +25,14 @@ export interface PrepareClosePositionParams {
  * Result of preparing a close position transaction.
  */
 export interface PrepareClosePositionResult {
-    signedTxs: Array<SignedTx>
+    prepareTxs: Array<PrepareTx>
 }
 
 /**
  * Result of executing a close position transaction.
  */
 export interface ExecuteClosePositionResult {
-    txHashes: Array<string>
+    txHash: string
 }
 
 /**
@@ -41,7 +42,7 @@ export interface ExecuteClosePositionParams {
     bot: BotSchema
     state: LiquidityPoolState
     txCheck: boolean
-    signedTxs: Array<SignedTx>
+    signedTx: SignedTx
     stimulate?: boolean
     liquidityPool: LiquidityPoolSchema
 }
@@ -56,4 +57,7 @@ export interface IClosePositionActionService {
     execute(
         params: ExecuteClosePositionParams,
     ): Promise<ExecuteClosePositionResult>
+    sign(
+        params: SignClosePositionParams,
+    ): Promise<SignClosePositionResult>
 }

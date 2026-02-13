@@ -81,8 +81,18 @@ export class PrepareService {
      * @example
      * const result = await prepareService.process({ job, bot, payload })
      */
-    async process(params: PrepareParams): Promise<PrepareResult> {
-        const { job, bot, payload: { gasBalanceAmount, quoteBalanceAmount, targetBalanceAmount } } = params
+    async process(
+        params: PrepareParams
+    ): Promise<PrepareResult> {
+        const { 
+            job, 
+            bot, 
+            payload: { 
+                gasBalanceAmount, 
+                quoteBalanceAmount, 
+                targetBalanceAmount 
+            }
+        } = params
         // guard: idempotency (return persisted data if already prepared)
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Prepared)
@@ -95,8 +105,10 @@ export class PrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    ageMs: this.dayjsService.now().diff(job.createdAt,
-                        "millisecond"),
+                    ageMs: this.dayjsService.now()
+                        .diff(job.createdAt,
+                            "millisecond"
+                        ),
                     quoteRatioResult: jobData?.logging?.quoteRatioResult,
                     balanceAmounts: jobData?.logging?.balanceAmounts,
                     txHashes: jobData?.prepareResult?.prepareTxs.map((prepareTx) => prepareTx.txHash),
@@ -110,7 +122,6 @@ export class PrepareService {
         let gasBalanceAmountBN = new BN(0)
         let quoteBalanceAmountBN = new BN(0)
         let targetBalanceAmountBN = new BN(0)
-
         // fetch balances if missing from payload
         if (
             !gasBalanceAmount || !quoteBalanceAmount || !targetBalanceAmount

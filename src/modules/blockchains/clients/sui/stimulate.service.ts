@@ -4,16 +4,10 @@ import {
 import {
     Transaction
 } from "@mysten/sui/transactions"
-import {
-    RpcAccessType
-} from "@modules/filesystem"
-import {
-    RpcExecutorService
-} from "@modules/blockchains"
+
 import {
     TransactionStimulatedFailedException,
     RpcClientFatalException,
-    MissingSuiMessageWithBytesParamException,
 } from "@modules/exceptions"
 import type {
     StimulateSuiTransactionParams,
@@ -26,7 +20,12 @@ import {
 import {
     ChainId 
 } from "@modules/common"
-
+import {
+    RpcExecutorService
+} from "../rpc-executor.service"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
 /**
  * Service responsible for simulating Sui transactions (dev-inspect / dry-run).
  * Accepts prepareTx and bot; throws TransactionSubmitFailedException when stimulation fails.
@@ -53,38 +52,29 @@ export class SuiStimulateService {
         }: StimulateSuiTransactionParams
     ): Promise<StimulateSuiTransactionResult> {
         // stage: validation
-        if (!signedTx.signatureWithBytes) {
-            throw new MissingSuiMessageWithBytesParamException({
-                botId: bot.id,
-                type: transactionType,
-            })
-        }
-       
-        // stage: validation
-        const transactionBlock = Transaction.from(signedTx.signatureWithBytes.bytes)
-
+        const transactionBlock = Transaction.from(signedTx.signedSerializedTx)
         // stage: stimulation
-        const result = await this.rpcExecutorService.withSuiClient(
+        const stimulateResult = await this.rpcExecutorService.withSuiClient(
             {
                 accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
-                    return await suiClient.devInspectTransactionBlock({
-                        transactionBlock,
-                        sender: bot.accountAddress,
-                    })
-                },
+                    return await suiClient.devInspectTransactionBlock(
+                        {
+                            transactionBlock,
+                            sender: bot.accountAddress,
+                        })
+                }
             }
         )
-
         // stage: validation
-        if (result.effects.status.status !== "success") {
+        if (stimulateResult.effects.status.status !== "success") {
             throw new RpcClientFatalException(
                 {
-                    message: result.effects.status.error ?? "Unknown error",
+                    message: stimulateResult.effects.status.error ?? "Unknown error",
                     originalError: new TransactionStimulatedFailedException(
                         {
                             botId: bot.id,
-                            txHash: result.effects.transactionDigest,
+                            txHash: stimulateResult.effects.transactionDigest,
                             liquidityPoolId: liquidityPool?.displayId,
                             type: transactionType,
                             chainId: ChainId.Sui,
@@ -99,7 +89,7 @@ export class SuiStimulateService {
             WinstonLog.TransactionStimulated,
             {
                 botId: bot.id,
-                txHash: result.effects.transactionDigest,
+                txHash: stimulateResult.effects.transactionDigest,
                 liquidityPoolId: liquidityPool?.displayId,
                 type: transactionType,
                 chainId: ChainId.Sui,
@@ -108,8 +98,8 @@ export class SuiStimulateService {
 
         // stage: return
         return {
-            txHash: result.effects.transactionDigest,
-            events: result.events || [],
+            txHash: stimulateResult.effects.transactionDigest,
+            events: stimulateResult.events || [],
         }
     }
 }

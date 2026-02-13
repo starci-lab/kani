@@ -8,7 +8,8 @@ import {
     AbstractException 
 } from "../abstract"
 import type {
-    DexId, LiquidityPoolId 
+    DexId, 
+    LiquidityPoolId 
 } from "@modules/databases"
 
 /** Metadata when Sui object is invalid type. */
@@ -16,7 +17,7 @@ export interface SuiObjectInvalidTypeExceptionMetadata extends AbstractException
     kind: SuiObjectKind
     id?: string
     dexId: DexId
-    liquidityPoolId: LiquidityPoolId
+    liquidityPoolId?: LiquidityPoolId
 }
 
 /** Thrown when Sui object type is invalid. */
