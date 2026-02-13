@@ -15,6 +15,8 @@ import {
     OpenPositionSkippedNoBalanceSnapshotMessage,
     OpenPositionSkippedNotEligibleMessage,
     RotationBotAssignmentsMessage,
+    TransactionStimulatedMessage,
+    TransactionExecutedMessage,
     WinstonLevel,
 } from "./types"
 import {
@@ -229,6 +231,22 @@ import {
 
 /** Map of Winston log names to level, Loki flag, and message type. */
 export const configMap = {
+    // Transaction Stimulated
+    [WinstonLog.TransactionStimulated]: {
+        name: WinstonLog.TransactionStimulated,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as TransactionStimulatedMessage,
+    },
+    // Transaction Executed
+    [WinstonLog.TransactionExecuted]: {
+        name: WinstonLog.TransactionExecuted,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as TransactionExecutedMessage,
+    },
     // Kafka Producer Ready
     [WinstonLog.KafkaProducerReady]: {
         name: WinstonLog.KafkaProducerReady,

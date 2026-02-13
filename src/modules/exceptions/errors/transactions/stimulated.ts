@@ -15,6 +15,9 @@ import type {
 import type {
     TransactionType 
 } from "../../enums"
+import type {
+    ChainId 
+} from "@modules/common"
 
 /** Thrown when transaction stimulation (devInspect) fails */
 export interface TransactionStimulatedFailedExceptionMetadata extends AbstractExceptionMetadata {
@@ -22,6 +25,7 @@ export interface TransactionStimulatedFailedExceptionMetadata extends AbstractEx
     txHash: string
     liquidityPoolId?: LiquidityPoolId
     type: TransactionType
+    chainId: ChainId
 }
 
 /** Thrown when transaction stimulation (devInspect) fails. */
@@ -32,6 +36,7 @@ export class TransactionStimulatedFailedException extends AbstractException {
             txHash,
             liquidityPoolId,
             originalError,
+            chainId,
         }: TransactionStimulatedFailedExceptionMetadata
     ) {
         super(
@@ -42,6 +47,7 @@ export class TransactionStimulatedFailedException extends AbstractException {
                 txHash,
                 liquidityPoolId,
                 originalError,
+                chainId,
             }
         )
     }

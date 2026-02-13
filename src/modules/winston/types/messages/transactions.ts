@@ -1,7 +1,13 @@
-import {
+import type {
+    ChainId 
+} from "@modules/common"
+import type {
     LiquidityPoolId,
     TokenId,
 } from "@modules/databases"
+import type {
+    TransactionType 
+} from "@modules/exceptions"
 
 export interface ClosePositionTransactionExecutedMessage {
     botId: string
@@ -138,4 +144,32 @@ export interface WithdrawTransactionFoundMessage {
 export interface ReconcileBalanceTransactionFoundMessage {
     botId: string
     txHash: string
+}
+
+/** Message for transaction stimulation */
+export interface TransactionStimulatedMessage {
+    /** Bot ID */
+    botId: string
+    /** Transaction hash */
+    txHash: string
+    /** Liquidity pool ID */
+    liquidityPoolId?: LiquidityPoolId
+    /** Transaction type */
+    type: TransactionType
+    /** Chain ID */
+    chainId: ChainId
+}
+
+/** Message for transaction execution */
+export interface TransactionExecutedMessage {
+    /** Bot ID */
+    botId: string
+    /** Transaction hash */
+    txHash: string
+    /** Liquidity pool ID */
+    liquidityPoolId?: LiquidityPoolId
+    /** Transaction type */
+    type: TransactionType
+    /** Chain ID */
+    chainId: ChainId
 }

@@ -2,22 +2,30 @@ import type {
     TransactionType
 } from "@modules/exceptions"
 import type {
-    LiquidityPoolId
+    BotSchema,
+    LiquidityPoolSchema
 } from "@modules/databases"
 import type {
-    SignatureWithBytes 
-} from "@mysten/sui/cryptography"
-
-/** Minimal bot shape required for Sui stimulate (sender + exception context). */
-export interface StimulateSuiBot {
-    id: string
-    accountAddress: string
-}
+    SignedTx
+} from "../../../types"
+import type {
+    SuiEventFromTransaction
+} from "./execute"
 
 /** Params for stimulating a Sui transaction (devInspect). Throws TransactionSubmitFailedException on failure. */
 export interface StimulateSuiTransactionParams {
-    signatureWithBytes: SignatureWithBytes
-    bot: StimulateSuiBot
+    /** Signed transaction */
+    signedTx: SignedTx
+    /** Bot */
+    bot: BotSchema
+    /** Transaction type */
     transactionType: TransactionType
-    liquidityPoolId?: LiquidityPoolId
+    /** Liquidity pool */
+    liquidityPool?: LiquidityPoolSchema
+}
+
+/** Result of stimulating a Sui transaction (devInspect). */
+export interface StimulateSuiTransactionResult {
+    txHash: string
+    events: Array<SuiEventFromTransaction>
 }

@@ -13,8 +13,8 @@ import {
 } from "../abstract"
 import BN from "bn.js"
 import type {
-    ErrorSuiSingleTransactionRequiredOperation 
-} from "../../enums"
+    TransactionType 
+} from "@modules/databases"
 
 /** Thrown when coin argument is not found in transaction */
 export interface CoinArgumentNotFoundExceptionMetadata extends AbstractExceptionMetadata {
@@ -209,7 +209,8 @@ export class SuiObjectPositionNotFoundException extends AbstractException {
 
 /** Thrown when Sui operation expects exactly one prepared transaction */
 export interface SuiSingleTransactionRequiredExceptionMetadata extends AbstractExceptionMetadata {
-    operation: ErrorSuiSingleTransactionRequiredOperation
+    botId: string
+    type: TransactionType
     numTxs: number
 }
 
@@ -217,7 +218,8 @@ export interface SuiSingleTransactionRequiredExceptionMetadata extends AbstractE
 export class SuiSingleTransactionRequiredException extends AbstractException {
     constructor(
         {
-            operation,
+            botId,
+            type,
             numTxs,
             originalError,
         }: SuiSingleTransactionRequiredExceptionMetadata
@@ -226,7 +228,8 @@ export class SuiSingleTransactionRequiredException extends AbstractException {
             "Sui requires exactly one transaction",
             "SUI_SINGLE_TRANSACTION_REQUIRED_EXCEPTION",
             {
-                operation,
+                botId,
+                type,
                 numTxs,
                 originalError,
             },

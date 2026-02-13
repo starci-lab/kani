@@ -1,12 +1,7 @@
 import {
-    ErrorSuiObjectKind, SuiObjectInvalidTypeException, SuiObjectNotFoundException 
-} from "@modules/exceptions"
-import {
-    RpcExecutorService 
+    SuiFetchService, 
+    SuiObjectKind
 } from "@modules/blockchains"
-import {
-    RpcAccessType 
-} from "@modules/filesystem"
 import {
     PrimaryMemoryStorageService, 
     DexId 
@@ -71,9 +66,9 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
         private readonly cacheService: CacheService,
         private readonly winstonService: WinstonService,
         private readonly eventEmitterService: EventEmitterService,
-        private readonly rpcExecutorService: RpcExecutorService,
         private readonly dayjsService: DayjsService,
         private readonly lokiJSService: LokiJSService,
+        private readonly suiFetchService: SuiFetchService,
     ) {}
 
     /**
@@ -128,7 +123,6 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
                 })()
             )
         }
-        
         // wait for all fetches to complete
         await this.asyncService.allIgnoreError(promises)
     }
@@ -140,46 +134,21 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
      */
     private async fetchPoolInfo(liquidityPool: LiquidityPoolSchema): Promise<void> {
         try {
-            // fetch pool object from on-chain
-            const objectInfo = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Http,
-                callback: async ({ suiClient }) => {
-                    return await suiClient.getObject({
-                        id: liquidityPool.poolAddress,
-                        options: {
-                            showContent: true,
-                        },
-                    })
-                },
-            })
-            
-            // validate object exists
-            if (objectInfo.error || !objectInfo.data) {
-                throw new SuiObjectNotFoundException({
-                    kind: ErrorSuiObjectKind.Pool,
-                    id: liquidityPool.poolAddress,
-                    dexId: DexId.Cetus,
-                    liquidityPoolId: liquidityPool.displayId,
-                })
-            }
-            
-            // validate object type
-            if (objectInfo.data.content?.dataType !== "moveObject") {
-                throw new SuiObjectInvalidTypeException({
-                    kind: ErrorSuiObjectKind.Pool,
-                    id: liquidityPool.poolAddress,
-                    dexId: DexId.Cetus,
-                    liquidityPoolId: liquidityPool.displayId,
-                })
-            }
-            
-            // parse pool fields and update state
-            const fields = objectInfo.data.content.fields as unknown as CetusSuiObjectPoolFields
-            const pool = parseCetusPool(fields)
-            await this.handlePoolStateUpdate({
+            const poolRaw = await this
+                .suiFetchService
+                .fetchObject<CetusSuiObjectPoolFields>(
+                    {
+                        objectId: liquidityPool.id,
+                        kind: SuiObjectKind.Pool,
+                        dexId: DexId.Cetus,
+                        liquidityPool,
+                    }
+                )
+            const pool = parseCetusPool(poolRaw)
+            await this.handlePoolStateUpdate(
                 liquidityPool,
-                state: pool
-            })
+                pool
+            )
         } catch (error) {
             // log fetch errors
             this.winstonService.log(
@@ -195,12 +164,14 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
     /**
      * Handles pool state update by caching and emitting events.
      *
-     * @param param - Parameters for handling pool state update
-     * @param param.liquidityPool - Liquidity pool schema
-     * @param param.state - Parsed pool state
+     * @param liquidityPool - Liquidity pool schema
+     * @param state - Parsed pool state
      * @returns Cache result
      */
-    private async handlePoolStateUpdate({ liquidityPool, state }: { liquidityPool: LiquidityPoolSchema, state: CetusPool }): Promise<DynamicClmmLiquidityPoolInfoCacheResult> {
+    private async handlePoolStateUpdate(
+        liquidityPool: LiquidityPoolSchema,
+        state: CetusPool
+    ): Promise<DynamicClmmLiquidityPoolInfoCacheResult> {
         // build cache result from parsed pool state
         const parsed: DynamicClmmLiquidityPoolInfoCacheResult = {
             tickCurrent: state.currentTickIndex,

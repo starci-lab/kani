@@ -7,6 +7,9 @@ import {
 import type {
     SuiObjectKind 
 } from "@modules/blockchains"
+import type {
+    LiquidityPoolId
+} from "@modules/databases"
 
 /** Metadata when Sui object is not found. */
 export interface SuiObjectNotFoundExceptionMetadata extends AbstractExceptionMetadata {
@@ -14,7 +17,7 @@ export interface SuiObjectNotFoundExceptionMetadata extends AbstractExceptionMet
     parentId?: string
     id?: string
     dexId: string
-    liquidityPoolId: string
+    liquidityPoolId?: LiquidityPoolId
 }
 
 /** Thrown when Sui object cannot be found. */

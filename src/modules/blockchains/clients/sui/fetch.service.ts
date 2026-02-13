@@ -13,7 +13,14 @@ import {
 } from "@modules/exceptions"
 import type {
     FetchSuiObjectParams,
+    FetchTransactionBlockParams,
 } from "./types"
+import {
+    AsyncService 
+} from "@modules/mixin"
+import {
+    SuiTransactionBlockResponse 
+} from "@mysten/sui/dist/cjs/client"
 
 /**
  * Service for fetching a Sui object by ID.
@@ -29,9 +36,10 @@ import type {
  * const liquidity = new BN(fields.liquidity)
  */
 @Injectable()
-export class SuiFetchObjectService {
+export class SuiFetchService {
     constructor(
         private readonly rpcExecutorService: RpcExecutorService,
+        private readonly asyncService: AsyncService,
     ) {}
 
     /**
@@ -41,7 +49,7 @@ export class SuiFetchObjectService {
         objectId,
         kind,
         dexId,
-        liquidityPoolId,
+        liquidityPool,
     }: FetchSuiObjectParams): Promise<T> {
         const objectInfo = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
@@ -60,7 +68,7 @@ export class SuiFetchObjectService {
                 kind,
                 id: objectId,
                 dexId,
-                liquidityPoolId,
+                liquidityPoolId: liquidityPool?.displayId,
             })
         }
 
@@ -69,11 +77,40 @@ export class SuiFetchObjectService {
                 kind,
                 id: objectId,
                 dexId,
-                liquidityPoolId,
+                liquidityPoolId: liquidityPool?.displayId,
             })
         }
 
         const object = objectInfo.data.content.fields as T
         return object
+    }
+
+    /**
+     * Fetches a Sui transaction block and returns it as a SuiTransactionBlockResponse. Returns null if not found or failed.
+     */
+    async fetchTransactionBlock(
+        {
+            txHash,
+        }: FetchTransactionBlockParams): Promise<SuiTransactionBlockResponse | null> {
+        const [transactionBlock] = await this.asyncService.resolveTuple(
+            this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Http,
+                callback: async ({ suiClient }) => {
+                    return suiClient.getTransactionBlock({
+                        digest: txHash,
+                        options: {
+                            showEffects: true,
+                            showEvents: true,
+                        },
+                    })
+                },
+            }
+            )
+        )
+        // if transaction block is not found or failed, return null
+        if (!transactionBlock || transactionBlock.effects?.status?.status !== "success") {
+            return null
+        }
+        return transactionBlock
     }
 }

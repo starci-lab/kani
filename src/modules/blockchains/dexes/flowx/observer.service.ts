@@ -1,25 +1,14 @@
 import {
-    ErrorSuiObjectKind,
-    SuiObjectInvalidTypeException,
-    SuiObjectNotFoundException
-} from "@modules/exceptions"
-import {
-    RpcExecutorService 
+    SuiFetchService, SuiObjectKind 
 } from "@modules/blockchains"
 import {
-    RpcAccessType 
-} from "@modules/filesystem"
-import {
-    PrimaryMemoryStorageService,
-    DexId,
-    LiquidityPoolSchema
+    PrimaryMemoryStorageService, DexId, LiquidityPoolSchema 
 } from "@modules/databases"
 import {
     Injectable, OnApplicationBootstrap, OnModuleInit 
 } from "@nestjs/common"
 import {
-    AsyncService, 
-    LokiJSService
+    AsyncService, LokiJSService 
 } from "@modules/mixin"
 import {
     Interval 
@@ -30,7 +19,7 @@ import {
 import {
     CacheKey,
     DynamicClmmLiquidityPoolInfoCacheResult,
-    CacheService
+    CacheService,
 } from "@modules/cache"
 import {
     WinstonLog, WinstonService 
@@ -52,8 +41,8 @@ import {
 } from "lokijs"
 
 /**
- * Service responsible for observing and updating FlowX liquidity pool states.
- * Fetches pool information at regular intervals and updates cache and emits events.
+ * Service responsible for observing FlowX pool state changes.
+ * Periodically fetches pool information from on-chain and updates cache.
  *
  * @example
  * const service = new FlowXObserverService(...)
@@ -61,7 +50,7 @@ import {
  */
 @Injectable()
 export class FlowXObserverService implements OnApplicationBootstrap, OnModuleInit {
-    // Snapshot here to reduce the computational complexity
+    /** Snapshot collection to reduce computational complexity. */
     private liquidityPoolCollection: Collection<LiquidityPoolSchema>
 
     constructor(
@@ -70,17 +59,16 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
         private readonly cacheService: CacheService,
         private readonly winstonService: WinstonService,
         private readonly eventEmitterService: EventEmitterService,
-        private readonly rpcExecutorService: RpcExecutorService,
         private readonly dayjsService: DayjsService,
         private readonly lokiJSService: LokiJSService,
-    ) { }
+        private readonly suiFetchService: SuiFetchService,
+    ) {}
 
     /**
-     * Initializes the module by creating a snapshot of FlowX liquidity pools.
-     * This reduces computational complexity by working with a local collection.
+     * Initializes the service by creating a snapshot collection of liquidity pools.
      */
-    async onModuleInit() {
-        // Find FlowX liquidity pools from primary memory storage
+    async onModuleInit(): Promise<void> {
+        // fetch all FlowX liquidity pools from primary memory storage
         const liquidityPools = this.memoryStorageService.liquidityPoolCollection
             .chain()
             .find({
@@ -89,123 +77,91 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
                 },
             })
             .data({
-                removeMeta: true 
+                removeMeta: true,
             })
 
-        // Create a new LokiJS collection for FlowX liquidity pools
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
-            name: "flowx-observer-liquidity-pools",
-            options: {
-                indices: ["poolAddress",
-                    "displayId",
-                    "id"],
-            },
-        })
+        // create local collection snapshot for efficient processing
+        this.liquidityPoolCollection =
+            await this.lokiJSService.createCollection<LiquidityPoolSchema>({
+                name: "flowx-observer-liquidity-pools",
+                options: {
+                    indices: ["poolAddress",
+                        "displayId",
+                        "id"],
+                },
+            })
 
-        // Insert the found liquidity pools into the new collection
+        // insert pools into snapshot collection
         this.liquidityPoolCollection.insert(liquidityPools)
     }
 
     /**
-     * Called once the application has bootstrapped.
-     * Initiates the periodic pool state update.
+     * Starts the pool state update interval on application bootstrap.
      */
-    onApplicationBootstrap() {
+    onApplicationBootstrap(): void {
         this.handlePoolStateUpdateInterval()
     }
 
     /**
-     * Handles the periodic update of pool states.
-     * Fetches information for all FlowX liquidity pools.
+     * Handles periodic pool state updates.
+     * Fetches pool information for all pools in parallel.
      */
     @Interval(envConfig().dexes.flowx.interval.observer.fetch)
-    private async handlePoolStateUpdateInterval() {
+    private async handlePoolStateUpdateInterval(): Promise<void> {
+        // process all pools in parallel
         const promises: Array<Promise<void>> = []
-        // Iterate over each liquidity pool and fetch its info
         for (const liquidityPool of this.liquidityPoolCollection.find()) {
             promises.push(
-                (
-                    async () => {
-                        await this.fetchPoolInfo(liquidityPool)
-                    })()
+                (async () => {
+                    await this.fetchPoolInfo(liquidityPool)
+                })(),
             )
         }
-        // Execute all fetch operations concurrently, ignoring individual errors
+
+        // wait for all fetches to complete
         await this.asyncService.allIgnoreError(promises)
     }
 
     /**
-     * Fetches the latest information for a given liquidity pool from the Sui blockchain.
+     * Fetches pool information from on-chain and updates cache.
      *
      * @param liquidityPool - The liquidity pool schema to fetch information for
      */
-    private async fetchPoolInfo(
-        liquidityPool: LiquidityPoolSchema
-    ) {
+    private async fetchPoolInfo(liquidityPool: LiquidityPoolSchema): Promise<void> {
         try {
-            // Fetch object info from Sui client
-            const objectInfo = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Http,
-                callback: async ({ suiClient }) => {
-                    return await suiClient.getObject({
-                        id: liquidityPool.poolAddress,
-                        options: {
-                            showContent: true,
-                        },
-                    })
-                },
+            const poolRaw = await this.suiFetchService.fetchObject<FlowxSuiObjectPoolFields>({
+                // FlowX uses poolAddress as on-chain object id (per your original code)
+                objectId: liquidityPool.poolAddress,
+                kind: SuiObjectKind.Pool,
+                dexId: DexId.FlowX,
+                liquidityPool,
             })
 
-            // Validate if object info exists
-            if (objectInfo.error || !objectInfo.data) {
-                throw new SuiObjectNotFoundException({
-                    kind: ErrorSuiObjectKind.Pool,
-                    id: liquidityPool.poolAddress,
-                    dexId: DexId.FlowX,
-                    liquidityPoolId: liquidityPool.displayId,
-                })
-            }
-
-            // Validate object data type
-            if (objectInfo.data.content?.dataType !== "moveObject") {
-                throw new SuiObjectInvalidTypeException({
-                    kind: ErrorSuiObjectKind.Pool,
-                    id: liquidityPool.poolAddress,
-                    dexId: DexId.FlowX,
-                    liquidityPoolId: liquidityPool.displayId,
-                })
-            }
-
-            // Parse pool fields and handle state update
-            const fields = objectInfo.data.content.fields as unknown as FlowxSuiObjectPoolFields
-            const pool = parseFlowxPool(fields)
-            return await this.handlePoolStateUpdate(liquidityPool,
+            const pool = parseFlowxPool(poolRaw)
+            await this.handlePoolStateUpdate(liquidityPool,
                 pool)
         } catch (error) {
-            // Log any errors encountered during fetching pool info
-            this.winstonService.log(
-                WinstonLog.LiquidityPoolFetchedError,
+            // log fetch errors
+            this.winstonService.log(WinstonLog.LiquidityPoolFetchedError,
                 {
                     liquidityPoolId: liquidityPool.displayId,
                     error: error.message,
-                }
-            )
+                })
         }
     }
 
     /**
-     * Handles the update of a liquidity pool's dynamic state.
-     * Stores the updated state in cache and emits a `ClmmLiquidityPoolsSynced` event.
+     * Handles pool state update by caching and emitting events.
      *
-     * @param liquidityPool - The liquidity pool schema being updated
-     * @param state - The parsed FlowX pool state
-     * @returns The parsed dynamic CLMM liquidity pool information
+     * @param liquidityPool - Liquidity pool schema
+     * @param state - Parsed pool state
+     * @returns Cache result
      */
     private async handlePoolStateUpdate(
         liquidityPool: LiquidityPoolSchema,
-        state: FlowxPool
-    ) {
-        // Parse dynamic CLMM liquidity pool information
+        state: FlowxPool,
+    ): Promise<DynamicClmmLiquidityPoolInfoCacheResult> {
+        // build cache result from parsed pool state
         const parsed: DynamicClmmLiquidityPoolInfoCacheResult = {
             tickCurrent: state.tickIndex,
             liquidity: state.liquidity,
@@ -221,29 +177,24 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
             snapshotAt: this.dayjsService.now(),
         }
 
-        // Store in cache and emit event concurrently
-        await this.asyncService.allIgnoreError(
-            [
-                // Store the parsed information in cache
-                this.cacheService.set(
-                    {
-                        key: CacheKey.DynamicClmmLiquidityPoolInfo,
-                        args: [liquidityPool.id],
-                        cacheResult: parsed,
-                    }
-                ),
-                // Emit an event indicating that CLMM liquidity pools have been synced
-                this.eventEmitterService.emit(
-                    {
-                        event: EventName.ClmmLiquidityPoolsSynced,
-                        payload: {
-                            id: liquidityPool.id,
-                            ...parsed,
-                        },
-                    }
-                ),
-            ]
-        )
+        // cache result and emit event in parallel
+        await this.asyncService.allIgnoreError([
+            // store in cache
+            this.cacheService.set({
+                key: CacheKey.DynamicClmmLiquidityPoolInfo,
+                args: [liquidityPool.id],
+                cacheResult: parsed,
+            }),
+            // emit event through event emitter
+            this.eventEmitterService.emit({
+                event: EventName.ClmmLiquidityPoolsSynced,
+                payload: {
+                    id: liquidityPool.id,
+                    ...parsed,
+                },
+            }),
+        ])
+
         return parsed
     }
 }

@@ -1,8 +1,8 @@
 import type {
-    PrepareTx
+    SignedTx
 } from "@modules/blockchains"
 import type {
-    LiquidityPoolId
+    LiquidityPoolSchema,
 } from "@modules/databases"
 import type {
     TransactionType
@@ -18,10 +18,10 @@ export interface ExecuteSuiBot {
 
 /** Params for executing a Sui transaction on-chain. */
 export interface ExecuteSuiTransactionParams {
-    prepareTx: PrepareTx
+    signedTx: SignedTx
     bot: ExecuteSuiBot
     transactionType: TransactionType
-    liquidityPoolId?: LiquidityPoolId
+    liquidityPool?: LiquidityPoolSchema
 }
 
 /** Sui event from executeTransactionBlock (when showEvents: true). */

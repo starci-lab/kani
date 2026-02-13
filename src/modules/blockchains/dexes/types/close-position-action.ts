@@ -8,7 +8,7 @@ import {
     LiquidityPoolSchema
 } from "@modules/databases"
 import {
-    PrepareTx
+    SignedTx
 } from "../../types"
 
 /**
@@ -24,7 +24,7 @@ export interface PrepareClosePositionParams {
  * Result of preparing a close position transaction.
  */
 export interface PrepareClosePositionResult {
-    prepareTxs: Array<PrepareTx>
+    signedTxs: Array<SignedTx>
 }
 
 /**
@@ -41,7 +41,7 @@ export interface ExecuteClosePositionParams {
     bot: BotSchema
     state: LiquidityPoolState
     txCheck: boolean
-    prepareTxs: Array<PrepareTx>
+    signedTxs: Array<SignedTx>
     stimulate?: boolean
     liquidityPool: LiquidityPoolSchema
 }

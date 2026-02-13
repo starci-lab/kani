@@ -22,7 +22,8 @@ import {
 } from "./solana"
 import {
     SuiExecuteService,
-    SuiStimulateService
+    SuiStimulateService,
+    SuiTxService
 } from "./sui"
 
 /**
@@ -50,6 +51,7 @@ export class ClientsModule extends ConfigurableModuleClass {
         // register all client services
         const providers: Array<Provider> = [
             // chain-specific services
+            SuiTxService,
             SolanaClientService,
             SolanaGetErrorTypesService,
             SolanaExecuteService,
@@ -59,7 +61,6 @@ export class ClientsModule extends ConfigurableModuleClass {
             SuiExecuteService,
             SuiStimulateService,
             SuiGetErrorTypesService,
-            // main executor service
             RpcExecutorService,
         ]
         

@@ -6,7 +6,6 @@ import {
     CacheKey,
     DynamicClmmLiquidityPoolInfoCacheResult,
     DynamicDlmmLiquidityPoolInfoCacheResult,
-    DynamicLiquidityPoolInfoCacheResult
 } from "@modules/cache"
 import {
     Injectable 
@@ -14,6 +13,9 @@ import {
 import { 
     CacheNotFoundException,
 } from "@modules/exceptions"
+import {
+    LiquidityPoolState,
+} from "../../types"
 
 /**
  * Service responsible for fetching dynamic liquidity pool state information from cache.
@@ -88,12 +90,12 @@ export class LiquidityPoolStateService {
      * Stage: on-chain/data fetch (via cache)
      *
      * @param liquidityPool - The liquidity pool schema
-     * @returns Dynamic liquidity pool information (CLMM or DLMM) from cache
+     * @returns Liquidity pool state (CLMM or DLMM)
      * @throws {CacheNotFoundException} When required dynamic cache entry is missing (from helper methods)
      */
-    async getDynamicLiquidityPoolInfo(
+    async getState(
         liquidityPool: LiquidityPoolSchema,
-    ): Promise<DynamicLiquidityPoolInfoCacheResult> {
+    ): Promise<LiquidityPoolState> {
         // Route to appropriate cache fetch method based on pool type
         switch (liquidityPool.type) {
         case LiquidityPoolType.Clmm:

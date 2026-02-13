@@ -31,7 +31,6 @@ import {
     PrivyMetadataNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
     MissingSolanaTxParamException,
-    TransactionSubmitFailedException,
     TransactionExecutionFailedException,
 } from "@modules/exceptions"
 import {
@@ -77,7 +76,8 @@ import {
     PrivySignService 
 } from "@modules/privy"
 import {
-    adjustSlippage 
+    adjustSlippage, 
+    ChainId
 } from "@modules/common"
 import {
     envConfig 
@@ -281,6 +281,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                     txHash,
                     liquidityPoolId: liquidityPool.displayId,
                     type: TransactionType.OpenPosition,
+                    chainId: ChainId.Solana,
                 })
             }
             prepareTx = {
@@ -331,7 +332,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             if (simulateResult.value.err) {
                 throw new TransactionStimulatedFailedException({
                     botId: bot.id,
-                    txHash: prepareTx.txHash,
+                    txHash: signedTx.txHash,
                     liquidityPoolId: liquidityPool.displayId,
                     type: TransactionType.OpenPosition,
                 })
@@ -476,7 +477,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                         },
                     ))
                 if (error) {
-                    throw new TransactionSubmitFailedException({
+                    throw new TransactionExecutionFailedException({
                         message: error.toString(),
                         originalError: new TransactionExecutionFailedException({
                             botId: bot.id,

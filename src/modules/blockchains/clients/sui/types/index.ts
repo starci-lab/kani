@@ -4,5 +4,6 @@
  */
 export * from "./client"
 export * from "./execute"
-export * from "./fetch-object"
+export * from "./fetch"
 export * from "./stimulate"
+export * from "./build"

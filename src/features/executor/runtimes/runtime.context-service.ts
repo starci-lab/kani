@@ -2,8 +2,7 @@ import {
     BotSchema, InjectPrimaryMongoose 
 } from "@modules/databases"
 import {
-    EventName, 
-    ExecutorBotUpdatedEventPayload,
+    EventName,
 } from "@modules/event"
 import {
     Injectable, Scope, Inject 
@@ -38,6 +37,9 @@ import {
     HandleWithdrawService,
     HandleNotSyncedService,
 } from "./handlers"
+import {
+    BotNotFoundException 
+} from "@modules/exceptions"
 
 @Injectable(
     {
@@ -71,50 +73,36 @@ export class RuntimeContextService {
         private readonly handleNotSyncedService: HandleNotSyncedService,
     ) { }
 
-    private readonly executorBotUpdatedHandler = (
-        event: ExecutorBotUpdatedEventPayload,
-    ) => {
-        this.refreshBot(event)
-    }
-
     /**
-     * Update the cached bot state.
+     * Get the bot by id using the database connection as source of truth.
      *
-     * - If an event is provided, use the bot from the event.
-     * - Otherwise, fetch the bot from the database.
+     * @returns The bot schema.
      */
-    private async refreshBot(
-        event?: ExecutorBotUpdatedEventPayload,
-    ) {
-        if (event) {
-            this.bot = event
-        } else {
-            const bot = await this.connection
-                .model<BotSchema>(BotSchema.name)
-                .findById(this.context.id)
-
-            if (!bot) {
-                return
-            }
-            this.bot = bot.toJSON()
+    async findBot() {
+        const bot = await this.connection
+            .model<BotSchema>(BotSchema.name)
+            .findById(this.context.id)
+        if (!bot) {
+            throw new BotNotFoundException(
+                {
+                    id: this.context.id,
+                }
+            )
         }
+        return bot.toJSON()
     }
 
     invokeAndSchedule(
         interval: number,
-        callback: (bot: BotSchema) => void,
+        callback: () => Promise<void>,
     ) {
-        setInterval(() => {
+        setInterval(async () => {
             if (!this.bot) {
                 return
             }
-            callback(this.bot)
+            await callback()
         },
         interval)
-        if (!this.bot) {
-            return
-        }
-        callback(this.bot)
     }
 
     /**
@@ -141,22 +129,17 @@ export class RuntimeContextService {
                 },
                 // set the action to initialize the runtime
                 action: async () => {
-                    // subscribe to executor updated events
-                    this.eventEmitterService.on({
-                        event: EventName.ExecutorBotUpdated,
-                        args: [this.context.id],
-                        listener: this.executorBotUpdatedHandler,
-                    })
                     // subscribe to clmm position open requested events
                     this.eventEmitterService.on({
                         event: EventName.ClmmPositionOpenRequested,
                         args: [this.context.id],
-                        listener: (event) => {
-                            if (!this.bot) {
+                        listener: async (event) => {
+                            const bot = await this.findBot()
+                            if (!bot) {
                                 return
                             }
                             this.handleClmmPositionOpenRequestedEventService.process(
-                                this.bot,
+                                bot,
                                 event
                             )
                         },
@@ -165,12 +148,13 @@ export class RuntimeContextService {
                     this.eventEmitterService.on({
                         event: EventName.DlmmPositionOpenRequested,
                         args: [this.context.id],
-                        listener: (event) => {
-                            if (!this.bot) {
+                        listener: async (event) => {
+                            const bot = await this.findBot()
+                            if (!bot) {
                                 return
                             }
                             this.handleDlmmPositionOpenRequestedEventService.process(
-                                this.bot,
+                                bot,
                                 event
                             )
                         },
@@ -179,12 +163,13 @@ export class RuntimeContextService {
                     this.eventEmitterService.on({
                         event: EventName.ClmmPositionCloseRequested,
                         args: [this.context.id],
-                        listener: (event) => {
-                            if (!this.bot) {
+                        listener: async (event) => {
+                            const bot = await this.findBot()
+                            if (!bot) {
                                 return
                             }
                             this.handleClmmPositionCloseRequestedEventService.process(
-                                this.bot,
+                                bot,
                                 event
                             )
                         },
@@ -193,37 +178,56 @@ export class RuntimeContextService {
                     this.eventEmitterService.on({
                         event: EventName.DlmmPositionCloseRequested,
                         args: [this.context.id],
-                        listener: (event) => {
-                            if (!this.bot) {
+                        listener: async (event) => {
+                            const bot = await this.findBot()
+                            if (!bot) {
                                 return
                             }
-                            this.handleDlmmPositionCloseRequestedEventService.process(this.bot,
-                                event)
+                            this.handleDlmmPositionCloseRequestedEventService.process(
+                                bot,
+                                event
+                            )
                         },
                     })
                     // invoke and schedule the handle not synced service
                     this.invokeAndSchedule(
                         envConfig().executor.runtime.operation.notSynced.interval,
-                        (bot) => this.handleNotSyncedService.process(bot),
+                        async () => {
+                            const bot = await this.findBot()
+                            if (!bot) {
+                                return
+                            }
+                            await this.handleNotSyncedService.process(
+                                bot
+                            )
+                        },
                     )
                     // invoke and schedule the reconcile balance service
                     this.invokeAndSchedule(
                         envConfig().executor.runtime.operation.reconcileBalance.interval.poll,
-                        (bot) => this.handleReconcileBalanceService.process(bot),
+                        async () => {
+                            const bot = await this.findBot()
+                            if (!bot) {
+                                return
+                            }
+                            await this.handleReconcileBalanceService.process(
+                                bot
+                            )
+                        },
                     )
                     // invoke and schedule the withdraw service
                     this.invokeAndSchedule(
                         envConfig().executor.runtime.operation.withdraw.interval.poll,
-                        (bot) => this.handleWithdrawService.process(bot),
+                        async () => {
+                            const bot = await this.findBot()
+                            if (!bot) {
+                                return
+                            }
+                            await this.handleWithdrawService.process(
+                                bot
+                            )
+                        },
                     )
-                    // gradually load the initial executor state
-                    setInterval(() => {
-                        this.refreshBot()
-                    }, 
-                    envConfig().executor.runtime.interval.refresh
-                    )
-                    // load the initial executor state
-                    await this.refreshBot()
                 }
             }
         )
@@ -238,12 +242,6 @@ export class RuntimeContextService {
         if (!this.bot) {
             return
         }
-        // unsubscribe from the executor updated event
-        this.eventEmitterService.off({
-            event: EventName.ExecutorBotUpdated,
-            args: [this.context.id],
-            listener: this.executorBotUpdatedHandler,
-        })
         // clear the cached bot
         this.bot = null
     }

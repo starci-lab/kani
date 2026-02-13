@@ -7,8 +7,8 @@ import {
     Decimal 
 } from "decimal.js"
 import {
-    PrepareTx,
-    LiquidityPoolState
+    LiquidityPoolState,
+    SignedTx
 } from "../../types"
 
 /**
@@ -24,7 +24,7 @@ export interface PrepareOpenPositionParams {
  * Result of preparing an open position transaction.
  */
 export interface PrepareOpenPositionResult {
-    prepareTxs: Array<PrepareTx>
+    signedTxs: Array<SignedTx>
     feeAmountA: BN
     feeAmountB: BN
     tickLower?: BN
@@ -44,7 +44,7 @@ export interface ExecuteOpenPositionParams {
     bot: BotSchema
     state: LiquidityPoolState
     txCheck: boolean
-    prepareTxs: Array<PrepareTx>
+    signedTxs: Array<SignedTx>
     positionId?: string
     stimulate?: boolean
     liquidityPool: LiquidityPoolSchema

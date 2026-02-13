@@ -1,6 +1,6 @@
 import type {
     DexId,
-    LiquidityPoolId
+    LiquidityPoolSchema
 } from "@modules/databases"
 import type {
     SuiObjectKind
@@ -18,8 +18,8 @@ export interface FetchSuiObjectParams {
     kind: SuiObjectKind
     /** DEX ID for exception context */
     dexId: DexId
-    /** Liquidity pool ID for exception context */
-    liquidityPoolId: LiquidityPoolId
+    /** Liquidity pool for exception context */
+    liquidityPool?: LiquidityPoolSchema
 }
 
 /** Move object content from Sui (dataType === "moveObject"). */
@@ -39,3 +39,9 @@ export interface FetchSuiMoveObjectResult<T = Record<string, unknown>> {
     /** Move object fields (typed as T). */
     fields: T
 }
+
+/** Params for fetching a Sui transaction block. */
+export interface FetchTransactionBlockParams {
+    /** Transaction hash to fetch */
+    txHash: string
+}   

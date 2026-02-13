@@ -16,8 +16,16 @@ import {
     MissingSuiMessageWithBytesParamException,
 } from "@modules/exceptions"
 import type {
-    StimulateSuiTransactionParams
+    StimulateSuiTransactionParams,
+    StimulateSuiTransactionResult
 } from "./types"
+import {
+    WinstonService,
+    WinstonLog,
+} from "@modules/winston"
+import {
+    ChainId 
+} from "@modules/common"
 
 /**
  * Service responsible for simulating Sui transactions (dev-inspect / dry-run).
@@ -30,6 +38,7 @@ import type {
 export class SuiStimulateService {
     constructor(
         private readonly rpcExecutorService: RpcExecutorService,
+        private readonly winstonService: WinstonService,
     ) {}
 
     /**
@@ -37,48 +46,70 @@ export class SuiStimulateService {
      */
     async stimulate(
         {
-            signatureWithBytes,
+            signedTx,
             bot,
             transactionType,
-            liquidityPoolId,
+            liquidityPool,
         }: StimulateSuiTransactionParams
-    ) {
-        // validate signatureWithBytes
-        if (!signatureWithBytes) {
+    ): Promise<StimulateSuiTransactionResult> {
+        // stage: validation
+        if (!signedTx.signatureWithBytes) {
             throw new MissingSuiMessageWithBytesParamException({
                 botId: bot.id,
                 type: transactionType,
             })
         }
        
-        // validate transaction block
-        const transactionBlock = Transaction.from(signatureWithBytes.bytes)
+        // stage: validation
+        const transactionBlock = Transaction.from(signedTx.signatureWithBytes.bytes)
 
-        // dev inspect transaction block
-        const result = await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Http,
-            callback: async ({ suiClient }) => {
-                return await suiClient.devInspectTransactionBlock({
-                    transactionBlock,
-                    sender: bot.accountAddress,
-                })
-            },
-        })
+        // stage: stimulation
+        const result = await this.rpcExecutorService.withSuiClient(
+            {
+                accessType: RpcAccessType.Http,
+                callback: async ({ suiClient }) => {
+                    return await suiClient.devInspectTransactionBlock({
+                        transactionBlock,
+                        sender: bot.accountAddress,
+                    })
+                },
+            }
+        )
 
-        // validate result
+        // stage: validation
         if (result.effects.status.status !== "success") {
-            throw new RpcClientFatalException({
-                message: result.effects.status.error ?? "Unknown error",
-                originalError: new TransactionStimulatedFailedException({
-                    botId: bot.id,
-                    txHash: result.effects.transactionDigest,
-                    liquidityPoolId,
-                    type: transactionType,
-                }),
-            })
+            throw new RpcClientFatalException(
+                {
+                    message: result.effects.status.error ?? "Unknown error",
+                    originalError: new TransactionStimulatedFailedException(
+                        {
+                            botId: bot.id,
+                            txHash: result.effects.transactionDigest,
+                            liquidityPoolId: liquidityPool?.displayId,
+                            type: transactionType,
+                            chainId: ChainId.Sui,
+                        }
+                    ),
+                }
+            )
         }
 
-        // return result
-        return result
+        // stage: logging
+        this.winstonService.log(
+            WinstonLog.TransactionStimulated,
+            {
+                botId: bot.id,
+                txHash: result.effects.transactionDigest,
+                liquidityPoolId: liquidityPool?.displayId,
+                type: transactionType,
+                chainId: ChainId.Sui,
+            }
+        )
+
+        // stage: return
+        return {
+            txHash: result.effects.transactionDigest,
+            events: result.events || [],
+        }
     }
 }
