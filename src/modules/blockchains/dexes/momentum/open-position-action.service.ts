@@ -39,7 +39,6 @@ import {
     TransactionExecutionFailedException,
     PrivyPublicKeyNotFoundException,
     SuiObjectNotFoundException,
-    ErrorSuiObjectKind,
     SuiObjectInvalidTypeException,
     TransactionType,
     EncryptedPrivySignerPrivateKeyNotFoundException,
@@ -124,7 +123,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                 // Stage: on-chain fetch validation (position object must exist)
                 if (objectInfo.error || !objectInfo.data) {
                     throw new SuiObjectNotFoundException({
-                        kind: ErrorSuiObjectKind.Position,
+                        kind: SuiObjectKind.Position,
                         id: positionId,
                         dexId: DexId.Momentum,
                         liquidityPoolId: liquidityPool.displayId,

@@ -38,27 +38,24 @@ import {
     TransactionStimulatedFailedException,
     TransactionExecutionFailedException,
     PrivyPublicKeyNotFoundException,
-    SuiObjectNotFoundException,
-    ErrorSuiObjectKind,
-    SuiObjectInvalidTypeException,
     TransactionType,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
     SlippageToleranceExceededException,
     SuiSingleTransactionRequiredException,
     ErrorSuiSingleTransactionRequiredOperation,
-    TransactionSubmitFailedException,
 } from "@modules/exceptions"
 import Decimal from "decimal.js"
 import {
     ExecuteOpenPositionParams 
 } from "../types"
 import {
-    RpcExecutorService 
+    RpcExecutorService,
+    SuiFetchObjectService,
+    SuiObjectKind,
+    SuiStimulateService,
+    SuiExecuteService,
 } from "../../clients"
-import {
-    RpcAccessType 
-} from "@modules/filesystem"
 import {
     WinstonService, WinstonLog 
 } from "@modules/winston"
@@ -91,14 +88,17 @@ import {
 @Injectable()
 export class CetusOpenPositionActionService implements IOpenActionService {
     constructor(
-    private readonly signerService: SignerService,
-    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-    private readonly openPositionTxbService: OpenPositionTxbService,
-    private readonly tickMathService: TickMathService,
-    private readonly asyncService: AsyncService,
-    private readonly rpcExecutorService: RpcExecutorService,
-    private readonly winstonService: WinstonService,
-    private readonly privySignService: PrivySignService,
+        private readonly signerService: SignerService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly openPositionTxbService: OpenPositionTxbService,
+        private readonly tickMathService: TickMathService,
+        private readonly asyncService: AsyncService,
+        private readonly rpcExecutorService: RpcExecutorService,
+        private readonly winstonService: WinstonService,
+        private readonly privySignService: PrivySignService,
+        private readonly suiFetchObjectService: SuiFetchObjectService,
+        private readonly suiStimulateService: SuiStimulateService,
+        private readonly suiExecuteService: SuiExecuteService,
     ) {}
 
     /**
@@ -126,45 +126,22 @@ export class CetusOpenPositionActionService implements IOpenActionService {
      * @example
      * const result = await service.confirm({ positionId, state })
      */
-    async confirm({ positionId, liquidityPool }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
-        return await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Http,
-            callback: async ({ suiClient }) => {
-                // fetch position object from on-chain
-                const objectInfo = await suiClient.getObject({
-                    id: positionId,
-                    options: {
-                        showContent: true,
-                    }
-                })
-                
-                // validate position object exists
-                if (objectInfo.error || !objectInfo.data) {
-                    throw new SuiObjectNotFoundException({
-                        kind: ErrorSuiObjectKind.Position,
-                        id: positionId,
-                        dexId: DexId.Cetus,
-                        liquidityPoolId: liquidityPool.displayId,
-                    })
-                }
-                
-                // validate object is a Move object
-                if (objectInfo.data.content?.dataType !== "moveObject") {
-                    throw new SuiObjectInvalidTypeException({
-                        kind: ErrorSuiObjectKind.Position,
-                        id: positionId,
-                        dexId: DexId.Cetus,
-                        liquidityPoolId: liquidityPool.displayId,
-                    })
-                }
-                
-                // extract and return liquidity
-                const fields = objectInfo.data.content.fields as unknown as CetusLiquidityPosition
-                return {
-                    liquidity: new BN(fields.liquidity),
-                }
-            },
-        })
+    async confirm(
+        { positionId, liquidityPool }
+        : ConfirmOpenPositionParams
+    ): Promise<ConfirmOpenPositionResult> {
+        const { liquidity } = await this
+            .suiFetchObjectService
+            .fetchObject<CetusLiquidityPosition>({
+                objectId: positionId,
+                kind: SuiObjectKind.Position,
+                dexId: DexId.Cetus,
+                liquidityPoolId: liquidityPool.displayId,
+            }
+            )
+        return {
+            liquidity: new BN(liquidity),
+        }
     }
 
     /**
@@ -178,7 +155,13 @@ export class CetusOpenPositionActionService implements IOpenActionService {
      * @param param.events - Array of Sui events
      * @returns Parsed event result with position ID
      */
-    private parseAddLiquidityEvent({ liquidityPool, bot, txHash, events }: ParseAddLiquidityEventParams): ParseAddLiquidityEventResult {
+    private parseAddLiquidityEvent(
+        { 
+            liquidityPool, 
+            bot, 
+            txHash, 
+            events 
+        }: ParseAddLiquidityEventParams): ParseAddLiquidityEventResult {
         // find add liquidity event
         const eventType = "::pool::AddLiquidityV2Event"
         const event = events?.find(event =>
@@ -291,26 +274,13 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         })
         let prepareTx: PrepareTx
         if (bot.version === AppVersion.V1) {
-            // dev inspect transaction for validation
-            const devInspect = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Http,
-                callback: async ({ suiClient }) => {
-                    return await suiClient.devInspectTransactionBlock({
-                        transactionBlock: openPositionTxb,
-                        sender: bot.accountAddress,
-                    })
-                },
-            })
-            // validate transaction effects
-            if (devInspect.effects.status.status !== "success") {
-                throw new TransactionStimulatedFailedException({
-                    type: TransactionType.OpenPosition,
-                    botId: bot.id,
-                    txHash: devInspect.effects.transactionDigest,
-                    liquidityPoolId: liquidityPool.displayId,
-                })
-            }
             
+            const result = await this.suiStimulateService.stimulate({
+                signatureWithBytes: openPositionTxb.signature,
+                bot,
+                transactionType: TransactionType.OpenPosition,
+                liquidityPoolId: liquidityPool.displayId,
+            })
             // build transaction
             const bytes = await this.rpcExecutorService.withSuiClient({
                 accessType: RpcAccessType.Http,

@@ -49,22 +49,6 @@ export class SolanaRpcIgnorableException extends AbstractException {
     }
 }
 
-/** Solana RPC: transaction submit failed, do not retry; eject RPC */
-export interface TransactionSubmitFailedExceptionMetadata extends AbstractExceptionMetadata {
-    message: string
-}
-export class TransactionSubmitFailedException extends AbstractException {
-    constructor({ message, originalError}: TransactionSubmitFailedExceptionMetadata) {
-        super("Transaction submit failed error",
-            "TRANSACTION_SUBMIT_FAILED_EXCEPTION",
-            {
-                message, 
-                originalError 
-            }
-        )
-    }
-}
-
 /** Sui RPC: temporary failure, safe to retry with backoff */
 export class SuiRpcRetryableException extends AbstractException {
     constructor(message?: string, metadata?: AbstractExceptionMetadata) {
@@ -99,6 +83,24 @@ export class SuiRpcIgnorableException extends AbstractException {
             "SUI_RPC_IGNORABLE_EXCEPTION",
             {
                 ...metadata,
+            },
+        )
+    }
+}
+
+/** RPC: fatal error for rpc client action */
+export interface RpcClientFatalExceptionMetadata extends AbstractExceptionMetadata {
+    message: string
+    originalError: Error
+}
+export class RpcClientFatalException extends AbstractException {
+    constructor({ message, originalError }: RpcClientFatalExceptionMetadata) {
+        super(
+            message ?? "RPC client fatal error",
+            "RPC_CLIENT_FATAL_EXCEPTION",
+            {
+                message,
+                originalError,
             },
         )
     }

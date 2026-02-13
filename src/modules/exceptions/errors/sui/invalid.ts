@@ -1,6 +1,6 @@
-import {
-    ErrorSuiObjectKind 
-} from "../../enums"
+import type {
+    SuiObjectKind 
+} from "@modules/blockchains"
 import type {
     AbstractExceptionMetadata 
 } from "../abstract"
@@ -13,7 +13,7 @@ import type {
 
 /** Metadata when Sui object is invalid type. */
 export interface SuiObjectInvalidTypeExceptionMetadata extends AbstractExceptionMetadata {
-    kind: ErrorSuiObjectKind
+    kind: SuiObjectKind
     id?: string
     dexId: DexId
     liquidityPoolId: LiquidityPoolId

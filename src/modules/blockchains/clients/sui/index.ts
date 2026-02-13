@@ -5,3 +5,6 @@
 export * from "./client.service"
 export * from "./get-error-types.service"
 export * from "./types"
+export * from "./execute.service"
+export * from "./stimulate.service"
+export * from "./fetch-object.service"

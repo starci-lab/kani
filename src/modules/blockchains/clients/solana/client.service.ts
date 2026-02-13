@@ -33,7 +33,7 @@ import {
     SolanaRpcRetryableException,
     SolanaRpcFatalException,
     SolanaRpcIgnorableException,
-    TransactionSubmitFailedException,
+    RpcClientFatalException,
 } from "@modules/exceptions"
 import {
     WithSolanaRpcParams
@@ -137,7 +137,7 @@ export class SolanaClientService {
                                 })
                                 switch (errorType) {
                                 case RpcErrorType.TransactionSubmitFailed:
-                                    throw new AbortError(new TransactionSubmitFailedException({
+                                    throw new AbortError(new RpcClientFatalException({
                                         message: error?.message, originalError: error 
                                     }))
                                 case RpcErrorType.Fatal:

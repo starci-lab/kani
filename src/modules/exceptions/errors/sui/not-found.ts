@@ -5,12 +5,12 @@ import {
     AbstractException 
 } from "../abstract"
 import type {
-    ErrorSuiObjectKind 
-} from "../../enums"
+    SuiObjectKind 
+} from "@modules/blockchains"
 
 /** Metadata when Sui object is not found. */
 export interface SuiObjectNotFoundExceptionMetadata extends AbstractExceptionMetadata {
-    kind: ErrorSuiObjectKind
+    kind: SuiObjectKind
     parentId?: string
     id?: string
     dexId: string

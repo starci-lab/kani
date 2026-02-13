@@ -8,12 +8,12 @@ import type {
     DexId, LiquidityPoolId 
 } from "@modules/databases"
 import type {
-    ErrorSolanaAccountKind 
-} from "../../enums"
+    AccountKind
+} from "@modules/blockchains"
 
 /** Metadata when Solana account is not found. */
 export interface SolanaAccountNotFoundExceptionMetadata extends AbstractExceptionMetadata {
-    kind: ErrorSolanaAccountKind
+    kind: AccountKind
     address: string
     dexId: DexId
     liquidityPoolId: LiquidityPoolId

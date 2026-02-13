@@ -15,6 +15,15 @@ import {
     SuiClientService,
     SuiGetErrorTypesService
 } from "./sui"
+import {
+    SolanaExecuteService,
+    SolanaStimulateService,
+    SolanaTxService
+} from "./solana"
+import {
+    SuiExecuteService,
+    SuiStimulateService
+} from "./sui"
 
 /**
  * Module for managing blockchain RPC clients.
@@ -43,7 +52,12 @@ export class ClientsModule extends ConfigurableModuleClass {
             // chain-specific services
             SolanaClientService,
             SolanaGetErrorTypesService,
+            SolanaExecuteService,
+            SolanaStimulateService,
+            SolanaTxService,
             SuiClientService,
+            SuiExecuteService,
+            SuiStimulateService,
             SuiGetErrorTypesService,
             // main executor service
             RpcExecutorService,
