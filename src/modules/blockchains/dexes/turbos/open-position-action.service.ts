@@ -9,6 +9,8 @@ import {
     ExecuteOpenPositionResult,
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResult,
+    SignOpenPositionParams,
+    SignOpenPositionResult,
 } from "../types"
 import {
     ClmmLiquidityPoolState
@@ -40,7 +42,8 @@ import {
     SuiExecuteService,
     SuiFetchService,
     SuiStimulateService,
-    SuiObjectKind
+    SuiObjectKind,
+    SuiTxService
 } from "../../clients"
 import {
     SuiEvent 
@@ -65,6 +68,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         private readonly suiFetchService: SuiFetchService,
         private readonly suiStimulateService: SuiStimulateService,
         private readonly suiExecuteService: SuiExecuteService,
+        private readonly suiTxService: SuiTxService,
     ) {}
     
     /**
@@ -331,6 +335,32 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         const positionId = mintNftEventParsed.nft_address
         return {
             positionId,
+        }
+    }
+
+    /**
+     * Signs an open position transaction.
+     *
+     * Stage: signing
+     * - Sign with V1 signer or Privy (V2)
+     *
+     * @param param - Parameters for signing open position
+     * @param param.bot - Bot schema
+     * @param param.prepareTx - Prepared unsigned transaction
+     * @returns Signed transaction
+     */
+    async sign({
+        bot,
+        prepareTx,
+        liquidityPool,
+    }: SignOpenPositionParams): Promise<SignOpenPositionResult> {
+        return {
+            signedTx: await this.suiTxService.signTx({
+                bot,
+                prepareTx,
+                transactionType: TransactionType.OpenPosition,
+                liquidityPool,
+            }),
         }
     }
 }

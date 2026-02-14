@@ -202,8 +202,16 @@ export class OpenPositionEnqueueService {
                                 executor: envConfig().executor.id,
                                 type: JobType.OpenPosition,
                                 status: JobStatus.Pending,
+                                tasks: [
+                                ],
+                                metadata: {
+                                    liquidityPoolId: liquidityPool.displayId,
+                                },
                             }
-                        ]
+                        ],
+                        {
+                            session,
+                        }
                     )
                     const job = jobRaw.toJSON()
                     /**
@@ -237,6 +245,7 @@ export class OpenPositionEnqueueService {
         const payload: ActionPayload = {
             jobId,
             botId: bot.id,
+            type: JobType.OpenPosition,
             isRetry,
             tasks: [
                 {

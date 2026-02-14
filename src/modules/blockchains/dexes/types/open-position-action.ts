@@ -124,6 +124,8 @@ export interface ConfirmOpenPositionResult {
  * Parameters for signing an open position.
  */
 export interface SignOpenPositionParams {
+    /* Liquidity pool */
+    liquidityPool: LiquidityPoolSchema
     /* Prepared transaction */
     prepareTx: PrepareTx
     /* Bot */

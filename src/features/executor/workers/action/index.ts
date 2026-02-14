@@ -1,1 +1,6 @@
 export * from "./action.module"
+export * from "./action.worker"
+export * from "./cancel.service"
+export * from "./on-completed.service"
+export * from "./on-failed.service"
+export * from "./send-heartbeat.service"

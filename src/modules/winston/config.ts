@@ -18,8 +18,10 @@ import {
     TransactionStimulatedMessage,
     TransactionExecutedMessage,
     WinstonLevel,
-} from "./types"
-import {
+    ActionJobCompletedMessage,
+    ActionJobFailedMessage,
+    ActionJobContextLoadFailedMessage,
+    ActiveJobPreparedMessage,
     MetricInitializedMessage,
     ClosePositionTransactionExecutedMessage,
     ClosePositionTransactionFailedMessage,
@@ -229,6 +231,7 @@ import {
     ConsulRegisterSuccessfullyMessage,
     JobEnqueuedMessage,
     JobEnqueueFailedMessage,
+    TransactionSignedMessage,
 } from "./types"
 
 /** Map of Winston log names to level, Loki flag, and message type. */
@@ -2160,5 +2163,45 @@ export const configMap = {
         loki: true,
         messageType: {
         } as JobEnqueueFailedMessage,
+    },
+    // Action Job Completed
+    [WinstonLog.ActionJobCompleted]: {
+        name: WinstonLog.ActionJobCompleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as ActionJobCompletedMessage,
+    },
+    // Action Job Failed
+    [WinstonLog.ActionJobFailed]: {
+        name: WinstonLog.ActionJobFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ActionJobFailedMessage,
+    },
+    // Action Job Context Load Failed
+    [WinstonLog.ActionJobContextLoadFailed]: {
+        name: WinstonLog.ActionJobContextLoadFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ActionJobContextLoadFailedMessage,
+    },
+    // Active Job Prepared
+    [WinstonLog.ActiveJobPrepared]: {
+        name: WinstonLog.ActiveJobPrepared,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as ActiveJobPreparedMessage,
+    },
+    // Transaction Signed
+    [WinstonLog.TransactionSigned]: {
+        name: WinstonLog.TransactionSigned,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as TransactionSignedMessage,
     },
 }

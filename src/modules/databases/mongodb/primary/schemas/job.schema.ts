@@ -8,9 +8,6 @@ import {
     Field, ID, Int, ObjectType 
 } from "@nestjs/graphql"
 import {
-    LiquidityPoolSchema 
-} from "./liquidity-pool.schema"
-import {
     Schema as MongooseSchema 
 } from "mongoose"
 import {
@@ -20,19 +17,16 @@ import {
     JobType, GraphQLTypeJobType, GraphQLTypeJobStatus, JobStatus 
 } from "../enums"
 import {
-    ExecutorSchema 
-} from "./executor.schema"
-
-import {
-    Types 
-} from "mongoose"
-import {
     PrimaryMongoDbCollectionRef,
 } from "../enums"
 import {
     TaskSchema, TaskSchemaClass 
 } from "./task.schema"
+import GraphQLJSON from "graphql-type-json"
 
+/**
+ * Represents a job.
+ */
 @ObjectType({
     description: "Represents a job",
 })
@@ -41,17 +35,9 @@ import {
     collection: "jobs",
 })
 export class JobSchema extends AbstractSchema {
-    @Field(() => ID,
-        {
-            description: "Reference to the liquidity pool associated with this job", nullable: true 
-        })
-    @Prop({
-        type: MongooseSchema.Types.ObjectId,
-        ref: PrimaryMongoDbCollectionRef.LiquidityPool,
-        required: false,
-    })
-        liquidityPool?: LiquidityPoolSchema | MongooseSchema.Types.ObjectId
-
+    /**
+     * The bot that the job is associated with.
+     */
     @Field(() => ID,
         {
             description: "Reference to the bot associated with this job" 
@@ -62,17 +48,9 @@ export class JobSchema extends AbstractSchema {
     })
         bot: BotSchema | MongooseSchema.Types.ObjectId
 
-    @Field(() => ID,
-        {
-            description: "Reference to the executor associated with this job", nullable: true 
-        })
-    @Prop({
-        type: MongooseSchema.Types.ObjectId,
-        ref: PrimaryMongoDbCollectionRef.Executor,
-        required: false,
-    })
-        executor?: ExecutorSchema | Types.ObjectId
-
+    /**
+     * The type of the job.
+     */
     @Field(() => GraphQLTypeJobType,
         {
             description: "The type of the job" 
@@ -82,6 +60,21 @@ export class JobSchema extends AbstractSchema {
     })
         type: JobType
 
+    /**
+     * The reason for the job cancellation.
+     */
+    @Field(() => GraphQLJSON,
+        {
+            description: "The metadata for the job" 
+        })
+    @Prop({
+        type: MongooseSchema.Types.Mixed, required: false 
+    })
+        metadata?: unknown
+
+    /**
+     * The status of the job.
+     */
     @Field(() => GraphQLTypeJobStatus,
         {
             description: "The status of the job" 
@@ -91,20 +84,9 @@ export class JobSchema extends AbstractSchema {
     })
         status: JobStatus
 
-    @Field(() => String,
-        {
-            description: "The transaction hash of the job" 
-        })
-    @Prop({
-        type: String, required: false 
-    })
-        txHash?: string
-
-    @Prop({
-        type: MongooseSchema.Types.Mixed, required: false 
-    })
-        data?: unknown
-
+    /**
+     * The number of retry attempts of the job.
+     */
     @Field(
         () => Int, 
         { 
@@ -117,6 +99,9 @@ export class JobSchema extends AbstractSchema {
     })
         retryCount: number
 
+    /**
+     * The date and time the job was processed.
+     */
     @Field(
         () => Date, 
         { 
@@ -129,6 +114,9 @@ export class JobSchema extends AbstractSchema {
     })
         processedAt?: Date
 
+    /**
+     * The date and time the job was started.
+     */
     @Field(
         () => Date, 
         { 
@@ -140,7 +128,9 @@ export class JobSchema extends AbstractSchema {
         type: Date, required: false 
     })
         startedAt?: Date
-
+    /**
+     * The tasks of the job.
+     */
     @Field(() => [TaskSchema],
         {
             description: "The tasks of the job",
@@ -153,16 +143,3 @@ export class JobSchema extends AbstractSchema {
 }
 
 export const JobSchemaClass = SchemaFactory.createForClass(JobSchema)
-
-// get the order of the job status
-export const getJobStatusOrder = (status: JobStatus): number => {
-    switch (status) {
-    case JobStatus.Pending: return 0
-    case JobStatus.Prepared: return 1
-    case JobStatus.Executed: return 2
-    case JobStatus.Confirmed: return 3
-    case JobStatus.Completed: return 4
-    case JobStatus.Cleared: return 5
-    case JobStatus.Failed: return 6
-    }
-}

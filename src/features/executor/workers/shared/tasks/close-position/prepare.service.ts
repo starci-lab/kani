@@ -2,12 +2,6 @@ import {
     Injectable
 } from "@nestjs/common"
 import {
-    ActionExecutionContextService,
-} from "../common"
-import {
-    OpenPositionActionService
-} from "@modules/blockchains"
-import {
     InjectPrimaryMongoose, JobSchema,
     StepType,
     TaskType
@@ -22,6 +16,9 @@ import {
     InjectSuperJson 
 } from "@modules/mixin"
 import SuperJSON from "superjson"
+import {
+    OpenPositionActionService 
+} from "@modules/blockchains"
 /**
  * Service for the Close Position Task PREPARE step.
  */
@@ -29,7 +26,6 @@ import SuperJSON from "superjson"
 export class ClosePositionTaskPrepareService {
     constructor(
         private readonly openPositionActionService: OpenPositionActionService,
-        private readonly actionExecutionContextService: ActionExecutionContextService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         @InjectSuperJson()
@@ -48,7 +44,7 @@ export class ClosePositionTaskPrepareService {
             jobId,
             liquidityPoolId,
             state,
-            index,
+            taskIndex,
         }: ClosePositionTaskPrepareParams
     ) {
         // Load the execution context.

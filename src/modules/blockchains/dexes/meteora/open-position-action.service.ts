@@ -224,12 +224,15 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
     async sign({
         bot,
         prepareTx,
+        liquidityPool,
     }: SignOpenPositionParams): Promise<SignedTx> {
         // stage: sign transaction
         return await this.solanaTxService.signTx(
             {
                 bot,
                 prepareTx,
+                transactionType: TransactionType.OpenPosition,
+                liquidityPool,
             }
         )
     }

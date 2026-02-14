@@ -29,7 +29,7 @@ import {
 } from "@modules/exceptions"
 import {
     SendHeartbeatService 
-} from "../../actions/send-heartbeat.service"
+} from "../../../action/send-heartbeat.service"
 
 /**
  * Service for the Close Position Task SIGN step.

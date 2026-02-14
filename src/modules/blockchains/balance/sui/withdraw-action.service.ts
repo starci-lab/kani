@@ -6,6 +6,8 @@ import {
     PrepareWithdrawTransactionResult,
     ExecuteWithdrawTransactionParams,
     ExecuteWithdrawTransactionResult,
+    SignWithdrawTransactionParams,
+    SignWithdrawTransactionResult,
 } from "../types"
 import {
     TransactionType,
@@ -27,6 +29,7 @@ import {
     SuiFetchService,
     SuiStimulateService,
     SuiExecuteService,
+    SuiTxService,
 } from "../../clients"
 import {
     SelectCoinsService,
@@ -53,6 +56,7 @@ export class SuiWithdrawActionService {
         private readonly suiFetchService: SuiFetchService,
         private readonly suiStimulateService: SuiStimulateService,
         private readonly suiExecuteService: SuiExecuteService,
+        private readonly suiTxService: SuiTxService,
     ) {
     }
 
@@ -298,6 +302,25 @@ export class SuiWithdrawActionService {
         })
         return {
             txHash,
+        }
+    }
+
+    /**
+     * Signs a withdraw transaction.
+     *
+     * @param param - Parameters for signing withdraw transaction
+     * @returns Signed transaction
+     *
+     * @example
+     * const signedTx = await service.sign({ bot, prepareTx })
+     */
+    public async sign({ bot, prepareTx }: SignWithdrawTransactionParams): Promise<SignWithdrawTransactionResult> {
+        return {
+            signedTx: await this.suiTxService.signTx({
+                bot,
+                prepareTx,
+                transactionType: TransactionType.Withdraw,
+            }),
         }
     }
 }

@@ -24,7 +24,7 @@ export interface ClosePositionTaskBaseParams {
 /** Params for the CLOSE POSITION PREPARE step. */
 export interface ClosePositionTaskPrepareParams extends ClosePositionTaskBaseParams {
     /** Task index */
-    index: string
+    taskIndex: number
 }
 
 /** Params for the CLOSE POSITION PLAN step. */

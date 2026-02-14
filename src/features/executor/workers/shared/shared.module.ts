@@ -11,7 +11,6 @@ import {
     SendHeartbeatService 
 } from "./actions"
 import {
-    OnCompletedService,
     ClearService,
     SerializerService
 } from "./actions"
@@ -22,14 +21,12 @@ import {
 @Module(
     {
         providers: [
-            OnCompletedService,
             OnFailedService,
             SendHeartbeatService,
             ClearService,
             SerializerService,
         ],
         exports: [
-            OnCompletedService,
             OnFailedService,
             SendHeartbeatService,
             ClearService,

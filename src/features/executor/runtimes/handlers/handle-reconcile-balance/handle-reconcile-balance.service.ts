@@ -2,7 +2,7 @@ import {
     Injectable,
 } from "@nestjs/common"
 import {
-    JobVariant,
+    JobType,
     type BotSchema,
 } from "@modules/databases"
 import {
@@ -158,7 +158,7 @@ export class HandleReconcileBalanceService {
                 {
                     botId: bot.id,
                     jobId,
-                    variant: JobVariant.ReconcileBalance,
+                    type: JobType.ReconcileBalance,
                 }
             )
         } catch (error) {
@@ -168,7 +168,7 @@ export class HandleReconcileBalanceService {
                     botId: bot.id,
                     error: error.message,
                     jobId,
-                    variant: JobVariant.ReconcileBalance,
+                    type: JobType.ReconcileBalance,
                 }
             )
             this.lockAuthorityService.release(

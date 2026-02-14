@@ -9,6 +9,8 @@ import {
     ExecuteOpenPositionResult,
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResult,
+    SignOpenPositionParams,
+    SignOpenPositionResult,
 } from "../types"
 import {
     DexId, OrcaPositionMetadata, PrimaryMemoryStorageService
@@ -324,6 +326,32 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         return {
             positionId,
             txHash,
+        }
+    }
+
+    /**
+     * Signs an open position transaction.
+     *
+     * Stage: signing
+     * - Sign with V1 signer or Privy (V2)
+     *
+     * @param param - Parameters for signing open position
+     * @param param.bot - Bot schema
+     * @param param.prepareTx - Prepared unsigned transaction
+     * @returns Signed transaction
+     */
+    async sign({
+        bot,
+        prepareTx,
+        liquidityPool,
+    }: SignOpenPositionParams): Promise<SignOpenPositionResult> {
+        return {
+            signedTx: await this.solanaTxService.signTx({
+                bot,
+                prepareTx,
+                transactionType: TransactionType.OpenPosition,
+                liquidityPool,
+            }),
         }
     }
 }

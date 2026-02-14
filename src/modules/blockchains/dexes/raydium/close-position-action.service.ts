@@ -152,11 +152,14 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
     async sign({
         bot,
         prepareTx,
+        liquidityPool,
     }: SignClosePositionParams): Promise<SignClosePositionResult> {
         return {
             signedTx: await this.solanaTxService.signTx({
                 bot,
                 prepareTx,
+                transactionType: TransactionType.ClosePosition,
+                liquidityPool,
             }),
         }
     }

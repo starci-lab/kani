@@ -1,5 +1,7 @@
 import {
-    BotSchema 
+    BotSchema,
+    LiquidityPoolSchema,
+    TransactionType
 } from "@modules/databases"
 import {
     Blockhash, 
@@ -32,6 +34,10 @@ export interface SignSolanaTxParams {
     bot: BotSchema
     /** Prepared transaction. */
     prepareTx: PrepareTx
+    /** Liquidity pool. */
+    liquidityPool?: LiquidityPoolSchema
+    /** Transaction type. */
+    transactionType: TransactionType
 }
 
 /** Params for compiling a Solana transaction message. */

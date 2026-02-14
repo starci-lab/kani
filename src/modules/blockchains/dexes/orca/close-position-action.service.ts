@@ -160,11 +160,14 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
     async sign({
         bot,
         prepareTx,
+        liquidityPool,
     }: SignClosePositionParams): Promise<SignClosePositionResult> {
         return {
             signedTx: await this.solanaTxService.signTx({
                 bot,
                 prepareTx,
+                transactionType: TransactionType.ClosePosition,
+                liquidityPool,
             }),
         }
     }

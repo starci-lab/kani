@@ -243,4 +243,7 @@ export enum WinstonLog {
     TransactionExecuted = "Transaction.Executed",
     ActionJobCompleted = "Action.Job.Completed",
     ActionJobFailed = "Action.Job.Failed",
+    ActionJobContextLoadFailed = "Action.Job.Context.Load.Failed",
+    ActiveJobPrepared = "Active.Job.Prepared",
+    TransactionSigned = "Transaction.Signed",
 }

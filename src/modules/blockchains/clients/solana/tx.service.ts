@@ -53,6 +53,9 @@ import {
     PrivyMetadataNotFoundException, 
     PrivyPublicKeyNotFoundException 
 } from "@modules/exceptions"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
 /**
  * Service for building Solana transactions with latest blockhash.
  * Fetches latest blockhash via RPC and returns compiled transaction + blockhash for signing/lifetime.
@@ -71,6 +74,7 @@ export class SolanaTxService {
         private readonly superJson: SuperJSON,
         private readonly signerService: SignerService,
         private readonly privySignService: PrivySignService,
+        private readonly winstonService: WinstonService,
     ) {}
 
     /**
@@ -151,6 +155,8 @@ export class SolanaTxService {
         {
             bot,
             prepareTx,
+            liquidityPool,
+            transactionType,
         }: SignSolanaTxParams): Promise<SignedTx> {
         const latestBlockhash = await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
@@ -230,6 +236,17 @@ export class SolanaTxService {
                 chainId: ChainId.Solana,
             }
         }
+        // stage: logging
+        this.winstonService.log(
+            WinstonLog.TransactionSigned,
+            {
+                botId: bot.id,
+                txHash: signedTx.txHash,
+                liquidityPoolId: liquidityPool?.displayId,
+                type: transactionType,
+                chainId: ChainId.Solana,
+            }
+        )
         return signedTx
     }
 }

@@ -11,7 +11,6 @@ import {
     JobSchema,
     BotSchema,
     TaskType,
-    JobVariant,
 } from "@modules/databases"
 import {
     ActionPayload
@@ -73,7 +72,13 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
      * @example
      * const job = await service.enqueue({ bot, jobId })
      */
-    async enqueue({ bot, jobId, isRetry }: EnqueueReconcileBalanceParams): Promise<Job<string>> {
+    async enqueue(
+        {
+            bot,
+            jobId,
+            isRetry,
+        }: EnqueueReconcileBalanceParams
+    ): Promise<Job<string>> {
         // create job record if not a retry
         if (!isRetry) {
             const session = await this.connection.startSession()
@@ -91,6 +96,8 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                                 status: JobStatus.Pending,
                                 executor: envConfig().executor.id,
                                 startedAt: this.dayjsService.now().toDate(),
+                                tasks: [
+                                ],
                             }
                         ],
                         {
@@ -122,7 +129,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
         
         // build payload and enqueue job
         const payload: ActionPayload = {
-            variant: JobVariant.ReconcileBalance,
+            type: JobType.ReconcileBalance,
             jobId,
             botId: bot.id,
             isRetry,

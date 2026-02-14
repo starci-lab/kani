@@ -38,6 +38,9 @@ import SuperJSON from "superjson"
 import {
     ChainId 
 } from "@modules/common"
+import {
+    WinstonLog, WinstonService
+} from "@modules/winston"
 /**
  * Service for building Sui transactions.
  */
@@ -47,6 +50,7 @@ export class SuiTxService {
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly signerService: SignerService,
         private readonly privySignService: PrivySignService,
+        private readonly winstonService: WinstonService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
     ) {}
@@ -60,7 +64,9 @@ export class SuiTxService {
     async signTx(
         { 
             bot, 
-            prepareTx 
+            prepareTx,
+            liquidityPool,
+            transactionType,
         }: SignSuiTxParams
     ): Promise<SignedTx> {
         // parse transaction from serialized tx
@@ -134,6 +140,17 @@ export class SuiTxService {
                 chainId: ChainId.Sui,
             }
         }
+        // stage: logging
+        this.winstonService.log(
+            WinstonLog.TransactionSigned,
+            {
+                botId: bot.id,
+                txHash: signedTx.txHash,
+                chainId: ChainId.Sui,
+                liquidityPoolId: liquidityPool?.displayId,
+                type: transactionType,
+            }
+        )
         return signedTx
     }
 }

@@ -9,7 +9,8 @@ import {
     StepType 
 } from "../enums"
 import {
-    ObjectType, Field, Int 
+    ObjectType, Field, 
+    Int
 } from "@nestjs/graphql"
 
 /**
@@ -50,7 +51,7 @@ export class StepSchema extends AbstractSchema {
     @Prop({
         type: String, required: false 
     })
-        signResult?: string
+        signedTx?: string
     /**
      * The send result of the step.
      */
@@ -67,16 +68,28 @@ export class StepSchema extends AbstractSchema {
         executeResult?: string
 
     /**
-     * The status of the step.
+     * The params of the step.
      */
-    @Field(
-        () => Int,
+    @Field(() => String,
+        {
+            description: "The sign params of the step",
+        }
+    )
+    @Prop({
+        type: String 
+    })
+        prepareTx: string
+
+    /**
+     * The index of the step.
+     */
+    @Field(() => Int,
         {
             description: "The index of the step",
         }
     )
-    @Prop({ 
-        type: Number, required: true
+    @Prop({
+        type: Number, required: true 
     })
         index: number
 }

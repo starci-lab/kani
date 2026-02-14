@@ -11,7 +11,6 @@ import {
     JobSchema,
     BotSchema,
     TaskType,
-    JobVariant,
 } from "@modules/databases"
 import {
     ActionPayload
@@ -73,10 +72,17 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
      * @example
      * const job = await service.enqueue({ bot, jobId, payload })
      */
-    async enqueue({ bot, jobId, isRetry, payload: cacheResult }: EnqueueWithdrawParams): Promise<Job<string>> {
+    async enqueue(
+        {
+            bot,
+            jobId,
+            isRetry,
+            payload: cacheResult,
+        }: EnqueueWithdrawParams
+    ): Promise<Job<string>> {
         // build withdraw payload
         const payload: ActionPayload = {
-            variant: JobVariant.Withdraw,
+            type: JobType.Withdraw,
             jobId,
             botId: bot.id,
             isRetry,
@@ -107,6 +113,8 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                                 status: JobStatus.Pending,
                                 executor: envConfig().executor.id,
                                 startedAt: this.dayjsService.now().toDate(),
+                                tasks: [
+                                ],
                             }
                         ],
                         {

@@ -50,8 +50,7 @@ export class BullModule extends ConfigurableModuleClass {
      */
     public static registerQueue(options: RegisterQueueOptions = {
     }): DynamicModule {
-        const queueName = options.queueName ?? BullQueueName.ReconcileBalance
-
+        const queueName = options.queueName ?? BullQueueName.Action
         const registerQueueDynamicModule = NestBullModule.registerQueue({
             name: `${bullData[queueName].name}`,
             prefix: bullData[queueName].prefix,

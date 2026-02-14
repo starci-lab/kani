@@ -58,11 +58,14 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
     async sign({
         bot,
         prepareTx,
+        liquidityPool,
     }: SignClosePositionParams): Promise<SignClosePositionResult> {
         return {
             signedTx: await this.suiTxService.signTx({
                 bot,
                 prepareTx,
+                transactionType: TransactionType.ClosePosition,
+                liquidityPool,
             }),
         }
     }

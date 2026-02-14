@@ -2,7 +2,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    JobVariant,
+    JobType,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
@@ -295,7 +295,7 @@ export class HandleOpenPositionService {
                 {
                     botId: bot.id,
                     jobId,
-                    variant: JobVariant.OpenPosition,
+                    type: JobType.OpenPosition,
                     liquidityPoolId: liquidityPool.displayId,
                 }
             )
@@ -306,7 +306,7 @@ export class HandleOpenPositionService {
                     botId: bot.id,
                     liquidityPoolId: liquidityPool.displayId,
                     jobId,
-                    variant: JobVariant.OpenPosition,
+                    type: JobType.OpenPosition,
                     error: error.message,
                 }
             )

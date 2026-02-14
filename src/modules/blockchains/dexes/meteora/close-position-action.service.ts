@@ -154,6 +154,7 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
         {
             bot,
             prepareTx,
+            liquidityPool,
         }: SignClosePositionParams
     ): Promise<SignClosePositionResult> {
         return {
@@ -161,6 +162,8 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                 {
                     bot,
                     prepareTx,
+                    transactionType: TransactionType.ClosePosition,
+                    liquidityPool,
                 }
             ),
         }

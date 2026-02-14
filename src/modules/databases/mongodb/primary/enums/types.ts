@@ -139,12 +139,10 @@ registerEnumType(GraphQLTypeJobType,
 
 export enum JobStatus {
     Pending = "pending",
-    Prepared = "prepared",
-    Executed = "executed",
-    Confirmed = "confirmed",
+    Running = "running",
     Completed = "completed",
-    Cleared = "cleared",
     Failed = "failed",
+    Cancelled = "cancelled",
 }
 
 export const GraphQLTypeJobStatus = createEnumType(JobStatus)
@@ -157,20 +155,17 @@ registerEnumType(GraphQLTypeJobStatus,
             [JobStatus.Pending]: {
                 description: "The job has been created but not processed yet",
             },
-            [JobStatus.Prepared]: {
-                description: "The job has been prepared",
-            },
-            [JobStatus.Executed]: {
-                description: "The job has been executed",
+            [JobStatus.Running]: {
+                description: "The job has been running",
             },
             [JobStatus.Completed]: {
                 description: "The job has been completed",
             },
-            [JobStatus.Cleared]: {
-                description: "The job has been cleared",
-            },
             [JobStatus.Failed]: {
                 description: "The job has failed",
+            },
+            [JobStatus.Cancelled]: {
+                description: "The job has been cancelled",
             },
         },
     }
@@ -405,36 +400,6 @@ registerEnumType(GraphQLTypeStepType,
             },
             [StepType.Execute]: {
                 description: "The execute step"
-            }
-        }
-    }
-)
-
-export enum JobVariant {
-    OpenPosition = "openPosition",
-    ClosePosition = "closePosition",
-    ReconcileBalance = "reconcileBalance",
-    Withdraw = "withdraw",
-}
-export const GraphQLTypeJobVariant = createEnumType(JobVariant)
-
-registerEnumType(
-    GraphQLTypeJobVariant,
-    {
-        name: "JobVariant",
-        description: "The variant of the job",
-        valuesMap: {
-            [JobVariant.OpenPosition]: {
-                description: "The open position job variant"
-            },
-            [JobVariant.ClosePosition]: {
-                description: "The close position job variant"
-            },
-            [JobVariant.ReconcileBalance]: {
-                description: "The reconcile balance job variant"
-            },
-            [JobVariant.Withdraw]: {
-                description: "The withdraw job variant"
             }
         }
     }

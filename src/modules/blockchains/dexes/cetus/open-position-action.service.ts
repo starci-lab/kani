@@ -306,6 +306,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         {
             bot,
             prepareTx,
+            liquidityPool,
         }: SignOpenPositionParams
     ): Promise<SignOpenPositionResult> {
         // sign transaction
@@ -313,6 +314,8 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             {
                 bot,
                 prepareTx,
+                transactionType: TransactionType.OpenPosition,
+                liquidityPool,
             }
         )
         // return signed transaction

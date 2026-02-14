@@ -17,7 +17,7 @@ import {
     SettlementService
 } from "@modules/blockchains"
 import {
-    JobVariant,
+    JobType,
     PositionAssociateService 
 } from "@modules/databases"
 import {
@@ -174,7 +174,7 @@ export class HandleClosePositionService {
                 {
                     botId: bot.id,
                     jobId,
-                    variant: JobVariant.ClosePosition,
+                    type: JobType.ClosePosition,
                     liquidityPoolId: liquidityPool.displayId,
                 }
             )
@@ -185,7 +185,7 @@ export class HandleClosePositionService {
                     botId: bot.id,
                     liquidityPoolId: liquidityPool.displayId,
                     jobId,
-                    variant: JobVariant.ClosePosition,
+                    type: JobType.ClosePosition,
                     error: error.message,
                 }
             )

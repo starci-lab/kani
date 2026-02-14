@@ -105,13 +105,16 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
     async sign(
         {
             bot, 
-            prepareTx
+            prepareTx,
+            liquidityPool,
         }: SignClosePositionParams
     ): Promise<SignClosePositionResult> {
         return {
             signedTx: await this.suiTxService.signTx({
                 bot,
                 prepareTx,
+                transactionType: TransactionType.ClosePosition,
+                liquidityPool,
             }),
         }
     }

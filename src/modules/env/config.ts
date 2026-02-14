@@ -1159,7 +1159,7 @@ export const envConfig = () => ({
             key: "BULLMQ_TIMEOUT", defaultValue: "30s" 
         }),
         stalledInterval: parseEnvMs({
-            key: "BULLMQ_STALLED_INTERVAL", defaultValue: "30s" 
+            key: "BULLMQ_STALLED_INTERVAL", defaultValue: "10s" 
         }),
         maxStalledCount: parseEnvInt({
             key: "BULLMQ_MAX_STALLED_COUNT", defaultValue: 1 

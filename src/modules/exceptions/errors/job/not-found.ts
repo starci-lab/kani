@@ -66,7 +66,6 @@ export interface PrepareResultNotFoundExceptionMetadata extends AbstractExceptio
     jobId: string
     liquidityPoolId: LiquidityPoolId
     taskIndex: number
-    stepIndex: number
 }
 
 /** Thrown when prepare result is not found. */
@@ -76,11 +75,41 @@ export class PrepareResultNotFoundException extends AbstractException {
         jobId,
         liquidityPoolId,
         taskIndex,
-        stepIndex,
     }: PrepareResultNotFoundExceptionMetadata) {
         super(
             "Prepare result not found",
             "PREPARE_RESULT_NOT_FOUND_EXCEPTION",
+            {
+                botId,  
+                jobId,
+                liquidityPoolId,
+                taskIndex,
+            }
+        )
+    }
+}
+
+/** Thrown when signed tx is not found. */
+export interface SignedTxNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    botId: string
+    jobId: string
+    liquidityPoolId: LiquidityPoolId
+    taskIndex: number
+    stepIndex: number
+}
+
+/** Thrown when signed tx is not found. */
+export class SignedTxNotFoundException extends AbstractException {
+    constructor({
+        botId,
+        jobId,
+        liquidityPoolId,
+        taskIndex,
+        stepIndex,
+    }: SignedTxNotFoundExceptionMetadata) {
+        super(
+            "Signed tx not found",
+            "SIGNED_TX_NOT_FOUND_EXCEPTION",
             {
                 botId,  
                 jobId,

@@ -299,11 +299,17 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
      * @throws If signing fails in SuiTxService
      */
     async sign(
-        { bot, prepareTx }: SignOpenPositionParams
+        { 
+            bot, 
+            prepareTx, 
+            liquidityPool 
+        }: SignOpenPositionParams
     ): Promise<SignOpenPositionResult> {
         const signedTx = await this.suiTxService.signTx({
             bot,
             prepareTx,
+            transactionType: TransactionType.OpenPosition,
+            liquidityPool,
         })
 
         return {

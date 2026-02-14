@@ -156,7 +156,9 @@ export class SuiReconcileBalanceActionService {
     ): Promise<SignReconcileBalanceTransactionResult> {
         return {
             signedTx: await this.suiTxService.signTx({
-                bot, prepareTx 
+                bot, 
+                prepareTx, 
+                transactionType: TransactionType.ReconcileBalance,
             })
         }
     }

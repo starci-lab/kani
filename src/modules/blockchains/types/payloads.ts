@@ -1,6 +1,6 @@
 import BN from "bn.js"
 import {
-    JobVariant,
+    JobType,
     TaskType 
 } from "@modules/databases"
 
@@ -79,6 +79,6 @@ export interface ActionPayload extends BasePayload {
   /** Tasks to execute. */
   tasks: Array<ActionTask>
   /** Liquidity pool to use. */
-  variant: JobVariant
+  type: JobType
 }
 

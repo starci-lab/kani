@@ -150,6 +150,7 @@ export class SolanaReconcileBalanceActionService {
             signedTx: await this.solanaTxService.signTx({
                 bot,
                 prepareTx,
+                transactionType: TransactionType.ReconcileBalance,
             }),
         }
     }

@@ -237,11 +237,14 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
     async sign({
         bot,
         prepareTx,
+        liquidityPool,
     }: SignOpenPositionParams): Promise<SignOpenPositionResult> {
         return {
             signedTx: await this.suiTxService.signTx({
                 bot,
                 prepareTx,
+                transactionType: TransactionType.OpenPosition,
+                liquidityPool,
             }),
         }
     }

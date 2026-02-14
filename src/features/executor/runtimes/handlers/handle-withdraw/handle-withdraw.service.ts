@@ -3,7 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     BotSchema,
-    JobVariant,
+    JobType,
 } from "@modules/databases"
 import {
     WithdrawEnqueueService
@@ -117,7 +117,7 @@ export class HandleWithdrawService {
                 {
                     botId: bot.id,
                     jobId,
-                    variant: JobVariant.Withdraw,
+                    type: JobType.Withdraw,
                 }
             )
         } catch (error) {
@@ -127,7 +127,7 @@ export class HandleWithdrawService {
                     botId: bot.id,
                     error: error.message,
                     jobId,
-                    variant: JobVariant.Withdraw,
+                    type: JobType.Withdraw,
                 }
             )
             this.lockAuthorityService.release(

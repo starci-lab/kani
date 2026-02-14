@@ -84,6 +84,19 @@ export class TaskSchema extends AbstractSchema {
         steps: Array<StepSchema>
 
     /**
+     * The number of steps in the task.
+     */
+    @Field(() => Int,
+        {
+            description: "The number of steps in the task",
+        }
+    )
+    @Prop({
+        type: Number, required: true 
+    })
+        stepCount: number
+
+    /**
      * The status of the task.
      */
     @Field(() => Int,

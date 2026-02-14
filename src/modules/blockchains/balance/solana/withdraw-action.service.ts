@@ -222,10 +222,13 @@ export class SolanaWithdrawActionService {
     }: SignWithdrawTransactionParams)
     : Promise<SignWithdrawTransactionResult> {
         return {
-            signedTx: await this.solanaTxService.signTx({
-                bot,
-                prepareTx,
-            }),
+            signedTx: await this.solanaTxService.signTx(
+                {
+                    bot,
+                    prepareTx,
+                    transactionType: TransactionType.Withdraw,
+                }
+            ),
         }
     }
 

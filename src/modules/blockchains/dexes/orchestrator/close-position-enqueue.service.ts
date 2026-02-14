@@ -98,6 +98,11 @@ export class ClosePositionEnqueueService {
                                 executor: envConfig().executor.id,
                                 type: JobType.ClosePosition,
                                 status: JobStatus.Pending,
+                                tasks: [
+                                ],
+                                metadata: {
+                                    liquidityPoolId: liquidityPool.displayId,
+                                },
                             }
                         ],
                         {
@@ -149,6 +154,7 @@ export class ClosePositionEnqueueService {
         const payload: ActionPayload = {
             jobId,
             botId: bot.id,
+            type: JobType.ClosePosition,
             isRetry,
             tasks: [
                 {

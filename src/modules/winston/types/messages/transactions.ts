@@ -173,3 +173,20 @@ export interface TransactionExecutedMessage {
     /** Chain ID */
     chainId: ChainId
 }
+
+
+/**
+ * Transaction signed message.
+ */
+export interface TransactionSignedMessage {
+    /** Bot ID. */
+    botId: string
+    /** Transaction hash. */
+    txHash: string
+    /** Chain ID. */
+    chainId: ChainId
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
+    /** Transaction type. */
+    type: TransactionType
+}
