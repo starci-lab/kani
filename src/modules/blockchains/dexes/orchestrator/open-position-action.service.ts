@@ -27,7 +27,9 @@ import {
     ExecuteOpenPositionParams,
     ExecuteOpenPositionResult,
     PrepareOpenPositionParams,
-    PrepareOpenPositionResult
+    PrepareOpenPositionResult,
+    SignOpenPositionParams,
+    SignOpenPositionResult
 } from "../types"
 import {
     ClmmLiquidityPoolState,
@@ -261,6 +263,48 @@ export class OpenPositionActionService {
             return this.orcaOpenPositionActionService.confirm(params)
         case DexId.Meteora:
             return this.meteoraOpenPositionActionService.confirm(params)
+        default:
+            throw new DexNotImplementedException({
+                id: liquidityPool.dex.toString(),
+            })
+        }
+    }
+
+    /**
+     * Signs an open position transaction.
+     * Delegates signing logic to DEX-specific service based on pool configuration.
+     *
+     * @param params - Parameters for signing open position
+     * @returns Signing result with signed transaction
+     * @throws {DexNotFoundException} If the DEX is not found in memory storage
+     * @throws {DexNotImplementedException} If the DEX is not enabled or not supported
+     */
+    async sign(
+        params: SignOpenPositionParams,
+    ): Promise<SignOpenPositionResult> {
+        const { liquidityPool } = params
+        // Stage: state/config validation (DEX must exist and be enabled for signing)
+        const dexId = liquidityPool.dex.toString()
+        const dex = this.getDexOrThrow(dexId)
+        this.assertDexEnabledOrThrow(dexId,
+            dex.displayId)
+
+        // Route to DEX-specific sign service
+        switch (dex.displayId) {
+        case DexId.FlowX:
+            return await this.flowxOpenPositionActionService.sign(params)
+        case DexId.Cetus:
+            return await this.cetusOpenPositionActionService.sign(params)
+        case DexId.Turbos:
+            return await this.turbosOpenPositionActionService.sign(params)
+        case DexId.Momentum:
+            return this.momentumOpenPositionActionService.sign(params)
+        case DexId.Raydium:
+            return await this.raydiumOpenPositionActionService.sign(params)
+        case DexId.Orca:
+            return await this.orcaOpenPositionActionService.sign(params)
+        case DexId.Meteora:
+            return await this.meteoraOpenPositionActionService.sign(params)
         default:
             throw new DexNotImplementedException({
                 id: liquidityPool.dex.toString(),

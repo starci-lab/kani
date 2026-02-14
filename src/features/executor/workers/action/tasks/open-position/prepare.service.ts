@@ -2,7 +2,7 @@ import {
     Injectable
 } from "@nestjs/common"
 import {
-    ClosePositionActionService,
+    OpenPositionActionService,
 } from "@modules/blockchains"
 import {
     InjectPrimaryMongoose, JobSchema,
@@ -14,7 +14,7 @@ import {
     Connection
 } from "mongoose"
 import {
-    ClosePositionTaskPrepareParams 
+    OpenPositionTaskPrepareParams
 } from "../types"
 import {
     InjectSuperJson 
@@ -28,12 +28,12 @@ import {
     WinstonService 
 } from "@modules/winston"
 /**
- * Service for the Close Position Task PREPARE step.
+ * Service for the Open Position Task PREPARE step.
  */
 @Injectable()
-export class ClosePositionTaskPrepareService {
+export class OpenPositionTaskPrepareService {
     constructor(
-        private readonly closePositionActionService: ClosePositionActionService,
+        private readonly openPositionActionService: OpenPositionActionService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         @InjectSuperJson()
@@ -43,7 +43,7 @@ export class ClosePositionTaskPrepareService {
     ) { }
 
     /**
-     * Process the Close Position Task PREPARE step.
+     * Process the Open Position Task PREPARE step.
      *
      * @param params - The parameters for the step.
      * @returns The result of the step.
@@ -56,7 +56,7 @@ export class ClosePositionTaskPrepareService {
             state,
             taskIndex,
             bullmqJob,
-        }: ClosePositionTaskPrepareParams
+        }: OpenPositionTaskPrepareParams
     ) {
         // Send heartbeat
         await this.sendHeartbeatService.process(
@@ -66,9 +66,9 @@ export class ClosePositionTaskPrepareService {
                 bullmqJob,
             }
         )
-        // We prepare the close position transaction.
+        // We prepare the open position transaction.
         const prepareResult =
-            await this.closePositionActionService.prepare(
+            await this.openPositionActionService.prepare(
                 {
                     bot,
                     liquidityPool,
@@ -86,7 +86,7 @@ export class ClosePositionTaskPrepareService {
                 $push: {
                     tasks: {
                         index: taskIndex,
-                        type: TaskType.ClosePosition,
+                        type: TaskType.OpenPosition,
                         prepareResult: this.superJson.stringify(prepareResult),
                         activeStep: 0,
                         stepCount: prepareResult.prepareTxs.length,
@@ -108,7 +108,7 @@ export class ClosePositionTaskPrepareService {
             {
                 botId: bot.id,
                 jobId: job.id,
-                type: JobType.ClosePosition,
+                type: JobType.OpenPosition,
                 txCount: prepareResult.prepareTxs.length,
                 liquidityPoolId: liquidityPool.displayId,
                 metadata: job.metadata,

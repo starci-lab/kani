@@ -233,6 +233,7 @@ import {
     JobEnqueueFailedMessage,
     TransactionSignedMessage,
     ActionJobConfirmedMessage,
+    ReconcileBalancePlanDeterminedMessage,
 } from "./types"
 
 /** Map of Winston log names to level, Loki flag, and message type. */
@@ -2212,5 +2213,13 @@ export const configMap = {
         loki: true,
         messageType: {
         } as ActionJobConfirmedMessage,
+    },
+    // Reconcile Balance Plan Determined
+    [WinstonLog.ReconcileBalancePlanDetermined]: {
+        name: WinstonLog.ReconcileBalancePlanDetermined,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ReconcileBalancePlanDeterminedMessage,
     },
 }

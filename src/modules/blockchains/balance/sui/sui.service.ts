@@ -3,6 +3,10 @@ import {
 } from "@nestjs/common"
 import {
     IBalanceActionService,
+    SignReconcileBalanceTransactionParams,
+    SignReconcileBalanceTransactionResult,
+    SignWithdrawTransactionParams,
+    SignWithdrawTransactionResult,
 } from "../types"
 import {
     PrepareReconcileBalanceTransactionParams,
@@ -94,6 +98,32 @@ export class SuiBalanceService implements IBalanceActionService {
         param: ExecuteWithdrawTransactionParams
     ): Promise<ExecuteWithdrawTransactionResult> {
         return await this.suiWithdrawActionService.execute(param)
+    }
+
+    /**
+     * Signs a reconcile balance transaction for Sui.
+     *
+     * @param param - Parameters for signing reconcile balance transaction
+     * @returns Signed transaction
+     *
+     * @example
+     * const signedTx = await service.signReconcileBalanceTransaction({ bot, prepareTx })
+     */
+    public async signReconcileBalanceTransaction(param: SignReconcileBalanceTransactionParams): Promise<SignReconcileBalanceTransactionResult> {
+        return await this.suiReconcileBalanceActionService.sign(param)
+    }
+
+    /**
+     * Signs a withdraw transaction for Sui.
+     *
+     * @param param - Parameters for signing withdraw transaction
+     * @returns Signed transaction
+     *
+     * @example
+     * const signedTx = await service.signWithdrawTransaction({ bot, prepareTx })
+     */
+    public async signWithdrawTransaction(param: SignWithdrawTransactionParams): Promise<SignWithdrawTransactionResult> {
+        return await this.suiWithdrawActionService.sign(param)
     }
 }
    

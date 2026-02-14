@@ -12,6 +12,8 @@ import {
     ExecuteWithdrawTransactionResult,
     DetermineReconcileBalancePlanParams,
     DetermineReconcileBalancePlanResult,
+    SignReconcileBalanceTransactionParams,
+    SignReconcileBalanceTransactionResult,
 } from "./types"
 import {
     SolanaBalanceService 
@@ -67,7 +69,9 @@ export class BalanceActionService implements IBalanceActionService {
      * @example
      * const result = await service.prepareReconcileBalanceTransaction({ bot, tokenInputs })
      */
-    async prepareReconcileBalanceTransaction(param: PrepareReconcileBalanceTransactionParams): Promise<PrepareReconcileBalanceTransactionResult> {
+    async prepareReconcileBalanceTransaction(
+        param: PrepareReconcileBalanceTransactionParams
+    ): Promise<PrepareReconcileBalanceTransactionResult> {
         const { bot } = param
         switch (bot.chainId) {
         case ChainId.Solana:
@@ -80,6 +84,28 @@ export class BalanceActionService implements IBalanceActionService {
     }
 
     /**
+     * Signs a reconcile balance transaction.
+     *
+     * @param param - Parameters for signing reconcile balance transaction
+     * @returns Signed transaction
+     *
+     * @example
+     * const signedTx = await service.sign({ bot, prepareTx })
+     */
+    async signReconcileBalanceTransaction(
+        param: SignReconcileBalanceTransactionParams
+    ): Promise<SignReconcileBalanceTransactionResult> {
+        const { bot } = param
+        switch (bot.chainId) {
+        case ChainId.Solana:
+            return this.solanaBalanceService.signReconcileBalanceTransaction(param)
+        case ChainId.Sui:
+            return this.suiBalanceService.signReconcileBalanceTransaction(param)
+        default:
+            throw new Error(`Unsupported chain id: ${bot.chainId}`)
+        }
+    }
+    /**
      * Executes a reconcile balance transaction.
      *
      * @param param - Parameters for executing reconcile balance transaction
@@ -88,7 +114,9 @@ export class BalanceActionService implements IBalanceActionService {
      * @example
      * const result = await service.executeReconcileBalanceTransaction({ bot, prepareTxs })
      */
-    async executeReconcileBalanceTransaction(param: ExecuteReconcileBalanceTransactionParams): Promise<ExecuteReconcileBalanceTransactionResult> {
+    async executeReconcileBalanceTransaction(
+        param: ExecuteReconcileBalanceTransactionParams
+    ): Promise<ExecuteReconcileBalanceTransactionResult> {
         const { bot } = param
         switch (bot.chainId) {
         case ChainId.Solana:
@@ -109,7 +137,9 @@ export class BalanceActionService implements IBalanceActionService {
      * @example
      * const result = await service.prepareWithdrawTransaction({ bot, tokenInputs, toAddress })
      */
-    async prepareWithdrawTransaction(param: PrepareWithdrawTransactionParams): Promise<PrepareWithdrawTransactionResult> {
+    async prepareWithdrawTransaction(
+        param: PrepareWithdrawTransactionParams
+    ): Promise<PrepareWithdrawTransactionResult> {
         const { bot } = param
         switch (bot.chainId) {
         case ChainId.Solana:
@@ -130,7 +160,9 @@ export class BalanceActionService implements IBalanceActionService {
      * @example
      * const result = await service.executeWithdrawTransaction({ bot, prepareTxs })
      */
-    async executeWithdrawTransaction(param: ExecuteWithdrawTransactionParams): Promise<ExecuteWithdrawTransactionResult> {
+    async executeWithdrawTransaction(
+        param: ExecuteWithdrawTransactionParams
+    ): Promise<ExecuteWithdrawTransactionResult> {
         const { bot } = param
         switch (bot.chainId) {
         case ChainId.Solana:

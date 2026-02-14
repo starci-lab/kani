@@ -10,10 +10,10 @@ import {
     ConfirmOpenPositionResult,
     ConfirmOpenPositionParams,
     SignOpenPositionParams,
+    SignOpenPositionResult,
 } from "../types"
 import {
     DlmmLiquidityPoolState,
-    SignedTx,
 } from "../../types"
 import {
     DexId, PrimaryMemoryStorageService 
@@ -225,16 +225,18 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         bot,
         prepareTx,
         liquidityPool,
-    }: SignOpenPositionParams): Promise<SignedTx> {
+    }: SignOpenPositionParams): Promise<SignOpenPositionResult> {
         // stage: sign transaction
-        return await this.solanaTxService.signTx(
-            {
-                bot,
-                prepareTx,
-                transactionType: TransactionType.OpenPosition,
-                liquidityPool,
-            }
-        )
+        return {
+            signedTx: await this.solanaTxService.signTx(
+                {
+                    bot,
+                    prepareTx,
+                    transactionType: TransactionType.OpenPosition,
+                    liquidityPool,
+                }
+            )
+        }
     }
 
     /**

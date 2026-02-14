@@ -65,75 +65,71 @@ export class ClosePositionTaskExecuteService {
         bullmqJob,
         taskIndex,
     }: ClosePositionTaskExecuteParams) {
-        try {
         // send heartbeat
-            await this.sendHeartbeatService.process(
-                {
-                    bot,
-                    job,
-                    bullmqJob,
-                }
-            )
-            // get the previous attempts
-            const hasPreviousAttempts = bullmqJob.attemptsMade > 0
-            // get the active step
-            const stepIndex = job.tasks[taskIndex].activeStep ?? 0
-            // get the step
-            const step = job.tasks[taskIndex].steps?.[stepIndex]
-            // get the signed tx
-            const signedTx = step?.signedTx
-            // if the signed tx is not found, throw an error
-            if (!signedTx) {
-                throw new SignedTxNotFoundException(
-                    {
-                        botId: bot.id,
-                        jobId: job.id,
-                        liquidityPoolId: liquidityPool.displayId,
-                        taskIndex,
-                        stepIndex,
-                    }
-                )
+        await this.sendHeartbeatService.process(
+            {
+                bot,
+                job,
+                bullmqJob,
             }
-            // execute the signed tx
-            const executeResult = await this.closePositionActionService.execute(
+        )
+        // get the previous attempts
+        const hasPreviousAttempts = bullmqJob.attemptsMade > 0
+        // get the active step
+        const stepIndex = job.tasks[taskIndex].activeStep ?? 0
+        // get the step
+        const step = job.tasks[taskIndex].steps?.[stepIndex]
+        // get the signed tx
+        const signedTx = step?.signedTx
+        // if the signed tx is not found, throw an error
+        if (!signedTx) {
+            throw new SignedTxNotFoundException(
                 {
-                    bot,
-                    state,
-                    txCheck: (hasPreviousAttempts || isRetry) ?? false,
-                    liquidityPool,
-                    signedTx: this.superJson.parse<SignedTx>(signedTx),
-                    stimulate: envConfig().executor.runtime.operation.closePosition.stimulate,
+                    botId: bot.id,
+                    jobId: job.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                    taskIndex,
+                    stepIndex,
                 }
             )
-            // update the job with the execute result
-            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                {
-                    _id: job.id 
-                },
-                {
-                    $set: {
-                        "tasks.$[task].steps.$[step].executeResult": this.superJson.stringify(executeResult),
-                        "tasks.$[task].steps.$[step].type": StepType.Execute,
-                    },
-                    // Move to next step
-                    $inc: {
-                        "tasks.$[task].activeStep": 1,
-                    },
-                },
-                {
-                    arrayFilters: [
-                        {
-                            "task.index": taskIndex, 
-                            "task.type": TaskType.ClosePosition 
-                        },
-                        {
-                            "step.index": stepIndex 
-                        },
-                    ],
-                },
-            )
-        } catch (error) {
-            console.log(error)
         }
+        // execute the signed tx
+        const executeResult = await this.closePositionActionService.execute(
+            {
+                bot,
+                state,
+                txCheck: (hasPreviousAttempts || isRetry) ?? false,
+                liquidityPool,
+                signedTx: this.superJson.parse<SignedTx>(signedTx),
+                stimulate: envConfig().executor.runtime.operation.closePosition.stimulate,
+            }
+        )
+        // update the job with the execute result
+        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            {
+                _id: job.id 
+            },
+            {
+                $set: {
+                    "tasks.$[task].steps.$[step].executeResult": this.superJson.stringify(executeResult),
+                    "tasks.$[task].steps.$[step].type": StepType.Execute,
+                },
+                // Move to next step
+                $inc: {
+                    "tasks.$[task].activeStep": 1,
+                },
+            },
+            {
+                arrayFilters: [
+                    {
+                        "task.index": taskIndex, 
+                        "task.type": TaskType.ClosePosition 
+                    },
+                    {
+                        "step.index": stepIndex 
+                    },
+                ],
+            },
+        )
     }
 }

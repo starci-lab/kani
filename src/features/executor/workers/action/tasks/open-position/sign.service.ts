@@ -2,7 +2,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    ClosePositionActionService, 
+    OpenPositionActionService, 
     PrepareTx
 } from "@modules/blockchains"
 import {
@@ -22,16 +22,16 @@ import {
     SendHeartbeatService 
 } from "../../send-heartbeat.service"
 import {
-    ClosePositionTaskSignParams 
+    OpenPositionTaskSignParams 
 } from "../types"
 
 /**
- * Service for the Close Position Task SIGN step.
+ * Service for the Open Position Task SIGN step.
  */
 @Injectable()
-export class ClosePositionTaskSignService {
+export class OpenPositionTaskSignService {
     constructor(
-        private readonly closePositionActionService: ClosePositionActionService,
+        private readonly openPositionActionService: OpenPositionActionService,
         private readonly sendHeartbeatService: SendHeartbeatService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
@@ -39,7 +39,7 @@ export class ClosePositionTaskSignService {
         private readonly connection: Connection,
     ) { }
     /**
-     * Process the Close Position Task SIGN step.
+     * Process the Open Position Task SIGN step.
      *
      * @param params - The parameters for the step.
      * @param taskIndex - The index of the task.
@@ -55,7 +55,7 @@ export class ClosePositionTaskSignService {
         job,
         bot,
         liquidityPool,
-    }: ClosePositionTaskSignParams) {
+    }: OpenPositionTaskSignParams) {
         // Send heartbeat
         await this.sendHeartbeatService.process(
             {
@@ -68,7 +68,7 @@ export class ClosePositionTaskSignService {
         const prepareTx = this.superJson.parse<PrepareTx>(
             job.tasks[taskIndex].steps[activeStep].prepareTx
         )
-        const { signedTx } = await this.closePositionActionService.sign(
+        const { signedTx } = await this.openPositionActionService.sign(
             {
                 bot,
                 prepareTx,
@@ -89,7 +89,7 @@ export class ClosePositionTaskSignService {
                 arrayFilters: [
                     {
                         "task.index": taskIndex, 
-                        "task.type": TaskType.ClosePosition 
+                        "task.type": TaskType.OpenPosition 
                     },
                     {
                         "step.index": activeStep 

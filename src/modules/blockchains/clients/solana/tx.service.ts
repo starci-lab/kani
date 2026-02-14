@@ -29,7 +29,7 @@ import type {
     CreateSolanaTxMessageParams,
     SignSolanaTxParams,
     CompileSolanaTxMessageParams,
-    CompileSolanaTxMessageResult
+    CompileSolanaTxMessageResult,
 } from "./types"
 import {
     InjectSuperJson 

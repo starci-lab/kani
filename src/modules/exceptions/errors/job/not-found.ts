@@ -93,7 +93,7 @@ export class PrepareResultNotFoundException extends AbstractException {
 export interface SignedTxNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
     jobId: string
-    liquidityPoolId: LiquidityPoolId
+    liquidityPoolId?: LiquidityPoolId
     taskIndex: number
     stepIndex: number
 }

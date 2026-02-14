@@ -3,6 +3,10 @@ import {
 } from "@nestjs/common"
 import {
     IBalanceActionService,
+    SignReconcileBalanceTransactionParams,
+    SignReconcileBalanceTransactionResult,
+    SignWithdrawTransactionParams,
+    SignWithdrawTransactionResult,
 } from "../types"
 import {
     PrepareReconcileBalanceTransactionParams,
@@ -86,5 +90,31 @@ export class SolanaBalanceService implements IBalanceActionService {
      */
     public async executeWithdrawTransaction(param: ExecuteWithdrawTransactionParams): Promise<ExecuteWithdrawTransactionResult> {
         return await this.solanaWithdrawActionService.execute(param)
+    }
+
+    /**
+     * Signs a reconcile balance transaction for Solana.
+     *
+     * @param param - Parameters for signing reconcile balance transaction
+     * @returns Signed transaction
+     *
+     * @example
+     * const signedTx = await service.signReconcileBalanceTransaction({ bot, prepareTx })
+     */
+    public async signReconcileBalanceTransaction(param: SignReconcileBalanceTransactionParams): Promise<SignReconcileBalanceTransactionResult> {
+        return await this.solanaReconcileBalanceActionService.sign(param)
+    }
+
+    /** 
+     * Signs a withdraw transaction for Solana.
+     *
+     * @param param - Parameters for signing withdraw transaction
+     * @returns Signed transaction
+     *
+     * @example
+     * const signedTx = await service.signWithdrawTransaction({ bot, prepareTx })
+     */
+    public async signWithdrawTransaction(param: SignWithdrawTransactionParams): Promise<SignWithdrawTransactionResult> {
+        return await this.solanaWithdrawActionService.sign(param)
     }
 }   

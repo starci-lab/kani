@@ -2,16 +2,10 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    ClosePositionTaskExecuteService 
-} from "./execute.service"
-import {
-    ClosePositionTaskSignService 
-} from "./sign.service"
-import {
-    ClosePositionTaskConfirmService 
+    OpenPositionTaskConfirmService 
 } from "./confirm.service"
 import {
-    ClosePositionTaskDispatcherParams 
+    OpenPositionTaskDispatcherParams 
 } from "../types"
 import {
     InjectPrimaryMongoose, 
@@ -25,33 +19,38 @@ import {
     JobNotFoundException 
 } from "@modules/exceptions"
 import {
-    ClosePositionTaskPrepareService 
+    OpenPositionTaskPrepareService 
 } from "./prepare.service"
+import {
+    OpenPositionTaskSignService 
+} from "./sign.service"
+import {
+    OpenPositionTaskExecuteService 
+} from "./execute.service"
 
 /**
- * Dispatcher service for the CLOSE POSITION task.
+ * Dispatcher service for the OPEN POSITION task.
  */
 @Injectable()
-export class ClosePositionTaskDispatchService {
+export class OpenPositionTaskDispatchService {
     constructor(
-        private readonly closePositionTaskPrepareService: ClosePositionTaskPrepareService,
-        private readonly closePositionTaskSignService: ClosePositionTaskSignService,
-        private readonly closePositionTaskExecuteService: ClosePositionTaskExecuteService,
-        private readonly closePositionTaskConfirmService: ClosePositionTaskConfirmService,
+        private readonly openPositionTaskPrepareService: OpenPositionTaskPrepareService,
+        private readonly openPositionTaskSignService: OpenPositionTaskSignService,
+        private readonly openPositionTaskExecuteService: OpenPositionTaskExecuteService,
+        private readonly openPositionTaskConfirmService: OpenPositionTaskConfirmService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
     ) { }
 
     /**
-     * Dispatch the CLOSE POSITION task.
-     * @param params - The parameters for the CLOSE POSITION task.
+     * Dispatch the OPEN POSITION task.
+     * @param params - The parameters for the OPEN POSITION task.
      * @param params.bot - The bot.
      * @param params.job - The job.
      * @param params.liquidityPool - The liquidity pool.
      * @param params.state - The state of the liquidity pool.
      * @param params.isRetry - Whether the task is being retried.
      * @param params.taskIndex - The index of the task.
-     * @param params.stepIndex - The index of the step.
      */
     async dispatch(
         {
@@ -63,7 +62,7 @@ export class ClosePositionTaskDispatchService {
             bullmqJob,
             taskIndex,
             isRetry
-        }: ClosePositionTaskDispatcherParams
+        }: OpenPositionTaskDispatcherParams
     ) {
         let jobSnapshot: JobSchema | null = null
         // do the loop until the task is completed
@@ -79,7 +78,7 @@ export class ClosePositionTaskDispatchService {
             }
             // if we do not find the task persisted in the job snapshot, we have to prepare 
             if (!jobSnapshot.tasks[taskIndex]) {
-                await this.closePositionTaskPrepareService.process(
+                await this.openPositionTaskPrepareService.process(
                     {
                         bot,
                         job: jobSnapshot,
@@ -102,7 +101,7 @@ export class ClosePositionTaskDispatchService {
                 switch (stepType) {
                 // Sign step
                 case StepType.Sign: {
-                    await this.closePositionTaskSignService.process(
+                    await this.openPositionTaskSignService.process(
                         {
                             bot,
                             job: jobSnapshot,
@@ -118,7 +117,7 @@ export class ClosePositionTaskDispatchService {
                 }
                 // Execute step
                 case StepType.Execute: {
-                    await this.closePositionTaskExecuteService.process(
+                    await this.openPositionTaskExecuteService.process(
                         {
                             bot,
                             job: jobSnapshot,
@@ -136,7 +135,7 @@ export class ClosePositionTaskDispatchService {
             }
             // process confirm
             if (!jobSnapshot.tasks[taskIndex].confirmed) {
-                await this.closePositionTaskConfirmService.process(
+                await this.openPositionTaskConfirmService.process(
                     {
                         bot,
                         job: jobSnapshot,

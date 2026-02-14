@@ -2,8 +2,8 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    SignedTx,
-    BalanceActionService
+    ClosePositionActionService, 
+    SignedTx
 } from "@modules/blockchains"
 import {
     InjectPrimaryMongoose,
@@ -19,7 +19,7 @@ import {
 } from "@modules/mixin"
 import SuperJSON from "superjson"
 import {
-    ReconcileBalanceTaskExecuteParams 
+    ClosePositionTaskExecuteParams 
 } from "../types"
 import {
     SendHeartbeatService 
@@ -32,12 +32,12 @@ import {
 } from "@modules/env"
 
 /**
- * Service for the Reconcile Balance Task EXECUTE step.
+ * Service for the Close Position Task EXECUTE step.
  */
 @Injectable()
-export class ReconcileBalanceTaskExecuteService {
+export class OpenPositionTaskExecuteService {
     constructor(
-        private readonly balanceActionService: BalanceActionService,
+        private readonly closePositionActionService: ClosePositionActionService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         @InjectSuperJson()
@@ -46,20 +46,25 @@ export class ReconcileBalanceTaskExecuteService {
     ) { }
     
     /**
-     * Process the Reconcile Balance Task EXECUTE step.
-     * @param params - The parameters for the Reconcile Balance Task EXECUTE step.
-     * @param params.bot - The bot.
-     * @param params.job - The job.
+     * Process the CLOSE POSITION TASK EXECUTE step.
+     * @param params - The parameters for the CLOSE POSITION TASK EXECUTE step.
+     * @param params.botId - The ID of the bot.
+     * @param params.jobId - The ID of the job.
+     * @param params.liquidityPoolId - The ID of the liquidity pool.
+     * @param params.state - The state of the liquidity pool.
+     * @param params.isRetry - Whether the task is being retried.
      * @param params.taskIndex - The index of the task.
-     * @param params.bullmqJob - The bullmq job.
+     * @param params.stepIndex - The index of the step.
      */
     async process({
         bot,
         job,
+        liquidityPool,
+        state,
         isRetry,
         bullmqJob,
         taskIndex,
-    }: ReconcileBalanceTaskExecuteParams) {
+    }: ClosePositionTaskExecuteParams) {
         // send heartbeat
         await this.sendHeartbeatService.process(
             {
@@ -82,18 +87,21 @@ export class ReconcileBalanceTaskExecuteService {
                 {
                     botId: bot.id,
                     jobId: job.id,
+                    liquidityPoolId: liquidityPool.displayId,
                     taskIndex,
                     stepIndex,
                 }
             )
         }
         // execute the signed tx
-        const executeResult = await this.balanceActionService.executeReconcileBalanceTransaction(
+        const executeResult = await this.closePositionActionService.execute(
             {
                 bot,
+                state,
                 txCheck: (hasPreviousAttempts || isRetry) ?? false,
-                stimulate: envConfig().executor.runtime.operation.reconcileBalance.stimulate,
+                liquidityPool,
                 signedTx: this.superJson.parse<SignedTx>(signedTx),
+                stimulate: envConfig().executor.runtime.operation.closePosition.stimulate,
             }
         )
         // update the job with the execute result
@@ -115,7 +123,7 @@ export class ReconcileBalanceTaskExecuteService {
                 arrayFilters: [
                     {
                         "task.index": taskIndex, 
-                        "task.type": TaskType.ReconcileBalance 
+                        "task.type": TaskType.OpenPosition 
                     },
                     {
                         "step.index": stepIndex 

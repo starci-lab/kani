@@ -2,7 +2,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    ClosePositionTaskConfirmParams 
+    OpenPositionTaskConfirmParams 
 } from "../types"
 import {
     WinstonService, WinstonLog 
@@ -18,7 +18,7 @@ import {
 } from "mongoose"
 
 @Injectable()
-export class ClosePositionTaskConfirmService {
+export class OpenPositionTaskConfirmService {
     constructor(
         private readonly winstonService: WinstonService,
         @InjectPrimaryMongoose()
@@ -26,8 +26,8 @@ export class ClosePositionTaskConfirmService {
     ) { }
 
     /**
-     * Process the CLOSE POSITION TASK CONFIRM step.
-     * @param params - The parameters for the CLOSE POSITION TASK CONFIRM step.
+     * Process the OPEN POSITION TASK CONFIRM step.
+     * @param params - The parameters for the OPEN POSITION TASK CONFIRM step.
      * @param params.bot - The bot.
      * @param params.job - The job.
      * @param params.liquidityPool - The liquidity pool.
@@ -41,7 +41,7 @@ export class ClosePositionTaskConfirmService {
             job,
             liquidityPool,
             taskIndex,
-        }: ClosePositionTaskConfirmParams
+        }: OpenPositionTaskConfirmParams
     ) {
         // simply logging
         this.winstonService.log(
@@ -50,7 +50,7 @@ export class ClosePositionTaskConfirmService {
                 botId: bot.id,
                 jobId: job.id,
                 liquidityPoolId: liquidityPool.displayId,
-                type: JobType.ClosePosition,
+                type: JobType.OpenPosition,
                 metadata: job.metadata,
             }
         )
@@ -68,7 +68,7 @@ export class ClosePositionTaskConfirmService {
                 arrayFilters: [
                     {
                         "task.index": taskIndex,
-                        "task.type": TaskType.ClosePosition,
+                        "task.type": TaskType.OpenPosition,
                     },
                 ],
             },

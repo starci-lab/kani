@@ -247,4 +247,5 @@ export enum WinstonLog {
     ActionJobConfirmed = "Action.Job.Confirmed",
     ActiveJobPrepared = "Active.Job.Prepared",
     TransactionSigned = "Transaction.Signed",
+    ReconcileBalancePlanDetermined = "Reconcile.Balance.Plan.Determined",
 }
