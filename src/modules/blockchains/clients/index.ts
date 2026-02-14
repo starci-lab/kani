@@ -3,7 +3,7 @@
  * Provides a unified entry point for RPC client utilities.
  */
 export * from "./clients.module"
-export * from "./rpc-executor.service"
+export * from "./rpc"
 export * from "./types"
 export * from "./enums"
 export * from "./solana"

@@ -173,11 +173,11 @@ export class SuiReconcileBalanceActionService {
         { 
             bot, 
             signedTx, 
-            isRetry = false, 
+            txCheck = false, 
             stimulate = false 
         }: ExecuteReconcileBalanceTransactionParams): Promise<ExecuteReconcileBalanceTransactionResult> {
         // check if transaction already exists on chain (for retries)
-        if (isRetry && !stimulate) {
+        if (txCheck && !stimulate) {
             const txBlock = await this.suiFetchService.fetchTransactionBlock({
                 txHash: signedTx.txHash,
             })

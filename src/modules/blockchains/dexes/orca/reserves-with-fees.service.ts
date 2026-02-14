@@ -11,6 +11,7 @@ import {
 } from "@nestjs/common"
 import {
     RpcExecutorService,
+    AccountKind,
 } from "../../clients"
 import {
     RpcAccessType,
@@ -22,7 +23,6 @@ import {
 import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
-    ErrorSolanaAccountKind,
     SolanaAccountNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
     PositionClmmStateNotFoundException,
@@ -206,7 +206,7 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
         // ----------------------------
         if (!positionAccount || !positionAccount.exists) {
             throw new SolanaAccountNotFoundException({
-                kind: ErrorSolanaAccountKind.PersonalPosition,
+                kind: AccountKind.PersonalPosition,
                 address: positionId,
                 dexId: DexId.Orca,
                 liquidityPoolId: liquidityPool.displayId,
@@ -226,7 +226,7 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
         const tickArrayLower = decodeTickArray(tickArrayLowerAccount)
         if (!tickArrayLower.exists) {
             throw new SolanaAccountNotFoundException({
-                kind: ErrorSolanaAccountKind.TickArrayLower,
+                kind: AccountKind.TickArrayLower,
                 address: tickArrayLower.address,
                 dexId: DexId.Orca,
                 liquidityPoolId: liquidityPool.displayId,
@@ -235,7 +235,7 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
         const tickArrayUpper = decodeTickArray(tickArrayUpperAccount)
         if (!tickArrayUpper.exists) {
             throw new SolanaAccountNotFoundException({
-                kind: ErrorSolanaAccountKind.TickArrayUpper,
+                kind: AccountKind.TickArrayUpper,
                 address: tickArrayUpper.address,
                 dexId: DexId.Orca,
                 liquidityPoolId: liquidityPool.displayId,

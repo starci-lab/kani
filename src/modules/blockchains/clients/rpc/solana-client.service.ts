@@ -36,14 +36,14 @@ import {
     RpcClientFatalException,
 } from "@modules/exceptions"
 import {
-    WithSolanaRpcParams
-} from "./types"
-import {
     RpcErrorType
 } from "../enums"
 import {
-    SolanaGetErrorTypesService
-} from "./get-error-types.service"
+    WithSolanaRpcParams 
+} from "./types"
+import {
+    SolanaGetErrorTypesService 
+} from "./solana-get-error-types.service"
 
 /**
  * Service responsible for executing Solana RPC calls with retry logic and error handling.

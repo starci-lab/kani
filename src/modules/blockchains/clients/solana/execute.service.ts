@@ -7,8 +7,10 @@ import {
 } from "@solana/kit"
 import {
     RpcExecutorService,
-    SolanaTx
-} from "@modules/blockchains"
+} from "../rpc"
+import {
+    SolanaTx 
+} from "../../types"
 import {
     RpcAccessType
 } from "@modules/filesystem"

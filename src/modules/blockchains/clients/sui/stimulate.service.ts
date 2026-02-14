@@ -22,7 +22,7 @@ import {
 } from "@modules/common"
 import {
     RpcExecutorService
-} from "../rpc-executor.service"
+} from "../rpc/rpc-executor.service"
 import {
     RpcAccessType 
 } from "@modules/filesystem"

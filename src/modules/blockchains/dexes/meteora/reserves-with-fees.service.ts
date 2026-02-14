@@ -15,6 +15,7 @@ import {
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
+    AccountKind,
     RpcExecutorService,
 } from "../../clients"
 import {
@@ -30,7 +31,6 @@ import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
     SolanaAccountNotFoundException,
-    ErrorSolanaAccountKind,
     PositionDlmmStateNotFoundException,
 } from "@modules/exceptions"
 import BN from "bn.js"
@@ -162,7 +162,7 @@ export class MeteoraReservesWithFeesService implements IReservesWithFeesService 
         // Stage: on-chain fetch validation (position account must exist)
         if (!positionAccount || !positionAccount.exists) {
             throw new SolanaAccountNotFoundException({
-                kind: ErrorSolanaAccountKind.PositionATA,
+                kind: AccountKind.PositionATA,
                 address: positionId,
                 dexId: DexId.Meteora,
                 liquidityPoolId: liquidityPool.displayId,
@@ -172,7 +172,7 @@ export class MeteoraReservesWithFeesService implements IReservesWithFeesService 
         for (const binArrayAccount of binArrayAccounts) {
             if (!binArrayAccount || !binArrayAccount.exists) {
                 throw new SolanaAccountNotFoundException({
-                    kind: ErrorSolanaAccountKind.BinArray,
+                    kind: AccountKind.BinArray,
                     address: binArrayAccount.address,
                     dexId: DexId.Meteora,
                     liquidityPoolId: liquidityPool.displayId,
@@ -192,7 +192,7 @@ export class MeteoraReservesWithFeesService implements IReservesWithFeesService 
             (binArrayAccount) => {
                 if (!binArrayAccount.exists) {
                     throw new SolanaAccountNotFoundException({
-                        kind: ErrorSolanaAccountKind.BinArray,
+                        kind: AccountKind.BinArray,
                         address: binArrayAccount.address,
                         dexId: DexId.Meteora,
                         liquidityPoolId: liquidityPool.displayId,
@@ -279,7 +279,7 @@ export class MeteoraReservesWithFeesService implements IReservesWithFeesService 
                 )
                 if (correspondingBinArrayIndex === -1) {
                     throw new SolanaAccountNotFoundException({
-                        kind: ErrorSolanaAccountKind.BinArray,
+                        kind: AccountKind.BinArray,
                         address: binArrayAccounts[correspondingBinArrayIndex].address,
                         dexId: DexId.Meteora,
                         liquidityPoolId: liquidityPool.displayId,
@@ -335,7 +335,7 @@ export class MeteoraReservesWithFeesService implements IReservesWithFeesService 
             )
             if (correspondingBinArrayIndex === -1) {
                 throw new SolanaAccountNotFoundException({
-                    kind: ErrorSolanaAccountKind.BinArray,
+                    kind: AccountKind.BinArray,
                     address: binArrayAccounts[correspondingBinArrayIndex].address,
                     dexId: DexId.Meteora,
                     liquidityPoolId: liquidityPool.displayId,

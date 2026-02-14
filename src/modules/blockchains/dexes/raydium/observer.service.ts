@@ -8,7 +8,6 @@ import {
 } from "@modules/cache"
 import BN from "bn.js"
 import {
-    LiquidityPoolId,
     PrimaryMemoryStorageService,
     DexId,
     LiquidityPoolSchema,
@@ -17,8 +16,7 @@ import {
     AsyncService, DayjsService, RetryService, LokiJSService 
 } from "@modules/mixin"
 import {
-    LiquidityPoolNotFoundException, LiquidityPoolNoWsIdleTimeoutException, 
-    SolanaAccountNotFoundException, ErrorSolanaAccountKind
+    LiquidityPoolNoWsIdleTimeoutException, 
 } from "@modules/exceptions"
 import {
     WinstonLog, WinstonService 
@@ -33,10 +31,12 @@ import {
     Interval 
 } from "@nestjs/schedule"
 import {
-    address, fetchEncodedAccount 
+    address 
 } from "@solana/kit"
 import {
-    RpcExecutorService 
+    RpcExecutorService,
+    SolanaFetchService,
+    AccountKind 
 } from "@modules/blockchains"
 import {
     RpcAccessType 
@@ -74,6 +74,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
         private readonly dayjsService: DayjsService,
         private readonly retryService: RetryService,
         private readonly lokiJSService: LokiJSService,
+        private readonly solanaFetchService: SolanaFetchService,
     ) { }
 
     /**
@@ -94,9 +95,12 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
             })
 
         // Create a new LokiJS collection for Raydium liquidity pools
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
-            name: "raydium-observer-liquidity-pools",
-        })
+        this.liquidityPoolCollection = await this
+            .lokiJSService
+            .createCollection<LiquidityPoolSchema>({
+                name: "raydium-observer-liquidity-pools",
+            }
+            )
 
         // Insert the found liquidity pools into the new collection
         this.liquidityPoolCollection.insert(liquidityPools)
@@ -127,7 +131,9 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
         // Iterate over each liquidity pool and fetch its info
         for (const liquidityPool of this.liquidityPoolCollection.find()) {
             promises.push(
-                this.fetchPoolInfo(liquidityPool.displayId)
+                (async () => {
+                    await this.fetchPoolInfo(liquidityPool)
+                })(),
             )
         }
         // Execute all fetch operations concurrently, ignoring individual errors
@@ -197,50 +203,33 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
     /**
      * Fetches the latest information for a given liquidity pool from the Solana blockchain.
      *
-     * @param liquidityPoolId - The liquidity pool ID to fetch information for
+     * @param liquidityPool - The liquidity pool to fetch information for
      */
     private async fetchPoolInfo(
-        liquidityPoolId: LiquidityPoolId
-    ) {
-        // Find liquidity pool from collection
-        const liquidityPool = this.liquidityPoolCollection.findOne({
-            id: {
-                $eq: liquidityPoolId,
-            },
-        })
-        if (!liquidityPool) {
-            throw new LiquidityPoolNotFoundException({
-                displayId: liquidityPoolId,
+        liquidityPool: LiquidityPoolSchema
+    ) { 
+        try {
+            const accountInfo = await this.solanaFetchService.fetchAccount({
+                address: liquidityPool.poolAddress,
+                kind: AccountKind.Pool,
+                dexId: DexId.Raydium,
+                liquidityPoolId: liquidityPool.displayId,
             })
-        }
-
-        await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Http,
-            callback: async ({ rpc }) => {
-                // Fetch account info from Solana client
-                const accountInfo = await fetchEncodedAccount(rpc,
-                    address(liquidityPool.poolAddress),
-                    {
-                        commitment: "confirmed",
-                    })
-
-                // Validate if account info exists
-                if (!accountInfo || !accountInfo.exists) {
-                    throw new SolanaAccountNotFoundException({
-                        kind: ErrorSolanaAccountKind.Pool,
-                        address: liquidityPool.poolAddress,
-                        dexId: DexId.Raydium,
-                        liquidityPoolId: liquidityPool.displayId,
-                    })
+            const state = PoolState.struct.read(
+                Buffer.from(accountInfo.data),
+                8)
+            return await this.handlePoolStateUpdate(liquidityPool,
+                state)
+        } catch (error) {
+            // Log any errors encountered during fetching pool info
+            this.winstonService.log(
+                WinstonLog.LiquidityPoolFetchedError,
+                {
+                    liquidityPoolId: liquidityPool.displayId,
+                    error: error.message,
                 }
-
-                // Parse pool state from account data (skip 8-byte discriminator)
-                const [state] = PoolState.struct.deserialize(Buffer.from(accountInfo.data),
-                    8)
-                return await this.handlePoolStateUpdate(liquidityPool,
-                    state)
-            },
-        })
+            )
+        }
     }
 
     /**
@@ -302,8 +291,10 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
                                 // Reset idle timeout on each update
                                 resetTimeout()
                                 // Handle the pool state update
-                                await this.handlePoolStateUpdate(liquidityPool,
-                                    state)
+                                await this.handlePoolStateUpdate(
+                                    liquidityPool,
+                                    state
+                                )
                             }
                         },
                         options: {

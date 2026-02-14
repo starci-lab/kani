@@ -16,7 +16,7 @@ import {
     AsyncService, RetryService 
 } from "@modules/mixin"
 import {
-    LiquidityPoolNoWsIdleTimeoutException, LiquidityPoolNotFoundException 
+    LiquidityPoolNoWsIdleTimeoutException 
 } from "@modules/exceptions"
 import {
     WinstonLog, WinstonService 
@@ -31,7 +31,7 @@ import {
     Whirlpool 
 } from "./beets"
 import {
-    address, fetchEncodedAccount 
+    address 
 } from "@solana/kit"
 import {
     envConfig 
@@ -40,7 +40,9 @@ import {
     Interval 
 } from "@nestjs/schedule"
 import {
-    RpcExecutorService 
+    AccountKind,
+    RpcExecutorService,
+    SolanaFetchService 
 } from "@modules/blockchains"
 import {
     RpcAccessType 
@@ -75,6 +77,7 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
         private readonly dayjsService: DayjsService,
         private readonly retryService: RetryService,
         private readonly lokiJSService: LokiJSService,
+        private readonly solanaFetchService: SolanaFetchService,
     ) {}
 
     /**
@@ -204,26 +207,12 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
         liquidityPool: LiquidityPoolSchema
     ) {
         try {
-            // Fetch account info from Solana client
-            const accountInfo = await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Http,
-                callback: async ({ rpc }) => {
-                    return await fetchEncodedAccount(
-                        rpc, 
-                        address(liquidityPool.poolAddress),
-                        {
-                            commitment: "confirmed",
-                        })
-                },
-            })
-
-            // Validate if account info exists
-            if (!accountInfo || !accountInfo.exists) {
-                throw new LiquidityPoolNotFoundException({
-                    displayId: liquidityPool.displayId,
-                })
-            }
-
+            const accountInfo = await this.solanaFetchService.fetchAccount({
+                address: liquidityPool.poolAddress,
+                kind: AccountKind.Pool,
+                dexId: DexId.Orca,
+                liquidityPoolId: liquidityPool.displayId,
+            })  
             // Parse pool state from account data (skip 8-byte discriminator)
             const state = Whirlpool.struct.read(Buffer.from(accountInfo.data),
                 8)

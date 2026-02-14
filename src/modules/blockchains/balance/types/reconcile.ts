@@ -29,7 +29,7 @@ export interface PrepareReconcileBalanceTransactionResult {
 export interface ExecuteReconcileBalanceTransactionParams {
     bot: BotSchema
     signedTx: SignedTx
-    isRetry?: boolean
+    txCheck?: boolean
     stimulate?: boolean
 }
 

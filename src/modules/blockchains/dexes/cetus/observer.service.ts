@@ -134,7 +134,7 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
      */
     private async fetchPoolInfo(liquidityPool: LiquidityPoolSchema): Promise<void> {
         try {
-            const poolRaw = await this
+            const objectInfo = await this
                 .suiFetchService
                 .fetchObject<CetusSuiObjectPoolFields>(
                     {
@@ -144,7 +144,7 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
                         liquidityPool,
                     }
                 )
-            const pool = parseCetusPool(poolRaw)
+            const pool = parseCetusPool(objectInfo)
             await this.handlePoolStateUpdate(
                 liquidityPool,
                 pool

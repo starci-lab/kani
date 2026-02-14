@@ -16,7 +16,7 @@ import {
     LokiJSService,
 } from "@modules/mixin"
 import {
-    LiquidityPoolNoWsIdleTimeoutException, SolanaAccountNotFoundException, ErrorSolanaAccountKind
+    LiquidityPoolNoWsIdleTimeoutException
 } from "@modules/exceptions"
 import {
     WinstonLog, WinstonService
@@ -35,9 +35,11 @@ import {
     Interval
 } from "@nestjs/schedule"
 import {
-    address, fetchEncodedAccount
+    address
 } from "@solana/kit"
 import {
+    AccountKind,
+    SolanaFetchService,
     RpcExecutorService
 } from "@modules/blockchains"
 import {
@@ -71,7 +73,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
 
     constructor(
         private readonly winstonService: WinstonService,
-        private readonly rpcExecutorService: RpcExecutorService,
+        private readonly solanaFetchService: SolanaFetchService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly eventEmitterService: EventEmitterService,
@@ -79,6 +81,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
         private readonly retryService: RetryService,
         private readonly cacheService: CacheService,
         private readonly lokiJSService: LokiJSService,
+        private readonly rpcExecutorService: RpcExecutorService,
     ) { }
 
     /**
@@ -212,29 +215,14 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
     private async fetchPoolInfo(liquidityPool: LiquidityPoolSchema) {
         try {
             // Fetch account info from Solana client
-            const accountInfo = await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Http,
-                callback: async ({ rpc }) => {
-                    return await fetchEncodedAccount(
-                        rpc,
-                        address(liquidityPool.poolAddress),
-                        {
-                            commitment: "confirmed",
-                        },
-                    )
-                }
-            })
-
-            // Validate if account info exists
-            if (!accountInfo || !accountInfo.exists) {
-                throw new SolanaAccountNotFoundException({
-                    kind: ErrorSolanaAccountKind.Pool,
+            const accountInfo = await this.solanaFetchService.fetchAccount(
+                {
                     address: liquidityPool.poolAddress,
+                    kind: AccountKind.Pool,
                     dexId: DexId.Meteora,
                     liquidityPoolId: liquidityPool.displayId,
-                })
-            }
-
+                }
+            )
             // Parse pool state from account data (skip 8-byte discriminator)
             const state = LbPair.struct.read(Buffer.from(accountInfo.data),
                 8)

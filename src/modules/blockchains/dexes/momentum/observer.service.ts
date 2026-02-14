@@ -1,14 +1,6 @@
 import {
-    ErrorSuiObjectKind,
-    SuiObjectInvalidTypeException, 
-    SuiObjectNotFoundException 
-} from "@modules/exceptions"
-import {
-    RpcExecutorService 
+    SuiFetchService, SuiObjectKind
 } from "@modules/blockchains"
-import {
-    RpcAccessType 
-} from "@modules/filesystem"
 import {
     PrimaryMemoryStorageService, 
     DexId
@@ -75,7 +67,7 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
         private readonly cacheService: CacheService,
         private readonly winstonService: WinstonService,
         private readonly eventEmitterService: EventEmitterService,
-        private readonly rpcExecutorService: RpcExecutorService,
+        private readonly suiFetchService: SuiFetchService,
         private readonly dayjsService: DayjsService,
         private readonly lokiJSService: LokiJSService,
     ) {}
@@ -150,41 +142,13 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
     ) {
         try {
             // Fetch object info from Sui client
-            const objectInfo = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Http,
-                callback: async ({ suiClient }) => {
-                    return await suiClient.getObject({
-                        id: liquidityPool.poolAddress,
-                        options: {
-                            showContent: true,
-                        },
-                    })
-                },
+            const objectInfo = await this.suiFetchService.fetchObject<MomentumSuiObjectPoolFields>({
+                objectId: liquidityPool.poolAddress,
+                kind: SuiObjectKind.Pool,
+                dexId: DexId.Momentum,
+                liquidityPool,
             })
-
-            // Validate if object info exists
-            if (objectInfo.error || !objectInfo.data) { 
-                throw new SuiObjectNotFoundException({
-                    kind: ErrorSuiObjectKind.Pool,
-                    id: liquidityPool.poolAddress,
-                    dexId: DexId.Momentum,
-                    liquidityPoolId: liquidityPool.displayId,
-                })
-            }
-
-            // Validate object data type
-            if (objectInfo.data.content?.dataType !== "moveObject") {
-                throw new SuiObjectInvalidTypeException({
-                    kind: ErrorSuiObjectKind.Pool,
-                    id: liquidityPool.poolAddress,
-                    dexId: DexId.Momentum,
-                    liquidityPoolId: liquidityPool.displayId,
-                })
-            }
-
-            // Parse pool fields and handle state update
-            const fields = objectInfo.data.content.fields as unknown as MomentumSuiObjectPoolFields
-            const pool = parseMomentumPool(fields)
+            const pool = parseMomentumPool(objectInfo)
             return await this.handlePoolStateUpdate(liquidityPool,
                 pool)
         } catch (error) {

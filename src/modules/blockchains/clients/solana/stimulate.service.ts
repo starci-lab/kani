@@ -10,8 +10,10 @@ import {
 } from "@modules/filesystem"
 import {
     RpcExecutorService,
-    SolanaTx
-} from "@modules/blockchains"
+} from "../rpc"
+import {
+    SolanaTx 
+} from "../../types"
 import {
     MissingSolanaTxParamException,
     RpcClientFatalException,

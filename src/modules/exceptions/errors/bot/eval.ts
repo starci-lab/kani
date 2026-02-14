@@ -1,6 +1,6 @@
 import {
     AbstractException, AbstractExceptionMetadata 
-} from "@modules/exceptions"
+} from "../abstract"
 /** Thrown when a bot is not eligible for an eval snapshot */
 export interface BotEvalSnapshotNotEligibleExceptionMetadata extends AbstractExceptionMetadata {
     botId: string

@@ -5,26 +5,24 @@ import {
     ConfigurableModuleClass, OPTIONS_TYPE 
 } from "./clients.module-definition"
 import {
-    RpcExecutorService 
-} from "./rpc-executor.service"
-import {
-    SolanaClientService,
-    SolanaGetErrorTypesService
-} from "./solana"
-import {
-    SuiClientService,
-    SuiGetErrorTypesService
-} from "./sui"
-import {
     SolanaExecuteService,
     SolanaStimulateService,
-    SolanaTxService
+    SolanaTxService,
+    SolanaFetchService,
 } from "./solana"
 import {
     SuiExecuteService,
+    SuiFetchService,
     SuiStimulateService,
-    SuiTxService
+    SuiTxService,
 } from "./sui"
+import {
+    RpcExecutorService,
+    SuiGetErrorTypesService,
+    SolanaGetErrorTypesService,
+    SolanaClientService,
+    SuiClientService,
+} from "./rpc"
 
 /**
  * Module for managing blockchain RPC clients.
@@ -50,18 +48,20 @@ export class ClientsModule extends ConfigurableModuleClass {
 
         // register all client services
         const providers: Array<Provider> = [
+            RpcExecutorService,
             // chain-specific services
-            SuiTxService,
-            SolanaClientService,
-            SolanaGetErrorTypesService,
             SolanaExecuteService,
             SolanaStimulateService,
             SolanaTxService,
-            SuiClientService,
+            SolanaFetchService,
+            SolanaGetErrorTypesService,
+            SolanaClientService,
             SuiExecuteService,
             SuiStimulateService,
+            SuiTxService,
             SuiGetErrorTypesService,
-            RpcExecutorService,
+            SuiClientService,
+            SuiFetchService,
         ]
         
         return {

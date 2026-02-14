@@ -1,68 +1,44 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
     PrepareWithdrawTransactionParams,
     PrepareWithdrawTransactionResult,
+    SignWithdrawTransactionParams,
+    SignWithdrawTransactionResult,
 } from "../types"
-import {
-    PrepareTx,
-} from "../../types"
 import {
     ExecuteWithdrawTransactionParams,
     ExecuteWithdrawTransactionResult,
 } from "../types"
-import { 
-    AppVersion,
+import {
     TokenId,
+    TransactionType,
 } from "@modules/databases"
 import {
-    EncryptedPrivySignerPrivateKeyNotFoundException,
-    TransactionType,
-    MissingSolanaTxParamException,
-    PrivyMetadataNotFoundException,
     TokenNotFoundException,
-    TransactionStimulatedFailedException,
-    TransactionSubmitFailedException,
-    TransactionExecutionFailedException,
 } from "@modules/exceptions"
 import {
     getCompiledTransactionMessageDecoder,
     getTransactionDecoder,
     getBase64Encoder,
     decompileTransactionMessageFetchingLookupTables,
-    setTransactionMessageLifetimeUsingBlockhash,
-    appendTransactionMessageInstructions,
-    compileTransaction,
-    signTransaction,
-    setTransactionMessageFeePayerSigner,
-    pipe,
-    createTransactionMessage,
-    assertIsSendableTransaction,
-    assertIsTransactionWithinSizeLimit,
-    getSignatureFromTransaction,
-    createNoopSigner,
     address,
     Instruction,
-    sendAndConfirmTransactionFactory,
-    signature,
-    getBase64EncodedWireTransaction,
 } from "@solana/kit"
 import {
-    SolanaAggregatorSelectorService 
+    SolanaAggregatorSelectorService
 } from "../../aggregators"
 import {
-    SignerService 
-} from "../../signers"
-import {
-    RpcExecutorService 
+    RpcExecutorService,
+    SolanaTxService,
+    SolanaFetchService,
+    SolanaStimulateService,
+    SolanaExecuteService,
 } from "@modules/blockchains"
 import {
-    RpcAccessType 
+    RpcAccessType
 } from "@modules/filesystem"
-import {
-    PrivySignService
-} from "@modules/privy"
 import {
     TransferInstructionService,
 } from "../../tx-builder"
@@ -70,12 +46,14 @@ import {
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
-    WinstonLog,
-    WinstonService 
-} from "@modules/winston"
-import {
-    AsyncService 
+    InjectSuperJson
 } from "@modules/mixin"
+import {
+    ChainId
+} from "@modules/common"
+import {
+    SuperJSON
+} from "superjson"
 
 /**
  * Service for handling withdraw transactions on Solana.
@@ -84,19 +62,21 @@ import {
  * @example
  * const service = new SolanaWithdrawActionService(...)
  * const prepareTxs = await service.prepare({ bot, tokenInputs, toAddress })
- * const txHashes = await service.execute({ bot, prepareTxs })
+ * const txHash = await service.execute({ bot, signedTx })
  */
 @Injectable()
 export class SolanaWithdrawActionService {
     constructor(
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly solanaAggregatorSelectorService: SolanaAggregatorSelectorService,
-        private readonly signerService: SignerService,
-        private readonly privySignService: PrivySignService,
+        private readonly solanaTxService: SolanaTxService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
         private readonly transferInstructionService: TransferInstructionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly winstonService: WinstonService,
-        private readonly asyncService: AsyncService,
+        private readonly solanaFetchService: SolanaFetchService,
+        private readonly solanaStimulateService: SolanaStimulateService,
+        private readonly solanaExecuteService: SolanaExecuteService,
     ) { }
 
     /**
@@ -107,32 +87,31 @@ export class SolanaWithdrawActionService {
      * @returns Prepared transactions ready for execution
      *
      * @example
-     * const prepareTxs = await service.prepare({ bot, tokenInputs, toAddress, toUsdc: true })
+     * const prepareTx = await service.prepare({ bot, tokenInputs, toAddress, toUsdc: true })
      */
     public async prepare(
-        { 
-            bot, 
-            tokenInputs, 
-            toAddress, 
-            toUsdc = false 
-        }: PrepareWithdrawTransactionParams): Promise<PrepareWithdrawTransactionResult> {
-        const prepareTxs: Array<PrepareTx> = []
+        {
+            bot,
+            tokenInputs,
+            toAddress,
+            toUsdc = false
+        }: PrepareWithdrawTransactionParams):
+        Promise<PrepareWithdrawTransactionResult> {
+        const instructions: Array<Instruction> = []
         for (const tokenInput of tokenInputs) {
-            const instructions: Array<Instruction> = []
-            
             if (toUsdc) {
                 // find USDC token
                 const usdcToken = this.primaryMemoryStorageService.tokenCollection.findOne({
                     displayId: {
                         $eq: TokenId.SolUsdc,
                     }
-                }) 
+                })
                 if (!usdcToken) {
                     throw new TokenNotFoundException({
                         displayId: TokenId.SolUsdc,
                     })
                 }
-                
+
                 // swap to USDC if token is not already USDC
                 if (tokenInput.token.displayId !== TokenId.SolUsdc) {
                     const { response: { payload: serializedTransaction } } = await this.solanaAggregatorSelectorService.batchQuote({
@@ -156,7 +135,7 @@ export class SolanaWithdrawActionService {
                             )
                         },
                     })
-                    
+
                     // add swap instructions
                     const swapInstructions = swapTransactionMessage.instructions
                     instructions.push(...swapInstructions)
@@ -171,9 +150,9 @@ export class SolanaWithdrawActionService {
                 if (!targetToken) {
                     throw new TokenNotFoundException({
                         displayId: tokenInput.token.displayId,
-                    })  
+                    })
                 }
-                
+
                 // swap to target token if needed
                 if (tokenInput.token.displayId !== targetToken.displayId) {
                     const { response: { payload: serializedTransaction } } = await this.solanaAggregatorSelectorService.batchQuote({
@@ -182,7 +161,7 @@ export class SolanaWithdrawActionService {
                         amountIn: tokenInput.amount,
                         senderAddress: bot.accountAddress,
                     })
-                    
+
                     // decode and decompile swap transaction
                     const swapTransactionBytes = getBase64Encoder().encode(serializedTransaction as string)
                     const swapTransaction = getTransactionDecoder().decode(swapTransactionBytes)
@@ -198,13 +177,13 @@ export class SolanaWithdrawActionService {
                             )
                         },
                     })
-                    
+
                     // add swap instructions
                     const swapInstructions = swapTransactionMessage.instructions
                     instructions.push(...swapInstructions)
                 }
             }
-            
+
             // create transfer instructions
             const { instructions: transferInstructions } = await this.transferInstructionService.createTransferInstructions({
                 fromAddress: address(bot.accountAddress),
@@ -213,134 +192,40 @@ export class SolanaWithdrawActionService {
                 token: tokenInput.token,
             })
             instructions.push(...transferInstructions)
-            
-            // get latest blockhash for transaction lifetime
-            const { value: latestBlockhash } = await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Http,
-                callback: async ({ rpc }) => {
-                    return await rpc.getLatestBlockhash().send()
-                },
-            })
-            
-            // build transaction message with all instructions
-            const transactionMessage = pipe(
-                createTransactionMessage({
-                    version: 0 
-                }),
-                (tx) => setTransactionMessageFeePayerSigner(
-                    createNoopSigner(address(bot.accountAddress)),
-                    tx),
-                (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash,
-                    tx),
-                (tx) => appendTransactionMessageInstructions(instructions,
-                    tx),
-            )
-            const compiledTransaction = compileTransaction(transactionMessage)
-            
-            // sign transaction based on bot version
-            let prepareTx: PrepareTx
-            if (bot.version === AppVersion.V1) {
-                const signedTransaction = await this.signerService.withSolanaSigner({
-                    bot,
-                    action: async (signer) => {
-                        return await signTransaction(
-                            [signer.keyPair],
-                            compiledTransaction,
-                        )
-                    },
-                })
-                
-                const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                const txHash = transactionSignature.toString()
-                
-                // validate transaction before returning
-                assertIsSendableTransaction(signedTransaction)
-                assertIsTransactionWithinSizeLimit(signedTransaction)
-                
-                prepareTx = {
-                    txHash,
-                    solanaTx: signedTransaction,
-                }
-                const simulateResult = await this.rpcExecutorService.withSolanaRpc({
-                    accessType: RpcAccessType.Http,
-                    callback: async ({ rpc }) => {
-                        return await rpc.simulateTransaction(
-                            getBase64EncodedWireTransaction(prepareTx.solanaTx!),
-                            {
-                                encoding: "base64",
-                                commitment: "confirmed",
-                            },
-                        ).send()
-                    },
-                })
-                if (simulateResult.value.err) {
-                    throw new TransactionSubmitFailedException({
-                        message: simulateResult.value.err.toString(),
-                        originalError: new TransactionStimulatedFailedException({
-                            botId: bot.id,
-                            txHash: prepareTx.txHash,
-                            type: TransactionType.Withdraw,
-                        }),
-                    })
-                }
-            } else {
-                // validate privy metadata for V2 bots
-                if (!bot.privyMetadata) {
-                    throw new PrivyMetadataNotFoundException({
-                        botId: bot.id,
-                    })
-                }
-                if (!bot.encryptedPrivySignerPrivateKeyPayload) {
-                    throw new EncryptedPrivySignerPrivateKeyNotFoundException({
-                        botId: bot.id,
-                    })
-                }
-                
-                // sign transaction with Privy gas sponsor
-                const signedTransaction = await this.privySignService.signSolanaTransaction({
-                    lifetimeConstraint: {
-                        blockhash: latestBlockhash.blockhash,
-                        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-                    },
-                    transaction: compiledTransaction,
-                    encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
-                    walletId: bot.privyMetadata.walletId,
-                })
-
-                prepareTx = {
-                    txHash: signedTransaction.txHash,
-                    solanaTx: signedTransaction.signedTransaction,
-                }
-
-                const simulateResult = await this.rpcExecutorService.withSolanaRpc({
-                    accessType: RpcAccessType.Http,
-                    callback: async ({ rpc }) => {
-                        return await rpc.simulateTransaction(
-                            getBase64EncodedWireTransaction(prepareTx.solanaTx!),
-                            {
-                                encoding: "base64",
-                                commitment: "confirmed",
-                            },
-                        ).send()
-                    },
-                })
-                if (simulateResult.value.err) {
-                    throw new TransactionSubmitFailedException({
-                        message: simulateResult.value.err.toString(),
-                        originalError: new TransactionStimulatedFailedException(
-                            {
-                                botId: bot.id,
-                                txHash: prepareTx.txHash,
-                                type: TransactionType.Withdraw,
-                            },
-                        ),
-                    })
-                }
-            }
-            prepareTxs.push(prepareTx)
-        }
+        }  
+        const { transactionMessage } = await this.solanaTxService.createTxMessage({
+            bot,
+            instructions,
+        })
         return {
-            prepareTxs,
+            prepareTxs: [
+                {
+                    chainId: ChainId.Solana,
+                    serializedTx: this.superJson.stringify(transactionMessage),
+                }
+            ],
+        }
+    }
+
+    /**
+     * Signs a withdraw transaction.
+     * Validates state, builds transaction, and signs it.
+     *
+     * @param param - Parameters for signing withdraw transaction
+     * @param param.bot - Bot schema
+     * @param param.prepareTx - Prepared transaction
+     * @returns Signed transaction
+     */
+    async sign({
+        bot,
+        prepareTx,
+    }: SignWithdrawTransactionParams)
+    : Promise<SignWithdrawTransactionResult> {
+        return {
+            signedTx: await this.solanaTxService.signTx({
+                bot,
+                prepareTx,
+            }),
         }
     }
 
@@ -351,128 +236,41 @@ export class SolanaWithdrawActionService {
      * @returns Array of transaction hashes
      *
      * @example
-     * const txHashes = await service.execute({ bot, prepareTxs })
+     * const txHash = await service.execute({ bot, signedTx })
      */
-    public async execute({ bot, prepareTxs, isRetry = false, stimulate = false }: ExecuteWithdrawTransactionParams): Promise<ExecuteWithdrawTransactionResult> {
-        const txHashes: Array<string> = []
-        for (const prepareTx of prepareTxs) {
-            // check if transaction already exists on chain (for retries)
-            if (isRetry) {
-                const transaction = await this.rpcExecutorService.withSolanaRpc({
-                    accessType: RpcAccessType.Http,
-                    callback: async ({ rpc }) => {
-                        return await rpc.getTransaction(signature(prepareTx.txHash),
-                            {
-                                commitment: "confirmed", 
-                                encoding: "base58",
-                                maxSupportedTransactionVersion: 0,
-                            }
-                        ).send()
-                    },
-                })
-                
-                // skip if transaction already exists
-                if (transaction) {
-                    this.winstonService.log(
-                        WinstonLog.WithdrawTransactionFound,
-                        {
-                            botId: bot.id,
-                            txHash: prepareTx.txHash,
-                        }
-                    )
-                    txHashes.push(prepareTx.txHash)
-                    continue
+    public async execute({ 
+        bot, 
+        signedTx, 
+        txCheck = false, 
+        stimulate = false 
+    }: ExecuteWithdrawTransactionParams): Promise<ExecuteWithdrawTransactionResult> {
+        if (txCheck && !stimulate) {
+            const transaction = await this.solanaFetchService.fetchTransaction({
+                txHash: signedTx.txHash,
+            })
+            if (transaction) {
+                return {
+                    txHash: signedTx.txHash,
                 }
-            }   
-            
-            // validate transaction exists
-            const { solanaTx } = prepareTx
-            if (!solanaTx) {
-                throw new MissingSolanaTxParamException({
-                    botId: bot.id,
-                    type: TransactionType.Withdraw,
-                })
-            }
-            
-            // execute or simulate transaction
-            if (stimulate) {
-                // simulate transaction without sending
-                const simulateTransactionResult = await this.rpcExecutorService.withSolanaRpc({
-                    accessType: RpcAccessType.Http,
-                    callback: async ({ rpc }) => {
-                        return await rpc.simulateTransaction(
-                            getBase64EncodedWireTransaction(solanaTx),
-                            {
-                                encoding: "base64",
-                                commitment: "confirmed",
-                            }
-                        ).send()
-                    },
-                })
-                
-                if (simulateTransactionResult.value.err) {
-                    throw new TransactionSubmitFailedException(
-                        {
-                            message: simulateTransactionResult.value.err.toString(),
-                            originalError: new TransactionStimulatedFailedException({
-                                botId: bot.id,
-                                txHash: prepareTx.txHash,
-                                type: TransactionType.Withdraw,
-                            })
-                        }
-                    )
-                }
-                
-                this.winstonService.log(
-                    WinstonLog.WithdrawTransactionStimulated,
-                    {
-                        botId: bot.id,
-                        txHash: prepareTx.txHash,
-                    }
-                )
-                txHashes.push(prepareTx.txHash)
-            } else {
-                // send and confirm transaction
-                const sendAndConfirmTransaction = await this.rpcExecutorService.withSolanaRpc({
-                    accessType: RpcAccessType.Write,
-                    callback: async ({ rpc, rpcSubscriptions }) => {
-                        return sendAndConfirmTransactionFactory({
-                            rpc,
-                            rpcSubscriptions,
-                        })
-                    },
-                })
-                const [, error] = await this.asyncService.resolveTuple(
-                    sendAndConfirmTransaction(
-                        solanaTx,
-                        {
-                            commitment: "confirmed",
-                        },
-                    ))
-                if (error) {
-                    throw new TransactionSubmitFailedException({
-                        message: error.toString(),
-                        originalError: new TransactionExecutionFailedException({
-                            botId: bot.id,
-                            txHash: prepareTx.txHash,
-                            type: TransactionType.Withdraw,
-                        })
-                    })
-                }
-                const transactionSignature = getSignatureFromTransaction(solanaTx)
-                this.winstonService.log(
-                    WinstonLog.WithdrawTransactionExecuted,
-                    {
-                        botId: bot.id,
-                        txHash: transactionSignature.toString(),
-                    }
-                )
-                txHashes.push(prepareTx.txHash)
             }
         }
+        if (stimulate) {
+            const { txHash } = await this.solanaStimulateService.stimulate({
+                signedTx,
+                bot,
+                transactionType: TransactionType.Withdraw,
+            })
+            return {
+                txHash,
+            }
+        }
+        const { txHash } = await this.solanaExecuteService.execute({
+            signedTx,
+            bot,
+            transactionType: TransactionType.Withdraw,
+        })
         return {
-            txHashes,
+            txHash,
         }
     }
 }
-

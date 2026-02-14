@@ -1,15 +1,10 @@
 import {
-    ErrorSuiObjectKind,
     LiquidityPoolNotFoundException, 
-    SuiObjectInvalidTypeException, 
-    SuiObjectNotFoundException
 } from "@modules/exceptions"
 import {
-    RpcExecutorService 
+    SuiFetchService, 
+    SuiObjectKind
 } from "@modules/blockchains"
-import {
-    RpcAccessType 
-} from "@modules/filesystem"
 import {
     PrimaryMemoryStorageService, LiquidityPoolId, DexId, LiquidityPoolSchema 
 } from "@modules/databases"
@@ -61,7 +56,7 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
         private readonly cacheService: CacheService,
         private readonly winstonService: WinstonService,
         private readonly eventEmitterService: EventEmitterService,
-        private readonly rpcExecutorService: RpcExecutorService,
+        private readonly suiFetchService: SuiFetchService,
         private readonly dayjsService: DayjsService,
     ) {}
 
@@ -133,42 +128,13 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
                 })
             }
             
-            // fetch pool object from on-chain
-            const objectInfo = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Http,
-                callback: async ({ suiClient }) => {
-                    return await suiClient.getObject({
-                        id: liquidityPool.poolAddress,
-                        options: {
-                            showContent: true,
-                        },
-                    })
-                },
+            const objectInfo = await this.suiFetchService.fetchObject<TurbosSuiObjectPoolFields>({
+                objectId: liquidityPool.poolAddress,
+                kind: SuiObjectKind.Pool,
+                dexId: DexId.Turbos,
+                liquidityPool,
             })
-            
-            // validate object exists
-            if (objectInfo.error || !objectInfo.data) {
-                throw new SuiObjectNotFoundException({
-                    kind: ErrorSuiObjectKind.Pool,
-                    id: liquidityPool.poolAddress,
-                    dexId: DexId.Turbos,
-                    liquidityPoolId: liquidityPoolId,
-                })
-            }
-            
-            // validate object type
-            if (objectInfo.data.content?.dataType !== "moveObject") {
-                throw new SuiObjectInvalidTypeException({
-                    kind: ErrorSuiObjectKind.Pool,
-                    id: liquidityPool.poolAddress,
-                    dexId: DexId.Turbos,
-                    liquidityPoolId: liquidityPoolId,
-                })
-            }
-            
-            // parse pool fields and update state
-            const fields = objectInfo.data.content.fields as unknown as TurbosSuiObjectPoolFields
-            const pool = parseTurbosPool(fields)
+            const pool = parseTurbosPool(objectInfo)
             await this.handlePoolStateUpdate({
                 liquidityPool,
                 state: pool

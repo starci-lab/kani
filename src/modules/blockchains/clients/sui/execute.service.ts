@@ -3,7 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     RpcExecutorService
-} from "@modules/blockchains"
+} from "../rpc"
 import {
     RpcAccessType
 } from "@modules/filesystem"

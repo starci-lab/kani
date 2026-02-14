@@ -9,7 +9,7 @@ import {
 } from "../../types"
 import {
     RpcExecutorService 
-} from "../rpc-executor.service"
+} from "../rpc/rpc-executor.service"
 import {
     SignerService 
 } from "../../signers"

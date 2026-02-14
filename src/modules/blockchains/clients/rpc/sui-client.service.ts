@@ -27,14 +27,14 @@ import {
     RpcClientFatalException,
 } from "@modules/exceptions"
 import {
+    RpcErrorType
+} from "../enums"   
+import {
     WithSuiClientParams
 } from "./types"
 import {
-    RpcErrorType
-} from "../enums"
-import {
     SuiGetErrorTypesService
-} from "./get-error-types.service"
+} from "./sui-get-error-types.service"
 
 /**
  * Service responsible for executing Sui RPC calls with retry logic and error handling.
@@ -77,19 +77,19 @@ export class SuiClientService {
                     chainId: ChainId.Sui,
                     accessType,
                 })
-                
+
                 // create Sui client
                 const suiClient = new SuiClient({
                     url: rpcUrl,
                     network: "mainnet",
                 })
-                
+
                 try {
                     return await this.retryService.retry(
                         {
                             options,
                             action: async () => {
-                            // resolve tuple of response and error
+                                // resolve tuple of response and error
                                 const [
                                     result,
                                     error
@@ -103,7 +103,7 @@ export class SuiClientService {
                                 if (result !== null) {
                                     return result
                                 }
-                            
+
                                 // handle null error case
                                 if (error === null) {
                                     throw new AbortError(new SuiRpcIgnorableException("Unknown error"))
@@ -117,8 +117,8 @@ export class SuiClientService {
                                     throw new AbortError(
                                         new RpcClientFatalException(
                                             {
-                                                message: error?.message, 
-                                                originalError: error 
+                                                message: error?.message,
+                                                originalError: error
                                             }
                                         ))
                                 case RpcErrorType.Fatal:
@@ -137,7 +137,7 @@ export class SuiClientService {
                         this.winstonService.log(
                             WinstonLog.EjectRpcFatalError,
                             {
-                                rpcId: id 
+                                rpcId: id
                             }
                         )
                         await this.p2cBalancerService.ejectRpcs([id])

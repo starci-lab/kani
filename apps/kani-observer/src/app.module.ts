@@ -86,6 +86,9 @@ import {
 import {
     ObserverModule 
 } from "@features/observer"
+import {
+    PrivyModule 
+} from "@modules/privy"
 
 @Module({
     imports: [
@@ -101,6 +104,9 @@ import {
             isGlobal: true,
             serviceName: ServiceName.KaniObserver,
             level: envConfig().winston.level as WinstonLevel,
+        }),
+        PrivyModule.register({
+            isGlobal: true,
         }),
         IoRedisModule.register({
             isGlobal: true,

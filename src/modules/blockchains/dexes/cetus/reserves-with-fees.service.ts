@@ -11,12 +11,12 @@ import {
 } from "@nestjs/common"
 import {
     RpcExecutorService,
+    SuiObjectKind,
 } from "../../clients"
 import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
     SuiObjectNotFoundException,
-    ErrorSuiObjectKind,
     InvalidTickScoreException,
     LiquidityPoolClmmStateNotFoundException,
     TokenNotFoundException,
@@ -148,7 +148,7 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
         // validate tick lower data exists
         if (!tickLowerDataRaw) {
             throw new SuiObjectNotFoundException({
-                kind: ErrorSuiObjectKind.TickLower,
+                kind: SuiObjectKind.TickLower,
                 parentId: tickManagerId,
                 dexId: DexId.Cetus,
                 liquidityPoolId: liquidityPool.displayId,
@@ -178,7 +178,7 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
         // validate tick upper data exists
         if (!tickUpperDataRaw) {
             throw new SuiObjectNotFoundException({
-                kind: ErrorSuiObjectKind.TickUpper,
+                kind: SuiObjectKind.TickUpper,
                 parentId: tickManagerId,
                 dexId: DexId.Cetus,
                 liquidityPoolId: liquidityPool.displayId,
@@ -208,7 +208,7 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
         // validate position info exists
         if (!positionInfoDataRaw) {
             throw new SuiObjectNotFoundException({
-                kind: ErrorSuiObjectKind.PositionInfo,
+                kind: SuiObjectKind.Position,
                 parentId: positionManagerId,
                 dexId: DexId.Cetus,
                 liquidityPoolId: liquidityPool.displayId,

@@ -129,7 +129,7 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
      */
     private async fetchPoolInfo(liquidityPool: LiquidityPoolSchema): Promise<void> {
         try {
-            const poolRaw = await this.suiFetchService.fetchObject<FlowxSuiObjectPoolFields>({
+            const objectInfo = await this.suiFetchService.fetchObject<FlowxSuiObjectPoolFields>({
                 // FlowX uses poolAddress as on-chain object id (per your original code)
                 objectId: liquidityPool.poolAddress,
                 kind: SuiObjectKind.Pool,
@@ -137,7 +137,7 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
                 liquidityPool,
             })
 
-            const pool = parseFlowxPool(poolRaw)
+            const pool = parseFlowxPool(objectInfo)
             await this.handlePoolStateUpdate(liquidityPool,
                 pool)
         } catch (error) {

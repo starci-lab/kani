@@ -263,12 +263,12 @@ export class SuiWithdrawActionService {
         { 
             bot, 
             signedTx, 
-            isRetry = false, 
+            txCheck = false, 
             stimulate = false 
         }: ExecuteWithdrawTransactionParams): 
         Promise<ExecuteWithdrawTransactionResult> {
         // check if transaction already exists on chain (for retries)
-        if (isRetry && !stimulate) {
+        if (txCheck && !stimulate) {
             const txBlock = await this.suiFetchService.fetchTransactionBlock({
                 txHash: signedTx.txHash,
             })

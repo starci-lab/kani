@@ -11,12 +11,12 @@ import {
 } from "@nestjs/common"
 import {
     RpcExecutorService,
+    SuiObjectKind,
 } from "../../clients"
 import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
     SuiObjectNotFoundException,
-    ErrorSuiObjectKind,
     SuiObjectInvalidTypeException,
     LiquidityPoolClmmStateNotFoundException,
     TokenNotFoundException,
@@ -160,7 +160,7 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
         // Stage: on-chain fetch validation
         if (!tickLowerDataRaw) {
             throw new SuiObjectNotFoundException({
-                kind: ErrorSuiObjectKind.TickLower,
+                kind: SuiObjectKind.TickLower,
                 parentId: liquidityPool.poolAddress,
                 dexId: DexId.Turbos,
                 liquidityPoolId: liquidityPool.displayId,
@@ -188,7 +188,7 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
         // Stage: on-chain fetch validation
         if (!tickUpperDataRaw) {
             throw new SuiObjectNotFoundException({
-                kind: ErrorSuiObjectKind.TickUpper,
+                kind: SuiObjectKind.TickUpper,
                 parentId: liquidityPool.poolAddress,
                 dexId: DexId.Turbos,
                 liquidityPoolId: liquidityPool.displayId,
@@ -215,7 +215,7 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
         // Stage: on-chain fetch validation (position NFT must exist)
         if (nftPositionInfo.error || !nftPositionInfo.data) {
             throw new SuiObjectNotFoundException({
-                kind: ErrorSuiObjectKind.PositionNFT,
+                kind: SuiObjectKind.PositionNFT,
                 id: positionId,
                 dexId: DexId.Turbos,
                 liquidityPoolId: liquidityPool.displayId,
@@ -223,7 +223,7 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
         }
         if (nftPositionInfo.data.content?.dataType !== "moveObject") {
             throw new SuiObjectInvalidTypeException({
-                kind: ErrorSuiObjectKind.PositionNFT,
+                kind: SuiObjectKind.PositionNFT,
                 id: positionId,
                 liquidityPoolId: liquidityPool.displayId,
                 dexId: DexId.Turbos,
@@ -247,7 +247,7 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
         // Stage: on-chain fetch validation (position must exist)
         if (positionInfo.error || !positionInfo.data) {
             throw new SuiObjectNotFoundException({
-                kind: ErrorSuiObjectKind.Position,
+                kind: SuiObjectKind.Position,
                 id: nftPosition.positionId,
                 liquidityPoolId: liquidityPool.displayId,
                 dexId: DexId.Turbos,
@@ -255,7 +255,7 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
         }
         if (positionInfo.data.content?.dataType !== "moveObject") {
             throw new SuiObjectInvalidTypeException({
-                kind: ErrorSuiObjectKind.Position,
+                kind: SuiObjectKind.Position,
                 id: nftPosition.positionId,
                 liquidityPoolId: liquidityPool.displayId,
                 dexId: DexId.Turbos,

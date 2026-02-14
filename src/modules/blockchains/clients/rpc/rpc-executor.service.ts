@@ -7,16 +7,15 @@ import {
 } from "./types"
 import {
     SolanaClientService
-} from "./solana"
+} from "./solana-client.service"
 import {
     SuiClientService
-} from "./sui"
+} from "./sui-client.service"
 
-
-/**
+/**../solana
  * Service responsible for executing RPC calls with retry logic and error handling.
  * Delegates to chain-specific client services (Solana, Sui) for actual RPC execution.
- *
+ *../sui
  * @example
  * const service = new RpcExecutorService(...)
  * const result = await service.withSolanaRpc({ accessType: RpcAccessType.Http, callback: async ({ rpc }) => {...} })

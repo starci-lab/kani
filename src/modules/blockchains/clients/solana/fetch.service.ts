@@ -9,7 +9,7 @@ import {
 } from "@solana/kit"
 import {
     RpcExecutorService
-} from "@modules/blockchains"
+} from "../rpc"
 import {
     RpcAccessType
 } from "@modules/filesystem"

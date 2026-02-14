@@ -17,7 +17,7 @@ import {
 } from "@solana/kit"
 import {
     RpcExecutorService
-} from "../rpc-executor.service"
+} from "../rpc"
 import {
     SignedTx,
     SolanaTx
@@ -40,7 +40,7 @@ import {
     AppVersion 
 } from "@modules/databases"
 import {
-    PrivySignService 
+    PrivySignService
 } from "@modules/privy"
 import {
     SignerService

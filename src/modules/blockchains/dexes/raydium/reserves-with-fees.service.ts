@@ -11,6 +11,7 @@ import {
 } from "@nestjs/common"
 import {
     RpcExecutorService,
+    AccountKind,
 } from "../../clients"
 import {
     RpcAccessType,
@@ -23,7 +24,6 @@ import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
     SolanaAccountNotFoundException,
-    ErrorSolanaAccountKind,
     MissingActivePositionLiquidityException,
     LiquidityPoolClmmStateNotFoundException,
     TokenNotFoundException,
@@ -189,7 +189,7 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
 
         if (!positionAccount?.exists) {
             throw new SolanaAccountNotFoundException({
-                kind: ErrorSolanaAccountKind.PersonalPosition,
+                kind: AccountKind.PersonalPosition,
                 address: positionId,
                 dexId: DexId.Raydium,
                 liquidityPoolId: liquidityPool.displayId,
@@ -198,7 +198,7 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
 
         if (!tickArrayLowerAccount?.exists) {
             throw new SolanaAccountNotFoundException({
-                kind: ErrorSolanaAccountKind.TickArrayLower,
+                kind: AccountKind.TickArrayLower,
                 address: tickArrayLowerPda,
                 dexId: DexId.Raydium,
                 liquidityPoolId: liquidityPool.displayId,
@@ -207,7 +207,7 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
 
         if (!tickArrayUpperAccount?.exists) {
             throw new SolanaAccountNotFoundException({
-                kind: ErrorSolanaAccountKind.TickArrayUpper,
+                kind: AccountKind.TickArrayUpper,
                 address: tickArrayUpperPda,
                 dexId: DexId.Raydium,
                 liquidityPoolId: liquidityPool.displayId,

@@ -29,7 +29,7 @@ export interface PrepareWithdrawTransactionResult {
 export interface ExecuteWithdrawTransactionParams {
     bot: BotSchema
     signedTx: SignedTx
-    isRetry?: boolean
+    txCheck?: boolean
     stimulate?: boolean
 }
 
@@ -44,4 +44,15 @@ export interface EnqueueWithdrawParams {
     jobId: string
     isRetry?: boolean
     payload: WithdrawCacheResult
+}
+
+/** Parameters for signing a withdraw transaction. */
+export interface SignWithdrawTransactionParams {
+    bot: BotSchema
+    prepareTx: PrepareTx
+}
+
+/** Result of signing a withdraw transaction. */
+export interface SignWithdrawTransactionResult {
+    signedTx: SignedTx
 }
