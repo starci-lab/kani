@@ -2,7 +2,7 @@ import {
     Injectable
 } from "@nestjs/common"
 import {
-    OpenPositionPrepareStepParams
+    OpenPositionTaskPrepareParams
 } from "../types"
 import {
     ActionExecutionContextService,
@@ -11,25 +11,26 @@ import {
     OpenPositionActionService
 } from "@modules/blockchains"
 import {
-    InjectPrimaryMongoose, JobSchema, 
-    JobStatus
+    InjectPrimaryMongoose, JobSchema,
+    TaskType
 } from "@modules/databases"
 import {
-    Connection 
+    Connection
 } from "mongoose"
 /**
  * Service for the OPEN POSITION PREPARE step.
  */
 @Injectable()
-export class OpenPositionPrepareStepService {
+export class OpenPositionTaskPrepareService {
     constructor(
         private readonly openPositionActionService: OpenPositionActionService,
         private readonly actionExecutionContextService: ActionExecutionContextService,
         @InjectPrimaryMongoose()
-        private readonly connection: Connection, 
+        private readonly connection: Connection,
     ) { }
+
     /**
-     * Process the OPEN POSITION PREPARE step.
+     * Process the OPEN POSITION TASK PREPARE step.
      *
      * @param params - The parameters for the step.
      * @returns The result of the step.
@@ -39,13 +40,14 @@ export class OpenPositionPrepareStepService {
             botId,
             jobId,
             liquidityPoolId,
-        }: OpenPositionPrepareStepParams
+            state,
+            index,
+        }: OpenPositionTaskPrepareParams
     ) {
         // Load the execution context.
         const {
             bot,
             liquidityPool,
-            state,
         } = await this.actionExecutionContextService.load(
             {
                 botId,
@@ -64,14 +66,28 @@ export class OpenPositionPrepareStepService {
                 }
             )
         // We update the database with the prepare result.
-        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+        await this.connection.model<JobSchema>(
+            JobSchema.name
+        ).updateOne(
             {
                 _id: {
                     $eq: jobId,
                 },
-                status: {
-                    $eq: JobStatus.Pending,
+            },
+            {
+                // Update the prepare result for the task.
+                $set: {
+                    "tasks.$[task].prepareResult": prepareResult,
                 },
+            },
+            {
+                // Update the task with the given index and type.
+                arrayFilters: [
+                    {
+                        "task.index": index,
+                        "task.type": TaskType.OpenPosition,
+                    }
+                ],
             },
         )
         return {

@@ -3,8 +3,16 @@ import {
     TransactionWithinSizeLimit, 
     TransactionWithBlockhashLifetime, 
     TransactionMessageBytes, 
-    SignaturesMap
+    SignaturesMap,
+    ExcludeTransactionMessageWithinSizeLimit,
+    TransactionMessageWithFeePayerSigner,
+    TransactionSigner,
+    Instruction,
+    createTransactionMessage,
+    AccountMeta,
+    AccountLookupMeta,
 } from "@solana/kit"
+
 import {
     ChainId 
 } from "@modules/common"
@@ -31,4 +39,15 @@ export interface PrepareTx {
     chainId: ChainId
     /** Serialized transaction. */
     serializedTx: string
+    /** Additional private keys for signing. */
+    privateKeys?: Array<string>
+}
+
+/** Solana transaction message type with all required properties. */
+export type SolanaTxMessage = Omit<
+ExcludeTransactionMessageWithinSizeLimit<
+Omit<ReturnType<typeof createTransactionMessage<0>>, "feePayer"> 
+& TransactionMessageWithFeePayerSigner<string, TransactionSigner<string>>>
+, "instructions"> & {
+    readonly instructions: readonly Instruction<string, readonly (AccountLookupMeta<string, string> | AccountMeta<string>)[]>[];
 }

@@ -9,9 +9,9 @@ import {
 import {
     LiquidityPoolState,
     PrepareTx,
-    SignedTx
+    SignedTx,
+    SolanaTx
 } from "../../types"
-
 /**
  * Parameters for preparing an open position transaction.
  */
@@ -124,7 +124,9 @@ export interface ConfirmOpenPositionResult {
  * Parameters for signing an open position.
  */
 export interface SignOpenPositionParams {
+    /* Prepared transaction */
     prepareTx: PrepareTx
+    /* Bot */
     bot: BotSchema
 }
 
@@ -139,6 +141,7 @@ export interface SignOpenPositionResult {
  * Parameters for signing an open position.
  */
 export interface SignClosePositionParams {
+    liquidityPool: LiquidityPoolSchema
     prepareTx: PrepareTx
     bot: BotSchema
 }
@@ -148,4 +151,14 @@ export interface SignClosePositionParams {
  */
 export interface SignClosePositionResult {
     signedTx: SignedTx
+}
+
+/**
+ * Serialized transaction for open position.
+ */
+export interface OpenPositionSerializedTx {
+    // solana transaction
+    solanaTx: SolanaTx
+    // position keypair private key
+    positionKeyPairPrivateKey: Array<number>
 }

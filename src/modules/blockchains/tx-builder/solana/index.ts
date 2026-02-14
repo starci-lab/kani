@@ -1,5 +1,5 @@
 export * from "./anchor.service"
 export * from "./ata-instruction.service"
-export * from "./keypair-generators.service"
 export * from "./mint-instruction.service"
 export * from "./transfer-instruction.service"
+export * from "./keypair.service"

@@ -62,7 +62,7 @@ export class SuiFetchService {
                 })
             },
         })
-
+        // if object is not found or failed, throw exception
         if (objectInfo.error || !objectInfo.data) {
             throw new SuiObjectNotFoundException({
                 kind,
@@ -71,7 +71,7 @@ export class SuiFetchService {
                 liquidityPoolId: liquidityPool?.displayId,
             })
         }
-
+        // if object is not a move object, throw exception
         if (objectInfo.data.content?.dataType !== "moveObject") {
             throw new SuiObjectInvalidTypeException({
                 kind,
@@ -80,7 +80,7 @@ export class SuiFetchService {
                 liquidityPoolId: liquidityPool?.displayId,
             })
         }
-
+        // return object fields
         const object = objectInfo.data.content.fields as T
         return object
     }

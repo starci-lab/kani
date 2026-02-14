@@ -9,13 +9,21 @@ import {
     RpcAccessType
 } from "@modules/filesystem"
 import {
-    RpcExecutorService
+    RpcExecutorService,
+    SolanaTx
 } from "@modules/blockchains"
 import {
     MissingSolanaTxParamException,
     RpcClientFatalException,
     TransactionStimulatedFailedException,
 } from "@modules/exceptions"
+import {
+    InjectSuperJson
+} from "@modules/mixin"
+import SuperJSON from "superjson"
+import {
+    ChainId
+} from "@modules/common"
 import type {
     StimulateSolanaTransactionParams,
     StimulateSolanaTransactionResult
@@ -32,18 +40,22 @@ import type {
 export class SolanaStimulateService {
     constructor(
         private readonly rpcExecutorService: RpcExecutorService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
     ) {}
 
     /**
      * Simulates a prepared Solana transaction. Throws if solanaTx is missing or simulation fails.
      */
     async stimulate({
-        solanaTx,
+        signedTx,
         bot,
         transactionType,
         liquidityPoolId,
     }: StimulateSolanaTransactionParams): Promise<StimulateSolanaTransactionResult> {
-        // validate solanaTx
+        // validate signedTx
+        const { signedSerializedTx } = signedTx
+        const solanaTx = this.superJson.parse<SolanaTx>(signedSerializedTx)
         if (!solanaTx) {
             throw new MissingSolanaTxParamException({
                 botId: bot.id,
@@ -67,23 +79,27 @@ export class SolanaStimulateService {
             },
         })
         // validate result
-        const txHash = getSignatureFromTransaction(solanaTx)
+        const signature = getSignatureFromTransaction(solanaTx).toString()
         // validate error
         if (result.value.err) {
             throw new RpcClientFatalException({
                 message: result.value.err.toString(),
-                originalError: new TransactionStimulatedFailedException({
-                    botId: bot.id,
-                    txHash,
-                    liquidityPoolId,
-                    type: transactionType,
-                }),
+                originalError: new TransactionStimulatedFailedException(
+                    {
+                        botId: bot.id,
+                        txHash: signature,
+                        liquidityPoolId,
+                        type: transactionType,
+                        chainId: ChainId.Solana,
+                    }
+                ),
             })
         }
 
         // return result
         return {
-            txHash,
+            txHash: signature,
+            signature,
         }
     }
 }

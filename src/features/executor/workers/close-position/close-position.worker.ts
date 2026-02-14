@@ -130,7 +130,9 @@ export class ClosePositionWorker extends WorkerHost {
         )
     }
 
-    async process(bullmqJob: Job<string>): Promise<void> {
+    async process(
+        bullmqJob: Job<string>
+    ): Promise<void> {
         // Payload is stored as SuperJSON string (same convention as open-position).
         const payload = this.superJson.parse<ClosePositionPayload>(bullmqJob.data)
         const { botId, jobId, liquidityPoolId, state } = payload
@@ -165,11 +167,13 @@ export class ClosePositionWorker extends WorkerHost {
                     )
                 }
 
-                const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
-                    id: {
-                        $eq: liquidityPoolId,
+                const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
+                    {
+                        id: {
+                            $eq: liquidityPoolId,
+                        }
                     }
-                })
+                )
 
                 if (!liquidityPool) {
                     throw new UnrecoverableError(

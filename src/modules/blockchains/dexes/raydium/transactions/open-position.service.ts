@@ -31,7 +31,7 @@ import {
     PersonalPositionService 
 } from "./personal-position.service"
 import {
-    createNoopSigner, generateKeyPairSigner 
+    createNoopSigner 
 } from "@solana/signers"
 import {
     SYSVAR_RENT_ADDRESS     
@@ -56,6 +56,9 @@ import {
     CreateOpenPositionInstructionsParams,
     CreateOpenPositionInstructionsResult
 } from "../types"
+import {
+    SolanaKeypairService
+} from "../../../tx-builder"
 
 /**
  * Service responsible for creating open position instructions for Raydium.
@@ -75,6 +78,7 @@ export class OpenPositionInstructionService {
         private readonly personalPositionService: PersonalPositionService,
         private readonly feeService: FeeService,
         private readonly mountStorageService: MountStorageService,
+        private readonly solanaKeypairService: SolanaKeypairService,
     ) { }
     /**
    * Build & append decrease_liquidity_v2 (close position) instruction
@@ -97,7 +101,7 @@ export class OpenPositionInstructionService {
         }
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
-        const mintKeyPair = await generateKeyPairSigner()
+        const mintKeyPair = await this.solanaKeypairService.generateKeypair()
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: liquidityPool.tokenA.toString()
@@ -244,7 +248,7 @@ export class OpenPositionInstructionService {
         const {
             ataAddress,
         } = await this.ataInstructionService.getOrCreateAtaInstructions({
-            tokenMint: mintKeyPair.address,
+            tokenMint: address(mintKeyPair.publicKey.toBase58()),
             ownerAddress: address(bot.accountAddress),
             is2022Token: true,
             pdaOnly: true,
@@ -260,7 +264,7 @@ export class OpenPositionInstructionService {
         const {
             pda: personalPositionPda,
         } = await this.personalPositionService.getPda({
-            nftMintAddress: mintKeyPair.address,
+            nftMintAddress: address(mintKeyPair.publicKey.toBase58()),
             programAddress: address(programAddress),
         })
         const [
@@ -289,7 +293,7 @@ export class OpenPositionInstructionService {
                     role: AccountRole.READONLY,
                 },
                 {
-                    address: address(mintKeyPair.address),
+                    address: address(mintKeyPair.publicKey.toBase58()),
                     role: AccountRole.WRITABLE_SIGNER,
                 },
                 {

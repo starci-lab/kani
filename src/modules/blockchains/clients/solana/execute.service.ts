@@ -6,7 +6,8 @@ import {
     sendAndConfirmTransactionFactory,
 } from "@solana/kit"
 import {
-    RpcExecutorService
+    RpcExecutorService,
+    SolanaTx
 } from "@modules/blockchains"
 import {
     RpcAccessType
@@ -17,8 +18,10 @@ import {
     TransactionExecutionFailedException,
 } from "@modules/exceptions"
 import {
-    AsyncService
+    AsyncService,
+    InjectSuperJson
 } from "@modules/mixin"
+import SuperJSON from "superjson"
 import type {
     ExecuteSolanaTransactionParams,
     ExecuteSolanaTransactionResult  
@@ -36,6 +39,8 @@ export class SolanaExecuteService {
     constructor(
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly asyncService: AsyncService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
     ) {}
 
     /**
@@ -43,13 +48,14 @@ export class SolanaExecuteService {
      */
     async execute(
         {
-            prepareTx,
+            signedTx,
             bot,
             transactionType,
             liquidityPoolId,
         }: ExecuteSolanaTransactionParams
     ): Promise<ExecuteSolanaTransactionResult> {
-        const { solanaTx } = prepareTx
+        const { signedSerializedTx } = signedTx
+        const solanaTx = this.superJson.parse<SolanaTx>(signedSerializedTx)
         if (!solanaTx) {
             throw new MissingSolanaTxParamException({
                 botId: bot.id,
@@ -82,7 +88,7 @@ export class SolanaExecuteService {
                     originalError: new TransactionExecutionFailedException(
                         {
                             botId: bot.id,
-                            txHash: prepareTx.txHash,
+                            txHash: getSignatureFromTransaction(solanaTx).toString(),
                             liquidityPoolId,
                             type: transactionType,
                         },
@@ -92,9 +98,10 @@ export class SolanaExecuteService {
             )
         }
 
-        const txHash = getSignatureFromTransaction(solanaTx).toString()
+        const signature = getSignatureFromTransaction(solanaTx).toString()
         return {
-            txHash 
+            txHash: signature,
+            signature,
         }
     }
 }

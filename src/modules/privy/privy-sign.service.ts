@@ -41,9 +41,9 @@ import {
     addLifetimeConstraint
 } from "./utils"
 import type {
-    SignSolanaTransactionParams,
+    SignSolanaTxParams,
     SignSolanaTransactionResult,
-    SignSuiTransactionParams,
+    SignSuiTxParams,
     SignSuiTransactionResult
 } from "./types"
 
@@ -65,7 +65,7 @@ export class PrivySignService {
      * @returns The signed transaction and the transaction hash.
      */ 
     async signSolanaTransaction(
-        params: SignSolanaTransactionParams,
+        params: SignSolanaTxParams,
     ): Promise<SignSolanaTransactionResult> {
         const {
             walletId,
@@ -112,7 +112,7 @@ export class PrivySignService {
      * @returns The transaction hash and the signature with bytes.
      */
     async signSuiTransaction(
-        params: SignSuiTransactionParams,
+        params: SignSuiTxParams,
     ): Promise<SignSuiTransactionResult> {
         const {
             walletId,

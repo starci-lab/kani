@@ -45,6 +45,7 @@ export class ActionExecutionContextService {
             jobId,
             botId,
             liquidityPoolId,
+            state: _state,
         }: LoadActionExecutionContextParams
     ): Promise<LoadActionExecutionContextResult> {
         // Find the job by id.
@@ -81,7 +82,7 @@ export class ActionExecutionContextService {
             )
         }
         // Get the state
-        const state = await this.liquidityPoolStateService.getState(liquidityPool)
+        const state = _state ?? await this.liquidityPoolStateService.getState(liquidityPool)
         return {
             job,
             bot,

@@ -1,5 +1,5 @@
 import type {
-    PrepareTx
+    SignedTx
 } from "@modules/blockchains"
 import type {
     LiquidityPoolId
@@ -15,7 +15,7 @@ export interface ExecuteSolanaBot {
 
 /** Params for executing a Solana transaction on-chain. */
 export interface ExecuteSolanaTransactionParams {
-    prepareTx: PrepareTx
+    signedTx: SignedTx
     bot: ExecuteSolanaBot
     transactionType: TransactionType
     liquidityPoolId?: LiquidityPoolId
@@ -24,4 +24,5 @@ export interface ExecuteSolanaTransactionParams {
 /** Result of executing a Solana transaction. */
 export interface ExecuteSolanaTransactionResult {
     txHash: string
+    signature: string
 }

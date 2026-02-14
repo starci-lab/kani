@@ -11,12 +11,12 @@ import {
 } from "@nestjs/common"
 import {
     RpcExecutorService,
+    SuiObjectKind,
 } from "../../clients"
 import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
     SuiObjectNotFoundException,
-    ErrorSuiObjectKind,
     SuiObjectInvalidTypeException,
     LiquidityPoolClmmStateNotFoundException,
     TokenNotFoundException,
@@ -157,7 +157,7 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
         // Stage: on-chain fetch validation
         if (!tickLowerDataRaw) {
             throw new SuiObjectNotFoundException({
-                kind: ErrorSuiObjectKind.TickLower,
+                kind: SuiObjectKind.TickLower,
                 parentId: ticksId,
                 dexId: DexId.Momentum,
                 liquidityPoolId: liquidityPool.displayId,
@@ -187,7 +187,7 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
         // Stage: on-chain fetch validation
         if (!tickUpperDataRaw) {
             throw new SuiObjectNotFoundException({
-                kind: ErrorSuiObjectKind.TickUpper,
+                kind: SuiObjectKind.TickUpper,
                 parentId: ticksId,
                 dexId: DexId.Momentum,
                 liquidityPoolId: liquidityPool.displayId,
@@ -214,7 +214,7 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
         // Stage: on-chain fetch validation
         if (objectInfo.error || !objectInfo.data) {
             throw new SuiObjectNotFoundException({
-                kind: ErrorSuiObjectKind.Position,
+                kind: SuiObjectKind.Position,
                 id: positionId,
                 dexId: DexId.Momentum,
                 liquidityPoolId: liquidityPool.displayId,
@@ -222,7 +222,7 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
         }
         if (objectInfo.data.content?.dataType !== "moveObject") {
             throw new SuiObjectInvalidTypeException({
-                kind: ErrorSuiObjectKind.Position,
+                kind: SuiObjectKind.Position,
                 id: positionId,
                 liquidityPoolId: liquidityPool.displayId,
                 dexId: DexId.Momentum,

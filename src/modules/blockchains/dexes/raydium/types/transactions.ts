@@ -9,10 +9,12 @@ import {
     Instruction
 } from "@solana/kit"
 import {
-    KeyPairSigner,
     Address
 } from "@solana/kit"
 import BN from "bn.js"
+import {
+    Keypair 
+} from "@solana/web3.js"
 
 /**
  * Parameters for creating open position instructions.
@@ -43,7 +45,7 @@ export interface CreateOpenPositionInstructionsResult {
     /** Array of instructions. */
     instructions: Array<Instruction>
     /** Position key pair. */
-    positionKeyPair: KeyPairSigner
+    positionKeyPair: Keypair
     /** Personal position address. */
     personalPosition: Address
     /** ATA address. */

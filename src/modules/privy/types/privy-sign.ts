@@ -26,13 +26,13 @@ export interface SignTransactionParams<T> {
 }
 
 /** Params for signing a Solana transaction. */
-export interface SignSolanaTransactionParams
+export interface SignSolanaTxParams
     extends SignTransactionParams<SolanaTransaction> {
     lifetimeConstraint: TransactionBlockhashLifetime
 }
 
 /** Params for signing a Sui transaction. */
-export interface SignSuiTransactionParams
+export interface SignSuiTxParams
     extends SignTransactionParams<Transaction> {
     publicKeyHex: string
     client: SuiClient

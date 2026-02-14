@@ -390,7 +390,7 @@ registerEnumType(
 
 export enum StepType {
     Sign = "sign",
-    Send = "send",
+    Execute = "execute",
 }
 
 export const GraphQLTypeStepType = createEnumType(StepType)
@@ -403,8 +403,8 @@ registerEnumType(GraphQLTypeStepType,
             [StepType.Sign]: {
                 description: "The sign step"
             },
-            [StepType.Send]: {
-                description: "The send step"
+            [StepType.Execute]: {
+                description: "The execute step"
             }
         }
     }

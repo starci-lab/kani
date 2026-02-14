@@ -37,7 +37,9 @@ import {
     PrepareClosePositionResult, 
     ExecuteClosePositionParams,
     PrepareClosePositionParams,
-    ExecuteClosePositionResult, 
+    ExecuteClosePositionResult,
+    SignClosePositionParams,
+    SignClosePositionResult, 
 } from "../types"
 
 /**
@@ -160,6 +162,55 @@ export class ClosePositionActionService {
         }
         case DexId.Meteora: {
             return await this.meteoraClosePositionActionService.prepare(params)
+        }
+        default: {
+            throw new DexNotImplementedException({
+                id: liquidityPool.dex.toString(),
+            })
+        }
+        }
+    }
+
+    /**
+     * Signs a close position transaction.
+     * Delegates signing logic to DEX-specific service based on pool configuration.
+     *
+     * @param params - Parameters for signing close position
+     * @returns Signed transaction with signature
+     * @throws {DexNotFoundException} If the DEX is not found in memory storage
+     * @throws {DexNotImplementedException} If the DEX is not supported
+     */ 
+    async sign(
+        params: SignClosePositionParams): Promise<SignClosePositionResult> 
+    {
+        const { bot, prepareTx, liquidityPool } = params
+        const dex = this.getDexOrThrow(liquidityPool.dex.toString())
+        this.assertDexEnabledOrThrow(dex.displayId)
+        switch (dex.displayId) {
+        case DexId.Meteora: {
+            return await this.meteoraClosePositionActionService.sign({
+                bot,
+                prepareTx,
+                liquidityPool,
+            })
+        }
+        case DexId.Raydium: {
+            return await this.raydiumClosePositionActionService.sign(params)
+        }
+        case DexId.Orca: {
+            return await this.orcaClosePositionActionService.sign(params)
+        }
+        case DexId.FlowX: {
+            return await this.flowXClosePositionActionService.sign(params)
+        }
+        case DexId.Cetus: {
+            return await this.cetusClosePositionActionService.sign(params)
+        }
+        case DexId.Turbos: {
+            return await this.turbosClosePositionActionService.sign(params)
+        }
+        case DexId.Momentum: {
+            return await this.momentumClosePositionActionService.sign(params)
         }
         default: {
             throw new DexNotImplementedException({

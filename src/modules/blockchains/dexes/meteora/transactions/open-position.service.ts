@@ -7,7 +7,9 @@ import {
     Instruction,
 } from "@solana/kit"
 import {
-    AtaInstructionService, AnchorUtilsService, KeypairGeneratorsService 
+    AtaInstructionService, 
+    AnchorUtilsService,
+    SolanaKeypairService
 } from "../../../tx-builder"
 import {
     MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService 
@@ -25,7 +27,9 @@ import {
 import Decimal from "decimal.js"
 import BN from "bn.js"
 import {
-    InvalidPoolTokensException, LiquidityPoolDlmmStateNotFoundException, MeteoraMultipleDlmmPositionsNotSupportedException 
+    InvalidPoolTokensException, 
+    LiquidityPoolDlmmStateNotFoundException, 
+    MeteoraMultipleDlmmPositionsNotSupportedException 
 } from "@modules/exceptions"
 import {
     getTransferSolInstruction, SYSTEM_PROGRAM_ADDRESS 
@@ -79,7 +83,7 @@ export class OpenPositionInstructionService {
         private readonly eventAuthorityService: EventAuthorityService,
         private readonly ataInstructionService: AtaInstructionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly keypairGeneratorsService: KeypairGeneratorsService,
+        private readonly solanaKeypairService: SolanaKeypairService,
         private readonly anchorUtilsService: AnchorUtilsService,
         private readonly meteoraSdkService: MeteoraSdkService,
         private readonly feeService: FeeService,
@@ -93,13 +97,15 @@ export class OpenPositionInstructionService {
      * @param amountB - The amount of token B.
      * @returns The open position instructions.
      */
-    async createOpenPositionInstructions({
-        bot,
-        state,
-        amountA,
-        liquidityPool,
-        amountB,
-    }: CreateOpenPositionInstructionsParams)
+    async createOpenPositionInstructions(
+        {
+            bot,
+            state,
+            amountA,
+            liquidityPool,
+            amountB,
+        }: CreateOpenPositionInstructionsParams
+    )
     : Promise<CreateOpenPositionInstructionsResult>
     {
         if (!liquidityPool.dlmmState) {
@@ -165,9 +171,7 @@ export class OpenPositionInstructionService {
                 liquidityPoolId: liquidityPool.displayId,
             })
         }
-        const positionKeyPairs = await this.keypairGeneratorsService.generateKeypairs(positionCount)
-        // we only support one position at a time
-        const positionKeyPair = positionKeyPairs[0]
+        const positionKeyPair = await this.solanaKeypairService.generateKeypair()
         const liquidityStrategyParameters = buildLiquidityStrategyParameters(
             remainingAmountA,
             remainingAmountB,
@@ -275,7 +279,7 @@ export class OpenPositionInstructionService {
                 },
                 // position owner
                 {
-                    address: address(positionKeyPair.address),
+                    address: address(positionKeyPair.publicKey.toBase58()),
                     role: AccountRole.WRITABLE_SIGNER,
                 },
                 // pool address
@@ -331,7 +335,7 @@ export class OpenPositionInstructionService {
             },
             slippagePercentage: slippagePercentage.toNumber(),
             maxActiveBinSlippage: slippagePercentage.toNumber(),
-            positionAddress: address(positionKeyPair.address),
+            positionAddress: address(positionKeyPair.publicKey.toBase58()),
             positionMinBinId: minBinId.toNumber(),
             positionMaxBinId: maxBinId.toNumber(),
             liquidityStrategyParameters,

@@ -9,12 +9,8 @@ import {
     StepType 
 } from "../enums"
 import {
-    Schema as MongooseSchema 
-} from "mongoose"
-import {
     ObjectType, Field, Int 
 } from "@nestjs/graphql"
-import GraphQLJSON from "graphql-type-json"
 
 /**
  * Represents a task that needs to be executed by the executor.
@@ -41,20 +37,34 @@ export class StepSchema extends AbstractSchema {
         enum: StepType 
     })
         type: StepType
-
     /**
-     * The data of the step.
+     * The sign params of the step.
      */
     @Field(
-        () => GraphQLJSON,
+        () => String,
         {
-            description: "The data of the step",
+            description: "The sign params of the step",
+            nullable: true,
         }
     )
     @Prop({
-        type: MongooseSchema.Types.Mixed, required: true 
+        type: String, required: false 
     })
-        data: unknown
+        signResult?: string
+    /**
+     * The send result of the step.
+     */
+    @Field(
+        () => String,
+        {
+            description: "The execute result of the step",
+            nullable: true,
+        }
+    )
+    @Prop({
+        type: String, required: false 
+    })
+        executeResult?: string
 
     /**
      * The status of the step.

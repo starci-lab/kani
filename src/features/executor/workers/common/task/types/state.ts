@@ -13,6 +13,8 @@ export interface LoadActionExecutionContextParams {
     botId: string
     /** Liquidity pool ID. */
     liquidityPoolId: string
+    /** State. */
+    state?: LiquidityPoolState
 }
 
 /** Result for loading the action context. */

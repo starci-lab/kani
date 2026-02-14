@@ -2,7 +2,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    Address, address, getAddressEncoder, getProgramDerivedAddress 
+    address, getAddressEncoder, getProgramDerivedAddress 
 } from "@solana/kit"
 import {
     GetPositionPdaParams,

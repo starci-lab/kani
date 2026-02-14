@@ -9,6 +9,8 @@ import {
     ExecuteOpenPositionResult,
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResult,
+    SignOpenPositionParams,
+    SignOpenPositionResult,
 } from "../types"
 import {
     ClmmLiquidityPoolState,
@@ -37,7 +39,8 @@ import {
     SuiExecuteService,
     SuiFetchService, 
     SuiObjectKind,
-    SuiStimulateService
+    SuiStimulateService,
+    SuiTxService,
 } from "../../clients"
 import {
     Decimal 
@@ -58,6 +61,15 @@ import {
  * Service responsible for opening positions on Momentum DEX.
  * Handles position creation, transaction preparation, validation, and execution.
  *
+ * Execution stages (DEX action convention):
+ * - confirm -> prepare -> sign -> execute
+ *
+ * Error-handling convention:
+ * - Input/state validation failures throw immediately
+ * - On-chain fetch failures throw immediately
+ * - Simulation/execution failures propagate from underlying Sui services
+ * - Event parsing failures throw explicitly (required event missing)
+ *
  * @example
  * const service = new MomentumOpenPositionActionService(...)
  * const result = await service.prepare({ bot, state })
@@ -71,17 +83,19 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         private readonly suiFetchService: SuiFetchService,
         private readonly suiStimulateService: SuiStimulateService,
         private readonly suiExecuteService: SuiExecuteService,
+        private readonly suiTxService: SuiTxService,
     ) {}
     
     /**
      * Confirms an open position by fetching position account from chain.
      *
+     * Stage: on-chain fetch
+     * - Fetch position object and return its liquidity
+     *
      * @param param - Parameters for confirming open position
      * @param param.positionId - Position account address
-     * @param param.state - CLMM liquidity pool state
+     * @param param.liquidityPool - Liquidity pool
      * @returns Confirmation result with position liquidity
-     * @throws {SuiObjectNotFoundException} If position account is not found on-chain
-     * @throws {SuiObjectInvalidTypeException} If fetched object is not a Move object
      */
     async confirm(
         { positionId, liquidityPool }: ConfirmOpenPositionParams
@@ -101,18 +115,24 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
 
     /**
      * Prepares an open position transaction.
-     * Validates state, calculates amounts, builds transaction, and signs it.
+     *
+     * Stage: state validation
+     * - Requires balance snapshots
+     * - Requires CLMM state
+     * - Requires pool token metadata
+     *
+     * Stage: transaction building
+     * - Calculate optimal tick range
+     * - Build unsigned transaction
      *
      * @param param - Parameters for preparing open position
      * @param param.bot - Bot schema
      * @param param.state - CLMM liquidity pool state
-     * @returns Prepared transaction with position details
+     * @param param.liquidityPool - Liquidity pool
+     * @returns Prepared unsigned transaction (serializedTx only)
      * @throws {BalanceSnapshotsNotFoundException} If balance snapshots are missing
      * @throws {LiquidityPoolClmmStateNotFoundException} If CLMM state is missing for the pool
      * @throws {InvalidPoolTokensException} If pool token metadata is missing
-     * @throws {TransactionStimulatedFailedException} If transaction dev inspect fails
-     * @throws {PrivyPublicKeyNotFoundException} If Privy wallet public key is not found for V2 bots
-     * @throws {EncryptedPrivySignerPrivateKeyNotFoundException} If encrypted Privy signer private key is not found for V2 bots
      */
     async prepare(
         {
@@ -123,44 +143,40 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
     ): Promise<PrepareOpenPositionResult> {
         const txb = new Transaction()
         const _state = state as ClmmLiquidityPoolState
-        // Stage: state validation (requires balance snapshots for sizing)
+        // stage: state validation (requires balance snapshots for sizing)
         if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
             })
         }
-        // Stage: state validation (pool must have CLMM static state)
+        // stage: state validation (pool must have CLMM static state)
         if (!liquidityPool.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
                 liquidityPoolId: liquidityPool.displayId,
             })
         }
-
-        // Extract balance amounts from snapshots
-        const {
-            targetBalanceAmount: snapshotTargetBalanceAmount,
-            quoteBalanceAmount: snapshotQuoteBalanceAmount
-        } = bot.balanceSnapshots
-        const snapshotTargetBalanceAmountBN = new BN(snapshotTargetBalanceAmount)
-        const snapshotQuoteBalanceAmountBN = new BN(snapshotQuoteBalanceAmount)
-
-        // Find token metadata
+        // stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: liquidityPool.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: liquidityPool.tokenB.toString(),
         })
-        // Stage: state validation (pool token metadata must exist)
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: liquidityPool.displayId,
             })
         }
-
-        // Determine if target token is token A
+        // stage: transaction building (extract balance amounts)
+        const {
+            targetBalanceAmount: snapshotTargetBalanceAmount,
+            quoteBalanceAmount: snapshotQuoteBalanceAmount
+        } = bot.balanceSnapshots
+        const snapshotTargetBalanceAmountBN = new BN(snapshotTargetBalanceAmount)
+        const snapshotQuoteBalanceAmountBN = new BN(snapshotQuoteBalanceAmount)
+        // stage: transaction building (determine if target token is token A)
         const targetIsA = bot.targetToken.toString() === tokenA.id
-        // Find optimal tick range based on balance amounts
+        // stage: transaction building (find optimal tick range)
         const {
             tickLower,
             tickUpper
@@ -172,10 +188,10 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
             quoteBalanceAmount: snapshotQuoteBalanceAmountBN,
             targetIsA,
         })
-        // Calculate amounts based on target token
+        // stage: transaction building (calculate amounts based on target token)
         const amountA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
         const amountB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
-        // Create open position transaction block
+        // stage: transaction building (build unsigned transaction)
         const {
             txb: openPositionTxb,
             feeAmountA,
@@ -191,7 +207,6 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
             tickUpper,
             liquidityPool,
         })
-
         return {
             prepareTxs: [
                 {
@@ -209,21 +224,52 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
     }
 
     /**
+     * Signs an open position transaction.
+     *
+     * Stage: signing
+     * - Sign with V1 signer or Privy (V2)
+     *
+     * @param param - Parameters for signing open position
+     * @param param.bot - Bot schema
+     * @param param.prepareTx - Prepared unsigned transaction
+     * @returns Signed transaction
+     */
+    async sign({
+        bot,
+        prepareTx,
+    }: SignOpenPositionParams): Promise<SignOpenPositionResult> {
+        return {
+            signedTx: await this.suiTxService.signTx({
+                bot,
+                prepareTx,
+            }),
+        }
+    }
+
+    /**
      * Executes an open position transaction.
-     * Handles transaction checking, stimulation, and execution.
+     *
+     * Stage: idempotency check (optional)
+     * - If txCheck is enabled and not stimulating, attempt to fetch transaction
+     * - If found, parse position ID and return immediately
+     *
+     * Stage: simulation (optional)
+     * - If stimulate is enabled, simulate transaction execution
+     * - Parse position ID from events
+     *
+     * Stage: execution
+     * - Execute transaction on-chain
+     * - Parse position ID from events
      *
      * @param param - Parameters for executing open position
      * @param param.bot - Bot schema
+     * @param param.state - CLMM liquidity pool state
      * @param param.txCheck - Whether to check if transaction already exists
-     * @param param.prepareTxs - Array of prepared transactions
      * @param param.stimulate - Whether to simulate transaction execution
+     * @param param.signedTx - Signed transaction
      * @param param.liquidityPool - Liquidity pool
      * @returns Execution result with position ID and transaction hashes
-     * @throws {SuiSingleTransactionRequiredException} If more than one transaction is provided for Sui
-     * @throws {TransactionNotPreparedException} If the transaction signature is missing
      * @throws {TransactionEventNotFoundException} If AddLiquidity event is not found in transaction
-     * @throws {TransactionStimulatedFailedException} If transaction stimulation fails
-     * @throws {TransactionExecutionFailedException} If transaction execution fails
      */
     async execute({
         bot,
@@ -234,12 +280,11 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         liquidityPool,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
-        // Stage: idempotency check (optional)
+        // stage: idempotency check (optional)
         if (txCheck && !stimulate) {
             const txBlock = await this.suiFetchService.fetchTransactionBlock({
                 txHash: signedTx.txHash,
             })
-
             if (txBlock) {
                 const { positionId } = this.parseAddLiquidityEvent({
                     state: _state,
@@ -248,15 +293,13 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                     events: txBlock?.events || [],
                     liquidityPool,
                 })
-
                 return {
                     positionId,
                     txHash: signedTx.txHash,
                 }
             }
         }
-
-        // Stage: simulation (optional)
+        // stage: simulation (optional)
         if (stimulate) {
             const { txHash, events } = await this.suiStimulateService.stimulate({
                 signedTx,
@@ -264,7 +307,6 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                 transactionType: TransactionType.OpenPosition,
                 liquidityPool,
             })
-
             const { positionId } = this.parseAddLiquidityEvent({
                 state: _state,
                 bot,
@@ -272,21 +314,18 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                 events,
                 liquidityPool,
             })
-
             return {
                 positionId,
                 txHash,
             }
         }
-
-        // Stage: execution
+        // stage: execution
         const { txHash, events } = await this.suiExecuteService.execute({
             signedTx,
             bot,
             transactionType: TransactionType.OpenPosition,
             liquidityPool,
         })
-
         const { positionId } = this.parseAddLiquidityEvent({
             state: _state,
             bot,
@@ -294,7 +333,6 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
             events,
             liquidityPool,
         })
-
         return {
             positionId,
             txHash,
@@ -303,6 +341,10 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
 
     /**
      * Parses the AddLiquidity event from transaction events to extract position ID.
+     *
+     * Stage: event parsing
+     * - Locate AddLiquidity event in events array
+     * - Extract position ID from event
      *
      * @param param - Parameters for parsing AddLiquidity event
      * @param param.events - Array of Sui events from the transaction
@@ -319,13 +361,9 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         liquidityPool,
     }: ParseAddLiquidityEventParams): ParseAddLiquidityEventResult {
         const eventType = "::liquidity::AddLiquidityEvent"
-
-        // Find the AddLiquidity event in the events array
         const event = events?.find(
             event => event.type.includes(eventType)
         )
-
-        // Stage: event parsing validation (event must exist)
         if (!event) {
             throw new TransactionEventNotFoundException({
                 botId: bot.id,
@@ -334,8 +372,6 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                 liquidityPoolId: liquidityPool.displayId,
             })
         }
-
-        // Parse event JSON to extract position ID
         const parsed = event.parsedJson as AddLiquidityEvent
         return {
             positionId: parsed.position_id,

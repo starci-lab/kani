@@ -4,6 +4,6 @@
  */
 export * from "./client"
 export * from "./execute"
-export * from "./fetch-account"
+export * from "./fetch"
 export * from "./stimulate"
-export * from "./solana-tx"
+export * from "./tx"

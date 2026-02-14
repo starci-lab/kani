@@ -7,68 +7,48 @@ import {
     PrepareClosePositionParams,
     PrepareClosePositionResult,
     ExecuteClosePositionResult,
-} from "../types"
+    SignClosePositionParams,
+    SignClosePositionResult,
+}from "../types"
 import {
     ClmmLiquidityPoolState,
-    PrepareTx,
 } from "../../types"
-import {
-    SignerService 
-} from "../../signers"
 import { 
-    AppVersion,
     PrimaryMemoryStorageService,
-    TransactionType
 } from "@modules/databases"
 import { 
     ClosePositionInstructionService, 
 } from "./transactions"
 import { 
     ActivePositionNotFoundException,
-    EncryptedPrivySignerPrivateKeyNotFoundException,
     InvalidPoolTokensException, 
-    MissingSolanaTxParamException, 
-    PrivyMetadataNotFoundException, 
-    TransactionExecutionFailedException, 
-    TransactionStimulatedFailedException, 
-    TransactionSubmitFailedException, 
-} from "@modules/exceptions"
+    TransactionType,
+}from "@modules/exceptions"
 import {
-    RpcExecutorService 
-} from "../../clients"
+    SolanaFetchService,
+    SolanaStimulateService,
+    SolanaExecuteService,
+    SolanaTxService,
+}from "../../clients"
 import {
-    RpcAccessType 
-} from "@modules/filesystem"
+    ChainId
+}from "@modules/common"
 import {
-    WinstonLog, WinstonService 
-} from "@modules/winston"
-import { 
-    pipe,
-    setTransactionMessageFeePayerSigner,
-    setTransactionMessageLifetimeUsingBlockhash,
-    compileTransaction,
-    getSignatureFromTransaction,
-    createTransactionMessage,
-    appendTransactionMessageInstructions,
-    sendAndConfirmTransactionFactory,
-    signature,
-    assertIsSendableTransaction,
-    assertIsTransactionWithinSizeLimit,
-    signTransaction,
-    createNoopSigner,
-    address,
-    getBase64EncodedWireTransaction
-} from "@solana/kit"
-import {
-    PrivySignService 
-} from "@modules/privy"
-import {
-    AsyncService 
+    InjectSuperJson
 } from "@modules/mixin"
+import SuperJSON from "superjson"
 
 /**
  * Service responsible for closing positions on Raydium DEX.
  * Handles position closure, transaction preparation, validation, and execution.
+ *
+ * Execution stages (DEX action convention):
+ * - prepare -> execute
+ *
+ * Error-handling convention:
+ * - Input/state validation failures throw immediately
+ * - On-chain fetch failures throw immediately
+ * - Simulation/execution failures propagate from underlying RPC services
  *
  * @example
  * const service = new RaydiumClosePositionActionService(...)
@@ -77,25 +57,34 @@ import {
 @Injectable()
 export class RaydiumClosePositionActionService implements IClosePositionActionService {
     constructor(
-        private readonly signerService: SignerService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly closePositionInstructionService: ClosePositionInstructionService,
-        private readonly rpcExecutorService: RpcExecutorService,
-        private readonly privySignService: PrivySignService,
-        private readonly winstonService: WinstonService,
-        private readonly asyncService: AsyncService,
+        private readonly solanaFetchService: SolanaFetchService,
+        private readonly solanaStimulateService: SolanaStimulateService,
+        private readonly solanaExecuteService: SolanaExecuteService,
+        private readonly solanaTxService: SolanaTxService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
     ) {}
 
     /**
      * Prepares a close position transaction.
      * Validates state, builds transaction, and signs it.
      *
+     * Stage: state validation
+     * - Requires active position
+     * - Requires pool token metadata
+     *
+     * Stage: transaction building
+     * - Create close position instructions
+     * - Build and sign transaction
+     *
      * @param param - Parameters for preparing close position
      * @param param.bot - Bot schema
      * @param param.state - CLMM liquidity pool state
      * @returns Prepared transaction with signature
      * @throws {ActivePositionNotFoundException} If no active position is found for the bot
-     * @throws {InvalidPoolTokensException} If pool token metadata is missing
+     * @throws {InvalidPoolTokensException}If pool token metadata is missing
      * @throws {PrivyMetadataNotFoundException} If Privy metadata is not found for V2 bots
      * @throws {EncryptedPrivySignerPrivateKeyNotFoundException} If encrypted Privy signer private key is not found for V2 bots
      */
@@ -104,14 +93,14 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
     ): Promise<PrepareClosePositionResult> {
         const _state = state as ClmmLiquidityPoolState
 
-        // Stage: state validation (close requires an active position)
+        // stage: state validation (close requires an active position)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
 
-        // Stage: state validation (pool token metadata must exist)
+        // stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: liquidityPool.tokenA.toString(),
@@ -128,140 +117,62 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
             })
         }
 
-        // Create close position instructions
+        // stage: transaction building (create close position instructions)
         const instructions = await this.closePositionInstructionService.createCloseInstructions({
             bot,
             state: _state,
             liquidityPool,
         })
 
-        const latestBlockhashResult = await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Http,
-            callback: async ({ rpc }) => {
-                return await rpc.getLatestBlockhash().send()
-            },
-        })
-        const latestBlockhash = latestBlockhashResult.value
-
-        const transactionMessage = pipe(
-            createTransactionMessage({
-                version: 0 
-            }),
-            (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)),
-                tx),
-            (tx) => appendTransactionMessageInstructions(instructions,
-                tx),
-            (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash,
-                tx),
+        const { transactionMessage } = await this.solanaTxService.createTxMessage(
+            {
+                bot,
+                instructions,
+            }
         )
-        const transaction = compileTransaction(transactionMessage)
-
-        let prepareTx: PrepareTx
-        if (bot.version === AppVersion.V1) {
-            const txHash = await this.signerService.withSolanaSigner({
-                bot,
-                action: async (signer) => {
-                    const signedTransaction = await signTransaction(
-                        [signer.keyPair],
-                        transaction,
-                    )
-                    const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                    const txHash = transactionSignature.toString()
-                    assertIsSendableTransaction(signedTransaction)
-                    assertIsTransactionWithinSizeLimit(signedTransaction)
-                    return txHash
-                },
-            })
-            const signedTransaction = await this.signerService.withSolanaSigner({
-                bot,
-                action: async (signer) => {
-                    return await signTransaction(
-                        [signer.keyPair],
-                        transaction,
-                    )
-                },
-            })
-            assertIsSendableTransaction(signedTransaction)
-            assertIsTransactionWithinSizeLimit(signedTransaction)
-            prepareTx = {
-                txHash,
-                solanaTx: signedTransaction,
-            }
-            // Stimulate before returning
-            const simulateResult = await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Http,
-                callback: async ({ rpc }) => {
-                    return await rpc.simulateTransaction(
-                        getBase64EncodedWireTransaction(prepareTx.solanaTx!),
-                        {
-                            encoding: "base64",
-                            commitment: "confirmed",
-                        },
-                    ).send()
-                },
-            })
-            if (simulateResult.value.err) {
-                throw new TransactionStimulatedFailedException({
-                    botId: bot.id,
-                    txHash: prepareTx.txHash,
-                    liquidityPoolId: liquidityPool.displayId,
-                    type: TransactionType.ClosePosition,
-                })
-            }
-        } else {
-            if (!bot.encryptedPrivySignerPrivateKeyPayload) {
-                throw new EncryptedPrivySignerPrivateKeyNotFoundException({
-                    botId: bot.id,
-                })
-            }
-            if (!bot.privyMetadata) {
-                throw new PrivyMetadataNotFoundException({
-                    botId: bot.id,
-                })
-            }
-            const signedTransaction = await this.privySignService.signSolanaTransaction({
-                lifetimeConstraint: {
-                    blockhash: latestBlockhash.blockhash,
-                    lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-                },
-                transaction,
-                encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
-                walletId: bot.privyMetadata.walletId,
-            })
-            prepareTx = {
-                txHash: signedTransaction.txHash,
-                solanaTx: signedTransaction.signedTransaction,
-            }
-            // Stimulate before returning
-            const simulateResult = await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Http,
-                callback: async ({ rpc }) => {
-                    return await rpc.simulateTransaction(
-                        getBase64EncodedWireTransaction(prepareTx.solanaTx!),
-                        {
-                            encoding: "base64",
-                            commitment: "confirmed",
-                        },
-                    ).send()
-                },
-            })
-            if (simulateResult.value.err) {
-                throw new TransactionStimulatedFailedException({
-                    botId: bot.id,
-                    txHash: prepareTx.txHash,
-                    liquidityPoolId: liquidityPool.displayId,
-                    type: TransactionType.ClosePosition,
-                })  
-            }
-        }
         return {
-            prepareTxs: [prepareTx],
+            prepareTxs: [
+                {
+                    chainId: ChainId.Solana,
+                    serializedTx: this.superJson.stringify(transactionMessage),
+                }
+            ],
+        }
+    }
+
+    /**
+     * Signs a close position transaction.
+     * Validates state, builds transaction, and signs it.
+     *
+     * @param param - Parameters for signing close position
+     * @param param.bot - Bot schema
+     * @param param.prepareTx - Prepared transaction
+     * @returns Signed transaction
+     */
+    async sign({
+        bot,
+        prepareTx,
+    }: SignClosePositionParams): Promise<SignClosePositionResult> {
+        return {
+            signedTx: await this.solanaTxService.signTx({
+                bot,
+                prepareTx,
+            }),
         }
     }
 
     /**
      * Executes a close position transaction.
-     * Handles transaction checking, stimulation, and execution.
+     *
+     * Stage: idempotency check (optional)
+     * - If txCheck is enabled and not stimulating, attempt to fetch transaction
+     * - If found, return immediately
+     *
+     * Stage: simulation (optional)
+     * - If stimulate is enabled, simulate transaction execution
+     *
+     * Stage: execution
+     * - Execute transaction on-chain
      *
      * @param param - Parameters for executing close position
      * @param param.bot - Bot schema
@@ -270,136 +181,48 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
      * @param param.prepareTxs - Array of prepared transactions
      * @param param.stimulate - Whether to simulate transaction execution
      * @returns Execution result with transaction hashes
-     * @throws {MissingSolanaTxParamException} If the Solana transaction is missing
-     * @throws {TransactionValidationFailedException} If transaction simulation fails
      */
     async execute({
         bot,
         txCheck,
         stimulate,
-        prepareTxs,
+        signedTx,
         liquidityPool,
     }: ExecuteClosePositionParams): Promise<ExecuteClosePositionResult> {
-        const txHashes: Array<string> = []
-
-        // Process each prepared transaction
-        for (const prepareTx of prepareTxs) {
-            // Stage: transaction checking (if txCheck is enabled and not stimulating)
-            if (txCheck && !stimulate) {
-                const transaction = await this.rpcExecutorService.withSolanaRpc({
-                    accessType: RpcAccessType.Http,
-                    callback: async ({ rpc }) => {
-                        return await rpc.getTransaction(
-                            signature(prepareTx.txHash),
-                            {
-                                commitment: "confirmed",
-                                encoding: "base58",
-                                maxSupportedTransactionVersion: 0,
-                            },
-                        ).send()
-                    },
-                })
-
-                // If transaction already executed, log and continue
-                if (transaction) {
-                    this.winstonService.log(
-                        WinstonLog.ClosePositionTransactionFound,
-                        {
-                            botId: bot.id,
-                            txHash: prepareTx.txHash,
-                            liquidityPoolId: liquidityPool.displayId,
-                        },
-                    )
-                    txHashes.push(prepareTx.txHash)
-                    continue
+        // stage: idempotency check (optional)
+        if (txCheck && !stimulate) {
+            const transaction = await this.solanaFetchService.fetchTransaction({
+                txHash: signedTx.txHash,
+            })
+            if (transaction) {
+                return {
+                    txHash: signedTx.txHash,
                 }
-            }
-
-            // Stage: transaction validation (Solana transaction must exist)
-            const { solanaTx } = prepareTx
-            if (!solanaTx) {
-                throw new MissingSolanaTxParamException({
-                    botId: bot.id,
-                    type: TransactionType.ClosePosition,
-                })
-            }
-
-            if (stimulate) {
-                const transaction = await this.rpcExecutorService.withSolanaRpc({
-                    accessType: RpcAccessType.Http,
-                    callback: async ({ rpc }) => {
-                        return await rpc.simulateTransaction(
-                            getBase64EncodedWireTransaction(solanaTx),
-                            {
-                                encoding: "base64",
-                                commitment: "confirmed",
-                            },
-                        ).send()
-                    },
-                })
-                if (transaction.value.err) {
-                    throw new TransactionSubmitFailedException({
-                        message: transaction.value.err.toString(),
-                        originalError: new TransactionStimulatedFailedException({
-                            botId: bot.id,
-                            txHash: prepareTx.txHash,
-                            liquidityPoolId: liquidityPool.displayId,
-                            type: TransactionType.ClosePosition,
-                        })
-                    })
-                }
-                this.winstonService.log(
-                    WinstonLog.ClosePositionTransactionStimulated,
-                    {
-                        botId: bot.id,
-                        txHash: prepareTx.txHash,
-                        liquidityPoolId: liquidityPool.displayId,
-                    },
-                )
-                txHashes.push(prepareTx.txHash)
-            } else {
-                const sendAndConfirmTransaction = await this.rpcExecutorService.withSolanaRpc({
-                    accessType: RpcAccessType.Write,
-                    callback: async ({ rpc, rpcSubscriptions }) => {
-                        return sendAndConfirmTransactionFactory({
-                            rpc,
-                            rpcSubscriptions,
-                        })
-                    },
-                })
-                const [, error] = await this.asyncService.resolveTuple(
-                    sendAndConfirmTransaction(
-                        solanaTx,
-                        {
-                            commitment: "confirmed",
-                        },
-                    ))
-                if (error) {
-                    throw new TransactionSubmitFailedException({
-                        message: error.toString(),
-                        originalError: new TransactionExecutionFailedException(
-                            {
-                                botId: bot.id,
-                                txHash: prepareTx.txHash,
-                                liquidityPoolId: liquidityPool.displayId,
-                                type: TransactionType.ClosePosition,
-                            }
-                        )
-                    })
-                }
-                this.winstonService.log(
-                    WinstonLog.ClosePositionTransactionExecuted,
-                    {
-                        botId: bot.id,
-                        txHash: prepareTx.txHash,
-                        liquidityPoolId: liquidityPool.displayId,
-                    },
-                )
-                txHashes.push(prepareTx.txHash)
             }
         }
+
+        // stage: simulation (optional)
+        if (stimulate) {
+            await this.solanaStimulateService.stimulate({
+                signedTx,
+                bot,
+                transactionType: TransactionType.ClosePosition,
+                liquidityPoolId: liquidityPool.displayId,
+            })
+            return {
+                txHash: signedTx.txHash,
+            }
+        }
+
+        // stage: execution
+        const { txHash } = await this.solanaExecuteService.execute({
+            signedTx,
+            bot,
+            transactionType: TransactionType.ClosePosition,
+            liquidityPoolId: liquidityPool.displayId,
+        })
         return {
-            txHashes,
+            txHash,
         }
     }
 }

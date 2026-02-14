@@ -12,7 +12,6 @@ import {
     AccountRole,
     address,
     createNoopSigner,
-    generateKeyPairSigner,
     Instruction,
 } from "@solana/kit"
 import {
@@ -64,6 +63,9 @@ import {
     CreateOpenPositionInstructionsParams,
     CreateOpenPositionInstructionsResult
 } from "../types"
+import {
+    SolanaKeypairService
+} from "../../../tx-builder"
 
 /**
  * Service responsible for creating open position instructions for Orca.
@@ -83,6 +85,7 @@ export class OpenPositionInstructionService {
     private readonly positionService: PositionService,
     private readonly mountStorageService: MountStorageService,
     private readonly feeService: FeeService,
+    private readonly solanaKeypairService: SolanaKeypairService,
     ) {}
 
     async createOpenPositionInstructions({
@@ -101,7 +104,7 @@ export class OpenPositionInstructionService {
         }
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
-        const mintKeyPair = await generateKeyPairSigner()
+        const mintKeyPair = await this.solanaKeypairService.generateKeypair()
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: liquidityPool.tokenA.toString(),
         })
@@ -248,13 +251,13 @@ export class OpenPositionInstructionService {
         }
         const { ataAddress } =
       await this.ataInstructionService.getOrCreateAtaInstructions({
-          tokenMint: mintKeyPair.address,
+          tokenMint: address(mintKeyPair.publicKey.toBase58()),
           ownerAddress: address(bot.accountAddress),
           is2022Token: true,
           pdaOnly: true,
       })
         const { pda: positionPda } = await this.positionService.getPda({
-            nftMintAddress: mintKeyPair.address,
+            nftMintAddress: address(mintKeyPair.publicKey.toBase58()),
             programAddress: address(programAddress),
         })
 
@@ -284,7 +287,7 @@ export class OpenPositionInstructionService {
                 },
                 // mint
                 {
-                    address: address(mintKeyPair.address),
+                    address: address(mintKeyPair.publicKey.toBase58()),
                     role: AccountRole.WRITABLE_SIGNER,
                 },
                 // position token account

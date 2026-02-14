@@ -14,7 +14,7 @@ import {
     SignerService 
 } from "../../signers"
 import {
-    SignSuiTransactionParams
+    SignSuiTxParams
 } from "./types"
 import {
     Transaction,
@@ -61,7 +61,7 @@ export class SuiTxService {
         { 
             bot, 
             prepareTx 
-        }: SignSuiTransactionParams
+        }: SignSuiTxParams
     ): Promise<SignedTx> {
         // parse transaction from serialized tx
         const txb = Transaction.from(prepareTx.serializedTx)

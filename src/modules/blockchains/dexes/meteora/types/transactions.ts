@@ -10,8 +10,8 @@ import {
     Instruction
 } from "@solana/kit"
 import {
-    KeyPairSigner
-} from "@solana/signers"
+    Keypair
+} from "@solana/web3.js"
 
 /**
  * Parameters for creating open position instructions.
@@ -36,7 +36,7 @@ export interface CreateOpenPositionInstructionsResult {
     /** Array of instructions. */
     instructions: Array<Instruction>
     /** Position key pair. */
-    positionKeyPair: KeyPairSigner
+    positionKeyPair: Keypair
     /** Minimum bin ID. */
     minBinId: BN
     /** Maximum bin ID. */

@@ -17,3 +17,9 @@ export interface FetchSolanaAccountParams {
     /** Liquidity pool ID for exception context */
     liquidityPoolId: LiquidityPoolId
 }
+
+/** Params for fetching a Solana transaction by hash. */
+export interface FetchSolanaTransactionParams {
+    /** Transaction hash to fetch */
+    txHash: string
+}

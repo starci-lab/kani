@@ -9,12 +9,9 @@ import {
     TaskType 
 } from "../enums"
 import {
-    Schema as MongooseSchema 
-} from "mongoose"
-import {
-    ObjectType, Field
+    ObjectType, Field,
+    Int
 } from "@nestjs/graphql"
-import GraphQLJSON from "graphql-type-json"
 import {
     StepSchema, StepSchemaClass 
 } from "./step.schema"
@@ -31,6 +28,19 @@ import {
 })
 export class TaskSchema extends AbstractSchema {
     /**
+     * The index of the task.
+     */
+    @Field(() => Int,
+        {
+            description: "The index of the task",
+        }
+    )
+    @Prop({
+        type: Number, required: true 
+    })
+        index: number
+
+    /**
      * The type of the task.
      */
     @Field(() => GraphQLTypeTaskType,
@@ -46,18 +56,19 @@ export class TaskSchema extends AbstractSchema {
         type: TaskType
 
     /**
-     * The payload of the task.
+     * The prepare result of the task.
      */
     @Field(
-        () => GraphQLJSON,
+        () => String,
         {
-            description: "The payload of the task",
+            description: "The prepare result of the task",
+            nullable: true,
         }
     )
     @Prop({
-        type: MongooseSchema.Types.Mixed, required: true 
+        type: String, required: false 
     })
-        payload: unknown
+        prepareResult?: string
 
     /**
      * The steps of the task.
@@ -71,6 +82,19 @@ export class TaskSchema extends AbstractSchema {
         type: [StepSchemaClass], required: true 
     })
         steps: Array<StepSchema>
+
+    /**
+     * The status of the task.
+     */
+    @Field(() => Int,
+        {
+            description: "The index of the active step",
+        }
+    )
+    @Prop({
+        type: Number, required: true 
+    })
+        activeStep: number
 }
 
 

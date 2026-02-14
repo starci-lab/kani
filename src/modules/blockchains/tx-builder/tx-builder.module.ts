@@ -7,11 +7,11 @@ import {
 import { 
     AnchorUtilsService, 
     AtaInstructionService, 
-    KeypairGeneratorsService, 
     MintInstructionService
 } from "./solana"
 import {
-    TransferInstructionService 
+    TransferInstructionService,
+    SolanaKeypairService
 } from "./solana"
 import {
     FetchCoinsService, SelectCoinsService 
@@ -29,7 +29,7 @@ import {
         AtaInstructionService,
         MintInstructionService,
         TransferInstructionService,
-        KeypairGeneratorsService,
+        SolanaKeypairService,
         FetchCoinsService,
         SelectCoinsService,
     ],
@@ -38,7 +38,7 @@ import {
         AtaInstructionService,
         MintInstructionService,
         TransferInstructionService,
-        KeypairGeneratorsService,
+        SolanaKeypairService,
         FetchCoinsService,
         SelectCoinsService,
     ],

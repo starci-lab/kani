@@ -4,7 +4,8 @@ import {
 import {
     address,
     EncodedAccount,
-    fetchEncodedAccount
+    fetchEncodedAccount,
+    signature,
 } from "@solana/kit"
 import {
     RpcExecutorService
@@ -15,16 +16,21 @@ import {
 import {
     SolanaAccountNotFoundException
 } from "@modules/exceptions"
+import {
+    AsyncService
+} from "@modules/mixin"
 import type {
     FetchSolanaAccountParams,
+    FetchSolanaTransactionParams,
 } from "./types"
 
 /**
- * Service for fetching a Solana account by address.
- * Throws if account does not exist; returns encoded account (exists is true when returned).
+ * Service for fetching Solana accounts and transactions.
+ * Throws if account does not exist; returns encoded account.
+ * Returns null if transaction is not found or failed.
  *
  * @example
- * const account = await fetchAccountService.fetchAccount({
+ * const account = await solanaFetchService.fetchAccount({
  *   address: positionId,
  *   kind: AccountKind.PersonalPosition,
  *   dexId: DexId.Meteora,
@@ -32,9 +38,10 @@ import type {
  * })
  */
 @Injectable()
-export class SolanaFetchAccountService {
+export class SolanaFetchService {
     constructor(
         private readonly rpcExecutorService: RpcExecutorService,
+        private readonly asyncService: AsyncService,
     ) {}
 
     /**
@@ -60,6 +67,7 @@ export class SolanaFetchAccountService {
                 )
             },
         })
+        // if account is not found, throw exception
         if (!accountInfo || !accountInfo.exists) {
             throw new SolanaAccountNotFoundException({
                 kind,
@@ -70,5 +78,33 @@ export class SolanaFetchAccountService {
         }
 
         return accountInfo as EncodedAccount
+    }
+
+    /**
+     * Fetches a Solana transaction. Returns null if not found or failed.
+     */
+    async fetchTransaction({
+        txHash,
+    }: FetchSolanaTransactionParams) {
+        const [transaction] = await this.asyncService.resolveTuple(
+            this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Http,
+                callback: async ({ rpc }) => {
+                    return await rpc.getTransaction(
+                        signature(txHash),
+                        {
+                            commitment: "confirmed",
+                            encoding: "base58",
+                            maxSupportedTransactionVersion: 0,
+                        },
+                    ).send()
+                },
+            })
+        )
+        // if transaction is not found or failed, return null
+        if (!transaction || transaction.meta?.err) {
+            return null
+        }
+        return transaction
     }
 }

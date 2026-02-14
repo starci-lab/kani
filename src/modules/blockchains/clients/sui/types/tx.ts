@@ -8,7 +8,7 @@ import {
 /**
  * Parameters for building a Sui transaction.
  */
-export interface SignSuiTransactionParams {
+export interface SignSuiTxParams {
     /** Bot schema. */
     bot: BotSchema
     /** Prepared transaction. */
