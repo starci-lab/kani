@@ -72,6 +72,7 @@ export class ReconcileBalanceTaskPrepareService {
             bot,
             job,
             taskIndex,
+            payload,
             bullmqJob,
         }: ReconcileBalanceTaskPrepareParams
     ) {
@@ -79,7 +80,6 @@ export class ReconcileBalanceTaskPrepareService {
         await this.sendHeartbeatService.process({
             bot, job, bullmqJob
         })
-
         const fetched = await this.balanceFetcherService.fetchBalances({
             bot
         })
@@ -90,7 +90,7 @@ export class ReconcileBalanceTaskPrepareService {
         const { eligible } = await this.evalSnapshotService.eval({
             bot
         })
-        if (!eligible) {
+        if (!eligible || payload.noSwap) {
             // Push a "no-op" task (0 steps) so dispatcher can mark it done immediately
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {
