@@ -25,6 +25,8 @@ import {
     SendHeartbeatService 
 } from "../../send-heartbeat.service"
 import {
+    JobFailureException,
+    JobFailureStrategy,
     SignedTxNotFoundException 
 } from "@modules/exceptions"
 import {
@@ -78,14 +80,15 @@ export class ReconcileBalanceTaskExecuteService {
         const signedTx = step?.signedTx
         // if the signed tx is not found, throw an error
         if (!signedTx) {
-            throw new SignedTxNotFoundException(
-                {
+            throw new JobFailureException({
+                originalError: new SignedTxNotFoundException({
                     botId: bot.id,
                     jobId: job.id,
                     taskIndex,
                     stepIndex,
-                }
-            )
+                }),
+                strategy: JobFailureStrategy.Fatal,
+            })
         }
         // execute the signed tx
         const executeResult = await this.balanceActionService.executeReconcileBalanceTransaction(

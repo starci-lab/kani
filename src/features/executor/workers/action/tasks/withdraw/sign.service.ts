@@ -21,14 +21,14 @@ import {
     SendHeartbeatService 
 } from "../../send-heartbeat.service"
 import {
-    ReconcileBalanceTaskSignParams 
+    WithdrawTaskSignParams 
 } from "../types"
 
 /**
- * Service for the Reconcile Balance Task SIGN step.
+ * Service for the WITHDRAW TASK SIGN step.
  */
 @Injectable()
-export class ReconcileBalanceTaskSignService {
+export class WithdrawTaskSignService {
     constructor(
     private readonly balanceActionService: BalanceActionService,
     private readonly sendHeartbeatService: SendHeartbeatService,
@@ -39,14 +39,21 @@ export class ReconcileBalanceTaskSignService {
     ) {}
 
     /**
-   * Process the Reconcile Balance Task SIGN step.
+   * Process the WITHDRAW TASK SIGN step.
+   * @param params - The parameters for the WITHDRAW TASK SIGN step.
+   * @param params.bot - The bot.
+   * @param params.job - The job.
+   * @param params.bullmqJob - The bullmq job.
+   * @param params.taskIndex - The index of the task.
    */
-    async process({
-        bot,
-        job,
-        bullmqJob,
-        taskIndex,
-    }: ReconcileBalanceTaskSignParams) {
+    async process(
+        {
+            bot,
+            job,
+            bullmqJob,
+            taskIndex,
+        }: WithdrawTaskSignParams
+    ) {
     // Send heartbeat
         await this.sendHeartbeatService.process({
             bot, job, bullmqJob 
@@ -80,7 +87,7 @@ export class ReconcileBalanceTaskSignService {
             {
                 arrayFilters: [
                     {
-                        "task.index": taskIndex, "task.type": TaskType.ReconcileBalance 
+                        "task.index": taskIndex, "task.type": TaskType.Withdraw 
                     },
                     {
                         "step.index": activeStep 

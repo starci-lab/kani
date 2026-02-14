@@ -19,12 +19,14 @@ import {
 } from "@modules/mixin"
 import SuperJSON from "superjson"
 import {
-    ReconcileBalanceTaskExecuteParams 
+    WithdrawTaskExecuteParams 
 } from "../types"
 import {
     SendHeartbeatService 
 } from "../../send-heartbeat.service"
 import {
+    JobFailureException,
+    JobFailureStrategy,
     SignedTxNotFoundException 
 } from "@modules/exceptions"
 import {
@@ -32,10 +34,10 @@ import {
 } from "@modules/env"
 
 /**
- * Service for the Reconcile Balance Task EXECUTE step.
+ * Service for the WITHDRAW TASK EXECUTE step.
  */
 @Injectable()
-export class ReconcileBalanceTaskExecuteService {
+export class WithdrawTaskExecuteService {
     constructor(
         private readonly balanceActionService: BalanceActionService,
         @InjectPrimaryMongoose()
@@ -46,8 +48,8 @@ export class ReconcileBalanceTaskExecuteService {
     ) { }
     
     /**
-     * Process the Reconcile Balance Task EXECUTE step.
-     * @param params - The parameters for the Reconcile Balance Task EXECUTE step.
+     * Process the WITHDRAW TASK EXECUTE step.
+     * @param params - The parameters for the WITHDRAW TASK EXECUTE step.
      * @param params.bot - The bot.
      * @param params.job - The job.
      * @param params.taskIndex - The index of the task.
@@ -59,7 +61,7 @@ export class ReconcileBalanceTaskExecuteService {
         isRetry,
         bullmqJob,
         taskIndex,
-    }: ReconcileBalanceTaskExecuteParams) {
+    }: WithdrawTaskExecuteParams) {
         // send heartbeat
         await this.sendHeartbeatService.process(
             {
@@ -78,21 +80,24 @@ export class ReconcileBalanceTaskExecuteService {
         const signedTx = step?.signedTx
         // if the signed tx is not found, throw an error
         if (!signedTx) {
-            throw new SignedTxNotFoundException(
+            throw new JobFailureException(
                 {
-                    botId: bot.id,
-                    jobId: job.id,
-                    taskIndex,
-                    stepIndex,
+                    originalError: new SignedTxNotFoundException({
+                        botId: bot.id,
+                        jobId: job.id,
+                        taskIndex,
+                        stepIndex,
+                    }),
+                    strategy: JobFailureStrategy.Fatal,
                 }
             )
         }
         // execute the signed tx
-        const executeResult = await this.balanceActionService.executeReconcileBalanceTransaction(
+        const executeResult = await this.balanceActionService.executeWithdrawTransaction(
             {
                 bot,
                 txCheck: (hasPreviousAttempts || isRetry) ?? false,
-                stimulate: envConfig().executor.runtime.operation.reconcileBalance.stimulate,
+                stimulate: envConfig().executor.runtime.operation.withdraw.stimulate,
                 signedTx: this.superJson.parse<SignedTx>(signedTx),
             }
         )
@@ -115,7 +120,7 @@ export class ReconcileBalanceTaskExecuteService {
                 arrayFilters: [
                     {
                         "task.index": taskIndex, 
-                        "task.type": TaskType.ReconcileBalance 
+                        "task.type": TaskType.Withdraw 
                     },
                     {
                         "step.index": stepIndex 

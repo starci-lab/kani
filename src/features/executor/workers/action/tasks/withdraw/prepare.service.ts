@@ -1,5 +1,5 @@
 import {
-    Injectable
+    Injectable 
 } from "@nestjs/common"
 import BN from "bn.js"
 import {
@@ -11,243 +11,219 @@ import {
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
-    Connection
+    Connection 
 } from "mongoose"
 import {
-    InjectSuperJson, AsyncService
+    InjectSuperJson, AsyncService 
 } from "@modules/mixin"
 import SuperJSON from "superjson"
 import {
-    TokenType
-} from "@modules/common"
-import {
     BalanceFetcherService,
-    EvalSnapshotService,
-    SwapDirection,
     BalanceActionService,
-    BalanceReconcileBalanceTokenInput,
+    BalanceWithdrawTokenInput,
 } from "@modules/blockchains"
 import {
+    BotWithdrawalAddressNotSetException,
     JobFailureException,
     JobFailureStrategy,
-    PrepareReconcileBalanceTransactionResultNotFoundException,
+    PrepareWithdrawTransactionResultNotFoundException,
+    SomeTokensNotFoundException,
+    TokenBalanceNotEnoughForWithdrawException,
     TokenNotFoundException,
+    WithdrawCacheResultNotFoundException,
 } from "@modules/exceptions"
 import {
-    SendHeartbeatService
+    SendHeartbeatService 
 } from "../../send-heartbeat.service"
 import {
-    WinstonLog, WinstonService
+    WinstonLog, WinstonService 
 } from "@modules/winston"
 import {
-    ReconcileBalanceTaskPrepareParams
+    WithdrawTaskPrepareParams 
 } from "../types"
+import {
+    CacheKey, CacheService 
+} from "@modules/cache"
 
+/**
+ * Service for the Withdraw Task PREPARE step.
+ */
 @Injectable()
-export class ReconcileBalanceTaskPrepareService {
+export class WithdrawTaskPrepareService {
     constructor(
-        private readonly balanceActionService: BalanceActionService,
-        private readonly balanceFetcherService: BalanceFetcherService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly evalSnapshotService: EvalSnapshotService,
-        private readonly asyncService: AsyncService,
-        private readonly sendHeartbeatService: SendHeartbeatService,
-        private readonly winstonService: WinstonService,
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
-    ) { }
+    private readonly balanceActionService: BalanceActionService,
+    private readonly balanceFetcherService: BalanceFetcherService,
+    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+    private readonly asyncService: AsyncService,
+    private readonly sendHeartbeatService: SendHeartbeatService,
+    private readonly winstonService: WinstonService,
+    @InjectPrimaryMongoose()
+    private readonly connection: Connection,
+    @InjectSuperJson()
+    private readonly superJson: SuperJSON,
+    private readonly cacheService: CacheService,
+    ) {}
 
     /**
-     * Process the Reconcile Balance Task PREPARE step.
-     * @param params - The parameters for the step.
-     * @param params.bot - The bot.
-     * @param params.taskIndex - The task index.
-     * @param params.bullmqJob - The bullmq job.
-     * @returns The result of the step.
-     */
-    async process(
-        {
-            bot,
-            job,
-            taskIndex,
-            bullmqJob,
-        }: ReconcileBalanceTaskPrepareParams
-    ) {
+   * Process the Withdraw Task PREPARE step.
+   */
+    async process({
+        bot,
+        job,
+        taskIndex,
+        bullmqJob,
+    }: WithdrawTaskPrepareParams) {
         // Heartbeat
         await this.sendHeartbeatService.process({
-            bot, job, bullmqJob
+            bot, job, bullmqJob 
         })
-
-        const fetched = await this.balanceFetcherService.fetchBalances({
-            bot
-        })
-        const targetBalanceAmount = new BN(fetched.targetBalanceAmount)
-        const quoteBalanceAmount = new BN(fetched.quoteBalanceAmount)
-        const gasBalanceAmount = new BN(fetched.gasBalanceAmount)
-        // 2) Eligibility gate
-        const { eligible } = await this.evalSnapshotService.eval({
-            bot
-        })
-        if (!eligible) {
-            // Push a "no-op" task (0 steps) so dispatcher can mark it done immediately
-            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                {
-                    _id: job.id
-                },
-                {
-                    $push: {
-                        tasks: {
-                            index: taskIndex,
-                            type: TaskType.ReconcileBalance,
-                            activeStep: 0,
-                            stepCount: 0,
-                            steps: [],
-                        },
-                    },
-                },
-            )
-
-            this.winstonService.log(WinstonLog.ActiveJobPrepared,
-                {
-                    botId: bot.id,
-                    jobId: job.id,
-                    type: JobType.ReconcileBalance,
-                    txCount: 0,
-                    metadata: job.metadata,
-                })
-
-            return
-        }
-
-        // 3) Determine plan (swap steps)
-        const { swapSteps, quoteRatioResult } =
-            await this.balanceActionService.determineReconcileBalancePlan(
-                {
-                    bot,
-                    targetBalanceAmount,
-                    quoteBalanceAmount,
-                    gasBalanceAmount,
-                }
-            )
-
-        this.winstonService.log(
-            WinstonLog.ReconcileBalancePlanDetermined,
+        // cache result
+        const cacheResult = await this.cacheService.get(
             {
-                botId: bot.id,
-                jobId: job.id,
-                quoteRatioResult: quoteRatioResult,
-                swapSteps: swapSteps,
+                key: CacheKey.Withdraw,
+                args: [bot.id],
             }
         )
-
-        // 4) Resolve tokens
-        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.targetToken.toString()
-            },
-        })
-        if (!targetToken) throw new TokenNotFoundException({
-            id: bot.targetToken.toString()
-        })
-
-        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.quoteToken.toString()
-            },
-        })
-        if (!quoteToken) throw new TokenNotFoundException({
-            id: bot.quoteToken.toString()
-        })
-
-        const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            type: {
-                $eq: TokenType.Native
-            },
-            chainId: {
-                $eq: bot.chainId
-            },
-        })
-        if (!gasToken) {
-            throw new TokenNotFoundException({
-                conditions: {
-                    type: TokenType.Native, chainId: bot.chainId
-                },
+        // job failure
+        if (!cacheResult) {
+            throw new JobFailureException({
+                originalError: new WithdrawCacheResultNotFoundException({
+                    botId: bot.id,
+                }),
+                strategy: JobFailureStrategy.Fatal,
             })
         }
 
-        // 5) Convert swap steps -> tokenInputs
-        const tokenInputs: Array<BalanceReconcileBalanceTokenInput> = []
+        // withdrawal address
+        if (!bot.withdrawalAddress) {
+            throw new JobFailureException({
+                originalError: new BotWithdrawalAddressNotSetException({
+                    botId: bot.id,
+                }),
+                strategy: JobFailureStrategy.Fatal,
+            })
+        }
 
-        for (const swapStep of swapSteps) {
-            const { direction, usedAmount } = swapStep
-
-            switch (direction) {
-            case SwapDirection.TargetToQuote:
-                tokenInputs.push({
-                    tokenIn: targetToken, tokenOut: quoteToken, amount: usedAmount
+        // tokens
+        const tokenIds = cacheResult.tokenInputs.map((tokenInput) => tokenInput.tokenId)
+        const tokens = this.primaryMemoryStorageService.tokenCollection.find(
+            {
+                id: {
+                    $in: tokenIds 
+                },
+            }
+        )
+        // some tokens not found
+        if (tokens.length !== cacheResult.tokenInputs.length) {
+            throw new JobFailureException({
+                originalError: new SomeTokensNotFoundException({
+                    actualCount: tokens.length,
+                    expectedCount: cacheResult.tokenInputs.length,
+                }),
+                strategy: JobFailureStrategy.Fatal,
+            })
+        }
+        // token balances
+        const tokenBalances = await this.asyncService.allMustDone(
+            tokens.map(async (token) => {
+                const tokenBalance = await this.balanceFetcherService.fetchBalance({
+                    bot,
+                    token,
                 })
-                break
-            case SwapDirection.QuoteToTarget:
-                tokenInputs.push({
-                    tokenIn: quoteToken, tokenOut: targetToken, amount: usedAmount
+                return [token.id,
+                    tokenBalance.balanceAmount] as [string, BN]
+            }),
+        )
+        // token balances map
+        const tokenBalancesMap = new Map<string, BN>(tokenBalances)
+        // token balances not enough
+        for (const tokenInput of cacheResult.tokenInputs) {
+            const tokenBalance = tokenBalancesMap.get(tokenInput.tokenId)
+            if (!tokenBalance) {
+                throw new JobFailureException({
+                    originalError: new TokenNotFoundException({
+                        id: tokenInput.tokenId,
+                    }),
+                    strategy: JobFailureStrategy.Fatal,
                 })
-                break
-            case SwapDirection.TargetToGas:
-                tokenInputs.push({
-                    tokenIn: targetToken, tokenOut: gasToken, amount: usedAmount
+            }
+            if (tokenBalance.lt(tokenInput.amount)) {
+                throw new JobFailureException({
+                    originalError: new TokenBalanceNotEnoughForWithdrawException({
+                        id: tokenInput.tokenId,
+                        amount: tokenInput.amount.toString(),
+                        balance: tokenBalance.toString(),
+                    }),
+                    strategy: JobFailureStrategy.Fatal,
                 })
-                break
-            case SwapDirection.QuoteToGas:
-                tokenInputs.push({
-                    tokenIn: quoteToken, tokenOut: gasToken, amount: usedAmount
-                })
-                break
             }
         }
 
-        // 6) Prepare transactions
-        const [prepareResult,
-            error] = await this.asyncService.resolveTuple(
-            this.balanceActionService.prepareReconcileBalanceTransaction({
-                bot,
-                tokenInputs,
-            }),
+        // 4) Convert inputs -> BalanceWithdrawTokenInput
+        const withdrawTokenInputs: Array<BalanceWithdrawTokenInput> = cacheResult.tokenInputs.map(
+            (tokenInput: { tokenId: string; amount: BN }) => {
+                const token = tokens.find((t) => t.id.toString() === tokenInput.tokenId)
+                if (!token) {
+                    throw new JobFailureException({
+                        originalError: new TokenNotFoundException({
+                            id: tokenInput.tokenId,
+                        }),
+                        strategy: JobFailureStrategy.Fatal,
+                    })
+                }
+                return {
+                    token,
+                    amount: tokenInput.amount,
+                    tokenId: token.id.toString(),
+                }
+            },
         )
 
+        // prepare withdraw transactions
+        const [prepareResult,
+            error] = await this.asyncService.resolveTuple(
+            this.balanceActionService.prepareWithdrawTransaction({
+                bot,
+                tokenInputs: withdrawTokenInputs,
+                toAddress: bot.withdrawalAddress,
+                toUsdc: cacheResult.toUsdc,
+            }),
+        )
+        // prepare withdraw transactions error  
         if (error) {
             throw new JobFailureException({
                 originalError: error,
                 strategy: JobFailureStrategy.Fatal,
             })
         }
+
         if (!prepareResult) {
-            throw new PrepareReconcileBalanceTransactionResultNotFoundException({
-                botId: bot.id,
-                jobId: job.id,
+            throw new JobFailureException({
+                originalError: new PrepareWithdrawTransactionResultNotFoundException({
+                    botId: bot.id,
+                    jobId: job.id,
+                }),
+                strategy: JobFailureStrategy.Fatal,
             })
         }
-
+        // persist as task + steps
         await this.connection.model<JobSchema>(JobSchema.name).updateOne(
             {
-                _id: job.id
+                _id: job.id 
             },
             {
                 $push: {
                     tasks: {
                         index: taskIndex,
-                        type: TaskType.ReconcileBalance,
+                        type: TaskType.Withdraw,
                         prepareResult: this.superJson.stringify(prepareResult),
                         activeStep: 0,
                         stepCount: prepareResult.prepareTxs.length,
-                        steps: prepareResult.prepareTxs.map((prepareTx, index) => (
-                            {
-                                index,
-                                type: StepType.Sign,
-                                prepareTx: this.superJson.stringify(prepareTx),
-                            }
-                        )),
+                        steps: prepareResult.prepareTxs.map((prepareTx, index) => ({
+                            index,
+                            type: StepType.Sign,
+                            prepareTx: this.superJson.stringify(prepareTx),
+                        })),
                     },
                 },
             },
@@ -258,7 +234,7 @@ export class ReconcileBalanceTaskPrepareService {
             {
                 botId: bot.id,
                 jobId: job.id,
-                type: JobType.ReconcileBalance,
+                type: JobType.Withdraw,
                 txCount: prepareResult.prepareTxs.length,
                 metadata: job.metadata,
             }

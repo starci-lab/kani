@@ -47,7 +47,6 @@ export class ReconcileBalanceTaskDispatchService {
      * @param params - The parameters for the RECONCILE BALANCE task.
      * @param params.bot - The bot.
      * @param params.job - The job.
-     * @param params.liquidityPool - The liquidity pool.
      * @param params.isRetry - Whether the task is being retried.
      * @param params.taskIndex - The index of the task.
      */

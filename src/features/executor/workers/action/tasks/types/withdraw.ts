@@ -1,5 +1,5 @@
 import {
-    ReconcileBalanceActionTaskPayload,
+    WithdrawActionTaskPayload,
 } from "@modules/blockchains"
 import {
     BotSchema, 
@@ -10,13 +10,13 @@ import {
 } from "bullmq"
 
 /** Base params for the CLOSE POSITION task. */
-export interface ReconcileBalanceTaskBaseParams {
+export interface WithdrawTaskBaseParams {
     /** Bot */
     bot: BotSchema
     /** Job */
     job: JobSchema
     /** Payload */
-    payload: ReconcileBalanceActionTaskPayload
+    payload: WithdrawActionTaskPayload
     /** BullMQ job */
     bullmqJob: Job<string>
     /** Retry */
@@ -24,37 +24,37 @@ export interface ReconcileBalanceTaskBaseParams {
 }
 
 /** Params for the CLOSE POSITION PREPARE step. */
-export interface ReconcileBalanceTaskPrepareParams extends ReconcileBalanceTaskBaseParams {
+export interface WithdrawTaskPrepareParams extends WithdrawTaskBaseParams {
     /** Task index */
     taskIndex: number
 }
 
 /** Params for the RECONCILE BALANCE SIGN step. */
-export interface ReconcileBalanceTaskSignParams extends ReconcileBalanceTaskBaseParams {
+export interface WithdrawTaskSignParams extends WithdrawTaskBaseParams {
     /** Task index */
     taskIndex: number
 }
 
 /** Params for the RECONCILE BALANCE EXECUTE step. */
-export interface ReconcileBalanceTaskExecuteParams extends ReconcileBalanceTaskBaseParams {
+export interface WithdrawTaskExecuteParams extends WithdrawTaskBaseParams {
     /** Task index */
     taskIndex: number
 }
 
 /** Params for the RECONCILE BALANCE EXECUTE step. */
-export interface ReconcileBalanceTaskExecuteParams extends ReconcileBalanceTaskBaseParams {
+export interface WithdrawTaskExecuteParams extends WithdrawTaskBaseParams {
     /** Task index */
     taskIndex: number
 }
 
 /** Params for the RECONCILE BALANCE CONFIRM step. */
-export interface ReconcileBalanceTaskConfirmParams extends ReconcileBalanceTaskBaseParams {
+export interface WithdrawTaskConfirmParams extends WithdrawTaskBaseParams {
     /** Task index */
     taskIndex: number
 }
 
 /** Params for the RECONCILE BALANCE DISPATCHER step. */
-export interface ReconcileBalanceTaskDispatcherParams extends ReconcileBalanceTaskBaseParams {
+export interface WithdrawTaskDispatcherParams extends WithdrawTaskBaseParams {
     /** Task index */
     taskIndex: number
 }

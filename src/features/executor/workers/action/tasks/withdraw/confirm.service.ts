@@ -2,7 +2,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    ReconcileBalanceTaskConfirmParams 
+    WithdrawTaskConfirmParams 
 } from "../types"
 import {
     WinstonService, WinstonLog 
@@ -17,7 +17,7 @@ import {
 } from "mongoose"
 
 @Injectable()
-export class ReconcileBalanceTaskConfirmService {
+export class WithdrawTaskConfirmService {
     constructor(
         private readonly winstonService: WinstonService,
         @InjectPrimaryMongoose()
@@ -25,13 +25,10 @@ export class ReconcileBalanceTaskConfirmService {
     ) { }
 
     /**
-     * Process the CLOSE POSITION TASK CONFIRM step.
-     * @param params - The parameters for the CLOSE POSITION TASK CONFIRM step.
+     * Process the WITHDRAW TASK CONFIRM step.
+     * @param params - The parameters for the WITHDRAW TASK CONFIRM step.
      * @param params.bot - The bot.
      * @param params.job - The job.
-     * @param params.liquidityPool - The liquidity pool.
-     * @param params.state - The state of the liquidity pool.
-     * @param params.isRetry - Whether the task is being retried.
      * @param params.taskIndex - The index of the task.
      */
     async process(
@@ -39,7 +36,7 @@ export class ReconcileBalanceTaskConfirmService {
             bot,
             job,
             taskIndex,
-        }: ReconcileBalanceTaskConfirmParams
+        }: WithdrawTaskConfirmParams
     ) {
         // simply logging
         this.winstonService.log(
@@ -47,7 +44,7 @@ export class ReconcileBalanceTaskConfirmService {
             {
                 botId: bot.id,
                 jobId: job.id,
-                type: JobType.ReconcileBalance,
+                type: JobType.Withdraw,
                 metadata: job.metadata,
             }
         )

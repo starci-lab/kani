@@ -2,7 +2,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    ReconcileBalanceTaskDispatcherParams 
+    WithdrawTaskDispatcherParams 
 } from "../types"
 import {
     InjectPrimaryMongoose, 
@@ -16,38 +16,38 @@ import {
     JobNotFoundException 
 } from "@modules/exceptions"
 import {
-    ReconcileBalanceTaskPrepareService 
+    WithdrawTaskPrepareService 
 } from "./prepare.service"
 import {
-    ReconcileBalanceTaskSignService 
+    WithdrawTaskSignService 
 } from "./sign.service"
 import {
-    ReconcileBalanceTaskExecuteService 
+    WithdrawTaskExecuteService 
 } from "./execute.service"
 import {
-    ReconcileBalanceTaskConfirmService 
+    WithdrawTaskConfirmService 
 } from "./confirm.service"
 
 /**
- * Dispatcher service for the RECONCILE BALANCE task.
+ * Dispatcher service for the WITHDRAW task.
  */
 @Injectable()
-export class ReconcileBalanceTaskDispatchService {
+export class WithdrawTaskDispatchService {
     constructor(
-        private readonly reconcileBalanceTaskPrepareService: ReconcileBalanceTaskPrepareService,
-        private readonly reconcileBalanceTaskSignService: ReconcileBalanceTaskSignService,
-        private readonly reconcileBalanceTaskExecuteService: ReconcileBalanceTaskExecuteService,
-        private readonly reconcileBalanceTaskConfirmService: ReconcileBalanceTaskConfirmService,
+        private readonly withdrawTaskPrepareService: WithdrawTaskPrepareService,
+        private readonly withdrawTaskSignService: WithdrawTaskSignService,
+        private readonly withdrawTaskExecuteService: WithdrawTaskExecuteService,
+        private readonly withdrawTaskConfirmService: WithdrawTaskConfirmService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
     ) { }
 
     /**
-     * Dispatch the RECONCILE BALANCE task.
-     * @param params - The parameters for the RECONCILE BALANCE task.
+     * Dispatch the WITHDRAW task.
+     * @param params - The parameters for the WITHDRAW task.
      * @param params.bot - The bot.
      * @param params.job - The job.
-     * @param params.liquidityPool - The liquidity pool.
+     * @param params.payload - The payload.
      * @param params.isRetry - Whether the task is being retried.
      * @param params.taskIndex - The index of the task.
      */
@@ -59,7 +59,7 @@ export class ReconcileBalanceTaskDispatchService {
             bullmqJob,
             taskIndex,
             isRetry
-        }: ReconcileBalanceTaskDispatcherParams
+        }: WithdrawTaskDispatcherParams
     ) {
         let jobSnapshot: JobSchema | null = null
         // do the loop until the task is completed
@@ -75,7 +75,7 @@ export class ReconcileBalanceTaskDispatchService {
             }
             // if we do not find the task persisted in the job snapshot, we have to prepare 
             if (!jobSnapshot.tasks[taskIndex]) {
-                await this.reconcileBalanceTaskPrepareService.process(
+                await this.withdrawTaskPrepareService.process(
                     {
                         bot,
                         job: jobSnapshot,
@@ -96,7 +96,7 @@ export class ReconcileBalanceTaskDispatchService {
                 switch (stepType) {
                 // Sign step
                 case StepType.Sign: {
-                    await this.reconcileBalanceTaskSignService.process(
+                    await this.withdrawTaskSignService.process(
                         {
                             bot,
                             job: jobSnapshot,
@@ -110,7 +110,7 @@ export class ReconcileBalanceTaskDispatchService {
                 }
                 // Execute step
                 case StepType.Execute: {
-                    await this.reconcileBalanceTaskExecuteService.process(
+                    await this.withdrawTaskExecuteService.process(
                         {
                             bot,
                             job: jobSnapshot,
@@ -126,7 +126,7 @@ export class ReconcileBalanceTaskDispatchService {
             }
             // process confirm
             if (!jobSnapshot.tasks[taskIndex].confirmed) {
-                await this.reconcileBalanceTaskConfirmService.process(
+                await this.withdrawTaskConfirmService.process(
                     {
                         bot,
                         job: jobSnapshot,

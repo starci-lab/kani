@@ -10,15 +10,11 @@ import {
     envConfig,
 } from "@modules/env"
 import {
-    InjectPrimaryMongoose,
     TaskType,
 } from "@modules/databases"
 import {
     InjectSuperJson,
 } from "@modules/mixin"
-import {
-    Connection,
-} from "mongoose"
 import SuperJSON from "superjson"
 import {
     Job 
@@ -46,7 +42,10 @@ import {
     CancelService 
 } from "./cancel.service"
 import {
-    ClosePositionTaskDispatchService 
+    ClosePositionTaskDispatchService, 
+    OpenPositionTaskDispatchService,
+    ReconcileBalanceTaskDispatchService,
+    WithdrawTaskDispatchService,
 } from "./tasks"
 @Worker(
     bullData[BullQueueName.Action].name,
@@ -59,16 +58,17 @@ import {
 )
 export class ActionWorker extends WorkerHost {
     constructor(
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
         private readonly onFailedService: OnFailedService,
         private readonly asyncService: AsyncService,
         private readonly onCompletedService: OnCompletedService,
         private readonly jobContextService: JobContextService,
-        private readonly liquidityPoolContextService: LiquidityPoolContextService,
+        private readonly liquidityPoolContextService: LiquidityPoolContextService,  
         private readonly winstonService: WinstonService,
         private readonly cancelService: CancelService,
         private readonly closePositionTaskDispatchService: ClosePositionTaskDispatchService,
+        private readonly openPositionTaskDispatchService: OpenPositionTaskDispatchService,
+        private readonly reconcileBalanceTaskDispatchService: ReconcileBalanceTaskDispatchService,
+        private readonly withdrawTaskDispatchService: WithdrawTaskDispatchService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
     ) {
@@ -79,7 +79,7 @@ export class ActionWorker extends WorkerHost {
         bullmqJob: Job<string>
     ): Promise<void> {
         const payload = this.superJson.parse<ActionPayload>(bullmqJob.data)
-        const { jobId, botId, tasks } = payload
+        const { jobId, botId, tasks, isRetry } = payload
         // Load the job and bot context
         const [
             context,
@@ -110,7 +110,8 @@ export class ActionWorker extends WorkerHost {
         }
         // end load the job and bot context
         try {
-            for (const task of tasks) {
+            for (let taskIndex = 0; taskIndex < tasks.length; taskIndex++) {
+                const task = tasks[taskIndex]
                 switch (task.type) {
                 case TaskType.ClosePosition: {
                     const { 
@@ -127,21 +128,68 @@ export class ActionWorker extends WorkerHost {
                             payload: task.payload,
                             state,
                             bullmqJob,
-                            taskIndex: 0,
+                            taskIndex,
+                        }
+                    )
+                    break
+                }
+                case TaskType.OpenPosition: {
+                    const { 
+                        liquidityPool, 
+                        state 
+                    } = await this.liquidityPoolContextService.load({
+                        liquidityPoolId: task.payload.liquidityPoolId,
+                    })
+                    await this.openPositionTaskDispatchService.dispatch(
+                        {
+                            job: context.job,
+                            bot: context.bot,
+                            liquidityPool,
+                            payload: task.payload,
+                            state,
+                            bullmqJob,
+                            taskIndex,
+                            isRetry,
+                        }
+                    )
+                    break
+                }
+                case TaskType.ReconcileBalance: {
+                    await this.reconcileBalanceTaskDispatchService.dispatch(
+                        {
+                            job: context.job,
+                            bot: context.bot,
+                            payload: task.payload,
+                            isRetry,
+                            bullmqJob,
+                            taskIndex,
+                        }
+                    )
+                    break
+                }
+                case TaskType.Withdraw: {
+                    await this.withdrawTaskDispatchService.dispatch(
+                        {
+                            job: context.job,
+                            bot: context.bot,
+                            payload: task.payload,
+                            bullmqJob,
+                            taskIndex,
+                            isRetry,
                         }
                     )
                     break
                 }
                 }
+                await this.onCompletedService.process(
+                    {
+                        job: context.job,
+                        bot: context.bot,
+                        bullmqJob,
+                        payload,
+                    }
+                )
             }
-            await this.onCompletedService.process(
-                {
-                    job: context.job,
-                    bot: context.bot,
-                    bullmqJob,
-                    payload,
-                }
-            )
         } catch (error) {
             await this.onFailedService.process(
                 {
