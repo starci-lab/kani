@@ -26,6 +26,15 @@ import {
 import {
     RpcAccessType 
 } from "@modules/filesystem"
+import {
+    SignatureWithBytes 
+} from "@mysten/sui/cryptography"
+import {
+    InjectSuperJson 
+} from "@modules/mixin"
+import {
+    SuperJSON 
+} from "superjson"
 /**
  * Service responsible for simulating Sui transactions (dev-inspect / dry-run).
  * Accepts prepareTx and bot; throws TransactionSubmitFailedException when stimulation fails.
@@ -38,6 +47,8 @@ export class SuiStimulateService {
     constructor(
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly winstonService: WinstonService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
     ) {}
 
     /**
@@ -52,7 +63,8 @@ export class SuiStimulateService {
         }: StimulateSuiTransactionParams
     ): Promise<StimulateSuiTransactionResult> {
         // stage: validation
-        const transactionBlock = Transaction.from(signedTx.signedSerializedTx)
+        const signatureWithBytes = this.superJson.parse<SignatureWithBytes>(signedTx.signedSerializedTx)
+        const transactionBlock = Transaction.from(signatureWithBytes.bytes)
         // stage: stimulation
         const stimulateResult = await this.rpcExecutorService.withSuiClient(
             {

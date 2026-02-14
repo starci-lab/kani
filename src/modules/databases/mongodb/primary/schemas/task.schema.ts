@@ -108,6 +108,20 @@ export class TaskSchema extends AbstractSchema {
         type: Number, required: true 
     })
         activeStep: number
+
+    /**
+     * Whether the task is confirmed.
+     */
+    @Field(() => Boolean,
+        {
+            description: "The status of the task",
+            nullable: true,
+        }
+    )
+    @Prop({
+        type: Boolean, required: false 
+    })
+        confirmed?: boolean  
 }
 
 

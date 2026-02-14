@@ -232,6 +232,7 @@ import {
     JobEnqueuedMessage,
     JobEnqueueFailedMessage,
     TransactionSignedMessage,
+    ActionJobConfirmedMessage,
 } from "./types"
 
 /** Map of Winston log names to level, Loki flag, and message type. */
@@ -2191,7 +2192,7 @@ export const configMap = {
     // Active Job Prepared
     [WinstonLog.ActiveJobPrepared]: {
         name: WinstonLog.ActiveJobPrepared,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as ActiveJobPreparedMessage,
@@ -2199,9 +2200,17 @@ export const configMap = {
     // Transaction Signed
     [WinstonLog.TransactionSigned]: {
         name: WinstonLog.TransactionSigned,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as TransactionSignedMessage,
+    },
+    // Action Job Confirmed
+    [WinstonLog.ActionJobConfirmed]: {
+        name: WinstonLog.ActionJobConfirmed,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ActionJobConfirmedMessage,
     },
 }

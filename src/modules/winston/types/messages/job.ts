@@ -99,3 +99,19 @@ export interface ActiveJobPreparedMessage {
     /** Metadata. */
     metadata?: unknown
 }
+
+/**
+ * Action job confirmed message.
+ */
+export interface ActionJobConfirmedMessage {
+    /** Bot ID. */
+    botId: string
+    /** Job ID. */
+    jobId: string
+    /** Job type. */
+    type: JobType
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
+    /** Metadata. */
+    metadata?: unknown
+}
