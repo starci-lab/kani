@@ -2,6 +2,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
+    JobVariant,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
@@ -280,7 +281,7 @@ export class HandleOpenPositionService {
         const jobId = new Types.ObjectId().toString()
         // Enqueue the open-position job
         try {
-            const bullmqJob = await this.openPositionEnqueueService.enqueue(
+            await this.openPositionEnqueueService.enqueue(
                 {
                     bot,
                     jobId,
@@ -290,21 +291,22 @@ export class HandleOpenPositionService {
                 }
             )
             this.winstonService.log(
-                WinstonLog.OpenPositionJobEnqueued,
+                WinstonLog.JobEnqueued,
                 {
                     botId: bot.id,
-                    liquidityPoolId: liquidityPool.displayId,
                     jobId,
-                    bullmqJobId: bullmqJob?.id,
+                    variant: JobVariant.OpenPosition,
+                    liquidityPoolId: liquidityPool.displayId,
                 }
             )
         } catch (error) {
             this.winstonService.log(
-                WinstonLog.OpenPositionJobEnqueueFailed,
+                WinstonLog.JobEnqueueFailed,
                 {
                     botId: bot.id,
                     liquidityPoolId: liquidityPool.displayId,
                     jobId,
+                    variant: JobVariant.OpenPosition,
                     error: error.message,
                 }
             )

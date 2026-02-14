@@ -1,5 +1,6 @@
 import BN from "bn.js"
 import {
+    JobVariant,
     TaskType 
 } from "@modules/databases"
 

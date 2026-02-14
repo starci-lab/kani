@@ -46,6 +46,8 @@ export enum WinstonLog {
     OpenPositionSkippedPriceNotReady = "Open.Position.Skipped.Price.Not.Ready",
     ClosePositionJobEnqueued = "Close.Position.Job.Enqueued",
     ClosePositionJobEnqueueFailed = "Close.Position.Job.Enqueue.Failed",
+    JobEnqueued = "Job.Enqueued",
+    JobEnqueueFailed = "Job.Enqueue.Failed",
     ClosePositionJobRequeued = "Close.Position.Job.Requeued",
     ClosePositionJobRequeueFailed = "Close.Position.Job.Requeue.Failed",
     ErrorDecryptingJwtSecretKey = "Error.Decrypting.Jwt.Secret.Key",

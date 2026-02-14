@@ -2,7 +2,8 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    BotSchema 
+    BotSchema,
+    JobVariant,
 } from "@modules/databases"
 import {
     WithdrawEnqueueService
@@ -104,7 +105,7 @@ export class HandleWithdrawService {
         const jobId = new Types.ObjectId().toString()
         // Enqueue the withdraw job
         try {
-            const bullmqJob = await this.withdrawEnqueueService.enqueue(
+            await this.withdrawEnqueueService.enqueue(
                 {
                     bot,
                     jobId,
@@ -112,20 +113,21 @@ export class HandleWithdrawService {
                 }
             )
             this.winstonService.log(
-                WinstonLog.WithdrawJobEnqueued,
+                WinstonLog.JobEnqueued,
                 {
-                    jobId,
                     botId: bot.id,
-                    bullmqJobId: bullmqJob?.id,
+                    jobId,
+                    variant: JobVariant.Withdraw,
                 }
             )
         } catch (error) {
             this.winstonService.log(
-                WinstonLog.WithdrawJobEnqueueFailed,
+                WinstonLog.JobEnqueueFailed,
                 {
                     botId: bot.id,
                     error: error.message,
                     jobId,
+                    variant: JobVariant.Withdraw,
                 }
             )
             this.lockAuthorityService.release(

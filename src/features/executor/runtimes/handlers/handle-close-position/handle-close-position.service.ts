@@ -17,6 +17,7 @@ import {
     SettlementService
 } from "@modules/blockchains"
 import {
+    JobVariant,
     PositionAssociateService 
 } from "@modules/databases"
 import {
@@ -160,7 +161,7 @@ export class HandleClosePositionService {
         }
         // Enqueue the close-position job
         try {
-            const bullmqJob = await this.closePositionEnqueueService.enqueue(
+            await this.closePositionEnqueueService.enqueue(
                 {
                     bot,
                     jobId,
@@ -169,21 +170,22 @@ export class HandleClosePositionService {
                 }
             )
             this.winstonService.log(
-                WinstonLog.ClosePositionJobEnqueued,
+                WinstonLog.JobEnqueued,
                 {
                     botId: bot.id,
-                    liquidityPoolId: liquidityPool.displayId,
                     jobId,
-                    bullmqJobId: bullmqJob?.id,
+                    variant: JobVariant.ClosePosition,
+                    liquidityPoolId: liquidityPool.displayId,
                 }
             )
         } catch (error) {
             this.winstonService.log(
-                WinstonLog.ClosePositionJobEnqueueFailed,
+                WinstonLog.JobEnqueueFailed,
                 {
                     botId: bot.id,
                     liquidityPoolId: liquidityPool.displayId,
                     jobId,
+                    variant: JobVariant.ClosePosition,
                     error: error.message,
                 }
             )

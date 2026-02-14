@@ -227,6 +227,8 @@ import {
     WithdrawLockAuthorityReleasedMessage,
     ConsulRegisterFailedMessage,
     ConsulRegisterSuccessfullyMessage,
+    JobEnqueuedMessage,
+    JobEnqueueFailedMessage,
 } from "./types"
 
 /** Map of Winston log names to level, Loki flag, and message type. */
@@ -2142,5 +2144,21 @@ export const configMap = {
         loki: true,
         messageType: {
         } as DlmmLiquidityPoolsSyncedMessage,
+    },
+    // Job Enqueued
+    [WinstonLog.JobEnqueued]: {
+        name: WinstonLog.JobEnqueued,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as JobEnqueuedMessage,
+    },
+    // Job Enqueue Failed
+    [WinstonLog.JobEnqueueFailed]: {
+        name: WinstonLog.JobEnqueueFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as JobEnqueueFailedMessage,
     },
 }

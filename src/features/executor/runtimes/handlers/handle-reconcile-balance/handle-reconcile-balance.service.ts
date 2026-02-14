@@ -1,8 +1,9 @@
 import {
     Injectable,
 } from "@nestjs/common"
-import type {
-    BotSchema,
+import {
+    JobVariant,
+    type BotSchema,
 } from "@modules/databases"
 import {
     ReconcileBalanceEnqueueService,
@@ -146,27 +147,28 @@ export class HandleReconcileBalanceService {
         const jobId = new Types.ObjectId().toString()
         // Enqueue the reconcile-balance job
         try {
-            const bullmqJob = await this.reconcileBalanceEnqueueService.enqueue(
+            await this.reconcileBalanceEnqueueService.enqueue(
                 {
                     bot,
                     jobId,
                 }
             )
             this.winstonService.log(
-                WinstonLog.ReconcileBalanceJobEnqueued,
+                WinstonLog.JobEnqueued,
                 {
-                    jobId,
                     botId: bot.id,
-                    bullmqJobId: bullmqJob?.id,
+                    jobId,
+                    variant: JobVariant.ReconcileBalance,
                 }
             )
         } catch (error) {
             this.winstonService.log(
-                WinstonLog.ReconcileBalanceJobEnqueueFailed,
+                WinstonLog.JobEnqueueFailed,
                 {
                     botId: bot.id,
                     error: error.message,
                     jobId,
+                    variant: JobVariant.ReconcileBalance,
                 }
             )
             this.lockAuthorityService.release(
