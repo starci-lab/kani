@@ -42,10 +42,10 @@ import {
 } from "@modules/exceptions"
 import {
     SerializerService 
-} from "../common"
+} from "../shared"
 import {
     SendHeartbeatService,
-} from "../common"
+} from "../shared"
 
 /**
  * Service for the EXECUTE phase of open-position jobs.

@@ -12,7 +12,7 @@ import {
 } from "mongoose"
 import {
     LockAuthorityService,
-} from "../../bussiness"
+} from "../../../bussiness"
 import type {
     ClearServiceParams
 } from "./types"

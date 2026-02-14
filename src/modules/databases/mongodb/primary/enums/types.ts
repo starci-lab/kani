@@ -409,3 +409,33 @@ registerEnumType(GraphQLTypeStepType,
         }
     }
 )
+
+export enum JobVariant {
+    OpenPosition = "openPosition",
+    ClosePosition = "closePosition",
+    ReconcileBalance = "reconcileBalance",
+    Withdraw = "withdraw",
+}
+export const GraphQLTypeJobVariant = createEnumType(JobVariant)
+
+registerEnumType(
+    GraphQLTypeJobVariant,
+    {
+        name: "JobVariant",
+        description: "The variant of the job",
+        valuesMap: {
+            [JobVariant.OpenPosition]: {
+                description: "The open position job variant"
+            },
+            [JobVariant.ClosePosition]: {
+                description: "The close position job variant"
+            },
+            [JobVariant.ReconcileBalance]: {
+                description: "The reconcile balance job variant"
+            },
+            [JobVariant.Withdraw]: {
+                description: "The withdraw job variant"
+            }
+        }
+    }
+)

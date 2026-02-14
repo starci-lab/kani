@@ -1,8 +1,7 @@
 import {
     BotSchema, 
     InjectPrimaryMongoose, 
-    JobSchema, 
-    PrimaryMemoryStorageService 
+    JobSchema,
 } from "@modules/databases"
 import {
     Injectable 
@@ -11,28 +10,22 @@ import {
     Connection 
 } from "mongoose"
 import {
-    LoadActionExecutionContextParams,
-    LoadActionExecutionContextResult,
+    LoadExecutionContextParams,
+    LoadExecutionContextResult,
 } from "../types"
 import {
     BotNotFoundException,
     JobNotFoundException,
-    LiquidityPoolNotFoundException,
 } from "@modules/exceptions"
-import {
-    LiquidityPoolStateService 
-} from "@modules/blockchains"
 
 /**
  * Service responsible for building the execution context for a given job, bot, and liquidity pool.
  */
 @Injectable()
-export class ActionExecutionContextService {
+export class ExecutionContextService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly liquidityPoolStateService: LiquidityPoolStateService,
     ) { }
 
     /**
@@ -44,10 +37,8 @@ export class ActionExecutionContextService {
         {
             jobId,
             botId,
-            liquidityPoolId,
-            state: _state,
-        }: LoadActionExecutionContextParams
-    ): Promise<LoadActionExecutionContextResult> {
+        }: LoadExecutionContextParams
+    ): Promise<LoadExecutionContextResult> {
         // Find the job by id.
         const jobRaw = await this.connection
             .model<JobSchema>(JobSchema.name)
@@ -68,26 +59,9 @@ export class ActionExecutionContextService {
             })
         }
         const bot = botRaw.toJSON()
-        // Find the liquidity pool by id.
-        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
-            id: {
-                $eq: liquidityPoolId,
-            }
-        })
-        if (!liquidityPool) {
-            throw new LiquidityPoolNotFoundException(
-                {
-                    id: liquidityPoolId,
-                }
-            )
-        }
-        // Get the state
-        const state = _state ?? await this.liquidityPoolStateService.getState(liquidityPool)
         return {
             job,
             bot,
-            liquidityPool,
-            state,
         }
     }
 }

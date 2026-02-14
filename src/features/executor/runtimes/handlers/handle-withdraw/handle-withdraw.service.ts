@@ -47,8 +47,8 @@ export class HandleWithdrawService {
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly winstonService: WinstonService,
         private readonly waitService: WaitService,
-        @InjectQueue(bullData[BullQueueName.Withdraw].name)
-        private readonly withdrawQueue: Queue<string>,
+        @InjectQueue(bullData[BullQueueName.Action].name)
+        private readonly actionQueue: Queue<string>,
         private readonly cacheService: CacheService,
     ) {}
 
@@ -88,7 +88,7 @@ export class HandleWithdrawService {
         const noActiveJobFound = await this.waitService.wait(
             {
                 action: async () => {
-                    const job = await this.withdrawQueue.getJob(bot.id)
+                    const job = await this.actionQueue.getJob(bot.id)
                     return !job
                 }
             }

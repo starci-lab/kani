@@ -64,7 +64,6 @@ export class HandleDlmmPositionOpenRequestedEventService {
             {
                 bot,
                 liquidityPool,
-                eventPayload: event,
             }
         )
     }

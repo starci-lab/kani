@@ -1,44 +1,83 @@
 import BN from "bn.js"
 import {
-    WithdrawCacheResult
-} from "@modules/cache"
-import {
-    LiquidityPoolState
-} from "./pool-state"
+    TaskType 
+} from "@modules/databases"
 
-/** Base payload for all job types. */
+/** Base payload for all action jobs. */
 export interface BasePayload {
-    jobId: string
-    botId: string
-    isRetry?: boolean
+  jobId: string
+  botId: string
+  isRetry?: boolean
+  /** Whether to use the context. */
+  useContext?: boolean
 }
 
-/** Payload for open position jobs. */
-export interface OpenPositionPayload extends BasePayload {
-    liquidityPoolId: string
-    state?: LiquidityPoolState
+/** Payload for open position action tasks. */
+export interface OpenPositionActionTaskPayload {
+  liquidityPoolId: string
 }
 
-/** Payload for close position jobs. */
-export interface ClosePositionPayload extends BasePayload {
-    liquidityPoolId: string
-    state?: LiquidityPoolState
+/** Payload for close position action tasks. */
+export interface ClosePositionActionTaskPayload {
+  liquidityPoolId: string
 }
 
-/** Payload for reconcile balance jobs. */
-export interface ReconcileBalancePayload extends BasePayload {
-    targetBalanceAmount?: BN
-    quoteBalanceAmount?: BN
-    gasBalanceAmount?: BN
+/** Payload for reconcile balance action tasks. */
+export interface ReconcileBalanceActionTaskPayload {
+  /** Whether to skip the swap. */
+  noSwap?: boolean
+  /** Whether to skip the balance reconciliation. */
+  noReconcile?: boolean
 }
 
-/** Input for withdrawing tokens. */
+/** Token input for withdraw operations. */
 export interface WithdrawTokenInput {
-    tokenId: string
-    amount: BN
+  tokenId: string
+  amount: BN
 }
 
-/** Payload for withdraw jobs. */
-export interface WithdrawPayload extends BasePayload {
-    payload: WithdrawCacheResult
+/** Payload for withdraw action tasks. */
+export interface WithdrawActionTaskPayload {
+  tokenInputs: Array<WithdrawTokenInput>
 }
+
+/** Task for an action. */
+export interface OpenPositionActionTask {
+  type: TaskType.OpenPosition
+  payload: OpenPositionActionTaskPayload
+}
+
+/** Task for an action. */
+export interface ClosePositionActionTask {
+  type: TaskType.ClosePosition
+  payload: ClosePositionActionTaskPayload
+}
+
+/** Task for an action. */
+export interface ReconcileBalanceActionTask {
+  type: TaskType.ReconcileBalance
+  payload: ReconcileBalanceActionTaskPayload
+  useContext?: boolean
+}
+
+/** Task for an action. */
+export interface WithdrawActionTask {
+  type: TaskType.Withdraw
+  payload: WithdrawActionTaskPayload
+}
+
+/** Union of all supported action tasks. */
+export type ActionTask =
+  | OpenPositionActionTask
+  | ClosePositionActionTask
+  | ReconcileBalanceActionTask
+  | WithdrawActionTask
+
+/** Action job payload. */
+export interface ActionPayload extends BasePayload {
+  /** Tasks to execute. */
+  tasks: Array<ActionTask>
+  /** Liquidity pool to use. */
+  variant: JobVariant
+}
+

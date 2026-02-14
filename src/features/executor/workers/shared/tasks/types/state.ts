@@ -6,11 +6,7 @@ import {
 } from "@modules/databases"
 
 /** Parameters for loading the action context. */
-export interface LoadActionExecutionContextParams {
-    /** Job ID. */
-    jobId: string
-    /** Bot ID. */
-    botId: string
+export interface LoadLiquidityPoolExecutionContextParams extends LoadExecutionContextParams {
     /** Liquidity pool ID. */
     liquidityPoolId: string
     /** State. */
@@ -18,13 +14,23 @@ export interface LoadActionExecutionContextParams {
 }
 
 /** Result for loading the action context. */
-export interface LoadActionExecutionContextResult {
-    /** Job. */
-    job: JobSchema
-    /** Bot. */
-    bot: BotSchema
+export interface LoadLiquidityPoolExecutionContextResult extends LoadExecutionContextResult {
     /** Liquidity pool. */
     liquidityPool: LiquidityPoolSchema
     /** State. */
     state: LiquidityPoolState
+}
+
+export interface LoadExecutionContextParams {
+    /** Job ID. */
+    jobId: string
+    /** Bot ID. */
+    botId: string
+}
+
+export interface LoadExecutionContextResult {
+    /** Job. */
+    job: JobSchema
+    /** Bot. */
+    bot: BotSchema
 }

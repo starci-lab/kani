@@ -8,7 +8,7 @@ import {
 } from "@modules/exceptions"
 import {
     LockAuthorityService,
-} from "../../bussiness"
+} from "../../../bussiness"
 import type {
     SendHeartbeatParams,
 } from "./types"

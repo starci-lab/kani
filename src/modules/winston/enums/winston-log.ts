@@ -239,4 +239,6 @@ export enum WinstonLog {
     DlmmLiquidityPoolsSynced = "Dlmm.Liquidity.Pools.Synced",
     TransactionStimulated = "Transaction.Stimulated",
     TransactionExecuted = "Transaction.Executed",
+    ActionJobCompleted = "Action.Job.Completed",
+    ActionJobFailed = "Action.Job.Failed",
 }

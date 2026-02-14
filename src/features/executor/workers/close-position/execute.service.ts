@@ -41,7 +41,7 @@ import {
 import {
     SerializerService,
     SendHeartbeatService,
-} from "../common"
+} from "../shared"
 
 /**
  * Service for the EXECUTE phase of close-position jobs.

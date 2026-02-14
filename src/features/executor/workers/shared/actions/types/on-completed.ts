@@ -5,14 +5,19 @@ import type {
     BotSchema, JobSchema, LiquidityPoolSchema 
 } from "@modules/databases"
 import type {
-    BullQueueName 
-} from "@modules/bullmq"
+    ActionPayload 
+} from "@modules/blockchains"
 
 /** Params for on-completed processing. */
 export interface OnCompletedParams {
+    /** Job schema. */
     job: JobSchema
+    /** Bot schema. */
     bot: BotSchema
+    /** BullMQ job. */
     bullmqJob: Job<string>
-    queueName: BullQueueName
+    /** Liquidity pool schema. */
     liquidityPool?: LiquidityPoolSchema
+    /** Action payload. */
+    payload: ActionPayload
 }

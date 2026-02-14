@@ -2,46 +2,22 @@ import {
     Module,
 } from "@nestjs/common"
 import {
-    ReconcileBalanceModule,
-} from "./reconcile-balance"
+    SharedModule 
+} from "./shared"
 import {
-    ConfigurableModuleClass,
+    ConfigurableModuleClass 
 } from "./workers.module-definition"
 import {
-    OpenPositionModule,
-} from "./open-position"
-import {
-    ClosePositionModule,
-} from "./close-position"
-import {
-    WithdrawModule,
-} from "./withdraw"
-import {
-    CommonModule 
-} from "./common"
+    ActionModule 
+} from "./action"
 @Module({
     imports: [
-        CommonModule.register(
+        SharedModule.register(
             {
                 isGlobal: true,
             }
         ),
-        ReconcileBalanceModule.register(
-            {
-                isGlobal: true,
-            }
-        ),
-        OpenPositionModule.register(
-            {
-                isGlobal: true,
-            }
-        ),
-        ClosePositionModule.register(
-            {
-                isGlobal: true,
-            }
-        ),
-        WithdrawModule.register(
+        ActionModule.register(
             {
                 isGlobal: true,
             }

@@ -4,11 +4,9 @@ import type {
 import {
     Injectable,
 } from "@nestjs/common"
-import type {
-    BotSchema,
-} from "@modules/databases"
 import {
-    PrimaryMemoryStorageService,
+    BotSchema,
+    PrimaryMemoryStorageService
 } from "@modules/databases"
 import {
     HandleClosePositionService,
@@ -57,7 +55,6 @@ export class HandleDlmmPositionCloseRequestedEventService {
             {
                 bot,
                 liquidityPool,
-                eventPayload: event,
             }
         )
     }

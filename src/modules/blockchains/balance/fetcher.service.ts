@@ -70,7 +70,12 @@ export class BalanceFetcherService implements IBalanceFetcherService {
      * @example
      * const balances = await service.fetchBalances({ bot, incentiveTokens })
      */
-    public async fetchBalances({ bot, incentiveTokens }: FetchBalancesParams): Promise<FetchBalancesResult> {
+    public async fetchBalances(
+        { 
+            bot, 
+            incentiveTokens 
+        }: FetchBalancesParams
+    ): Promise<FetchBalancesResult> {
         // find target token from storage
         const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne(
             {

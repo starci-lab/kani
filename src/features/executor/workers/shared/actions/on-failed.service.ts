@@ -29,7 +29,7 @@ import {
 } from "mongoose"
 import {
     LockAuthorityService,
-} from "../../bussiness"
+} from "../../../bussiness"
 import {
     DayjsService,
 } from "@modules/mixin"
@@ -53,10 +53,7 @@ export class OnFailedService {
     /** Winston log event per queue. */
     private queueToLog(queueName: BullQueueName): WinstonLog {
         const map: Record<BullQueueName, WinstonLog> = {
-            [BullQueueName.OpenPosition]: WinstonLog.OpenPositionJobFailed,
-            [BullQueueName.ClosePosition]: WinstonLog.ClosePositionJobFailed,
-            [BullQueueName.ReconcileBalance]: WinstonLog.ReconcileBalanceJobFailed,
-            [BullQueueName.Withdraw]: WinstonLog.WithdrawJobFailed,
+            [BullQueueName.Action]: WinstonLog.ActionJobFailed,
         }
         return map[queueName]
     }

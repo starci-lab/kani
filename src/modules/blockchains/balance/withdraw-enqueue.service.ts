@@ -10,9 +10,11 @@ import {
     InjectPrimaryMongoose,
     JobSchema,
     BotSchema,
+    TaskType,
+    JobVariant,
 } from "@modules/databases"
 import {
-    WithdrawPayload
+    ActionPayload
 } from "../types"
 import {
     envConfig
@@ -38,9 +40,6 @@ import {
     DayjsService
 } from "@modules/mixin"
 import {
-    v4
-} from "uuid"
-import {
     IWithdrawEnqueueService
 } from "./types"
 
@@ -57,8 +56,8 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        @InjectQueue(bullData[BullQueueName.Withdraw].name)
-        private readonly withdrawQueue: Queue<string>,
+        @InjectQueue(bullData[BullQueueName.Action].name)
+        private readonly actionQueue: Queue<string>,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         private readonly dayjsService: DayjsService,
@@ -76,13 +75,20 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
      */
     async enqueue({ bot, jobId, isRetry, payload: cacheResult }: EnqueueWithdrawParams): Promise<Job<string>> {
         // build withdraw payload
-        const payload: WithdrawPayload = {
+        const payload: ActionPayload = {
+            variant: JobVariant.Withdraw,
             jobId,
             botId: bot.id,
             isRetry,
-            payload: cacheResult,
+            tasks: [
+                {
+                    /** Withdraw task */
+                    type: TaskType.Withdraw,
+                    /** Payload for withdraw task */
+                    payload: cacheResult,
+                },
+            ],
         }
-        const payloadString = this.superJson.stringify(payload)
         
         // create job record if not a retry
         if (!isRetry) {
@@ -120,7 +126,6 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                                         job: job.id,
                                         queuedAt: this.dayjsService.now().toDate(),
                                         jobType: JobType.Withdraw,
-                                        payload: payloadString,
                                     },
                                 }
                             },
@@ -133,9 +138,9 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
         }
         
         // enqueue job to queue
-        return await this.withdrawQueue.add(
-            v4(),
-            payloadString,
+        return await this.actionQueue.add(
+            jobId,
+            this.superJson.stringify(payload),
             {
                 jobId: bot.id,
             }

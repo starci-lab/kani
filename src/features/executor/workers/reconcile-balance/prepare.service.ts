@@ -49,7 +49,7 @@ import {
 } from "@modules/mixin"
 import {
     SerializerService,
-} from "../common"
+} from "../shared"
 
 /**
  * Service for the PREPARE phase of reconcile-balance jobs.

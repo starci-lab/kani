@@ -3,23 +3,22 @@ import {
 } from "@nestjs/common"
 import {
     ConfigurableModuleClass,
-} from "./common.module-definition"
+} from "./shared.module-definition"
 import {
     OnFailedService 
-} from "./on-failed.service"
+} from "./actions"
 import {
     SendHeartbeatService 
-} from "./send-heartbeat.service"
+} from "./actions"
 import {
-    OnCompletedService 
-} from "./on-completed.service"
-import {
-    ClearService 
-} from "./clear.service"
-import {
-    SerializerService 
-} from "./serializer.service"
+    OnCompletedService,
+    ClearService,
+    SerializerService
+} from "./actions"
 
+/**
+ * Shared module for the workers.
+ */
 @Module(
     {
         providers: [
@@ -38,6 +37,6 @@ import {
         ],
     }
 )
-export class CommonModule extends ConfigurableModuleClass {}
+export class SharedModule extends ConfigurableModuleClass {}
 
 

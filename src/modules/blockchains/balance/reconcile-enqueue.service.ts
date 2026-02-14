@@ -10,9 +10,11 @@ import {
     InjectPrimaryMongoose,
     JobSchema,
     BotSchema,
+    TaskType,
+    JobVariant,
 } from "@modules/databases"
 import {
-    ReconcileBalancePayload
+    ActionPayload
 } from "../types"
 import {
     envConfig
@@ -38,9 +40,6 @@ import {
     DayjsService
 } from "@modules/mixin"
 import {
-    v4
-} from "uuid"
-import {
     IReconcileBalanceEnqueueService
 } from "./types"
 
@@ -57,8 +56,8 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        @InjectQueue(bullData[BullQueueName.ReconcileBalance].name)
-        private readonly reconcileBalanceQueue: Queue<string>,
+        @InjectQueue(bullData[BullQueueName.Action].name)
+        private readonly actionQueue: Queue<string>,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         private readonly dayjsService: DayjsService,
@@ -122,13 +121,24 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
         }
         
         // build payload and enqueue job
-        const payload: ReconcileBalancePayload = {
+        const payload: ActionPayload = {
+            variant: JobVariant.ReconcileBalance,
             jobId,
             botId: bot.id,
             isRetry,
+            tasks: [
+                {
+                    /** Reconcile balance task */
+                    type: TaskType.ReconcileBalance,
+                    payload: {
+                        /** Payload for reconcile balance task */
+                        noSwap: false,
+                    },
+                },
+            ],
         }
-        return await this.reconcileBalanceQueue.add(
-            v4(),
+        return await this.actionQueue.add(
+            jobId,
             this.superJson.stringify(payload),
             {
                 jobId: bot.id,

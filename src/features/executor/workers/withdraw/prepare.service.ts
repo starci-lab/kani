@@ -42,7 +42,7 @@ import {
 } from "@modules/mixin"
 import {
     SerializerService,
-} from "../common"
+} from "../shared"
 import {
     ToStringObject,
 } from "@modules/common"

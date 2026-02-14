@@ -54,8 +54,8 @@ export class HandleClosePositionService {
         private readonly liquidityPoolStateService: LiquidityPoolStateService,
         private readonly positionAssociateService: PositionAssociateService,
         private readonly waitService: WaitService,
-        @InjectQueue(bullData[BullQueueName.ClosePosition].name)
-        private readonly closePositionQueue: Queue<string>,
+        @InjectQueue(bullData[BullQueueName.Action].name)
+        private readonly actionQueue: Queue<string>,
     ) {}
     /**
      * Process close-position request for the given bot and liquidity pool.
@@ -70,7 +70,6 @@ export class HandleClosePositionService {
         {
             bot,
             liquidityPool,
-            eventPayload,
         }: HandleClosePositionParams
     ) {
         // Skip if bot has no active position to close
@@ -99,7 +98,7 @@ export class HandleClosePositionService {
         })
         const jobId = new Types.ObjectId().toString()
         // Settle the position to determine if we should close
-        const state = eventPayload ?? await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
+        const state = await this.liquidityPoolStateService.getState(liquidityPool)
         const { 
             settled, 
             strategyResults 
@@ -129,7 +128,7 @@ export class HandleClosePositionService {
         const noActiveJobFound = await this.waitService.wait(
             {
                 action: async () => {
-                    const job = await this.closePositionQueue.getJob(bot.id)
+                    const job = await this.actionQueue.getJob(bot.id)
                     return !job
                 }
             }
@@ -167,7 +166,6 @@ export class HandleClosePositionService {
                     jobId,
                     isRetry: false,
                     liquidityPool,
-                    state,
                 }
             )
             this.winstonService.log(

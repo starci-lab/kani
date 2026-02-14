@@ -3,13 +3,13 @@ import {
 } from "@nestjs/common"
 import {
     ClosePositionActionService, 
-    PrepareClosePositionResult
+    SignedTx
 } from "@modules/blockchains"
 import {
     ActionExecutionContextService 
 } from "../common"
 import {
-    ClosePositionTaskSignParams 
+    ClosePositionTaskExecuteParams,
 } from "../types"
 import {
     InjectPrimaryMongoose,
@@ -25,41 +25,49 @@ import {
 } from "@modules/mixin"
 import SuperJSON from "superjson"
 import {
-    PrepareResultNotFoundException 
+    SignResultNotFoundException 
 } from "@modules/exceptions"
-import {
-    SendHeartbeatService 
-} from "../../send-heartbeat.service"
 
 /**
- * Service for the Close Position Task SIGN step.
+ * Service for the Close Position Task EXECUTE step.
  */
 @Injectable()
-export class ClosePositionTaskSignService {
+export class ClosePositionTaskExecuteService {
     constructor(
         private readonly closePositionActionService: ClosePositionActionService,
         private readonly actionExecutionContextService: ActionExecutionContextService,
-        private readonly sendHeartbeatService: SendHeartbeatService,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
     ) { }
-
+    
+    /**
+     * Process the CLOSE POSITION TASK EXECUTE step.
+     * @param params - The parameters for the CLOSE POSITION TASK EXECUTE step.
+     * @param params.botId - The ID of the bot.
+     * @param params.jobId - The ID of the job.
+     * @param params.liquidityPoolId - The ID of the liquidity pool.
+     * @param params.state - The state of the liquidity pool.
+     * @param params.isRetry - Whether the task is being retried.
+     * @param params.taskIndex - The index of the task.
+     * @param params.stepIndex - The index of the step.
+     */
     async process({
         botId,
-        bullmqJob,
         jobId,
         liquidityPoolId,
         state,
+        isRetry,
         taskIndex,
         stepIndex,
-    }: ClosePositionTaskSignParams) {
+    }: ClosePositionTaskExecuteParams) {
         // Load the execution context.
         const {
             bot,
             liquidityPool,
             job,
+            state: _state,
         } = await this.actionExecutionContextService.load(
             {
                 botId,
@@ -68,17 +76,9 @@ export class ClosePositionTaskSignService {
                 state,
             }
         )
-        // try send heartbeat to BullMQ
-        await this.sendHeartbeatService.process(
-            {
-                bot,
-                job,
-                bullmqJob,
-            }
-        )
-        const prepareResult = job.tasks[taskIndex].prepareResult
-        if (!prepareResult) {
-            throw new PrepareResultNotFoundException(
+        const signResult = job.tasks[taskIndex].steps[stepIndex].signResult
+        if (!signResult) {
+            throw new SignResultNotFoundException(
                 {
                     botId,
                     jobId,
@@ -88,17 +88,21 @@ export class ClosePositionTaskSignService {
                 }
             )
         }
-        const prepareTx = this.superJson.parse<PrepareClosePositionResult>(
-            prepareResult
+        const signedTx = this.superJson.parse<SignedTx>(
+            job.tasks[taskIndex].steps[stepIndex].signResult ?? ""
         )
         // We need validation here
         // Thus, we need to sign
-        const signedTx = await this.closePositionActionService.sign({
-            bot,
-            prepareTx: prepareTx.prepareTxs[stepIndex],
-            liquidityPool,
-        })
-        // We update the database with the signed tx.
+        const executeResult = await this.closePositionActionService.execute(
+            {
+                bot,
+                state: _state,
+                txCheck: isRetry ?? false,
+                liquidityPool,
+                signedTx,
+            }
+        )
+        // We update the database with the execute result.
         await this.connection.model<JobSchema>(
             JobSchema.name
         ).updateOne(
@@ -110,7 +114,7 @@ export class ClosePositionTaskSignService {
             {
                 $set: {
                     "tasks.$[task].steps.$[step].type": StepType.Execute,
-                    "tasks.$[task].steps.$[step].signResult": this.superJson.stringify(signedTx),
+                    "tasks.$[task].steps.$[step].executeResult": this.superJson.stringify(executeResult),
                 },
             },
             {

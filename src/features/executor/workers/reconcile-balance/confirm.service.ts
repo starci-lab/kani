@@ -32,7 +32,7 @@ import {
 } from "@modules/mixin"
 import {
     SendHeartbeatService,
-} from "../common"
+} from "../shared"
 
 /**
  * Service for the CONFIRM phase of reconcile-balance jobs.

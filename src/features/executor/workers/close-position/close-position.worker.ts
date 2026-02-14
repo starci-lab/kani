@@ -58,7 +58,7 @@ import {
     ClearService,
     OnCompletedService,
     OnFailedService,
-} from "../common"
+} from "../shared"
 import {
     PrepareService,
 } from "./prepare.service"

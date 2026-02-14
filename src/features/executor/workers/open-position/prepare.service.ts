@@ -33,7 +33,7 @@ import {
 } from "@modules/exceptions"
 import {
     SerializerService 
-} from "../common"
+} from "../shared"
 import {
     ToStringObject 
 } from "@modules/common"

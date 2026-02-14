@@ -7,6 +7,7 @@ import {
     JobSchema,
     JobStatus,
     JobType,
+    TaskType,
 } from "@modules/databases"
 import {
     CannotClosePositionEnqueueJobReason,
@@ -19,10 +20,7 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    v4 
-} from "uuid"
-import {
-    ClosePositionPayload 
+    ActionPayload 
 } from "../../types"
 import SuperJSON from "superjson"
 import {
@@ -61,8 +59,8 @@ export class ClosePositionEnqueueService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        @InjectQueue(bullData[BullQueueName.ClosePosition].name)
-        private readonly closePositionQueue: Queue<string>,
+        @InjectQueue(bullData[BullQueueName.Action].name)
+        private readonly actionQueue: Queue<string>,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         private readonly dayjsService: DayjsService,
@@ -82,7 +80,6 @@ export class ClosePositionEnqueueService {
             bot,
             jobId,
             isRetry,
-            state,
         }: EnqueueClosePositionParams,
     ): Promise<Job<string>> {
         if (!isRetry) {
@@ -130,7 +127,7 @@ export class ClosePositionEnqueueService {
             )
         } 
         // check if the job is already in the queue
-        const jobInQueue = await this.closePositionQueue.getJob(bot.id)
+        const jobInQueue = await this.actionQueue.getJob(bot.id)
         if (jobInQueue) {
             this.winstonService.log(
                 WinstonLog.ClosePositionJobAlreadyEnqueued,
@@ -149,15 +146,30 @@ export class ClosePositionEnqueueService {
                 }
             )
         }   
-        const payload: ClosePositionPayload = {
+        const payload: ActionPayload = {
             jobId,
             botId: bot.id,
-            liquidityPoolId: liquidityPool.id,
             isRetry,
-            state,
+            tasks: [
+                {
+                    /** Close position task */
+                    type: TaskType.ClosePosition,
+                    payload: {
+                        /** Payload for close position task */
+                        liquidityPoolId: liquidityPool.id,
+                    },
+                },
+                {
+                    /** Reconcile balance task */
+                    type: TaskType.ReconcileBalance,
+                    payload: {
+                        /** Payload for reconcile balance task */
+                    },
+                }
+            ],
         }
-        return await this.closePositionQueue.add(
-            v4(),
+        return await this.actionQueue.add(
+            jobId,
             this.superjson.stringify(payload),
             {
                 jobId: bot.id,

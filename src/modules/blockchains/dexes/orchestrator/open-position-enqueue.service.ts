@@ -9,6 +9,7 @@ import {
     JobType,
     PrimaryMemoryStorageService,
     QuoteRatioStatus,
+    TaskType,
 } from "@modules/databases"
 import {
     BalanceSnapshotsNotFoundException,
@@ -45,7 +46,7 @@ import {
     Queue 
 } from "bullmq"
 import {
-    OpenPositionPayload 
+    ActionPayload 
 } from "../../types"
 import {
     EnqueueOpenPositionParams
@@ -67,7 +68,7 @@ export class OpenPositionEnqueueService {
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         private readonly dayjsService: DayjsService,
-        @InjectQueue(bullData[BullQueueName.OpenPosition].name)
+        @InjectQueue(bullData[BullQueueName.Action].name)
         private readonly openPositionQueue: Queue<string>,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
@@ -111,7 +112,6 @@ export class OpenPositionEnqueueService {
             bot,
             jobId,
             isRetry,
-            state,
         }: EnqueueOpenPositionParams,
     ): Promise<Job<string>> {
         /**
@@ -234,12 +234,28 @@ export class OpenPositionEnqueueService {
                 }
             )
         }
-        const payload: OpenPositionPayload = {
+        const payload: ActionPayload = {
             jobId,
             botId: bot.id,
-            liquidityPoolId: liquidityPool.id,
             isRetry,
-            state,
+            tasks: [
+                {
+                    /** Open position task */
+                    type: TaskType.OpenPosition,    
+                    payload: {
+                        /** Payload for open position task */
+                        liquidityPoolId: liquidityPool.id,
+                    },
+                },
+                {
+                    /** Reconcile balance task */
+                    type: TaskType.ReconcileBalance,
+                    payload: {
+                        /** Payload for reconcile balance task */
+                        noSwap: false,
+                    },
+                },
+            ],
         }
         return await this.openPositionQueue.add(
             jobId,

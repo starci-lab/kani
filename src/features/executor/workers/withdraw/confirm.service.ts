@@ -28,7 +28,7 @@ import {
 } from "@modules/mixin"
 import {
     SendHeartbeatService,
-} from "../common"
+} from "../shared"
 import {
     envConfig,
 } from "@modules/env"

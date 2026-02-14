@@ -138,7 +138,7 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
                 .suiFetchService
                 .fetchObject<CetusSuiObjectPoolFields>(
                     {
-                        objectId: liquidityPool.id,
+                        objectId: liquidityPool.poolAddress,
                         kind: SuiObjectKind.Pool,
                         dexId: DexId.Cetus,
                         liquidityPool,

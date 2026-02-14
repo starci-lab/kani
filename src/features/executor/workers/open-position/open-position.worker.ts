@@ -75,7 +75,7 @@ import {
     ClearService,
     OnCompletedService,
     OnFailedService
-} from "../common"
+} from "../shared"
 import type {
     ProcessParams,
 } from "./types"

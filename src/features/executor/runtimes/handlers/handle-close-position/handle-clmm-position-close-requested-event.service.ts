@@ -57,7 +57,6 @@ export class HandleClmmPositionCloseRequestedEventService {
             {
                 bot,
                 liquidityPool,
-                eventPayload,
             }
         )
     }

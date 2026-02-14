@@ -29,8 +29,6 @@ export interface EnqueueOpenPositionParams {
     jobId: string
     /** Whether this is a retry. */
     isRetry?: boolean
-    /** Optional liquidity pool state. */
-    state?: LiquidityPoolState
 }
 
 /**
@@ -45,6 +43,4 @@ export interface EnqueueClosePositionParams {
     jobId: string
     /** Whether this is a retry. */
     isRetry?: boolean
-    /** Optional liquidity pool state. */
-    state?: LiquidityPoolState
 }

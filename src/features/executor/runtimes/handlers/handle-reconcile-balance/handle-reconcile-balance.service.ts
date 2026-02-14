@@ -48,8 +48,8 @@ export class HandleReconcileBalanceService {
         private readonly winstonService: WinstonService,
         private readonly dayjsService: DayjsService,
         private readonly waitService: WaitService,
-        @InjectQueue(bullData[BullQueueName.ReconcileBalance].name)
-        private readonly reconcileBalanceQueue: Queue<string>,
+        @InjectQueue(bullData[BullQueueName.Action].name)
+        private readonly actionQueue: Queue<string>,
     ) {}
 
     /**
@@ -114,7 +114,7 @@ export class HandleReconcileBalanceService {
         const noActiveJobFound = await this.waitService.wait(
             {
                 action: async () => {
-                    const job = await this.reconcileBalanceQueue.getJob(bot.id)
+                    const job = await this.actionQueue.getJob(bot.id)
                     return !job
                 }
             }

@@ -67,8 +67,8 @@ export class HandleOpenPositionService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly waitService: WaitService,
-        @InjectQueue(bullData[BullQueueName.OpenPosition].name)
-        private readonly openPositionQueue: Queue<string>,
+        @InjectQueue(bullData[BullQueueName.Action].name)
+        private readonly actionQueue: Queue<string>,
         private readonly evalSnapshotService: EvalSnapshotService,
     ) {}
 
@@ -85,7 +85,6 @@ export class HandleOpenPositionService {
         {
             bot,
             liquidityPool,
-            eventPayload,
         }: HandleOpenPositionParams
     ) {
         // Skip if bot is not running
@@ -248,7 +247,7 @@ export class HandleOpenPositionService {
         const noActiveJobFound = await this.waitService.wait(
             {
                 action: async () => {
-                    const job = await this.openPositionQueue.getJob(bot.id)
+                    const job = await this.actionQueue.getJob(bot.id)
                     return !job
                 }
             }
@@ -287,7 +286,7 @@ export class HandleOpenPositionService {
                     jobId,
                     isRetry: false,
                     liquidityPool,
-                    state: eventPayload,
+
                 }
             )
             this.winstonService.log(

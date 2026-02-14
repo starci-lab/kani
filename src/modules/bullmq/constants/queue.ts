@@ -23,28 +23,10 @@ export function formatWithBraces(prefix: string): string {
  * Each queue has its own prefix and name derived from executor id.
  */
 export const bullData: Record<BullQueueName, BullQueueData> = {
-    [BullQueueName.OpenPosition]: {
+    [BullQueueName.Action]: {
         prefix: formatWithBraces(
-            `open_position:${envConfig().executor.id}`,
+            `action-${envConfig().executor.id}`
         ),
-        name: `open_position-${envConfig().executor.id}`,
-    },
-    [BullQueueName.ClosePosition]: {
-        prefix: formatWithBraces(
-            `close_position-${envConfig().executor.id}`
-        ),
-        name: `close_position-${envConfig().executor.id}`,
-    },
-    [BullQueueName.ReconcileBalance]: {
-        prefix: formatWithBraces(
-            `reconcile_balance-${envConfig().executor.id}`
-        ),
-        name: `reconcile_balance-${envConfig().executor.id}`,
-    },
-    [BullQueueName.Withdraw]: {
-        prefix: formatWithBraces(
-            `withdraw-${envConfig().executor.id}`
-        ),
-        name: `withdraw-${envConfig().executor.id}`,
+        name: `action-${envConfig().executor.id}`,
     },
 }

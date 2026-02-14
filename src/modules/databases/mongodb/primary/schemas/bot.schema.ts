@@ -408,6 +408,21 @@ export class BotSchema extends AbstractSchema {
         ref: PrimaryMongoDbCollectionRef.Executor,
     })
         executor: ExecutorSchema | Types.ObjectId
+
+    /**
+     * Whether the bot is preparing to open a position.
+     */
+    @Field(
+        () => Boolean,
+        {
+            description: "Whether the bot is preparing to open a position",
+            nullable: true,
+        }
+    )
+    @Prop({
+        type: Boolean, required: false
+    })
+        preparingToOpenPosition?: boolean
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

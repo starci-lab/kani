@@ -6,6 +6,7 @@ import {
     BotSchema,
     JobSchema,
     JobStatus,
+    JobVariant,
 } from "@modules/databases"
 import {
     BullQueueName
@@ -22,7 +23,7 @@ import {
 } from "mongoose"
 import {
     LockAuthorityService,
-} from "../../bussiness"
+} from "../../../bussiness"
 import type {
     OnCompletedParams,
 } from "./types"
@@ -49,22 +50,6 @@ export class OnCompletedService {
     ) {}
 
     /**
-     * Get the Winston log event for a given queue name.
-     * 
-     * @param queueName - The name of the queue.
-     * @returns The Winston log event.
-     */ 
-    private queueToLog(queueName: BullQueueName): WinstonLog {
-        const queueToLog: Record<BullQueueName, WinstonLog> = {
-            [BullQueueName.OpenPosition]: WinstonLog.OpenPositionJobCompleted,
-            [BullQueueName.ClosePosition]: WinstonLog.ClosePositionJobCompleted,
-            [BullQueueName.ReconcileBalance]: WinstonLog.ReconcileBalanceJobCompleted,
-            [BullQueueName.Withdraw]: WinstonLog.WithdrawJobCompleted,
-        }
-        return queueToLog[queueName]
-    }
-
-    /**
      * Completion handler for worker job processing.
      *
      * Marks the job COMPLETED, clears the bot's `activeJob`, logs completion,
@@ -72,18 +57,22 @@ export class OnCompletedService {
      *
      * @param param - Params including job, bot, bullmqJob, queueName, and optional liquidityPool
      */
-    async process({
-        job,
-        bot,
-        bullmqJob,
-        queueName,
-        liquidityPool,
-    }: OnCompletedParams): Promise<void> {
-        if (queueName === BullQueueName.Withdraw) {
-            await this.cacheService.del({
-                key: CacheKey.Withdraw,
-                args: [bot.id],
-            })
+    async process(
+        {
+            job,
+            bot,
+            bullmqJob,
+            liquidityPool,
+            payload,
+        }: OnCompletedParams
+    ): Promise<void> {
+        if (payload.variant === JobVariant.Withdraw) {
+            await this.cacheService.del(
+                {
+                    key: CacheKey.Withdraw,
+                    args: [bot.id],
+                }
+            )
         }
         const session = await this.connection.startSession()
         await session.withTransaction(
@@ -131,7 +120,7 @@ export class OnCompletedService {
             },
         )
         
-        const logEvent = this.queueToLog(queueName)
+        const logEvent = WinstonLog.ActionJobCompleted
         const logPayload: Record<string, unknown> = {
             botId: bot.id,
             jobId: job.id,
