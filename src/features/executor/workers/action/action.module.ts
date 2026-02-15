@@ -48,7 +48,10 @@ import {
 import {
     ActionRequeueService 
 } from "./requeue.service"
-
+import {
+    JobStepTransitionService 
+} from "./update"
+    
 @Module(
     {
         providers: [
@@ -81,6 +84,7 @@ import {
             OpenPositionTaskConfirmService,
             OpenPositionTaskDispatchService,
             ActionRequeueService,
+            JobStepTransitionService,
         ],
     }
 )

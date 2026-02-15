@@ -39,7 +39,7 @@ import {
 } from "@modules/env"
 import {
     JobStepTransitionService 
-} from "../../../update"
+} from "../../update"
     
 /**
  * Service for the WITHDRAW TASK EXECUTE step.

@@ -25,10 +25,10 @@ export interface ClosePositionActionTaskPayload {
 
 /** Payload for reconcile balance action tasks. */
 export interface ReconcileBalanceActionTaskPayload {
-  /** Whether to skip the swap. */
-  noSwap?: boolean
-  /** Whether to skip the balance reconciliation. */
-  noReconcile?: boolean
+  /** Whether to perform the swap. */
+  swap?: boolean
+  /** Whether to perform the balance reconciliation. */
+  reconcile?: boolean
 }
 
 /** Token input for withdraw operations. */

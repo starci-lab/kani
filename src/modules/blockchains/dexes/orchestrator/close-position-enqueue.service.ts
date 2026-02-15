@@ -177,6 +177,8 @@ export class ClosePositionEnqueueService {
                         type: TaskType.ReconcileBalance,
                         payload: {
                         /** Payload for reconcile balance task */
+                            swap: true,
+                            reconcile: false,
                         },
                     }
                 ],

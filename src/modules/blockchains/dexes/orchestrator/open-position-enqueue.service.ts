@@ -196,14 +196,6 @@ export class OpenPositionEnqueueService {
                             liquidityPoolId: liquidityPool.id,
                         },
                     },
-                    {
-                        /** Reconcile balance task */
-                        type: TaskType.ReconcileBalance,
-                        payload: {
-                            /** Payload for reconcile balance task */
-                            noSwap: false,
-                        },
-                    },
                 ],
             }
             await this.actionQueue.add(

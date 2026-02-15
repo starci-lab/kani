@@ -42,7 +42,7 @@ import {
 } from "@modules/common"
 import {
     JobStepTransitionService 
-} from "../../../update"
+} from "../../update"
     
 /**
  * Service for the Close Position Task EXECUTE step.

@@ -152,8 +152,9 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                     /** Reconcile balance task */
                         type: TaskType.ReconcileBalance,
                         payload: {
-                        /** Payload for reconcile balance task */
-                            noSwap: false,
+                            /** Payload for reconcile balance task */
+                            swap: true,
+                            reconcile: true,
                         },
                     },
                 ],

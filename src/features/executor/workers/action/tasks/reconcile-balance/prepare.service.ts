@@ -26,6 +26,7 @@ import {
     SwapDirection,
     BalanceActionService,
     BalanceReconcileBalanceTokenInput,
+    BalanceSnapshotService
 } from "@modules/blockchains"
 import {
     JobFailureException,
@@ -55,6 +56,7 @@ export class ReconcileBalanceTaskPrepareService {
         private readonly asyncService: AsyncService,
         private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly winstonService: WinstonService,
+        private readonly balanceSnapshotService: BalanceSnapshotService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         @InjectSuperJson()
@@ -82,17 +84,33 @@ export class ReconcileBalanceTaskPrepareService {
         await this.sendHeartbeatService.process({
             bot, job, bullmqJob
         })
-        const fetched = await this.balanceFetcherService.fetchBalances({
-            bot
-        })
-        const targetBalanceAmount = new BN(fetched.targetBalanceAmount)
-        const quoteBalanceAmount = new BN(fetched.quoteBalanceAmount)
-        const gasBalanceAmount = new BN(fetched.gasBalanceAmount)
+        let targetBalanceAmount = new BN(bot.balanceSnapshots?.targetBalanceAmount ?? 0)
+        let quoteBalanceAmount = new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? 0)
+        let gasBalanceAmount = new BN(bot.balanceSnapshots?.gasBalanceAmount ?? 0)
+        // if reconcile is not disabled, fetch the balances and update the balance snapshots
+        console.log(payload)
+        if (payload.reconcile) {
+            const fetched = await this.balanceFetcherService.fetchBalances({
+                bot
+            })
+            targetBalanceAmount = new BN(fetched.targetBalanceAmount)
+            quoteBalanceAmount = new BN(fetched.quoteBalanceAmount)
+            gasBalanceAmount = new BN(fetched.gasBalanceAmount)
+            // update the balance snapshotsz
+            await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
+                {
+                    bot,
+                    targetBalanceAmount,
+                    quoteBalanceAmount,
+                    gasBalanceAmount,
+                }
+            )
+        }
         // 2) Eligibility gate
         const { eligible } = await this.evalSnapshotService.eval({
             bot
         })
-        if (!eligible || payload.noSwap) {
+        if (!eligible || !payload.swap) {
             // Push a "no-op" task (0 steps) so dispatcher can mark it done immediately
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {

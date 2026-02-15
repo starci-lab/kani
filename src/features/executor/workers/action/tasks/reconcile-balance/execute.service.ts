@@ -37,7 +37,7 @@ import {
 } from "@modules/common"
 import {
     JobStepTransitionService 
-} from "../../../update"
+} from "../../update"
     
 /**
  * Service for the Reconcile Balance Task EXECUTE step.
@@ -75,7 +75,7 @@ export class ReconcileBalanceTaskExecuteService {
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
         // step snapshot (may be undefined)
         const step = job.tasks[taskIndex].steps?.[stepIndex]
-        
+
         // signed tx
         const signedTx = step?.signedTx
         if (!signedTx) {
