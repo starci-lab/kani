@@ -243,6 +243,16 @@ import {
     JobSkippedBotAlreadyHasActivePositionMessage,
     JobSkippedBotNotHasActivePositionMessage,
     JobSkippedBotNotRunningMessage,
+    JobSkippedLiquidityPoolContextLoadFailedMessage,
+    JobSkippedBotBalanceSnapshotWithinCooldownMessage,
+    JobSkippedCannotSettlePositionMessage,
+    JobSkippedBotNoBalanceSnapshotMessage,
+    JobSkippedBotAlreadyHasActiveJobMessage,
+    JobSkippedBotNotEligibleMessage,
+    JobSkippedLiquidityPoolInfoNotReadyMessage,
+    JobSkippedTokenPriceNotReadyMessage,
+    JobSkippedNoPayloadMessage,
+    JobSkippedBotRunningMessage,
 } from "./types"
 
 /** Map of Winston log names to level, Loki flag, and message type. */
@@ -2302,5 +2312,85 @@ export const configMap = {
         loki: true,
         messageType: {
         } as JobSkippedBotNotRunningMessage,
+    },
+    // Job Skipped Liquidity Pool Context Load Failed
+    [WinstonLog.JobSkippedLiquidityPoolContextLoadFailed]: {
+        name: WinstonLog.JobSkippedLiquidityPoolContextLoadFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as JobSkippedLiquidityPoolContextLoadFailedMessage,
+    },
+    // Job Skipped Balance Snapshot Within Cooldown
+    [WinstonLog.JobSkippedBotBalanceSnapshotWithinCooldown]: {
+        name: WinstonLog.JobSkippedBotBalanceSnapshotWithinCooldown,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedBotBalanceSnapshotWithinCooldownMessage,
+    },
+    // Job Skipped Cannot Settle Position
+    [WinstonLog.JobSkippedCannotSettlePosition]: {
+        name: WinstonLog.JobSkippedCannotSettlePosition,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedCannotSettlePositionMessage,
+    },
+    // Job Skipped No Balance Snapshot
+    [WinstonLog.JobSkippedBotNoBalanceSnapshot]: {
+        name: WinstonLog.JobSkippedBotNoBalanceSnapshot,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedBotNoBalanceSnapshotMessage,
+    },
+    // Job Skipped Bot Already Has Active Job
+    [WinstonLog.JobSkippedBotAlreadyHasActiveJob]: {
+        name: WinstonLog.JobSkippedBotAlreadyHasActiveJob,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedBotAlreadyHasActiveJobMessage,
+    },
+    // Job Skipped Bot Not Eligible
+    [WinstonLog.JobSkippedBotNotEligible]: {
+        name: WinstonLog.JobSkippedBotNotEligible,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedBotNotEligibleMessage,
+    },
+    // Job Skipped Liquidity Pool Info Not Ready
+    [WinstonLog.JobSkippedLiquidityPoolInfoNotReady]: {
+        name: WinstonLog.JobSkippedLiquidityPoolInfoNotReady,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedLiquidityPoolInfoNotReadyMessage,
+    },
+    // Job Skipped Token Price Not Ready
+    [WinstonLog.JobSkippedTokenPriceNotReady]: {
+        name: WinstonLog.JobSkippedTokenPriceNotReady,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedTokenPriceNotReadyMessage,
+    },
+    // Job Skipped No Payload
+    [WinstonLog.JobSkippedNoPayload]: {
+        name: WinstonLog.JobSkippedNoPayload,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedNoPayloadMessage,
+    },
+    // Job Skipped Bot Running
+    [WinstonLog.JobSkippedBotRunning]: {
+        name: WinstonLog.JobSkippedBotRunning,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedBotRunningMessage,
     },
 }

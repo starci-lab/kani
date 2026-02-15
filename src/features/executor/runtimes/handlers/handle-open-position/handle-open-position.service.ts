@@ -91,9 +91,10 @@ export class HandleOpenPositionService {
         // Skip if bot is not running
         if (!bot.running) {
             this.winstonService.log(
-                WinstonLog.OpenPositionSkippedBotNotRunning,
+                WinstonLog.JobSkippedBotNotRunning,
                 {
                     botId: bot.id,
+                    type: JobType.OpenPosition,
                     liquidityPoolId: liquidityPool.displayId,
                 }
             )
@@ -102,10 +103,24 @@ export class HandleOpenPositionService {
         // Skip if bot already has an active position
         if (bot.activePosition) {
             this.winstonService.log(
-                WinstonLog.OpenPositionSkippedBotAlreadyHasActivePosition,
+                WinstonLog.JobSkippedBotAlreadyHasActivePosition,
                 {
                     botId: bot.id,
                     liquidityPoolId: liquidityPool.displayId,
+                    type: JobType.OpenPosition,
+                }
+            )
+            return
+        }
+        // Skip if bot already has an active job
+        if (bot.activeJob) {
+            this.winstonService.log(
+                WinstonLog.JobSkippedBotAlreadyHasActiveJob,
+                {
+                    botId: bot.id,
+                    jobId: bot.activeJob.job.toString(),
+                    liquidityPoolId: liquidityPool.displayId,
+                    type: JobType.OpenPosition,
                 }
             )
             return
@@ -113,10 +128,11 @@ export class HandleOpenPositionService {
         // Skip if no balance snapshot (need reconciled balance before opening)
         if (!bot.balanceSnapshots) {
             this.winstonService.log(
-                WinstonLog.OpenPositionSkippedNoBalanceSnapshot,
+                WinstonLog.JobSkippedBotNoBalanceSnapshot,
                 {
                     botId: bot.id,
                     liquidityPoolId: liquidityPool.displayId,
+                    type: JobType.OpenPosition,
                 }
             )
             return
@@ -128,20 +144,10 @@ export class HandleOpenPositionService {
         )
         if (diffMs > envConfig().executor.runtime.operation.reconcileBalance.cooldown.rescan) {
             this.winstonService.log(
-                WinstonLog.OpenPositionSkippedBalanceSnapshotTooOld,
+                WinstonLog.JobSkippedBotBalanceSnapshotWithinCooldown,
                 {
                     botId: bot.id,
-                    liquidityPoolId: liquidityPool.displayId,
-                }
-            )
-            return
-        }
-        // Skip if bot already has an active job
-        if (bot.activeJob) {
-            this.winstonService.log(
-                WinstonLog.OpenPositionSkippedBotAlreadyHasActiveJob,
-                {
-                    botId: bot.id,
+                    type: JobType.OpenPosition,
                     liquidityPoolId: liquidityPool.displayId,
                 }
             )
@@ -155,10 +161,11 @@ export class HandleOpenPositionService {
         )
         if (!eligible) {
             this.winstonService.log(
-                WinstonLog.OpenPositionSkippedNotEligible,
+                WinstonLog.JobSkippedBotNotEligible,
                 {
                     botId: bot.id,
                     liquidityPoolId: liquidityPool.displayId,
+                    type: JobType.OpenPosition,
                 }
             )
             return
@@ -170,10 +177,11 @@ export class HandleOpenPositionService {
                     async () => {
                         if (!await this.dynamicLiquidityPoolInfoDiagnosticService.ready(liquidityPool.id)) {
                             this.winstonService.log(
-                                WinstonLog.OpenPositionSkippedDynamicLiquidityPoolInfoNotReady,
+                                WinstonLog.JobSkippedLiquidityPoolInfoNotReady,
                                 {
                                     botId: bot.id,
                                     liquidityPoolId: liquidityPool.displayId,
+                                    type: JobType.OpenPosition,
                                 }
                             )
                             throw new DynamicLiquidityPoolInfoDiagnosticNotReadyException(
@@ -198,11 +206,12 @@ export class HandleOpenPositionService {
                                 })
                             }
                             this.winstonService.log(
-                                WinstonLog.OpenPositionSkippedPriceNotReady,
+                                WinstonLog.JobSkippedTokenPriceNotReady,
                                 {
                                     botId: bot.id,
                                     liquidityPoolId: liquidityPool.displayId,
                                     tokenId: token.displayId,
+                                    type: JobType.OpenPosition,
                                 }
                             )
                             throw new PriceDiagnosticNotReadyException({
@@ -225,11 +234,12 @@ export class HandleOpenPositionService {
                                 })
                             }
                             this.winstonService.log(
-                                WinstonLog.OpenPositionSkippedPriceNotReady,
+                                WinstonLog.JobSkippedTokenPriceNotReady,
                                 {
                                     botId: bot.id,
                                     liquidityPoolId: liquidityPool.displayId,
                                     tokenId: token.displayId,
+                                    type: JobType.OpenPosition,
                                 }
                             )
                             throw new PriceDiagnosticNotReadyException(
@@ -244,20 +254,15 @@ export class HandleOpenPositionService {
         } catch {
             return
         }
-        // Wait to ensure no job for this bot is already in the queue
-        const noActiveJobFound = await this.waitService.wait(
-            {
-                action: async () => {
-                    const job = await this.actionQueue.getJob(bot.id)
-                    return !job
-                }
-            }
-        )
-        if (!noActiveJobFound) {
+        // Ensure no job for this bot is already in the queue
+        const bullmqJob = await this.actionQueue.getJob(bot.id)
+        if (bullmqJob) {
             this.winstonService.log(
-                WinstonLog.OpenPositionSkippedActiveJobFoundInQueue,
+                WinstonLog.JobSkippedFoundInQueue,
                 {
                     botId: bot.id,
+                    bullmqJobId: bullmqJob.id ?? "",
+                    type: JobType.OpenPosition,
                     liquidityPoolId: liquidityPool.displayId,
                 }
             )
@@ -281,18 +286,18 @@ export class HandleOpenPositionService {
         const jobId = new Types.ObjectId().toString()
         // Enqueue the open-position job
         try {
-            await this.openPositionEnqueueService.enqueue(
+            const bullmqJob = await this.openPositionEnqueueService.enqueue(
                 {
                     bot,
                     jobId,
                     isRetry: false,
                     liquidityPool,
-
                 }
             )
             this.winstonService.log(
                 WinstonLog.JobEnqueued,
                 {
+                    bullmqJobId: bullmqJob.id ?? "",
                     botId: bot.id,
                     jobId,
                     type: JobType.OpenPosition,

@@ -50,10 +50,12 @@ import {
     Connection
 } from "mongoose"
 import {
+    BalanceSnapshotsNotFoundException,
     LiquidityPoolNotFoundException
 } from "@modules/exceptions"
 import {
-    JobContextService
+    JobContextService,
+    LiquidityPoolContextService
 } from "./context"
 
 /**
@@ -74,6 +76,7 @@ export class ActionRequeueService implements OnApplicationBootstrap {
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly jobContextService: JobContextService,
+        private readonly liquidityPoolContextService: LiquidityPoolContextService,
         private readonly openPositionEnqueueService: OpenPositionEnqueueService,
         private readonly closePositionEnqueueService: ClosePositionEnqueueService,
         private readonly withdrawEnqueueService: WithdrawEnqueueService,
@@ -107,8 +110,10 @@ export class ActionRequeueService implements OnApplicationBootstrap {
                 "activeJob.queuedAt": {
                     $exists: true,
                     $lt: this.dayjsService.now()
-                        .subtract(ttl,
-                            "millisecond")
+                        .subtract(
+                            ttl,
+                            "millisecond"
+                        )
                         .toDate(),
                 },
             })
@@ -128,8 +133,10 @@ export class ActionRequeueService implements OnApplicationBootstrap {
                         )
                         return
                     }
-                    const [context,
-                        error] = await this.asyncService.resolveTuple(
+                    const [
+                        context,
+                        error
+                    ] = await this.asyncService.resolveTuple(
                         this.jobContextService.load({
                             jobId: bot.activeJob?.job?.toString() ?? "",
                             botId: bot.id,
@@ -191,7 +198,27 @@ export class ActionRequeueService implements OnApplicationBootstrap {
                                     }
                                 )
                                 return
-                            }   
+                            } 
+                            const liquidityPool = this
+                                .primaryMemoryStorageService
+                                .liquidityPoolCollection
+                                .findOne({
+                                    id: {
+                                        $eq: context.bot.activeJob?.liquidityPool.toString() ?? "",
+                                    }
+                                })
+                            if (!liquidityPool) {
+                                throw new LiquidityPoolNotFoundException({
+                                    id: context.bot.activeJob?.liquidityPool.toString() ?? "",
+                                })
+                            }
+                            // ensure balance snapshot found
+                            if (!context.bot.balanceSnapshots) {
+                                throw new BalanceSnapshotsNotFoundException({
+                                    botId: bot.id,
+                                })
+                            }
+                            // ensure 
                             bullmqJob = await this.openPositionEnqueueService.enqueue(
                                 {
                                     bot,
@@ -214,6 +241,19 @@ export class ActionRequeueService implements OnApplicationBootstrap {
                                     }
                                 )
                                 return
+                            }
+                            const liquidityPool = this
+                                .primaryMemoryStorageService
+                                .liquidityPoolCollection
+                                .findOne({
+                                    id: {
+                                        $eq: context.bot.activeJob?.liquidityPool.toString() ?? "",
+                                    }
+                                })
+                            if (!liquidityPool) {
+                                throw new LiquidityPoolNotFoundException({
+                                    id: context.bot.activeJob?.liquidityPool.toString() ?? "",
+                                })
                             }
                             bullmqJob = await this.closePositionEnqueueService.enqueue(
                                 {

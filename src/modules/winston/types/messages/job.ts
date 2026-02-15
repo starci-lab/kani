@@ -1,12 +1,18 @@
+import type {
+    SettleStrategyResult 
+} from "@modules/blockchains"
 import {
     JobType, 
     LiquidityPoolId,
+    TokenId,
 } from "@modules/databases"
 
 /**
  * Job enqueued message.
  */
 export interface JobEnqueuedMessage {
+    /** BullMQ job ID. */
+    bullmqJobId?: string
     /** Bot ID. */
     botId: string
     /** Job ID. */
@@ -24,7 +30,7 @@ export interface JobEnqueueFailedMessage {
     /** Bot ID. */
     botId: string
     /** Job ID. */
-    jobId: string
+    jobId?: string
     /** Job type. */
     type: JobType
     /** Liquidity pool ID. */
@@ -123,11 +129,13 @@ export interface JobSkippedFoundInQueueMessage {
     /** Bot ID. */
     botId: string
     /** Job ID. */
-    jobId: string
+    jobId?: string
     /** Job type. */
     type: JobType
     /** BullMQ job ID. */
     bullmqJobId: string
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
 }
 
 /**
@@ -137,7 +145,7 @@ export interface JobSkippedAuthorityNotAcquiredMessage {
     /** Bot ID. */
     botId: string
     /** Job ID. */
-    jobId: string
+    jobId?: string
     /** Job type. */
     type: JobType
 }
@@ -205,9 +213,11 @@ export interface JobSkippedBotAlreadyHasActivePositionMessage {
     /** Bot ID. */
     botId: string
     /** Job ID. */
-    jobId: string
+    jobId?: string
     /** Job type. */
     type: JobType
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
 }
 
 /**
@@ -217,9 +227,11 @@ export interface JobSkippedBotNotHasActivePositionMessage {
     /** Bot ID. */
     botId: string
     /** Job ID. */
-    jobId: string
+    jobId?: string
     /** Job type. */
     type: JobType
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
 }
 
 /**
@@ -229,7 +241,149 @@ export interface JobSkippedBotNotRunningMessage {
     /** Bot ID. */
     botId: string
     /** Job ID. */
+    jobId?: string
+    /** Job type. */
+    type: JobType
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
+}
+
+/**
+ * Job skipped liquidity pool context load failed message.
+ */
+export interface JobSkippedLiquidityPoolContextLoadFailedMessage {
+    /** Job ID. */
+    jobId?: string
+    /** Bot ID. */
+    botId: string
+    /** Error. */
+    error: string
+    /** Job type. */
+    type: JobType
+}
+
+/**
+ * Job skipped balance snapshot within cooldown message.
+ */
+export interface JobSkippedBotBalanceSnapshotWithinCooldownMessage {
+    /** Job ID. */
+    jobId?: string
+    /** Bot ID. */
+    botId: string
+    /** Job type. */
+    type: JobType
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
+}
+
+/**
+ * Job skipped cannot settle position message.
+ */
+export interface JobSkippedCannotSettlePositionMessage {
+    /** Job ID. */
+    jobId?: string
+    /** Bot ID. */
+    botId: string
+    /** Job type. */
+    type: JobType
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
+    /** Strategy results. */
+    strategyResults?: Array<SettleStrategyResult>
+}
+
+/**
+ * Job skipped no balance snapshot message.
+ */
+export interface JobSkippedBotNoBalanceSnapshotMessage {
+    /** Job ID. */
+    jobId?: string
+    /** Bot ID. */
+    botId: string
+    /** Job type. */
+    type: JobType
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
+}
+
+/**
+ * Job skipped bot already has active job message.
+ */
+export interface JobSkippedBotAlreadyHasActiveJobMessage {
+    /** Job ID. */
     jobId: string
+    /** Bot ID. */
+    botId: string
+    /** Job type. */
+    type: JobType
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
+}
+
+/**
+ * Job skipped bot not eligible message.
+ */
+export interface JobSkippedBotNotEligibleMessage {
+    /** Job ID. */
+    jobId?: string
+    /** Bot ID. */
+    botId: string
+    /** Job type. */
+    type: JobType
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
+}
+
+/**
+ * Job skipped liquidity pool info not ready message.
+ */
+export interface JobSkippedLiquidityPoolInfoNotReadyMessage {
+    /** Job ID. */
+    jobId?: string
+    /** Bot ID. */
+    botId: string
+    /** Job type. */
+    type: JobType
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
+}
+
+/**
+ * Job skipped token price not ready message.
+ */
+export interface JobSkippedTokenPriceNotReadyMessage {
+    /** Job ID. */
+    jobId?: string
+    /** Bot ID. */
+    botId: string
+    /** Job type. */
+    type: JobType
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
+    /** Token ID. */
+    tokenId: TokenId
+}
+
+/**
+ * Job skipped no payload message.
+ */
+export interface JobSkippedNoPayloadMessage {
+    /** Job ID. */
+    jobId?: string
+    /** Bot ID. */
+    botId: string
+    /** Job type. */
+    type: JobType
+}
+
+/**
+ * Job skipped bot running message.
+ */
+export interface JobSkippedBotRunningMessage {
+    /** Job ID. */
+    jobId?: string
+    /** Bot ID. */
+    botId: string
     /** Job type. */
     type: JobType
 }

@@ -18,7 +18,7 @@ import {
 } from "@modules/blockchains"
 import {
     JobType,
-    PositionAssociateService,
+    ActivePositionAssociateService,
 } from "@modules/databases"
 import {
     envConfig 
@@ -50,7 +50,7 @@ export class HandleClosePositionService {
         private readonly winstonService: WinstonService,
         private readonly settlementService: SettlementService,
         private readonly liquidityPoolStateService: LiquidityPoolStateService,
-        private readonly positionAssociateService: PositionAssociateService,
+        private readonly activePositionAssociateService: ActivePositionAssociateService,
         @InjectQueue(bullData[BullQueueName.Action].name)
         private readonly actionQueue: Queue<string>,
     ) {}
@@ -69,7 +69,7 @@ export class HandleClosePositionService {
             liquidityPool,
         }: HandleClosePositionParams
     ) {
-        const jobId = new Types.ObjectId().toString()
+       
         // Skip if bot has no active position to close
         if (!bot.activePosition) {
             this.winstonService.log(
@@ -77,17 +77,19 @@ export class HandleClosePositionService {
                 {
                     botId: bot.id,
                     type: JobType.ClosePosition,
-                    jobId,
+                    liquidityPoolId: liquidityPool.displayId,
                 }
             )
             return
         }
         // Associate the active position
-        await this.positionAssociateService.associateActivePosition(
-            {
-                bot
-            }
-        )
+        await this
+            .activePositionAssociateService
+            .attachAssociatedPositionsToBotActivePositions(
+                {
+                    bots: [bot],
+                }
+            )
         // Settle the position to determine if we should close
         const state = await this.liquidityPoolStateService.getState(liquidityPool)
         const { 
@@ -105,25 +107,25 @@ export class HandleClosePositionService {
             && envConfig().executor.runtime.operation.closePosition.settle.enabled
         ) {
             this.winstonService.log(
-                WinstonLog.CannotSettlePosition,
+                WinstonLog.JobSkippedCannotSettlePosition,
                 {
                     botId: bot.id,
-                    jobId,
                     liquidityPoolId: liquidityPool.displayId,
+                    type: JobType.ClosePosition,
                     strategyResults,
                 }
             )
             return
         }
         // Ensure no job for this bot is already in the queue
-        const bullmqJob = await this.actionQueue.getJob(jobId)
+        const bullmqJob = await this.actionQueue.getJob(bot.id)
         if (bullmqJob) {
             this.winstonService.log(
                 WinstonLog.JobSkippedFoundInQueue,
                 {
                     botId: bot.id,
-                    jobId,
                     type: JobType.ClosePosition,
+                    liquidityPoolId: liquidityPool.displayId,
                     bullmqJobId: bullmqJob.id ?? "",
                 }
             )
@@ -148,6 +150,7 @@ export class HandleClosePositionService {
         }
         // Enqueue the close-position job
         try {
+            const jobId = new Types.ObjectId().toString()
             await this.closePositionEnqueueService.enqueue(
                 {
                     bot,
@@ -171,7 +174,6 @@ export class HandleClosePositionService {
                 {
                     botId: bot.id,
                     liquidityPoolId: liquidityPool.displayId,
-                    jobId,
                     type: JobType.ClosePosition,
                     error: error.message,
                 }

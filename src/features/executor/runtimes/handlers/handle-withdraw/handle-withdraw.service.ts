@@ -73,28 +73,64 @@ export class HandleWithdrawService {
             }
         )
         if (!payload) {
+            this.winstonService.log(
+                WinstonLog.JobSkippedNoPayload,
+                {
+                    botId: bot.id,
+                    type: JobType.Withdraw,
+                }
+            )
             return
         }
         
         // Skip if bot is running
-        if (bot.running) return
+        if (bot.running) {
+            this.winstonService.log(
+                WinstonLog.JobSkippedBotNotRunning,
+                {
+                    botId: bot.id,
+                    type: JobType.Withdraw,
+                }
+            )
+            return
+        }
         // Skip if bot has an active position
-        if (bot.activePosition) return
+        if (bot.activePosition) {
+            this.winstonService.log(
+                WinstonLog.JobSkippedBotAlreadyHasActivePosition,
+                {
+                    botId: bot.id,
+                    type: JobType.Withdraw,
+                }
+            )
+            return
+        }
         // Skip if bot already has an active job
         if (bot.activeJob) {
+            this.winstonService.log(
+                WinstonLog.JobSkippedBotAlreadyHasActiveJob,
+                {
+                    botId: bot.id,
+                    jobId: bot.activeJob.job.toString(),
+                    type: JobType.Withdraw,
+                }
+            )
             return
         }
 
         // Wait to ensure no job for this bot is already in the queue
-        const noActiveJobFound = await this.waitService.wait(
-            {
-                action: async () => {
-                    const job = await this.actionQueue.getJob(bot.id)
-                    return !job
+        const bullmqJob = await this.actionQueue.getJob(bot.id)
+        if (bullmqJob) {
+            this.winstonService.log(
+                WinstonLog.JobSkippedFoundInQueue,
+                {
+                    botId: bot.id,
+                    bullmqJobId: bullmqJob.id ?? "",
+                    type: JobType.Withdraw,
                 }
-            }
-        )
-        if (!noActiveJobFound) return
+            )
+            return
+        }
         // Acquire lock authority; return if not acquired
         const acquired = await this.lockAuthorityService.acquire(
             {
@@ -109,7 +145,6 @@ export class HandleWithdrawService {
                 {
                     bot,
                     jobId,
-                    payload,
                 }
             )
             this.winstonService.log(

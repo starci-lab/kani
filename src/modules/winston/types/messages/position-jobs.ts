@@ -13,7 +13,7 @@ export interface OpenPositionJobEnqueuedMessage {
 export interface OpenPositionJobEnqueueFailedMessage {
     botId: string
     liquidityPoolId: LiquidityPoolId
-    jobId: string
+    jobId?: string
     error: string
 }
 

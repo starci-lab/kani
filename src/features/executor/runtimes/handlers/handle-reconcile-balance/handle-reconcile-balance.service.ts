@@ -20,7 +20,6 @@ import {
 } from "mongoose"
 import {
     DayjsService,
-    WaitService
 } from "@modules/mixin"
 import {
     envConfig 
@@ -48,7 +47,6 @@ export class HandleReconcileBalanceService {
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly winstonService: WinstonService,
         private readonly dayjsService: DayjsService,
-        private readonly waitService: WaitService,
         @InjectQueue(bullData[BullQueueName.Action].name)
         private readonly actionQueue: Queue<string>,
     ) {}
@@ -68,9 +66,10 @@ export class HandleReconcileBalanceService {
         // Skip if bot is not running
         if (!bot.running) {
             this.winstonService.log(
-                WinstonLog.ReconcileBalanceSkippedBotNotRunning,
+                WinstonLog.JobSkippedBotNotRunning,
                 {
                     botId: bot.id,
+                    type: JobType.ReconcileBalance,
                 }
             )
             return
@@ -78,9 +77,10 @@ export class HandleReconcileBalanceService {
         // Skip if bot has an active position
         if (bot.activePosition) {
             this.winstonService.log(
-                WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActivePosition,
+                WinstonLog.JobSkippedBotAlreadyHasActivePosition,
                 {
                     botId: bot.id,
+                    type: JobType.ReconcileBalance,
                 }
             )
             return
@@ -93,38 +93,24 @@ export class HandleReconcileBalanceService {
             )
             if (diffMs <= envConfig().executor.runtime.operation.reconcileBalance.cooldown.rescan) {
                 this.winstonService.log(
-                    WinstonLog.ReconcileBalanceSkippedBalanceSnapshotWithinCooldown,
+                    WinstonLog.JobSkippedBotBalanceSnapshotWithinCooldown,
                     {
                         botId: bot.id,
+                        type: JobType.ReconcileBalance,
                     }
                 )
                 return
             }
         }
-        // Skip if bot already has an active job
-        if (bot.activeJob) {
-            this.winstonService.log(
-                WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActiveJob,
-                {
-                    botId: bot.id,
-                }
-            )
-            return
-        }
         // Wait to ensure no job for this bot is already in the queue
-        const noActiveJobFound = await this.waitService.wait(
-            {
-                action: async () => {
-                    const job = await this.actionQueue.getJob(bot.id)
-                    return !job
-                }
-            }
-        )
-        if (!noActiveJobFound) {
+        const bullmqJob = await this.actionQueue.getJob(bot.id)
+        if (bullmqJob) {
             this.winstonService.log(
-                WinstonLog.ReconcileBalanceSkippedActiveJobFoundInQueue,
+                WinstonLog.JobSkippedFoundInQueue,
                 {
                     botId: bot.id,
+                    type: JobType.ReconcileBalance,
+                    bullmqJobId: bullmqJob.id ?? "",
                 }
             )
             return
@@ -137,16 +123,18 @@ export class HandleReconcileBalanceService {
         )
         if (!acquired) {
             this.winstonService.log(
-                WinstonLog.ReconcileBalanceLockAuthorityNotAcquired,
+                WinstonLog.JobSkippedAuthorityNotAcquired,
                 {
                     botId: bot.id,
+                    type: JobType.ReconcileBalance,
                 }
             )
             return
         }
-        const jobId = new Types.ObjectId().toString()
         // Enqueue the reconcile-balance job
         try {
+            // Create job ID
+            const jobId = new Types.ObjectId().toString()
             await this.reconcileBalanceEnqueueService.enqueue(
                 {
                     bot,
@@ -167,7 +155,6 @@ export class HandleReconcileBalanceService {
                 {
                     botId: bot.id,
                     error: error.message,
-                    jobId,
                     type: JobType.ReconcileBalance,
                 }
             )
