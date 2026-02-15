@@ -103,6 +103,10 @@ export class ClosePositionTaskExecuteService {
                 signedTx: this.superJson.parse<SignedTx>(signedTx),
                 stimulate: envConfig().executor.runtime.operation.closePosition.stimulate,
             })
+            throw new RpcClientFatalException({
+                message: "RPC client fatal exception",
+                originalError: new Error("RPC client fatal exception"),
+            })
 
             // persist execute result + move next step
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
@@ -160,58 +164,87 @@ export class ClosePositionTaskExecuteService {
                     [
                         {
                             $set: {
-                                "tasks.$[task].steps.$[step].type": StepType.Sign,
-
-                                // push failure record with ZERO-BASED index
-                                "tasks.$[task].steps.$[step].txFailures": {
-                                    $concatArrays: [
-                                        {
-                                            $ifNull: [
-                                                "tasks.$[task].steps.$[step].txFailures",
-                                                [],
-                                            ],
-                                        },
-                                        [
-                                            {
-                                                index: {
-                                                    $ifNull: [
-                                                        "tasks.$[task].steps.$[step].txFailureIndex",
-                                                        0,
+                                tasks: {
+                                    $map: {
+                                        input: "$tasks",
+                                        as: "t",
+                                        in: {
+                                            $cond: [
+                                                {
+                                                    $and: [
+                                                        {
+                                                            $eq: ["$$t.index",
+                                                                taskIndex] 
+                                                        },
+                                                        {
+                                                            $eq: ["$$t.type",
+                                                                TaskType.ClosePosition] 
+                                                        },
                                                     ],
                                                 },
-                                                errorMessage: error.message,
-                                                stackTrace: error.stack,
-                                            },
-                                        ],
-                                    ],
-                                },
-
-                                // increment counter AFTER logging
-                                "tasks.$[task].steps.$[step].txFailureIndex": {
-                                    $add: [
-                                        {
-                                            $ifNull: [
-                                                "tasks.$[task].steps.$[step].txFailureIndex",
-                                                0,
+                                                {
+                                                    $mergeObjects: [
+                                                        "$$t",
+                                                        {
+                                                            steps: {
+                                                                $map: {
+                                                                    input: "$$t.steps",
+                                                                    as: "s",
+                                                                    in: {
+                                                                        $cond: [
+                                                                            {
+                                                                                $eq: ["$$s.index",
+                                                                                    stepIndex] 
+                                                                            },
+                                                                            {
+                                                                                $mergeObjects: [
+                                                                                    "$$s",
+                                                                                    {
+                                                                                        type: StepType.Sign,
+                                                                                        txFailures: {
+                                                                                            $concatArrays: [
+                                                                                                {
+                                                                                                    $ifNull: ["$$s.txFailures",
+                                                                                                        []] 
+                                                                                                },
+                                                                                                [
+                                                                                                    {
+                                                                                                        index: {
+                                                                                                            $ifNull: ["$$s.txFailureIndex",
+                                                                                                                0] 
+                                                                                                        },
+                                                                                                        errorMessage: error.message,
+                                                                                                        stackTrace: error.stack,
+                                                                                                    },
+                                                                                                ],
+                                                                                            ],
+                                                                                        },
+                                                                                        txFailureIndex: {
+                                                                                            $add: [{
+                                                                                                $ifNull: ["$$s.txFailureIndex",
+                                                                                                    0] 
+                                                                                            },
+                                                                                            1],
+                                                                                        },
+                                                                                    },
+                                                                                ],
+                                                                            },
+                                                                            "$$s",
+                                                                        ],
+                                                                    },
+                                                                },
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                                "$$t",
                                             ],
                                         },
-                                        1,
-                                    ],
+                                    },
                                 },
                             },
                         },
                     ],
-                    {
-                        arrayFilters: [
-                            {
-                                "task.index": taskIndex,
-                                "task.type": TaskType.ClosePosition,
-                            },
-                            {
-                                "step.index": stepIndex,
-                            },
-                        ],
-                    },
                 )
 
                 // keep same behavior as your OpenPosition version
