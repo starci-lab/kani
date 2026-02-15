@@ -23,7 +23,6 @@ import {
     getTransactionDecoder, 
     getCompiledTransactionMessageDecoder, 
     decompileTransactionMessageFetchingLookupTables, 
-    Instruction,
 } from "@solana/kit"
 import {
     SolanaAggregatorSelectorService,
@@ -119,14 +118,10 @@ export class SolanaReconcileBalanceActionService {
             // extract swap instructions from transaction message
             const swapInstructions = swapTransactionMessage.instructions
             // create transaction message
-            const { transactionMessage } = await this.solanaTxService.createTxMessage({
-                bot,
-                instructions: swapInstructions as Array<Instruction>,
-            })
             prepareTxs.push(
                 {
                     chainId: ChainId.Solana,
-                    serializedTx: this.superJson.stringify(transactionMessage),
+                    serializedTx: this.superJson.stringify(swapInstructions),
                 }
             )
         }

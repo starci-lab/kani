@@ -124,17 +124,11 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
             liquidityPool,
         })
 
-        const { transactionMessage } = await this.solanaTxService.createTxMessage(
-            {
-                bot,
-                instructions,
-            }
-        )
         return {
             prepareTxs: [
                 {
                     chainId: ChainId.Solana,
-                    serializedTx: this.superJson.stringify(transactionMessage),
+                    serializedTx: this.superJson.stringify(instructions),
                 }
             ],
         }

@@ -203,20 +203,16 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             nftMintAddress: mintKeyPair.publicKey.toBase58(),
         }
 
-        const { transactionMessage } = await this.solanaTxService.createTxMessage(
-            {
-                bot,
-                instructions: openPositionInstructions,
-            }
-        )
         return {
-            prepareTxs: [{
-                chainId: ChainId.Solana,
-                serializedTx: this.superJson.stringify(transactionMessage),
-                privateKeys: [
-                    bs58.encode(mintKeyPair.secretKey),
-                ],
-            }],
+            prepareTxs: [
+                {
+                    chainId: ChainId.Solana,
+                    serializedTx: this.superJson.stringify(openPositionInstructions),
+                    privateKeys: [
+                        bs58.encode(mintKeyPair.secretKey),
+                    ],
+                }
+            ],
             feeAmountA,
             feeAmountB,
             tickLower,

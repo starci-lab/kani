@@ -73,8 +73,6 @@ export class PrivySignService {
             encryptedPrivySignerPrivateKey,
             lifetimeConstraint,
         } = params
-        console.log("tx")
-        console.log(transaction)
         const transactionBytes = new Uint8Array(
             getTransactionEncoder().encode(transaction)
         )

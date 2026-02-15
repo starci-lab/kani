@@ -117,16 +117,9 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                 liquidityPool,
             }
         )
-        // stage: transaction building (build unsigned transaction with latest blockhash)
-        const { transactionMessage } = await this.solanaTxService.createTxMessage(
-            {
-                bot,
-                instructions,
-            }
-        )
         const prepareTx: PrepareTx = {
             chainId: ChainId.Solana,
-            serializedTx: this.superJson.stringify(transactionMessage),
+            serializedTx: this.superJson.stringify(instructions),
         }
         return {
             prepareTxs: [prepareTx],

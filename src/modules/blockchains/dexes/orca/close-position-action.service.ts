@@ -123,18 +123,17 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
             state: _state,
             liquidityPool,
         })
-
-        const { transactionMessage } = await this.solanaTxService.createTxMessage(
+        console.dir(
+            instructions,
             {
-                bot,
-                instructions,
+                depth: null 
             }
         )
         return {
             prepareTxs: [
                 {
                     chainId: ChainId.Solana,
-                    serializedTx: this.superJson.stringify(transactionMessage),
+                    serializedTx: this.superJson.stringify(instructions),
                 }
             ],
         }

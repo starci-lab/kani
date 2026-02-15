@@ -230,16 +230,10 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             ataAddress: ataAddress.toString(),
             nftMintAddress: mintKeyPair.publicKey.toBase58(),
         }
-        const { transactionMessage } = await this.solanaTxService.createTxMessage(
-            {
-                bot,
-                instructions: openPositionInstructions,
-            }
-        )
         return {
             prepareTxs: [{
                 chainId: ChainId.Solana,
-                serializedTx: this.superJson.stringify(transactionMessage),
+                serializedTx: this.superJson.stringify(openPositionInstructions),
                 privateKeys: [
                     bs58.encode(mintKeyPair.secretKey),
                 ],

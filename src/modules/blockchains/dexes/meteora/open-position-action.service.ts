@@ -173,19 +173,12 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
             amountB,
             liquidityPool,
         })
-        // stage: transaction building (build unsigned transaction with latest blockhash)
-        const { transactionMessage } = await this.solanaTxService.createTxMessage(
-            {
-                bot,
-                instructions: openPositionInstructions,
-            }
-        )
         // return result
         return {
             prepareTxs: [
                 {
                     chainId: ChainId.Solana,
-                    serializedTx: this.superJson.stringify(transactionMessage),
+                    serializedTx: this.superJson.stringify(openPositionInstructions),
                     privateKeys: [
                         bs58.encode(positionKeyPair.secretKey),
                     ],

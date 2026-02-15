@@ -2,34 +2,32 @@ import {
     Injectable
 } from "@nestjs/common"
 import {
-    pipe,
-    setTransactionMessageFeePayerSigner,
-    createTransactionMessage,
-    appendTransactionMessageInstructions,
-    address,
-    createNoopSigner,
-    partiallySignTransaction,
     createKeyPairFromPrivateKeyBytes,
     signTransaction,
     getSignatureFromTransaction,
+    Instruction,
+    createTransactionMessage,
+    pipe,
+    setTransactionMessageFeePayerSigner,
+    createNoopSigner,
+    address,
+    addSignersToTransactionMessage,
+    createSignerFromKeyPair,
+    TransactionSigner,
+    appendTransactionMessageInstructions,
     compileTransaction,
-    setTransactionMessageLifetimeUsingBlockhash,
 } from "@solana/kit"
 import {
     RpcExecutorService
 } from "../rpc"
 import {
     SignedTx,
-    SolanaTx
 } from "../../types"
 import {
     RpcAccessType
 } from "@modules/filesystem"
 import type {
-    CreateSolanaTxMessageParams,
     SignSolanaTxParams,
-    CompileSolanaTxMessageParams,
-    CompileSolanaTxMessageResult,
 } from "./types"
 import {
     InjectSuperJson 
@@ -77,73 +75,6 @@ export class SolanaTxService {
     ) {}
 
     /**
-     * Fetches latest blockhash and builds an unsigned transaction with the given instructions.
-     *
-     * @param params.bot - Bot (fee payer: bot.accountAddress)
-     * @param params.instructions - Instructions to append to the transaction
-     * @returns transaction message
-     */
-    async createTxMessage(
-        {
-            bot,
-            instructions,
-        }: CreateSolanaTxMessageParams
-    )
-    {
-        // create transaction message
-        const transactionMessage = pipe(
-            createTransactionMessage({
-                version: 0,
-            }),
-            (tx) =>
-                setTransactionMessageFeePayerSigner(
-                    createNoopSigner(address(bot.accountAddress)),
-                    tx,
-                ),
-            (tx) =>
-                appendTransactionMessageInstructions(
-                    instructions,
-                    tx,
-                )
-        )
-        // return transaction message
-        return {
-            transactionMessage,
-        }
-    }
-
-    /**
-     * Compiles a Solana transaction message.
-     *
-     * @param params.transactionMessage - Transaction message
-     * @returns compiled transaction
-     */
-    async compileTxMessage(
-        {
-            transactionMessage,
-        }: CompileSolanaTxMessageParams
-    ): Promise<CompileSolanaTxMessageResult> {
-        const { value: latestBlockhash } = await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Http,
-            callback: async ({ rpc }) => {
-                return await rpc.getLatestBlockhash().send()
-            },
-        })
-        const transactionMessageWithLifetime = setTransactionMessageLifetimeUsingBlockhash(
-            latestBlockhash,
-            transactionMessage,
-        )
-        const transaction = compileTransaction(transactionMessageWithLifetime)
-        return {
-            transaction: transaction as SolanaTx,
-            lifetimeConstraint: {
-                blockhash: latestBlockhash.blockhash,
-                lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-            },
-        }
-    }
-
-    /**
      * Signs a Solana transaction message.
      *
      * @param params.bot - Bot (fee payer: bot.accountAddress)
@@ -164,23 +95,37 @@ export class SolanaTxService {
             },
         })
         // retrieve solana tx from serialized tx
-        let solanaTx = this.superJson.parse<SolanaTx>(prepareTx.serializedTx)
-        
+        const instructions = this.superJson.parse<Array<Instruction>>(prepareTx.serializedTx)
+        let cryptoSigners: Array<TransactionSigner> = []
         if (prepareTx.privateKeys?.length) {
             // create keypairs from private keys
-            const keypairs = await Promise.all(
+            cryptoSigners = await Promise.all(
                 prepareTx.privateKeys.map((privateKey) => 
                     createKeyPairFromPrivateKeyBytes(
                         bs58.decode(privateKey)
-                    )
+                    ).then((keyPair) => createSignerFromKeyPair(keyPair))
                 )
             )
-            // partially sign solana tx
-            solanaTx = await partiallySignTransaction(
-                keypairs,
-                solanaTx,
-            )
         }
+        const solanaTx = pipe(
+            createTransactionMessage({
+                version: 0,
+            }),
+            (tx) => setTransactionMessageFeePayerSigner(
+                createNoopSigner(address(bot.accountAddress)),
+                tx,
+            ),
+            (tx) => addSignersToTransactionMessage([
+                createNoopSigner(address(bot.accountAddress)),
+                ...cryptoSigners,
+            ],
+            tx,
+            ),
+            (tx) => appendTransactionMessageInstructions(instructions,
+                tx),
+            (tx) => compileTransaction(tx),
+        )
+        
         // sign transaction bytes
         let signedTx: SignedTx
         // sign with V1 signer
