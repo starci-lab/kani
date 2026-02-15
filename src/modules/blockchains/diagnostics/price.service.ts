@@ -5,7 +5,7 @@ import {
 } from "@nestjs/common"
 import {
     PriceService
-} from "@modules/blockchains"
+} from "../math"
 import type {
     TokenSchema
 } from "@modules/databases"

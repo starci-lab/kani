@@ -75,11 +75,13 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
         // Create the close position transaction block
         const {
             txb: closePositionTxb,
-        } = await this.closePositionTxbService.createClosePositionTxb({
-            bot,
-            state: _state,
-            liquidityPool,
-        })
+        } = await this.closePositionTxbService.createClosePositionTxb(
+            {
+                bot,
+                state: _state,
+                liquidityPool,
+            }
+        )
  
         return {
             prepareTxs: [

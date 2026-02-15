@@ -12,7 +12,7 @@ import {
 } from "mongoose"
 import {
     LockAuthorityService,
-} from "../../bussiness"
+} from "@modules/lock"
 import type {
     CancelParams
 } from "./types"

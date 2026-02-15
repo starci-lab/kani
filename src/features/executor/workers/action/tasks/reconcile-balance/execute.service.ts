@@ -26,12 +26,14 @@ import {
 } from "../../send-heartbeat.service"
 import {
     JobFailureException,
-    JobFailureStrategy,
     SignedTxNotFoundException 
 } from "@modules/exceptions"
 import {
     envConfig 
 } from "@modules/env"
+import {
+    JobFailureStrategy,
+} from "@modules/common"
 
 /**
  * Service for the Reconcile Balance Task EXECUTE step.

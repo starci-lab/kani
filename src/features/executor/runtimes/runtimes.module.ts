@@ -21,9 +21,6 @@ import {
     HandleWithdrawService,
     HandleNotSyncedService,
 } from "./handlers"
-import {
-    LockAuthorityService 
-} from "../bussiness"
 
 /**
  * Runtimes Module
@@ -51,7 +48,6 @@ export class RuntimesModule extends ConfigurableModuleClass {
                 ...dynamicModule.providers || [], 
                 RuntimesFactoryService,
                 RuntimeContextService,
-                LockAuthorityService,
                 HandleClmmPositionOpenRequestedEventService,
                 HandleDlmmPositionOpenRequestedEventService,
                 HandleReconcileBalanceService,

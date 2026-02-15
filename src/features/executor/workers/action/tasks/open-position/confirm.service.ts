@@ -244,23 +244,22 @@ export class OpenPositionTaskConfirmService {
                     }
                 })
 
-            // simply logging
-            this.winstonService.log(
-                WinstonLog.ActionJobTaskConfirmed,
-                {
-                    botId: bot.id,
-                    jobId: job.id,
-                    type: JobType.OpenPosition,
-                    metadata: job.metadata,
-                    taskIndex,
-                    taskType: TaskType.OpenPosition,
-                }
-            )
+            
         } catch (error) {
-            if (error instanceof ActionJobStimulateMongoSessionException) {
-                return
+            if (!(error instanceof ActionJobStimulateMongoSessionException)) {
+                throw error
             }
-            throw error
         }
+        this.winstonService.log(
+            WinstonLog.ActionJobTaskConfirmed,
+            {
+                botId: bot.id,
+                jobId: job.id,
+                type: JobType.OpenPosition,
+                metadata: job.metadata,
+                taskIndex,
+                taskType: TaskType.OpenPosition,
+            }
+        )
     }
 }

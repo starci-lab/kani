@@ -25,7 +25,6 @@ import {
 import {
     BotWithdrawalAddressNotSetException,
     JobFailureException,
-    JobFailureStrategy,
     PrepareWithdrawTransactionResultNotFoundException,
     SomeTokensNotFoundException,
     TokenBalanceNotEnoughForWithdrawException,
@@ -44,6 +43,9 @@ import {
 import {
     CacheKey, CacheService 
 } from "@modules/cache"
+import {
+    JobFailureStrategy,
+} from "@modules/common"
 
 /**
  * Service for the Withdraw Task PREPARE step.

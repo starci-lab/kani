@@ -27,6 +27,12 @@ import {
     WinstonLog,
     WinstonService 
 } from "@modules/winston"
+import {
+    JobFailureException, 
+} from "@modules/exceptions"
+import {
+    JobFailureStrategy 
+} from "@modules/common"
 /**
  * Service for the Close Position Task PREPARE step.
  */
@@ -58,16 +64,18 @@ export class ClosePositionTaskPrepareService {
             liquidityPool,
         }: ClosePositionTaskPrepareParams
     ) {
+        try {
         // Send heartbeat
-        await this.sendHeartbeatService.process(
-            {
-                bot,
-                job,
-                bullmqJob,
-            }
-        )
-        // We prepare the close position transaction.
-        const prepareResult =
+            await this.sendHeartbeatService.process(
+                {
+                    bot,
+                    job,
+                    bullmqJob,
+                    fatal: true,
+                }
+            )
+            // We prepare the close position transaction.
+            const prepareResult =
             await this.closePositionActionService.prepare(
                 {
                     bot,
@@ -75,45 +83,55 @@ export class ClosePositionTaskPrepareService {
                     state,
                 }
             )
-        // We update the database with the prepare result.
-        await this.connection.model<JobSchema>(
-            JobSchema.name
-        ).updateOne(
-            {
-                _id: job.id,
-            },
-            {
-                $push: {
-                    tasks: {
-                        index: taskIndex,
-                        type: TaskType.ClosePosition,
-                        prepareResult: this.superJson.stringify(prepareResult),
-                        activeStep: 0,
-                        stepCount: prepareResult.prepareTxs.length,
-                        steps: prepareResult.prepareTxs.map(
-                            (prepareTx, index) => (
-                                {
-                                    index,
-                                    type: StepType.Sign,
-                                    prepareTx: this.superJson.stringify(prepareTx),
-                                }
-                            )
-                        ),
+            // We update the database with the prepare result.
+            await this.connection.model<JobSchema>(
+                JobSchema.name
+            ).updateOne(
+                {
+                    _id: job.id,
+                },
+                {
+                    $push: {
+                        tasks: {
+                            index: taskIndex,
+                            type: TaskType.ClosePosition,
+                            prepareResult: this.superJson.stringify(prepareResult),
+                            activeStep: 0,
+                            stepCount: prepareResult.prepareTxs.length,
+                            steps: prepareResult.prepareTxs.map(
+                                (prepareTx, index) => (
+                                    {
+                                        index,
+                                        type: StepType.Sign,
+                                        prepareTx: this.superJson.stringify(prepareTx),
+                                    }
+                                )
+                            ),
+                        },
                     },
                 },
-            },
-        )
-        this.winstonService.log(
-            WinstonLog.ActiveJobTaskPrepared,
-            {
-                botId: bot.id,
-                jobId: job.id,
-                type: JobType.ClosePosition,
-                txCount: prepareResult.prepareTxs.length,
-                metadata: job.metadata,
-                taskIndex,
-                taskType: TaskType.ClosePosition,
-            }
-        )
+            )
+            this.winstonService.log(
+                WinstonLog.ActiveJobTaskPrepared,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.ClosePosition,
+                    txCount: prepareResult.prepareTxs.length,
+                    metadata: job.metadata,
+                    taskIndex,
+                    taskType: TaskType.ClosePosition,
+                }
+            )
+        } catch (error) 
+        {
+            // log the error
+            throw new JobFailureException(
+                {
+                    originalError: error,
+                    strategy: JobFailureStrategy.Fatal,
+                }
+            )
+        }
     }
 }

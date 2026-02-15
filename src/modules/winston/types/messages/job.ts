@@ -2,6 +2,9 @@ import type {
     SettleStrategyResult 
 } from "@modules/blockchains"
 import {
+    JobFailureStrategy 
+} from "@modules/common"
+import {
     JobType, 
     LiquidityPoolId,
     QuoteRatioStatus,
@@ -73,6 +76,8 @@ export interface ActionJobFailedMessage {
     error: string
     /** Attempts made. */
     attemptsMade?: number
+    /** Job failure strategy. */
+    strategy: JobFailureStrategy
 }
 
 /**
@@ -170,6 +175,8 @@ export interface JobRequeuedMessage {
     metadata?: unknown
     /** BullMQ job ID. */
     bullmqJobId?: string
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
 }
 
 /**
@@ -184,6 +191,8 @@ export interface JobRequeueFailedMessage {
     type: JobType
     /** Error. */
     error: string
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
 }
 
 /**

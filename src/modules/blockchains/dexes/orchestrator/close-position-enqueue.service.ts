@@ -188,25 +188,50 @@ export class ClosePositionEnqueueService {
                     jobId: bot.id,
                 }
             )
-            this.winstonService.log(
-                WinstonLog.JobEnqueued,
-                {
-                    jobId: jobId ?? "",
-                    botId: bot.id,
-                    type: JobType.ClosePosition,
-                    liquidityPoolId: liquidityPool.displayId,
-                }
-            )
+            if (!isRetry) {
+                this.winstonService.log(
+                    WinstonLog.JobEnqueued,
+                    {
+                        jobId: jobId ?? "",
+                        botId: bot.id,
+                        type: JobType.ClosePosition,
+                        liquidityPoolId: liquidityPool.displayId,
+                    }
+                )
+            } else {
+                this.winstonService.log(
+                    WinstonLog.JobRequeued,
+                    {
+                        jobId: jobId ?? "",
+                        botId: bot.id,
+                        type: JobType.ClosePosition,
+                        liquidityPoolId: liquidityPool.displayId,
+                    }
+                )
+            }
         } catch (error) {
-            this.winstonService.log(
-                WinstonLog.JobEnqueueFailed,
-                {
-                    botId: bot.id,
-                    type: JobType.ClosePosition,
-                    liquidityPoolId: liquidityPool.displayId,
-                    error: error.message,
-                }
-            )
+            if (!isRetry) {
+                this.winstonService.log(
+                    WinstonLog.JobEnqueueFailed,
+                    {
+                        botId: bot.id,
+                        type: JobType.ClosePosition,
+                        liquidityPoolId: liquidityPool.displayId,
+                        error: error.message,
+                    }
+                )
+            } else {
+                this.winstonService.log(
+                    WinstonLog.JobRequeueFailed,
+                    {
+                        jobId: oldJob?.id ?? "",
+                        botId: bot.id,
+                        type: JobType.ClosePosition,
+                        liquidityPoolId: liquidityPool.displayId,
+                        error: error.message,
+                    }
+                )
+            }
             this.lockAuthorityService.release(
                 {
                     botId: bot.id,

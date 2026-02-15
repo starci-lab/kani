@@ -165,23 +165,46 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                     jobId: bot.id,
                 }
             )
-            this.winstonService.log(
-                WinstonLog.JobEnqueued,
-                {
-                    botId: bot.id,
-                    jobId: jobId ?? "",
-                    type: JobType.ReconcileBalance,
-                }
-            )
+            if (!isRetry) {
+                this.winstonService.log(
+                    WinstonLog.JobEnqueued,
+                    {
+                        botId: bot.id,
+                        jobId: jobId ?? "",
+                        type: JobType.ReconcileBalance,
+                    }
+                )
+            } else {
+                this.winstonService.log(
+                    WinstonLog.JobRequeued,
+                    {
+                        botId: bot.id,
+                        jobId: jobId ?? "",
+                        type: JobType.ReconcileBalance,
+                    }
+                )
+            }
         } catch (error) {
-            this.winstonService.log(
-                WinstonLog.JobEnqueueFailed,
-                {
-                    botId: bot.id,
-                    type: JobType.ReconcileBalance,
-                    error: error.message,
-                }
-            )
+            if (!isRetry) {
+                this.winstonService.log(
+                    WinstonLog.JobEnqueueFailed,
+                    {
+                        botId: bot.id,
+                        type: JobType.ReconcileBalance,
+                        error: error.message,
+                    }
+                )
+            } else {
+                this.winstonService.log(
+                    WinstonLog.JobRequeueFailed,
+                    {
+                        botId: bot.id,
+                        jobId: oldJob?.id ?? "",
+                        type: JobType.ReconcileBalance,
+                        error: error.message,
+                    }
+                )
+            }
             this.lockAuthorityService.release(
                 {
                     botId: bot.id,

@@ -6,7 +6,6 @@ import {
 } from "bullmq"
 import {
     JobFailureException,
-    JobFailureStrategy,
 } from "@modules/exceptions"
 import {
     WinstonLog,
@@ -26,13 +25,16 @@ import {
 } from "mongoose"
 import {
     LockAuthorityService,
-} from "../../bussiness"
+} from "@modules/lock"
 import {
     DayjsService,
 } from "@modules/mixin"
 import {
     envConfig,
 } from "@modules/env"
+import {
+    JobFailureStrategy,
+} from "@modules/common"
 
 /**
  * Service for handling job failure.
@@ -97,7 +99,7 @@ export class OnFailedService {
             // update the database to mark the job as failed
             const session = await this.connection.startSession()
             await session.withTransaction(
-                async () => {
+                async (clientSession) => {
                     await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                         {
                             _id: job.id,
@@ -118,7 +120,7 @@ export class OnFailedService {
                             },
                         },
                         {
-                            session,
+                            session: clientSession,
                         }
                     )
                     await this.connection.model<BotSchema>(BotSchema.name).updateOne(
@@ -131,7 +133,7 @@ export class OnFailedService {
                             },
                         },
                         {
-                            session,
+                            session: clientSession,
                         }
                     )
                 }
@@ -146,6 +148,7 @@ export class OnFailedService {
                     error: _error.getOriginalError().message,
                     metadata: job.metadata,
                     attemptsMade: bullmqJob.attemptsMade,
+                    strategy: JobFailureStrategy.Fatal,
                 }
             )
             // release the lock
@@ -155,7 +158,6 @@ export class OnFailedService {
             // throw the error
             throw new UnrecoverableError(_error.getOriginalError().message)
         }
-        case JobFailureStrategy.Retry:
         case JobFailureStrategy.Requeue: {
             this.winstonService.log(
                 WinstonLog.ActionJobFailed,
@@ -166,12 +168,15 @@ export class OnFailedService {
                     error: _error.getOriginalError().message,
                     metadata: job.metadata,
                     attemptsMade: bullmqJob.attemptsMade,
+                    strategy: JobFailureStrategy.Requeue,
                 },
             )
-            break
+            throw new UnrecoverableError(_error.getOriginalError().message)
+        }
+        default: {
+            throw error
         }
         }
-        throw error
     }
 }
 

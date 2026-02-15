@@ -4,11 +4,13 @@ import {
 import {
     HeartbeatTimeoutException,
     JobFailureException,
-    JobFailureStrategy,
 } from "@modules/exceptions"
 import {
-    LockAuthorityService,
-} from "../../bussiness"
+    LockAuthorityService
+} from "@modules/lock"
+import {
+    JobFailureStrategy,
+} from "@modules/common"
 import type {
     SendHeartbeatParams,
 } from "./types"

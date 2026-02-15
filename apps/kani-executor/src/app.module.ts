@@ -34,7 +34,8 @@ import {
     TxBuilderModule, 
     BalanceModule, 
     SnapshotsModule,
-    AggregatorsModule
+    AggregatorsModule,
+    DiagnosticsModule
 } from "@modules/blockchains"
 import {
     CacheModule 
@@ -103,9 +104,6 @@ import {
 import {
     GraphModule 
 } from "@modules/graph"
-import {
-    DiagnosticsModule 
-} from "@modules/diagnostics"
 
 @Module({
     imports: [
@@ -159,6 +157,9 @@ import {
                 manualLoad: envConfig().databases.mongoose.primary.manualLoad,
             },
             associate: true,
+        }),
+        DiagnosticsModule.register({
+            isGlobal: true,
         }),
         PrivyModule.register({
             isGlobal: true,

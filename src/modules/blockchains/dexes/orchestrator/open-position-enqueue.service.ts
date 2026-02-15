@@ -65,7 +65,7 @@ import {
 import {
     DynamicLiquidityPoolInfoDiagnosticService,
     PriceDiagnosticService
-} from "@modules/diagnostics"
+} from "@modules/blockchains/diagnostics"
 
 /**
  * Service responsible for enqueuing open position jobs.
@@ -215,30 +215,63 @@ export class OpenPositionEnqueueService {
                     jobId: bot.id,
                 }
             )
-            this.winstonService.log(
-                WinstonLog.JobEnqueued,
-                {
-                    jobId: jobId ?? "",
-                    botId: bot.id,
-                    type: JobType.OpenPosition,
-                    liquidityPoolId: liquidityPool.displayId,
-                }
-            )
+            if (!isRetry) {
+                this.winstonService.log(
+                    WinstonLog.JobEnqueued,
+                    {
+                        jobId: jobId ?? "",
+                        botId: bot.id,
+                        type: JobType.OpenPosition,
+                        liquidityPoolId: liquidityPool.displayId,
+                    }
+                )
+            } else {
+                this.winstonService.log(
+                    WinstonLog.JobRequeued,
+                    {
+                        jobId: jobId ?? "",
+                        botId: bot.id,
+                        type: JobType.OpenPosition,
+                        liquidityPoolId: liquidityPool.displayId,
+                    }
+                )
+            }
         } catch (error) {
-            this.winstonService.log(WinstonLog.JobEnqueueFailed,
-                {
-                    botId: bot.id,
-                    type: JobType.OpenPosition,
-                    liquidityPoolId: liquidityPool.displayId,
-                    error: error.message,
-                })
+            if (!isRetry) {
+                this.winstonService.log(
+                    WinstonLog.JobEnqueueFailed,
+                    {
+                        botId: bot.id,
+                        type: JobType.OpenPosition,
+                        liquidityPoolId: liquidityPool.displayId,
+                        error: error.message,
+                    })
+            } else {
+                this.winstonService.log(
+                    WinstonLog.JobRequeueFailed,
+                    {
+                        jobId: oldJob?.id ?? "",
+                        botId: bot.id,
+                        type: JobType.OpenPosition,
+                        liquidityPoolId: liquidityPool.displayId,
+                        error: error.message,
+                    }
+                )
+            }
             this.lockAuthorityService.release({
                 botId: bot.id,
             })
         }
     }
 
-
+    /**
+     * Validate if the open position job can be enqueued.
+     * 
+     * @param bot - The bot.
+     * @param liquidityPool - The liquidity pool.
+     * @param oldJob - The old job.
+     * @returns True if the open position job can be enqueued, false otherwise.
+     */
     private async validate(
         {
             bot,

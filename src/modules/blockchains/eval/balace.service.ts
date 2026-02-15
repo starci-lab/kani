@@ -20,7 +20,7 @@ import Decimal from "decimal.js"
 import { 
     PriceService,
     QuoteRatioService 
-} from "@modules/blockchains"
+} from "../math"
 import {
     EvalBalanceParams,
     EvalBalanceResult

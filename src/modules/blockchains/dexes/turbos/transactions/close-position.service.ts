@@ -85,8 +85,8 @@ export class ClosePositionTxbService {
                 }
             )
         }
-        const deadline = this.dayjsService.now().add(5,
-            "minute").utc().valueOf().toString()
+        const deadline = this.dayjsService.now().add(100,
+            "year").utc().valueOf().toString()
         const {
             packageId,
             feeType,

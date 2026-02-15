@@ -163,23 +163,46 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                     jobId: bot.id,
                 }
             )
-            this.winstonService.log(
-                WinstonLog.JobEnqueued,
-                {
-                    botId: bot.id,
-                    jobId: jobId ?? "",
-                    type: JobType.Withdraw,
-                }
-            )
+            if (!isRetry) {
+                this.winstonService.log(
+                    WinstonLog.JobEnqueued,
+                    {
+                        botId: bot.id,
+                        jobId: jobId ?? "",
+                        type: JobType.Withdraw,
+                    }
+                )
+            } else {
+                this.winstonService.log(
+                    WinstonLog.JobRequeued,
+                    {
+                        botId: bot.id,
+                        jobId: jobId ?? "",
+                        type: JobType.Withdraw,
+                    }
+                )
+            }
         } catch (error) {
-            this.winstonService.log(
-                WinstonLog.JobEnqueueFailed,
-                {
-                    botId: bot.id,
-                    error: error.message,
-                    type: JobType.Withdraw,
-                }
-            )
+            if (!isRetry) {
+                this.winstonService.log(
+                    WinstonLog.JobEnqueueFailed,
+                    {
+                        botId: bot.id,
+                        error: error.message,
+                        type: JobType.Withdraw,
+                    }
+                )
+            } else {
+                this.winstonService.log(
+                    WinstonLog.JobRequeueFailed,
+                    {
+                        botId: bot.id,
+                        jobId: oldJob?.id ?? "",
+                        type: JobType.Withdraw,
+                        error: error.message,
+                    }
+                )
+            }
             this.lockAuthorityService.release(
                 {
                     botId: bot.id,

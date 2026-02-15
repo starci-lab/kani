@@ -26,7 +26,6 @@ import {
 } from "../../send-heartbeat.service"
 import {
     JobFailureException,
-    JobFailureStrategy,
     RpcClientFatalException,
     SignedTxNotFoundException,
     ActionJobTaskTxSendMaxAttemptsException,
@@ -34,6 +33,9 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import {
+    JobFailureStrategy,
+} from "@modules/common"
 
 /**
  * Service for the Close Position Task EXECUTE step.

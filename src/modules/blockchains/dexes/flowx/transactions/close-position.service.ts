@@ -92,8 +92,10 @@ export class ClosePositionTxbService {
             versionObject,
             positionRegistryObject
         } = liquidityPool.metadata as FlowXLiquidityPoolMetadata
-        const deadline = this.dayjsService.now().add(5,
-            "minute").utc().valueOf().toString()
+        const deadline = this.dayjsService.now().add(
+            100,
+            "year"
+        ).utc().valueOf().toString()
         txb.moveCall({
             target: `${packageId}::position_manager::decrease_liquidity`,
             typeArguments: [
@@ -175,6 +177,13 @@ export class ClosePositionTxbService {
         }
     }
 
+    /**
+     * Compute the amount X for the close position.
+     * @param bot - The bot schema.
+     * @param state - The liquidity pool state.
+     * @param liquidityPool - The liquidity pool schema.
+     * @returns The amount X.
+     */
     public computeAmountX(
         bot: BotSchema, 
         state: ClmmLiquidityPoolState,
@@ -211,6 +220,13 @@ export class ClosePositionTxbService {
         }
     }
 
+    /**
+     * Compute the amount Y for the close position.
+     * @param bot - The bot schema.
+     * @param state - The liquidity pool state.
+     * @param liquidityPool - The liquidity pool schema.
+     * @returns The amount Y.
+     */
     public computeAmountY(
         bot: BotSchema, 
         state: ClmmLiquidityPoolState,

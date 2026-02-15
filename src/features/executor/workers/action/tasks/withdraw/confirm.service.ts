@@ -16,6 +16,12 @@ import {
 import {
     Connection 
 } from "mongoose"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    ActionJobStimulateMongoSessionException 
+} from "@modules/exceptions"
 
 @Injectable()
 export class WithdrawTaskConfirmService {
@@ -39,6 +45,43 @@ export class WithdrawTaskConfirmService {
             taskIndex,
         }: WithdrawTaskConfirmParams
     ) {
+        try {
+        
+            // update the job with the confirmed status
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                {
+                    _id: job.id,
+                },
+                {
+                    $set: {
+                        "tasks.$[task].confirmed": true,
+                    },
+                    $inc: {
+                        taskIndex: 1,
+                    },
+                },
+                {
+                    arrayFilters: [
+                        {
+                            "task.index": taskIndex,
+                            "task.type": TaskType.Withdraw,
+                        },
+                    ],
+                },
+            )
+            // throw an exception to stimulate the mongo session
+            if (envConfig().executor.runtime.operation.withdraw.stimulate) {
+                throw new ActionJobStimulateMongoSessionException({
+                    botId: bot.id,
+                    jobId: job.id,
+                    taskIndex,
+                })
+            }
+        } catch (error) {
+            if (!(error instanceof ActionJobStimulateMongoSessionException)) {
+                throw error
+            }
+        }
         // simply logging
         this.winstonService.log(
             WinstonLog.ActionJobTaskConfirmed,
@@ -50,28 +93,6 @@ export class WithdrawTaskConfirmService {
                 taskIndex,
                 taskType: TaskType.Withdraw,
             }
-        )
-        // update the job with the confirmed status
-        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-            {
-                _id: job.id,
-            },
-            {
-                $set: {
-                    "tasks.$[task].confirmed": true,
-                },
-                $inc: {
-                    taskIndex: 1,
-                },
-            },
-            {
-                arrayFilters: [
-                    {
-                        "task.index": taskIndex,
-                        "task.type": TaskType.Withdraw,
-                    },
-                ],
-            },
         )
     }
 }

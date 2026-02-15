@@ -3,7 +3,7 @@ import type {
 } from "../abstract"
 import {
     JobFailureStrategy,
-} from "../../enums"
+} from "@modules/common"
 import {
     AbstractException,
 } from "../abstract"

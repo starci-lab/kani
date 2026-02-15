@@ -29,7 +29,6 @@ import {
 } from "@modules/blockchains"
 import {
     JobFailureException,
-    JobFailureStrategy,
     PrepareReconcileBalanceTransactionResultNotFoundException,
     TokenNotFoundException,
 } from "@modules/exceptions"
@@ -42,6 +41,9 @@ import {
 import {
     ReconcileBalanceTaskPrepareParams
 } from "../types"
+import {
+    JobFailureStrategy,
+} from "@modules/common"
 
 @Injectable()
 export class ReconcileBalanceTaskPrepareService {

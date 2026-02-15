@@ -26,9 +26,11 @@ import {
 } from "../../send-heartbeat.service"
 import {
     JobFailureException,
-    JobFailureStrategy,
     SignedTxNotFoundException 
 } from "@modules/exceptions"
+import {
+    JobFailureStrategy,
+} from "@modules/common"
 import {
     envConfig 
 } from "@modules/env"

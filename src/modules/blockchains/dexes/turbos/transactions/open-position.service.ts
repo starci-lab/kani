@@ -177,8 +177,8 @@ export class OpenPositionTxbService {
             ]
         })
         const slippage = new Decimal(envConfig().dexes.turbos.openPosition.slippage)
-        const deadline = this.dayjsService.now().add(5,
-            "minute").utc().valueOf().toString()
+        const deadline = this.dayjsService.now().add(100,
+            "year").utc().valueOf().toString()
         txb.moveCall({
             target: `${packageId}::position_manager::mint`,
             typeArguments: [
