@@ -64,7 +64,6 @@ export class SolanaExecuteService {
                 type: transactionType,
             })
         }
-
         const sendAndConfirmTransaction = await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
             callback: async ({ rpc, rpcSubscriptions }) => {

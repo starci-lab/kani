@@ -3,6 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     OpenPositionActionService, 
+    PrepareOpenPositionResult, 
     SignedTx 
 } from "@modules/blockchains"
 import {
@@ -16,9 +17,6 @@ import {
 } from "mongoose"
 import {
     InjectSuperJson 
-} from "@modules/mixin"
-import {
-    DayjsService 
 } from "@modules/mixin"
 import SuperJSON from "superjson"
 import {
@@ -56,7 +54,6 @@ export class OpenPositionTaskExecuteService {
     @InjectSuperJson()
     private readonly superJson: SuperJSON,
     private readonly sendHeartbeatService: SendHeartbeatService,
-    private readonly dayjsService: DayjsService,
     private readonly jobStepTransitionService: JobStepTransitionService,
     ) {}
 
@@ -112,9 +109,10 @@ export class OpenPositionTaskExecuteService {
                     strategy: JobFailureStrategy.Fatal,
                 })
             }
-
+            const prepareResult = this.superJson.parse<PrepareOpenPositionResult>(job.tasks[taskIndex].prepareResult ?? "")
             // execute the signed tx
             const executeResult = await this.openPositionActionService.execute({
+                positionId: prepareResult?.positionId ?? "",
                 bot,
                 state,
                 txCheck: (hasPreviousAttempts || isRetry) ?? false,

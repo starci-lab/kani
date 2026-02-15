@@ -2,7 +2,6 @@ import {
     Injectable
 } from "@nestjs/common"
 import {
-    createKeyPairFromPrivateKeyBytes,
     signTransaction,
     getSignatureFromTransaction,
     Instruction,
@@ -16,6 +15,9 @@ import {
     TransactionSigner,
     appendTransactionMessageInstructions,
     compileTransaction,
+    partiallySignTransaction,
+    setTransactionMessageLifetimeUsingBlockhash,
+    createKeyPairFromBytes,
 } from "@solana/kit"
 import {
     RpcExecutorService
@@ -96,18 +98,20 @@ export class SolanaTxService {
         })
         // retrieve solana tx from serialized tx
         const instructions = this.superJson.parse<Array<Instruction>>(prepareTx.serializedTx)
+        let cryptoKeyPairs: Array<CryptoKeyPair> = []
         let cryptoSigners: Array<TransactionSigner> = []
         if (prepareTx.privateKeys?.length) {
             // create keypairs from private keys
-            cryptoSigners = await Promise.all(
+            cryptoKeyPairs = await Promise.all(
                 prepareTx.privateKeys.map((privateKey) => 
-                    createKeyPairFromPrivateKeyBytes(
-                        bs58.decode(privateKey)
-                    ).then((keyPair) => createSignerFromKeyPair(keyPair))
+                    createKeyPairFromBytes(bs58.decode(privateKey))
                 )
             )
+            cryptoSigners = await Promise.all(
+                cryptoKeyPairs.map((cryptoKeyPair) => createSignerFromKeyPair(cryptoKeyPair))
+            )
         }
-        const solanaTx = pipe(
+        let solanaTx = pipe(
             createTransactionMessage({
                 version: 0,
             }),
@@ -123,9 +127,18 @@ export class SolanaTxService {
             ),
             (tx) => appendTransactionMessageInstructions(instructions,
                 tx),
+            (tx) => setTransactionMessageLifetimeUsingBlockhash(
+                latestBlockhash.value,
+                tx),
             (tx) => compileTransaction(tx),
         )
-        
+        // partially sign transaction
+        if (cryptoSigners.length) {
+            solanaTx = await partiallySignTransaction(
+                cryptoKeyPairs,
+                solanaTx,
+            )
+        }
         // sign transaction bytes
         let signedTx: SignedTx
         // sign with V1 signer
@@ -158,7 +171,7 @@ export class SolanaTxService {
                     botId: bot.id,
                 })
             }
-            const { txHash } = await this.privySignService.signSolanaTransaction(
+            const { txHash, signedTransaction } = await this.privySignService.signSolanaTransaction(
                 {
                     transaction: solanaTx,
                     lifetimeConstraint: {
@@ -171,7 +184,7 @@ export class SolanaTxService {
             )
             signedTx = {
                 txHash,
-                signedSerializedTx: this.superJson.stringify(solanaTx),
+                signedSerializedTx: this.superJson.stringify(signedTransaction),
                 chainId: ChainId.Solana,
             }
         }

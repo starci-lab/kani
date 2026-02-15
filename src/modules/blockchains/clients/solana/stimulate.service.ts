@@ -64,7 +64,6 @@ export class SolanaStimulateService {
                 type: transactionType,
             })
         }
-
         // simulate transaction
         const result = await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
