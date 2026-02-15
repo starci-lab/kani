@@ -282,7 +282,7 @@ import {
                 DependencyName.Kafka,
                 DependencyName.Memory,
                 DependencyName.Disk,
-                DependencyName.LockAuthorityRedis,
+                //DependencyName.LockAuthorityRedis,
                 DependencyName.BullmqRedis,
             ],
         }),
