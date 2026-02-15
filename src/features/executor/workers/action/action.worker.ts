@@ -47,6 +47,10 @@ import {
     ReconcileBalanceTaskDispatchService,
     WithdrawTaskDispatchService,
 } from "./tasks"
+
+/**
+ * The action worker is responsible for processing the action job.
+ */
 @Worker(
     bullData[BullQueueName.Action].name,
     {
@@ -75,6 +79,11 @@ export class ActionWorker extends WorkerHost {
         super()
     }
 
+    /**
+     * Process the action job.
+     * @param bullmqJob - The BullMQ job.
+     * @returns A promise that resolves when the job is processed.
+     */
     async process(
         bullmqJob: Job<string>
     ): Promise<void> {
