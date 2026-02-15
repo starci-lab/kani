@@ -22,13 +22,17 @@ import {
 import {
     ActionJobStimulateMongoSessionException 
 } from "@modules/exceptions"
-
+import {
+    SendHeartbeatService 
+} from "../../send-heartbeat.service"
+    
 @Injectable()
 export class WithdrawTaskConfirmService {
     constructor(
         private readonly winstonService: WinstonService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly sendHeartbeatService: SendHeartbeatService,
     ) { }
 
     /**
@@ -43,10 +47,17 @@ export class WithdrawTaskConfirmService {
             bot,
             job,
             taskIndex,
+            bullmqJob
         }: WithdrawTaskConfirmParams
     ) {
+        await this.sendHeartbeatService.process(
+            {
+                bot,
+                job,
+                bullmqJob,
+            }
+        )
         try {
-        
             // update the job with the confirmed status
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {

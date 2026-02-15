@@ -107,7 +107,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                                     _id: jobId,
                                     bot: bot.id,
                                     type: JobType.ReconcileBalance,
-                                    status: JobStatus.Pending,
+                                    status: JobStatus.Running,
                                     executor: envConfig().executor.id,
                                     startedAt: this.dayjsService.now().toDate(),
                                     tasks: [

@@ -524,6 +524,9 @@ export const envConfig = () => ({
              * 2 = remove job completely
              */
             job: {
+                retryInterval: parseEnvMs({
+                    key: "EXECUTOR_WORKERS_JOB_RETRY_INTERVAL", defaultValue: "3s" 
+                }),
                 level: parseEnvInt({
                     key: "EXECUTOR_WORKERS_JOB_LEVEL", defaultValue: 0 
                 }),

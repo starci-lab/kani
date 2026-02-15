@@ -17,21 +17,9 @@ import {
 @Schema({
     _id: false,
     autoCreate: false,
+    timestamps: true,
 })
 export class TxFailureSchema extends AbstractSchema {
-    /**
-     * The index of the task that the job is currently processing.
-     */
-    @Field(() => String,
-        {
-            description: "The index of the task that the job is currently processing",
-        })
-    @Prop({
-        type: String,
-        required: true,
-    })
-        index: string
-
     /**
      * The error message.
      */
@@ -39,10 +27,12 @@ export class TxFailureSchema extends AbstractSchema {
         {
             description: "The error message",
         })
-    @Prop({
-        type: String,
-        required: true,
-    })
+    @Prop(
+        {
+            type: String,
+            required: true,
+        }
+    )
         errorMessage: string
 
     /**
@@ -57,6 +47,19 @@ export class TxFailureSchema extends AbstractSchema {
         required: true,
     })
         stackTrace: string
+
+    /**
+     * The number of retries of the step.
+     */
+    @Field(() => Date,
+        {
+            description: "The date and time the tx failure was recorded",
+        }
+    )
+    @Prop({
+        type: Date
+    })
+        snapshotAt: Date
 }
 
 /**

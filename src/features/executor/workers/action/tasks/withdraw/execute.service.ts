@@ -25,16 +25,22 @@ import {
     SendHeartbeatService 
 } from "../../send-heartbeat.service"
 import {
+    ActionJobTaskTxSendMaxAttemptsException,
     JobFailureException,
+    RpcClientFatalException,
     SignedTxNotFoundException 
 } from "@modules/exceptions"
 import {
     JobFailureStrategy,
+    sleep,
 } from "@modules/common"
 import {
     envConfig 
 } from "@modules/env"
-
+import {
+    JobStepTransitionService 
+} from "../../../update"
+    
 /**
  * Service for the WITHDRAW TASK EXECUTE step.
  */
@@ -47,6 +53,7 @@ export class WithdrawTaskExecuteService {
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         private readonly sendHeartbeatService: SendHeartbeatService,
+        private readonly jobStepTransitionService: JobStepTransitionService,
     ) { }
     
     /**
@@ -94,41 +101,100 @@ export class WithdrawTaskExecuteService {
                 }
             )
         }
+        try {
         // execute the signed tx
-        const executeResult = await this.balanceActionService.executeWithdrawTransaction(
-            {
-                bot,
-                txCheck: (hasPreviousAttempts || isRetry) ?? false,
-                stimulate: envConfig().executor.runtime.operation.withdraw.stimulate,
-                signedTx: this.superJson.parse<SignedTx>(signedTx),
+            const executeResult = await this.balanceActionService.executeWithdrawTransaction(
+                {
+                    bot,
+                    txCheck: (hasPreviousAttempts || isRetry) ?? false,
+                    stimulate: envConfig().executor.runtime.operation.withdraw.stimulate,
+                    signedTx: this.superJson.parse<SignedTx>(signedTx),
+                }
+            )
+            // update the job with the execute result
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                {
+                    _id: job.id 
+                },
+                {
+                    $set: {
+                        "tasks.$[task].steps.$[step].executeResult": this.superJson.stringify(executeResult),
+                        "tasks.$[task].steps.$[step].type": StepType.Execute,
+                    },
+                    // Move to next step
+                    $inc: {
+                        "tasks.$[task].activeStep": 1,
+                    },
+                },
+                {
+                    arrayFilters: [
+                        {
+                            "task.index": taskIndex, 
+                            "task.type": TaskType.Withdraw 
+                        },
+                        {
+                            "step.index": stepIndex 
+                        },
+                    ],
+                },
+            )
+        } catch (error) {
+            // If tx execution failed with a fatal RPC error, rollback to Sign and record failure atomically.
+            if (error instanceof RpcClientFatalException) {
+                const retries = step?.retries ?? 0
+                const maxAttempts = envConfig().executor.workers.job.txSendMaxAttempts
+                // if tx failure index is greater than or equal to max attempts, throw a job failure exception
+                if (retries >= maxAttempts) {
+                    // reset retries to 0
+                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                        {
+                            _id: job.id 
+                        },
+                        {
+                            $set: {
+                                "tasks.$[task].steps.$[step].retries": 0,
+                            },
+                        },
+                        {
+                            arrayFilters: [
+                                {
+                                    "task.index": taskIndex,
+                                    "task.type": TaskType.Withdraw,
+                                },
+                                {
+                                    "step.index": stepIndex,
+                                },
+                            ],
+                        },
+                    )
+                    throw new JobFailureException({
+                        originalError: new ActionJobTaskTxSendMaxAttemptsException({
+                            maxAttempts,
+                            originalError: error,
+                            botId: bot.id,
+                            jobId: job.id,
+                            metadata: job.metadata,
+                            type: TaskType.Withdraw,
+                        }),
+                        strategy: JobFailureStrategy.Requeue,
+                    })
+                }
+                // rollback to sign with failure
+                await this.jobStepTransitionService.rollbackToSignWithFailure(
+                    {
+                        jobId: job.id,
+                        taskType: TaskType.Withdraw,
+                        taskIndex,
+                        stepIndex,
+                        error,
+                    }
+                )
+                // sleep for the retry interval
+                await sleep(envConfig().executor.workers.job.retryInterval)
+                return
             }
-        )
-        // update the job with the execute result
-        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-            {
-                _id: job.id 
-            },
-            {
-                $set: {
-                    "tasks.$[task].steps.$[step].executeResult": this.superJson.stringify(executeResult),
-                    "tasks.$[task].steps.$[step].type": StepType.Execute,
-                },
-                // Move to next step
-                $inc: {
-                    "tasks.$[task].activeStep": 1,
-                },
-            },
-            {
-                arrayFilters: [
-                    {
-                        "task.index": taskIndex, 
-                        "task.type": TaskType.Withdraw 
-                    },
-                    {
-                        "step.index": stepIndex 
-                    },
-                ],
-            },
-        )
+
+            throw error
+        }
     }
 }

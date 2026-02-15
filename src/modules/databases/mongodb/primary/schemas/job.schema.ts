@@ -90,14 +90,14 @@ export class JobSchema extends AbstractSchema {
     @Field(
         () => Int, 
         { 
-            description: "The number of retry attempts of the job",
-            defaultValue: 0
+            description: "The number of retries of the job",
+            nullable: true,
         }
     )
     @Prop({
-        type: Number, default: 0 
+        type: Number, required: false 
     })
-        retryCount: number
+        retries?: number
 
     /**
      * The date and time the job was processed.

@@ -141,7 +141,7 @@ export class OpenPositionEnqueueService {
                                     bot: bot.id,
                                     executor: envConfig().executor.id,
                                     type: JobType.OpenPosition,
-                                    status: JobStatus.Pending,
+                                    status: JobStatus.Running,
                                     tasks: [
                                     ],
                                     metadata: {

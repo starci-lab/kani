@@ -55,9 +55,13 @@ export class WithdrawTaskSignService {
         }: WithdrawTaskSignParams
     ) {
     // Send heartbeat
-        await this.sendHeartbeatService.process({
-            bot, job, bullmqJob 
-        })
+        await this.sendHeartbeatService.process(
+            {
+                bot, 
+                job, 
+                bullmqJob 
+            }
+        )
 
         const activeStep = job.tasks[taskIndex].activeStep ?? 0
         const step = job.tasks[taskIndex].steps?.[activeStep]

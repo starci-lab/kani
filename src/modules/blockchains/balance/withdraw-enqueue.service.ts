@@ -105,7 +105,7 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                                     _id: jobId,
                                     bot: bot.id,
                                     type: JobType.Withdraw,
-                                    status: JobStatus.Pending,
+                                    status: JobStatus.Running,
                                     executor: envConfig().executor.id,
                                     startedAt: this.dayjsService.now().toDate(),
                                     tasks: [

@@ -79,80 +79,82 @@ export class ClosePositionTaskConfirmService {
             liquidityPool,
         }: ClosePositionTaskConfirmParams
     ) {
-        try {
-            const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-                id: {
-                    $eq: liquidityPool.tokenA.toString(),
-                },
-            })
-            if (!targetToken) {
-                throw new TokenNotFoundException(
-                    {
-                        id: liquidityPool.tokenA.toString(),
-                    }
-                )
-            }
-            const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-                id: {
-                    $eq: liquidityPool.tokenB.toString(),
-                },
-            })
-            if (!quoteToken) {
-                throw new TokenNotFoundException(
-                    {
-                        id: liquidityPool.tokenB.toString(),
-                    }
-                )
-            }
-            const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-                type: {
-                    $eq: TokenType.Native,
-                },
-                chainId: {
-                    $eq: bot.chainId,
-                },
-            })
-            if (!gasToken) {
-                throw new TokenNotFoundException(
-                    {
-                        conditions: {
-                            type: TokenType.Native,
-                            chainId: bot.chainId,
-                        },
-                    }
-                )
-            }
-            const rewardTokenAddresses = state.rewards.map((
-                reward: DynamicClmmRewardInfo | DynamicDlmmRewardInfo
-            ) => reward.tokenAddress
-            )
-            // Get reward tokens that are NOT target or quote token
-            const nonPairRewardTokenAddresses = _.difference(
-                rewardTokenAddresses,
-                [
-                    targetToken.tokenAddress,
-                    quoteToken.tokenAddress
-                ]
-            )
-            const nonPairRewardTokens = this.primaryMemoryStorageService.tokenCollection.find(
+
+        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: liquidityPool.tokenA.toString(),
+            },
+        })
+        if (!targetToken) {
+            throw new TokenNotFoundException(
                 {
-                    tokenAddress: {
-                        $in: nonPairRewardTokenAddresses,
+                    id: liquidityPool.tokenA.toString(),
+                }
+            )
+        }
+        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: liquidityPool.tokenB.toString(),
+            },
+        })
+        if (!quoteToken) {
+            throw new TokenNotFoundException(
+                {
+                    id: liquidityPool.tokenB.toString(),
+                }
+            )
+        }
+        const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            type: {
+                $eq: TokenType.Native,
+            },
+            chainId: {
+                $eq: bot.chainId,
+            },
+        })
+        if (!gasToken) {
+            throw new TokenNotFoundException(
+                {
+                    conditions: {
+                        type: TokenType.Native,
+                        chainId: bot.chainId,
                     },
                 }
             )
-            const {
-                targetBalanceAmount,
-                quoteBalanceAmount,
-                gasBalanceAmount,
-                incentiveBalanceAmounts,
-            } = await this.balanceFetcherService.fetchBalances(
-                {
-                    bot,
-                    incentiveTokens: nonPairRewardTokens,
-                }
-            )
-            const signedTxs = (job.tasks[taskIndex].steps ?? []).map((step) => this.superJson.parse<SignedTx>(step.signedTx ?? ""))
+        }
+        const rewardTokenAddresses = state.rewards.map((
+            reward: DynamicClmmRewardInfo | DynamicDlmmRewardInfo
+        ) => reward.tokenAddress
+        )
+        // Get reward tokens that are NOT target or quote token
+        const nonPairRewardTokenAddresses = _.difference(
+            rewardTokenAddresses,
+            [
+                targetToken.tokenAddress,
+                quoteToken.tokenAddress
+            ]
+        )
+        const nonPairRewardTokens = this.primaryMemoryStorageService.tokenCollection.find(
+            {
+                tokenAddress: {
+                    $in: nonPairRewardTokenAddresses,
+                },
+            }
+        )
+        const {
+            targetBalanceAmount,
+            quoteBalanceAmount,
+            gasBalanceAmount,
+            incentiveBalanceAmounts,
+        } = await this.balanceFetcherService.fetchBalances(
+            {
+                bot,
+                incentiveTokens: nonPairRewardTokens,
+            }
+        )
+        const signedTxs = (job.tasks[taskIndex].steps ?? []).map((step) => this.superJson.parse<SignedTx>(step.signedTx ?? ""))
+
+        try {
             const session = await this.connection.startSession()
             await session.withTransaction(async (
                 clientSession

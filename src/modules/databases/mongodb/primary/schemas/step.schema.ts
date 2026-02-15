@@ -14,7 +14,7 @@ import {
 } from "@nestjs/graphql"
 import {
     TxFailureSchema, TxFailureSchemaClass 
-} from "./tx-failure.service"
+} from "./tx-failure.schema"
 
 /**
  * Represents a task that needs to be executed by the executor.
@@ -104,23 +104,28 @@ export class StepSchema extends AbstractSchema {
             description: "The tx failures of the step",
         }
     )
-    @Prop({
-        type: [TxFailureSchemaClass], required: false 
-    })
+    @Prop(
+        {
+            type: [TxFailureSchemaClass], 
+            required: false 
+        }
+    )
         txFailures?: Array<TxFailureSchema>
 
     /**
-     * The tx failure reason.
+     * The index of the tx failure.
      */
     @Field(() => Int,
-        {   
-            description: "The index of the tx failure",
+        {
+            description: "The number of retries of the step",
+            nullable: true,
         }
     )
     @Prop({
-        type: Number, required: false 
+        type: Number, 
+        required: false 
     })
-        txFailureIndex?: number 
+        retries?: number
 }
 
 

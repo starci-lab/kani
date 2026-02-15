@@ -34,8 +34,15 @@ import {
 } from "@modules/env"
 import {
     JobFailureStrategy,
+    sleep,
 } from "@modules/common"
-
+import {
+    DayjsService 
+} from "@modules/mixin"
+import {
+    JobStepTransitionService 
+} from "../../../update"
+    
 /**
  * Service for the Close Position Task EXECUTE step.
  */
@@ -48,6 +55,8 @@ export class ClosePositionTaskExecuteService {
     @InjectSuperJson()
     private readonly superJson: SuperJSON,
     private readonly sendHeartbeatService: SendHeartbeatService,
+    private readonly dayjsService: DayjsService,
+    private readonly jobStepTransitionService: JobStepTransitionService,
     ) {}
 
     /**
@@ -62,12 +71,10 @@ export class ClosePositionTaskExecuteService {
         bullmqJob,
         taskIndex,
     }: ClosePositionTaskExecuteParams) {
-    // previous attempts from BullMQ
+        // previous attempts from BullMQ
         const hasPreviousAttempts = bullmqJob.attemptsMade > 0
-
         // active step index
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
-
         // step snapshot (may be undefined)
         const step = job.tasks[taskIndex].steps?.[stepIndex]
 
@@ -103,11 +110,6 @@ export class ClosePositionTaskExecuteService {
                 signedTx: this.superJson.parse<SignedTx>(signedTx),
                 stimulate: envConfig().executor.runtime.operation.closePosition.stimulate,
             })
-            throw new RpcClientFatalException({
-                message: "RPC client fatal exception",
-                originalError: new Error("RPC client fatal exception"),
-            })
-
             // persist execute result + move next step
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {
@@ -138,116 +140,61 @@ export class ClosePositionTaskExecuteService {
         } catch (error) {
             if (error instanceof RpcClientFatalException) {
                 // retry cap (use in-memory snapshot)
-                const txFailureIndex = step?.txFailureIndex ?? 0
+                const retries = step?.retries ?? 0
                 const maxAttempts = envConfig().executor.workers.job.txSendMaxAttempts
-
-                if (txFailureIndex >= maxAttempts) {
-                    throw new JobFailureException({
-                        originalError: new ActionJobTaskTxSendMaxAttemptsException({
-                            maxAttempts,
-                            originalError: error,
-                            botId: bot.id,
-                            jobId: job.id,
-                            liquidityPoolId: liquidityPool.displayId,
-                            metadata: job.metadata,
-                            type: TaskType.ClosePosition,
-                        }),
-                        strategy: JobFailureStrategy.Requeue,
-                    })
-                }
-
-                // rollback to Sign + log failure + increment counter atomically (pipeline update)
-                await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                    {
-                        _id: job.id 
-                    },
-                    [
+                // if tx failure index is greater than or equal to max attempts, throw a job failure exception
+                if (retries >= maxAttempts) {
+                    // reset retries to 0
+                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                        {
+                            _id: job.id 
+                        },
                         {
                             $set: {
-                                tasks: {
-                                    $map: {
-                                        input: "$tasks",
-                                        as: "t",
-                                        in: {
-                                            $cond: [
-                                                {
-                                                    $and: [
-                                                        {
-                                                            $eq: ["$$t.index",
-                                                                taskIndex] 
-                                                        },
-                                                        {
-                                                            $eq: ["$$t.type",
-                                                                TaskType.ClosePosition] 
-                                                        },
-                                                    ],
-                                                },
-                                                {
-                                                    $mergeObjects: [
-                                                        "$$t",
-                                                        {
-                                                            steps: {
-                                                                $map: {
-                                                                    input: "$$t.steps",
-                                                                    as: "s",
-                                                                    in: {
-                                                                        $cond: [
-                                                                            {
-                                                                                $eq: ["$$s.index",
-                                                                                    stepIndex] 
-                                                                            },
-                                                                            {
-                                                                                $mergeObjects: [
-                                                                                    "$$s",
-                                                                                    {
-                                                                                        type: StepType.Sign,
-                                                                                        txFailures: {
-                                                                                            $concatArrays: [
-                                                                                                {
-                                                                                                    $ifNull: ["$$s.txFailures",
-                                                                                                        []] 
-                                                                                                },
-                                                                                                [
-                                                                                                    {
-                                                                                                        index: {
-                                                                                                            $ifNull: ["$$s.txFailureIndex",
-                                                                                                                0] 
-                                                                                                        },
-                                                                                                        errorMessage: error.message,
-                                                                                                        stackTrace: error.stack,
-                                                                                                    },
-                                                                                                ],
-                                                                                            ],
-                                                                                        },
-                                                                                        txFailureIndex: {
-                                                                                            $add: [{
-                                                                                                $ifNull: ["$$s.txFailureIndex",
-                                                                                                    0] 
-                                                                                            },
-                                                                                            1],
-                                                                                        },
-                                                                                    },
-                                                                                ],
-                                                                            },
-                                                                            "$$s",
-                                                                        ],
-                                                                    },
-                                                                },
-                                                            },
-                                                        },
-                                                    ],
-                                                },
-                                                "$$t",
-                                            ],
-                                        },
-                                    },
-                                },
+                                "tasks.$[task].steps.$[step].retries": 0 
                             },
                         },
-                    ],
+                        {
+                            arrayFilters: [
+                                {
+                                    "task.index": taskIndex,
+                                    "task.type": TaskType.ClosePosition,
+                                },
+                                {
+                                    "step.index": stepIndex,
+                                },
+                            ],
+                        }
+                    )
+                    throw new JobFailureException(
+                        {
+                            originalError: new ActionJobTaskTxSendMaxAttemptsException({
+                                maxAttempts,
+                                originalError: error,
+                                botId: bot.id,
+                                jobId: job.id,
+                                liquidityPoolId: liquidityPool.displayId,
+                                metadata: job.metadata,
+                                type: TaskType.ClosePosition,
+                            }),
+                            strategy: JobFailureStrategy.Requeue,
+                        }
+                    )
+                }
+                // rollback to sign with failure
+                await this.jobStepTransitionService.rollbackToSignWithFailure(
+                    {
+                        jobId: job.id,
+                        taskType: TaskType.ClosePosition,
+                        taskIndex,
+                        stepIndex,
+                        error,
+                    }
                 )
-
-                // keep same behavior as your OpenPosition version
+                // sleep for the retry interval
+                await sleep(
+                    envConfig().executor.workers.job.retryInterval
+                )               
                 return
             }
 

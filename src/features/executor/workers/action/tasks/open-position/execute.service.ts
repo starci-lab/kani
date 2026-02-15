@@ -17,6 +17,9 @@ import {
 import {
     InjectSuperJson 
 } from "@modules/mixin"
+import {
+    DayjsService 
+} from "@modules/mixin"
 import SuperJSON from "superjson"
 import {
     OpenPositionTaskExecuteParams 
@@ -35,8 +38,12 @@ import {
 } from "@modules/env"
 import {
     JobFailureStrategy,
+    sleep,
 } from "@modules/common"
-
+import {
+    JobStepTransitionService 
+} from "../../../update"
+    
 /**
  * Service for the Close Position Task EXECUTE step.
  */
@@ -49,6 +56,8 @@ export class OpenPositionTaskExecuteService {
     @InjectSuperJson()
     private readonly superJson: SuperJSON,
     private readonly sendHeartbeatService: SendHeartbeatService,
+    private readonly dayjsService: DayjsService,
+    private readonly jobStepTransitionService: JobStepTransitionService,
     ) {}
 
     /**
@@ -65,7 +74,12 @@ export class OpenPositionTaskExecuteService {
             taskIndex,
         }: OpenPositionTaskExecuteParams
     ) {
-    // get the previous attempts
+        await this.sendHeartbeatService.process({
+            bot,
+            job,
+            bullmqJob,
+        })
+        // get the previous attempts
         const hasPreviousAttempts = bullmqJob.attemptsMade > 0
 
         // get the active step index
@@ -140,8 +154,27 @@ export class OpenPositionTaskExecuteService {
             // If tx execution failed with a fatal RPC error, rollback to Sign and record failure atomically.
             if (error instanceof RpcClientFatalException) {
                 // get the tx failure index
-                const txFailureIndex = step?.txFailureIndex ?? 0
-                if (txFailureIndex >= envConfig().executor.workers.job.txSendMaxAttempts) {
+                const retries = step?.retries ?? 0
+                if (retries >= envConfig().executor.workers.job.txSendMaxAttempts) {
+                    // reset retries to 0
+                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                        {
+                            _id: job.id 
+                        },
+                        {
+                            $set: {
+                                "tasks.$[task].steps.$[step].retries": 0 
+                            },
+                        },
+                        {
+                            arrayFilters: [
+                                {
+                                    "task.index": taskIndex,
+                                    "task.type": TaskType.OpenPosition,
+                                },
+                            ],
+                        }
+                    )
                     throw new JobFailureException(
                         {
                             originalError: new ActionJobTaskTxSendMaxAttemptsException(
@@ -159,70 +192,23 @@ export class OpenPositionTaskExecuteService {
                         }
                     )
                 }
-                await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                // rollback to sign with failure
+                await this.jobStepTransitionService.rollbackToSignWithFailure(
                     {
-                        _id: job.id 
-                    },
-                    [
-                        {
-                            $set: {
-                                "tasks.$[task].steps.$[step].type": StepType.Sign,
-                                // Append failure record with ZERO-BASED index:
-                                // index = ifNull(txFailureIndex, 0)
-                                "tasks.$[task].steps.$[step].txFailures": {
-                                    $concatArrays: [
-                                        {
-                                            $ifNull: [
-                                                "tasks.$[task].steps.$[step].txFailures",
-                                                [],
-                                            ],
-                                        },
-                                        [
-                                            {
-                                                index: {
-                                                    $ifNull: [
-                                                        "tasks.$[task].steps.$[step].txFailureIndex",
-                                                        0,
-                                                    ],
-                                                },
-                                                errorMessage: error.message,
-                                                stackTrace: error.stack,
-                                            },
-                                        ],
-                                    ],
-                                },
-                                // Increment counter AFTER logging:
-                                // txFailureIndex = ifNull(txFailureIndex, 0) + 1
-                                "tasks.$[task].steps.$[step].txFailureIndex": {
-                                    $add: [
-                                        {
-                                            $ifNull: [
-                                                "tasks.$[task].steps.$[step].txFailureIndex",
-                                                0,
-                                            ],
-                                        },
-                                        1,
-                                    ],
-                                },
-                            },
-                        },
-                    ],
-                    {
-                        arrayFilters: [
-                            {
-                                "task.index": taskIndex,
-                                "task.type": TaskType.OpenPosition,
-                            },
-                            {
-                                "step.index": stepIndex,
-                            },
-                        ],
-                    },
+                        jobId: job.id,
+                        taskType: TaskType.OpenPosition,
+                        taskIndex,
+                        stepIndex,
+                        error,
+                    }
                 )
+                // sleep for the retry interval
+                await sleep(
+                    envConfig().executor.workers.job.retryInterval
+                )               
                 return
             }
 
-            // For other errors: rethrow so the worker can handle/retry properly.
             throw error
         }
     }

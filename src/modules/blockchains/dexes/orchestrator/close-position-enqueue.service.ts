@@ -124,7 +124,7 @@ export class ClosePositionEnqueueService {
                                     bot: bot.id,
                                     executor: envConfig().executor.id,
                                     type: JobType.ClosePosition,
-                                    status: JobStatus.Pending,
+                                    status: JobStatus.Running,
                                     tasks: [
                                     ],
                                     metadata: {

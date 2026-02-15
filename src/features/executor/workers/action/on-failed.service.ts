@@ -115,9 +115,6 @@ export class OnFailedService {
                                     },
                                 } : undefined),
                             },
-                            $inc: {
-                                retryCount: 1,
-                            },
                         },
                         {
                             session: clientSession,
@@ -173,8 +170,22 @@ export class OnFailedService {
             )
             throw new UnrecoverableError(_error.getOriginalError().message)
         }
-        default: {
+        case JobFailureStrategy.Retry: {
+            // update the database to increment the retries
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                {
+                    _id: job.id,
+                },
+                {
+                    $inc: {
+                        retries: 1 
+                    },
+                },
+            )   
             throw error
+        }
+        default: {
+            throw new UnrecoverableError(_error.getOriginalError().message)
         }
         }
     }

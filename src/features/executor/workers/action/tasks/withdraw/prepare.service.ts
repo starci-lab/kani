@@ -76,9 +76,13 @@ export class WithdrawTaskPrepareService {
         bullmqJob,
     }: WithdrawTaskPrepareParams) {
         // Heartbeat
-        await this.sendHeartbeatService.process({
-            bot, job, bullmqJob 
-        })
+        await this.sendHeartbeatService.process(
+            {
+                bot, 
+                job,
+                bullmqJob 
+            }
+        )
         // cache result
         const cacheResult = await this.cacheService.get(
             {

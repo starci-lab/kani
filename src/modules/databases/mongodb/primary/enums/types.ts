@@ -138,7 +138,6 @@ registerEnumType(GraphQLTypeJobType,
     })
 
 export enum JobStatus {
-    Pending = "pending",
     Running = "running",
     Completed = "completed",
     Failed = "failed",
@@ -152,9 +151,6 @@ registerEnumType(GraphQLTypeJobStatus,
         name: "JobStatus",
         description: "Represents the lifecycle status of a background job",
         valuesMap: {
-            [JobStatus.Pending]: {
-                description: "The job has been created but not processed yet",
-            },
             [JobStatus.Running]: {
                 description: "The job has been running",
             },

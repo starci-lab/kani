@@ -58,31 +58,31 @@ export class ReconcileBalanceTaskConfirmService {
             bullmqJob,
         }: ReconcileBalanceTaskConfirmParams
     ) {
-        try {
         // send heartbeat
-            await this.sendHeartbeatService.process(
+        await this.sendHeartbeatService.process(
+            {
+                bot,
+                job,
+                bullmqJob,
+            }
+        )
+        // check tx
+        const stepCount = job.tasks[taskIndex].stepCount
+        let targetBalanceAmount = new BN(0)
+        let quoteBalanceAmount = new BN(0)
+        let gasBalanceAmount = new BN(0)
+        if (stepCount > 0) {
+            // we need to refresh the balance snapshots
+            const fetched = await this.balanceFetcherService.fetchBalances(
                 {
                     bot,
-                    job,
-                    bullmqJob,
                 }
             )
-            // check tx
-            const stepCount = job.tasks[taskIndex].stepCount
-            let targetBalanceAmount = new BN(0)
-            let quoteBalanceAmount = new BN(0)
-            let gasBalanceAmount = new BN(0)
-            if (stepCount > 0) {
-            // we need to refresh the balance snapshots
-                const fetched = await this.balanceFetcherService.fetchBalances(
-                    {
-                        bot,
-                    }
-                )
-                targetBalanceAmount = new BN(fetched.targetBalanceAmount)
-                quoteBalanceAmount = new BN(fetched.quoteBalanceAmount)
-                gasBalanceAmount = new BN(fetched.gasBalanceAmount)
-            }
+            targetBalanceAmount = new BN(fetched.targetBalanceAmount)
+            quoteBalanceAmount = new BN(fetched.quoteBalanceAmount)
+            gasBalanceAmount = new BN(fetched.gasBalanceAmount)
+        }
+        try {
             const session = await this.connection.startSession()
             await session.withTransaction(async (
                 clientSession
