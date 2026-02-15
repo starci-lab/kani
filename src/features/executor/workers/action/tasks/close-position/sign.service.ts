@@ -56,46 +56,51 @@ export class ClosePositionTaskSignService {
         bot,
         liquidityPool,
     }: ClosePositionTaskSignParams) {
+        try {
         // Send heartbeat
-        await this.sendHeartbeatService.process(
-            {
-                bot,
-                job,
-                bullmqJob,
-            }
-        )
-        const activeStep = job.tasks[taskIndex].activeStep
-        const prepareTx = this.superJson.parse<PrepareTx>(
-            job.tasks[taskIndex].steps[activeStep].prepareTx
-        )
-        const { signedTx } = await this.closePositionActionService.sign(
-            {
-                bot,
-                prepareTx,
-                liquidityPool,
-            }
-        )
-        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-            {
-                _id: job.id 
-            },
-            {
-                $set: {
-                    "tasks.$[task].steps.$[step].type": StepType.Execute,
-                    "tasks.$[task].steps.$[step].signedTx": this.superJson.stringify(signedTx),
+            await this.sendHeartbeatService.process(
+                {
+                    bot,
+                    job,
+                    bullmqJob,
+                }
+            )
+            const activeStep = job.tasks[taskIndex].activeStep
+            const prepareTx = this.superJson.parse<PrepareTx>(
+                job.tasks[taskIndex].steps[activeStep].prepareTx
+            )
+            const { signedTx } = await this.closePositionActionService.sign(
+                {
+                    bot,
+                    prepareTx,
+                    liquidityPool,
+                }
+            )
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                {
+                    _id: job.id 
                 },
-            },
-            {
-                arrayFilters: [
-                    {
-                        "task.index": taskIndex, 
-                        "task.type": TaskType.ClosePosition 
+                {
+                    $set: {
+                        "tasks.$[task].steps.$[step].type": StepType.Execute,
+                        "tasks.$[task].steps.$[step].signedTx": this.superJson.stringify(signedTx),
                     },
-                    {
-                        "step.index": activeStep 
-                    },
-                ],
-            },
-        )
+                },
+                {
+                    arrayFilters: [
+                        {
+                            "task.index": taskIndex, 
+                            "task.type": TaskType.ClosePosition 
+                        },
+                        {
+                            "step.index": activeStep 
+                        },
+                    ],
+                },
+            )
+        } catch (error) {
+            console.log(error)
+            throw error
+        }
     }
 }

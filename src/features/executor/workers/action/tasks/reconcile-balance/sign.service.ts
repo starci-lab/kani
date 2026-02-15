@@ -47,7 +47,7 @@ export class ReconcileBalanceTaskSignService {
         bullmqJob,
         taskIndex,
     }: ReconcileBalanceTaskSignParams) {
-    // Send heartbeat
+        // Send heartbeat
         await this.sendHeartbeatService.process({
             bot, job, bullmqJob 
         })

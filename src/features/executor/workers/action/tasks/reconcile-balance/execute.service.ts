@@ -75,7 +75,6 @@ export class ReconcileBalanceTaskExecuteService {
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
         // step snapshot (may be undefined)
         const step = job.tasks[taskIndex].steps?.[stepIndex]
-
         // signed tx
         const signedTx = step?.signedTx
         if (!signedTx) {

@@ -50,8 +50,7 @@ import {
 } from "@modules/common"
 import {
     EncryptedPrivySignerPrivateKeyNotFoundException, 
-    PrivyMetadataNotFoundException, 
-    PrivyPublicKeyNotFoundException 
+    PrivyMetadataNotFoundException,
 } from "@modules/exceptions"
 import {
     WinstonLog, WinstonService 
@@ -204,11 +203,6 @@ export class SolanaTxService {
                 chainId: ChainId.Solana,
             }
         } else {
-            if (!bot.privyMetadata?.walletPublicKey) {
-                throw new PrivyPublicKeyNotFoundException({
-                    botId: bot.id,
-                })
-            }
             if (!bot.privyMetadata?.walletId) {
                 throw new PrivyMetadataNotFoundException({
                     botId: bot.id,
