@@ -80,7 +80,8 @@ export class ReconcileBalanceTaskSignService {
             {
                 arrayFilters: [
                     {
-                        "task.index": taskIndex, "task.type": TaskType.ReconcileBalance 
+                        "task.index": taskIndex, 
+                        "task.type": TaskType.ReconcileBalance 
                     },
                     {
                         "step.index": activeStep 

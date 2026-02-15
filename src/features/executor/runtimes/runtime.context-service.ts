@@ -92,6 +92,12 @@ export class RuntimeContextService {
         return bot.toJSON()
     }
 
+    /**
+     * Invoke and schedule a callback at a given interval.
+     *
+     * @param interval - The interval in milliseconds.
+     * @param callback - The callback to invoke.
+     */
     invokeAndSchedule(
         interval: number,
         callback: () => Promise<void>,
