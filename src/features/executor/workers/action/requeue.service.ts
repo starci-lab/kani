@@ -62,6 +62,9 @@ export class ActionRequeueService implements OnApplicationBootstrap {
     ) {
     }
 
+    /**
+     * On application bootstrap, process the requeue.
+     */
     onApplicationBootstrap() {
         this.process()
     }
@@ -158,6 +161,9 @@ export class ActionRequeueService implements OnApplicationBootstrap {
         await this.asyncService.allIgnoreError(promises)
     }
 
+    /**
+     * Handle the interval for the requeue.
+     */
     @Interval(envConfig().executor.runtime.operation.openPosition.requeue.interval)
     handleInterval() {
         this.process()
