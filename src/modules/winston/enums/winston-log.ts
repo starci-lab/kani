@@ -240,7 +240,7 @@ export enum WinstonLog {
     OpenPositionSkippedActiveJobFoundInQueue = "Open.Position.Skipped.Active.Job.Found.In.Queue",
     JobSkippedFoundInQueue = "Action.Skipped.Active.Job.Found.In.Queue",
     JobSkippedNotFoundInDatabase = "Action.Skipped.Active.Job.NotFound.In.Database",
-    JobSkippedAuthorityNotAcquired = "Action.Job.Skipped.Authority.Not.Acquired",
+    JobSkippedBotAuthorityNotAcquired = "Action.Job.Skipped.Authority.Not.Acquired",
     LiquidityPoolsSyncedMarkedAsReady = "Liquidity.Pools.Synced.Marked.As.Ready",
     ClmmLiquidityPoolsSynced = "Clmm.Liquidity.Pools.Synced",
     DlmmLiquidityPoolsSynced = "Dlmm.Liquidity.Pools.Synced",
@@ -267,4 +267,6 @@ export enum WinstonLog {
     JobSkippedLiquidityPoolInfoNotReady = "Job.Skipped.Liquidity.Pool.Info.Not.Ready",
     JobSkippedTokenPriceNotReady = "Job.Skipped.Token.Price.Not.Ready",
     JobSkippedNoPayload = "Job.Skipped.No.Payload",
+    JobSkippedLiquidityPoolNotOwnedByBot = "Job.Skipped.Liquidity.Pool.Not.Owned.By.Bot",
+    JobSkippedQuoteRatioNotGood = "Job.Skipped.Quote.Ratio.Not.Good",
 }

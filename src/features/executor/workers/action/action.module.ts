@@ -45,6 +45,9 @@ import {
     OpenPositionTaskConfirmService,
     OpenPositionTaskDispatchService,
 } from "./tasks"
+import {
+    ActionRequeueService 
+} from "./requeue.service"
 
 @Module(
     {
@@ -77,6 +80,7 @@ import {
             OpenPositionTaskExecuteService,
             OpenPositionTaskConfirmService,
             OpenPositionTaskDispatchService,
+            ActionRequeueService,
         ],
     }
 )

@@ -38,7 +38,7 @@ import {
 import _ from "lodash"
 import type {
     LiquidityPoolsSyncedDiagnosticMessage 
-} from "../types"
+} from "./types"
   
   @Injectable()
 export class LiquidityPoolSyncedDiagnosticService

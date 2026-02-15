@@ -32,7 +32,7 @@ import {
 } from "lokijs"
 import type {
     PriceDiagnosticReadinessResult
-} from "../types"
+} from "./types"
 
 @Injectable()
 export class PriceDiagnosticService

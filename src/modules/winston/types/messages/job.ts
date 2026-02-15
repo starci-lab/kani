@@ -4,6 +4,7 @@ import type {
 import {
     JobType, 
     LiquidityPoolId,
+    QuoteRatioStatus,
     TokenId,
 } from "@modules/databases"
 
@@ -141,7 +142,7 @@ export interface JobSkippedFoundInQueueMessage {
 /**
  * Action job skipped authority not acquired message.
  */
-export interface JobSkippedAuthorityNotAcquiredMessage {
+export interface JobSkippedBotAuthorityNotAcquiredMessage {
     /** Bot ID. */
     botId: string
     /** Job ID. */
@@ -386,4 +387,36 @@ export interface JobSkippedBotRunningMessage {
     botId: string
     /** Job type. */
     type: JobType
+}
+
+/**
+ * Job skipped liquidity pool not owned by bot message.
+ */
+export interface JobSkippedLiquidityPoolNotOwnedByBotMessage {
+    /** Job ID. */
+    jobId?: string
+    /** Bot ID. */
+    botId: string
+    /** Job type. */
+    type: JobType
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
+}
+
+/**
+ * Job skipped quote ratio not good message.
+ */
+export interface JobSkippedQuoteRatioNotGoodMessage {
+    /** Job ID. */
+    jobId?: string
+    /** Bot ID. */
+    botId: string
+    /** Job type. */
+    type: JobType
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
+    /** Quote ratio. */
+    quoteRatio: number
+    /** Quote ratio status. */
+    quoteRatioStatus: QuoteRatioStatus
 }

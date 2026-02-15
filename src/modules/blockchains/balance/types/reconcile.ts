@@ -1,5 +1,6 @@
 import {
-    BotSchema, 
+    BotSchema,
+    JobSchema, 
 } from "@modules/databases"
 import BN from "bn.js"
 import {
@@ -41,7 +42,7 @@ export interface ExecuteReconcileBalanceTransactionResult {
 /** Parameters for enqueuing a reconcile balance job. */
 export interface EnqueueReconcileBalanceParams {
     bot: BotSchema
-    jobId: string
+    oldJob?: JobSchema
     isRetry?: boolean
 }
 

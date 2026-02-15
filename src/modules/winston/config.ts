@@ -235,7 +235,7 @@ import {
     ActiveJobTaskPreparedMessage,
     ReconcileBalancePlanDeterminedMessage,
     JobSkippedFoundInQueueMessage,
-    JobSkippedAuthorityNotAcquiredMessage,
+    JobSkippedBotAuthorityNotAcquiredMessage,
     JobRequeuedMessage,
     JobRequeueFailedMessage,
     JobSkippedNotFoundInDatabaseMessage,
@@ -253,6 +253,8 @@ import {
     JobSkippedTokenPriceNotReadyMessage,
     JobSkippedNoPayloadMessage,
     JobSkippedBotRunningMessage,
+    JobSkippedLiquidityPoolNotOwnedByBotMessage,
+    JobSkippedQuoteRatioNotGoodMessage,
 } from "./types"
 
 /** Map of Winston log names to level, Loki flag, and message type. */
@@ -2258,12 +2260,12 @@ export const configMap = {
         } as JobSkippedNotFoundInDatabaseMessage,
     },
     // Action Job Skipped Authority Not Acquired
-    [WinstonLog.JobSkippedAuthorityNotAcquired]: {
-        name: WinstonLog.JobSkippedAuthorityNotAcquired,
+    [WinstonLog.JobSkippedBotAuthorityNotAcquired]: {
+        name: WinstonLog.JobSkippedBotAuthorityNotAcquired,
         level: WinstonLevel.Debug,
         loki: true,
         messageType: {
-        } as JobSkippedAuthorityNotAcquiredMessage,
+        } as JobSkippedBotAuthorityNotAcquiredMessage,
     },
     // Job Requeued
     [WinstonLog.JobRequeued]: {
@@ -2392,5 +2394,21 @@ export const configMap = {
         loki: true,
         messageType: {
         } as JobSkippedBotRunningMessage,
+    },
+    // Job Skipped Liquidity Pool Not Owned By Bot
+    [WinstonLog.JobSkippedLiquidityPoolNotOwnedByBot]: {
+        name: WinstonLog.JobSkippedLiquidityPoolNotOwnedByBot,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedLiquidityPoolNotOwnedByBotMessage,
+    },
+    // Job Skipped Quote Ratio Not Good
+    [WinstonLog.JobSkippedQuoteRatioNotGood]: {
+        name: WinstonLog.JobSkippedQuoteRatioNotGood,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedQuoteRatioNotGoodMessage,
     },
 }

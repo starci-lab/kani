@@ -18,20 +18,6 @@ import {
     Interval
 } from "@nestjs/schedule"
 import {
-    WinstonLog,
-    WinstonService
-} from "@modules/winston"
-import {
-    InjectQueue
-} from "@nestjs/bullmq"
-import {
-    Job,
-    Queue
-} from "bullmq"
-import {
-    BullQueueName, bullData
-} from "@modules/bullmq"
-import {
     AsyncService
 } from "@modules/mixin"
 import {
@@ -41,21 +27,16 @@ import {
     WithdrawEnqueueService
 } from "@modules/blockchains"
 import {
-    LockAuthorityService
-} from "../../bussiness"
-import {
     InjectPrimaryMongoose
 } from "@modules/databases"
 import {
     Connection
 } from "mongoose"
 import {
-    BalanceSnapshotsNotFoundException,
     LiquidityPoolNotFoundException
 } from "@modules/exceptions"
 import {
     JobContextService,
-    LiquidityPoolContextService
 } from "./context"
 
 /**
@@ -68,15 +49,10 @@ import {
 @Injectable()
 export class ActionRequeueService implements OnApplicationBootstrap {
     constructor(
-        @InjectQueue(bullData[BullQueueName.Action].name)
-        private readonly actionQueue: Queue<string>,
         private readonly dayjsService: DayjsService,
-        private readonly winstonService: WinstonService,
         private readonly asyncService: AsyncService,
-        private readonly lockAuthorityService: LockAuthorityService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly jobContextService: JobContextService,
-        private readonly liquidityPoolContextService: LiquidityPoolContextService,
         private readonly openPositionEnqueueService: OpenPositionEnqueueService,
         private readonly closePositionEnqueueService: ClosePositionEnqueueService,
         private readonly withdrawEnqueueService: WithdrawEnqueueService,
@@ -95,245 +71,91 @@ export class ActionRequeueService implements OnApplicationBootstrap {
      * @returns Promise that resolves when requeue pass completes.
      */
     async process() {
-        try {
-            // get TTL from config
-            const ttl = envConfig().executor.runtime.operation.openPosition.requeue.interval
-            // find bots with stale active jobs
-            const bots = await this.connection.model<BotSchema>(BotSchema.name).find({
-                executor: {
-                    $eq: envConfig().executor.id,
-                },
-                activeJob: {
-                    $exists: true,
-                    $ne: null,
-                },
-                "activeJob.queuedAt": {
-                    $exists: true,
-                    $lt: this.dayjsService.now()
-                        .subtract(
-                            ttl,
-                            "millisecond"
-                        )
-                        .toDate(),
-                },
-            })
-            // requeue each stale bot
-            const promises = bots.map(
-                async (bot) => {
-                    const bullmqJob = await this.actionQueue.getJob(bot.id)
-                    if (bullmqJob) {
-                        this.winstonService.log(
-                            WinstonLog.JobSkippedFoundInQueue,
-                            {
-                                botId: bot.id,
-                                jobId: bot.activeJob?.job?.toString() ?? "",
-                                type: bot.activeJob?.jobType ?? JobType.OpenPosition,
-                                bullmqJobId: bullmqJob?.id ?? "",
-                            }
-                        )
-                        return
-                    }
-                    const [
-                        context,
-                        error
-                    ] = await this.asyncService.resolveTuple(
-                        this.jobContextService.load({
-                            jobId: bot.activeJob?.job?.toString() ?? "",
-                            botId: bot.id,
-                        }
-                        )
+        // get TTL from config
+        const ttl = envConfig().executor.runtime.operation.openPosition.requeue.interval
+        // find bots with stale active jobs
+        const bots = await this.connection.model<BotSchema>(BotSchema.name).find({
+            executor: {
+                $eq: envConfig().executor.id,
+            },
+            activeJob: {
+                $exists: true,
+                $ne: null,
+            },
+            "activeJob.queuedAt": {
+                $exists: true,
+                $lt: this.dayjsService.now()
+                    .subtract(
+                        ttl,
+                        "millisecond"
                     )
-                    if (error || !context) {
-                        this.winstonService.log(
-                            WinstonLog.JobSkippedContextLoadFailed,
-                            {
-                                jobId: bot.activeJob?.job?.toString() ?? "",
-                                botId: bot.id,
-                                type: bot.activeJob?.jobType ?? JobType.OpenPosition,
-                                error: error?.message ?? "Unknown error",
-                            }
-                        )
-                        return
+                    .toDate(),
+            },
+        })
+        // requeue each stale bot
+        const promises = bots.map(
+            async (bot) => {
+                const context = await this.jobContextService.load({
+                    botId: bot.id,
+                    jobId: bot.activeJob?.job?.toString() ?? "",
+                })
+                const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
+                    id: {
+                        $eq: context.bot.activeJob?.liquidityPool.toString() ?? "",
                     }
-                    const acquired = await this.lockAuthorityService.acquire(
+                })
+                if (!liquidityPool) {
+                    throw new LiquidityPoolNotFoundException({
+                        id: context.bot.activeJob?.liquidityPool.toString() ?? "",
+                    })
+                }
+                switch (context.job.type) {
+                case JobType.OpenPosition: {
+                    await this.openPositionEnqueueService.enqueue(
                         {
-                            botId: bot.id,
+                            liquidityPool,
+                            bot,
+                            oldJob: context.job,
+                            isRetry: true,
                         }
                     )
-                    if (!acquired) {
-                        this.winstonService.log(
-                            WinstonLog.JobSkippedAuthorityNotAcquired,
-                            {
-                                botId: bot.id,
-                                jobId: bot.activeJob?.job?.toString() ?? "",
-                                type: bot.activeJob?.jobType ?? JobType.OpenPosition,
-                            }
-                        )
-                        return
-                    }
-                    try {
-                        let bullmqJob: Job<string> | undefined
-                        switch (context.job.type) {
-                        case JobType.OpenPosition: {
-                            // ensure bot is running
-                            if (!context.bot.running) {
-                                this.winstonService.log(
-                                    WinstonLog.JobSkippedBotNotRunning,
-                                    {
-                                        botId: bot.id,
-                                        jobId: context.job.id,
-                                        type: bot.activeJob?.jobType ?? JobType.OpenPosition,
-                                    }
-                                )
-                                return
-                            }
-                            // ensure no active position found
-                            if (context.bot.activePosition) {
-                                this.winstonService.log(
-                                    WinstonLog.JobSkippedBotAlreadyHasActivePosition,
-                                    {
-                                        botId: bot.id,
-                                        jobId: context.job.id,
-                                        type: bot.activeJob?.jobType ?? JobType.OpenPosition,
-                                    }
-                                )
-                                return
-                            } 
-                            const liquidityPool = this
-                                .primaryMemoryStorageService
-                                .liquidityPoolCollection
-                                .findOne({
-                                    id: {
-                                        $eq: context.bot.activeJob?.liquidityPool.toString() ?? "",
-                                    }
-                                })
-                            if (!liquidityPool) {
-                                throw new LiquidityPoolNotFoundException({
-                                    id: context.bot.activeJob?.liquidityPool.toString() ?? "",
-                                })
-                            }
-                            // ensure balance snapshot found
-                            if (!context.bot.balanceSnapshots) {
-                                throw new BalanceSnapshotsNotFoundException({
-                                    botId: bot.id,
-                                })
-                            }
-                            // ensure 
-                            bullmqJob = await this.openPositionEnqueueService.enqueue(
-                                {
-                                    bot,
-                                    liquidityPool,
-                                    jobId: bot.activeJob?.job?.toString() ?? "",
-                                    isRetry: true,
-                                }
-                            )
-                            break
-                        }
-                        case JobType.ClosePosition: {
-                            // ensure no active position found
-                            if (!context.bot.activePosition) {
-                                this.winstonService.log(
-                                    WinstonLog.JobSkippedBotNotHasActivePosition,
-                                    {
-                                        botId: bot.id,
-                                        jobId: context.job.id,
-                                        type: bot.activeJob?.jobType ?? JobType.ClosePosition,
-                                    }
-                                )
-                                return
-                            }
-                            const liquidityPool = this
-                                .primaryMemoryStorageService
-                                .liquidityPoolCollection
-                                .findOne({
-                                    id: {
-                                        $eq: context.bot.activeJob?.liquidityPool.toString() ?? "",
-                                    }
-                                })
-                            if (!liquidityPool) {
-                                throw new LiquidityPoolNotFoundException({
-                                    id: context.bot.activeJob?.liquidityPool.toString() ?? "",
-                                })
-                            }
-                            bullmqJob = await this.closePositionEnqueueService.enqueue(
-                                {
-                                    bot: context.bot,
-                                    liquidityPool,
-                                    jobId: bot.activeJob?.job?.toString() ?? "",
-                                    isRetry: true,
-                                }
-                            )
-                            break
-                        }
-                        case JobType.Withdraw: {
-                            bullmqJob = await this.withdrawEnqueueService.enqueue(
-                                {
-                                    bot: context.bot,
-                                    jobId: bot.activeJob?.job?.toString() ?? "",
-                                    isRetry: true,
-                                }
-                            )
-                            break
-                        }
-                        case JobType.ReconcileBalance: {
-                            // ensure bot is running
-                            if (!context.bot.running) {
-                                this.winstonService.log(
-                                    WinstonLog.JobSkippedBotNotRunning,
-                                    {
-                                        botId: bot.id,
-                                        jobId: context.job.id,
-                                        type: bot.activeJob?.jobType ?? JobType.ReconcileBalance,
-                                    }
-                                )
-                                return
-                            }
-                            bullmqJob = await this.reconcileBalanceEnqueueService.enqueue(
-                                {
-                                    bot: context.bot,
-                                    jobId: bot.activeJob?.job?.toString() ?? "",
-                                    isRetry: true,
-                                }
-                            )
-                        }
-                        }
-                        this.winstonService.log(
-                            WinstonLog.JobRequeued,
-                            {
-                                jobId: context.job.id,
-                                botId: bot.id,
-                                type: context.job.type,
-                                metadata: context.job.metadata,
-                                bullmqJobId: bullmqJob?.id ?? "",
-                            }
-                        )
-                    } catch (error) {
-                        this.winstonService.log(
-                            WinstonLog.JobRequeueFailed,
-                            {
-                                botId: bot.id,
-                                jobId: bot.activeJob?.job?.toString() ?? "",
-                                type: bot.activeJob?.jobType ?? JobType.OpenPosition,
-                                error: error.message,
-                            }
-                        )
-                        this.lockAuthorityService.release(
-                            {
-                                botId: bot.id,
-                            }
-                        )
-                    }
+                    break
                 }
-            )
-            await this.asyncService.allIgnoreError(promises)
-        } catch (error) {
-            this.winstonService.log(
-                WinstonLog.OpenPositionRequeueFailed,
-                {
-                    error: error.message,
+                case JobType.ClosePosition: {
+                    await this.closePositionEnqueueService.enqueue(
+                        {
+                            liquidityPool,
+                            bot,
+                            oldJob: context.job,
+                            isRetry: true,
+                        }
+                    )
+                    break
                 }
-            )
-        }
+                case JobType.Withdraw: {
+                    await this.withdrawEnqueueService.enqueue(
+                        {
+                            bot,
+                            oldJob: context.job,
+                            isRetry: true,
+                        }
+                    )
+                    break
+                }
+                case JobType.ReconcileBalance: {
+                    await this.reconcileBalanceEnqueueService.enqueue(
+                        {
+                            bot,
+                            oldJob: context.job,
+                            isRetry: true,
+                        }
+                    )
+                    break
+                }
+                }
+            }
+        )
+        await this.asyncService.allIgnoreError(promises)
     }
 
     @Interval(envConfig().executor.runtime.operation.openPosition.requeue.interval)

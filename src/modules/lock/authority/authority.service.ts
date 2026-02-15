@@ -28,12 +28,9 @@ import {
 import {
     sleep 
 } from "@modules/common"
-import type {
-    AcquireParams,
-    ReleaseParams,
-    SendHeartbeatParams,
+import {
+    AcquireParams, ReleaseParams, SendHeartbeatParams 
 } from "./types"
-
 const LOCK_AUTHORITY_KEY = "lock-authority"
 
 /**
@@ -285,7 +282,9 @@ export class LockAuthorityService implements OnApplicationBootstrap {
      * @example
      * const ok = await lockAuthorityService.sendHeartbeat({ botId: "..." })
      */
-    async sendHeartbeat({ botId }: SendHeartbeatParams): Promise<boolean> {
+    async sendHeartbeat(
+        { botId }: SendHeartbeatParams
+    ): Promise<boolean> {
     // create the key for the lock authority
         const key = this.getLockKey(botId)
         const lockSchedulerKey = this.getLockSchedulerKey()

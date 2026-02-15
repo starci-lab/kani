@@ -34,7 +34,7 @@ import {
 } from "lokijs"
 import type {
     DynamicLiquidityPoolInfoDiagnosticReadinessResult,
-} from "../types"
+} from "./types"
 
 @Injectable()
 export class DynamicLiquidityPoolInfoDiagnosticService

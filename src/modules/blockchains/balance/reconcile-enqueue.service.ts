@@ -22,7 +22,6 @@ import {
     Connection
 } from "mongoose"
 import {
-    Job,
     Queue
 } from "bullmq"
 import {
@@ -41,6 +40,16 @@ import {
 import {
     IReconcileBalanceEnqueueService
 } from "./types"
+import {
+    WinstonLog,
+    WinstonService 
+} from "@modules/winston"
+import {
+    LockAuthorityService 
+} from "@modules/lock"
+import {
+    Types
+} from "mongoose"
 
 /**
  * Service responsible for enqueuing reconcile balance jobs.
@@ -60,6 +69,8 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         private readonly dayjsService: DayjsService,
+        private readonly winstonService: WinstonService,
+        private readonly lockAuthorityService: LockAuthorityService,
     ) {
     }
 
@@ -73,83 +84,198 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
      * const job = await service.enqueue({ bot, jobId })
      */
     async enqueue(
-        {
-            bot,
-            jobId,
-            isRetry,
-        }: EnqueueReconcileBalanceParams
-    ): Promise<Job<string>> {
+        params: EnqueueReconcileBalanceParams
+    ) {
+        const { bot, oldJob, isRetry } = params
+        if (!await this.validate(params)) {
+            return
+        }
         // create job record if not a retry
-        if (!isRetry) {
-            const session = await this.connection.startSession()
-            await session.withTransaction(
-                async () => {
+        let jobId = oldJob?.id
+        try {
+            if (!isRetry) {
+                jobId = new Types.ObjectId().toString()
+                const session = await this.connection.startSession()
+                await session.withTransaction(
+                    async () => {
                     // persist job record in database
-                    const [jobRaw] = await this.connection.model<JobSchema>(
-                        JobSchema.name
-                    ).create(
-                        [
-                            {
-                                _id: jobId,
-                                bot: bot.id,
-                                type: JobType.ReconcileBalance,
-                                status: JobStatus.Pending,
-                                executor: envConfig().executor.id,
-                                startedAt: this.dayjsService.now().toDate(),
-                                tasks: [
-                                ],
-                            }
-                        ],
-                        {
-                            session
-                        })
-                    const job = jobRaw.toJSON<JobSchema>()
-                    // update bot with active job reference
-                    await this.connection.model<BotSchema>(BotSchema.name)
-                        .updateOne(
-                            {
-                                _id: bot.id
-                            },
-                            {
-                                $set: {
-                                    activeJob: {
-                                        job: job.id,
-                                        queuedAt: this.dayjsService.now().toDate(),
-                                        jobType: JobType.ReconcileBalance,
-                                    },
+                        const [jobRaw] = await this.connection.model<JobSchema>(
+                            JobSchema.name
+                        ).create(
+                            [
+                                {
+                                    _id: jobId,
+                                    bot: bot.id,
+                                    type: JobType.ReconcileBalance,
+                                    status: JobStatus.Pending,
+                                    executor: envConfig().executor.id,
+                                    startedAt: this.dayjsService.now().toDate(),
+                                    tasks: [
+                                    ],
                                 }
-                            },
+                            ],
                             {
                                 session
-                            }
-                        )
+                            })
+                        const job = jobRaw.toJSON<JobSchema>()
+                        // update bot with active job reference
+                        await this.connection.model<BotSchema>(BotSchema.name)
+                            .updateOne(
+                                {
+                                    _id: bot.id
+                                },
+                                {
+                                    $set: {
+                                        activeJob: {
+                                            job: job.id,
+                                            queuedAt: this.dayjsService.now().toDate(),
+                                            jobType: JobType.ReconcileBalance,
+                                        },
+                                    }
+                                },
+                                {
+                                    session
+                                }
+                            )
+                    }
+                )
+            }
+        
+            // build payload and enqueue job
+            const payload: ActionPayload = {
+                type: JobType.ReconcileBalance,
+                jobId: jobId ?? "",
+                botId: bot.id,
+                isRetry,
+                tasks: [
+                    {
+                    /** Reconcile balance task */
+                        type: TaskType.ReconcileBalance,
+                        payload: {
+                        /** Payload for reconcile balance task */
+                            noSwap: false,
+                        },
+                    },
+                ],
+            }
+            await this.actionQueue.add(
+                bot.id,
+                this.superJson.stringify(payload),
+                {
+                    jobId: bot.id,
+                }
+            )
+            this.winstonService.log(
+                WinstonLog.JobEnqueued,
+                {
+                    botId: bot.id,
+                    jobId: jobId ?? "",
+                    type: JobType.ReconcileBalance,
+                }
+            )
+        } catch (error) {
+            this.winstonService.log(
+                WinstonLog.JobEnqueueFailed,
+                {
+                    botId: bot.id,
+                    type: JobType.ReconcileBalance,
+                    error: error.message,
+                }
+            )
+            this.lockAuthorityService.release(
+                {
+                    botId: bot.id,
                 }
             )
         }
-        
-        // build payload and enqueue job
-        const payload: ActionPayload = {
-            type: JobType.ReconcileBalance,
-            jobId,
-            botId: bot.id,
-            isRetry,
-            tasks: [
+    }
+
+    /**
+     * Validate the reconcile-balance job.
+     * 
+     * @param bot - The bot.
+     * @param oldJob - The old job.
+     * @returns True if the job is valid, false otherwise.
+     */
+    private async validate(
+        {
+            bot,
+            oldJob,
+        }: EnqueueReconcileBalanceParams
+    ): Promise<boolean> {
+        // Skip if bot is not running
+        if (!bot.running) {
+            this.winstonService.log(
+                WinstonLog.JobSkippedBotNotRunning,
                 {
-                    /** Reconcile balance task */
-                    type: TaskType.ReconcileBalance,
-                    payload: {
-                        /** Payload for reconcile balance task */
-                        noSwap: false,
-                    },
-                },
-            ],
+                    botId: bot.id,
+                    type: JobType.ReconcileBalance,
+                    jobId: oldJob?.id,
+                }
+            )
+            return false
         }
-        return await this.actionQueue.add(
-            jobId,
-            this.superJson.stringify(payload),
+        // Skip if bot has an active position
+        if (bot.activePosition) {
+            this.winstonService.log(
+                WinstonLog.JobSkippedBotAlreadyHasActivePosition,
+                {
+                    botId: bot.id,
+                    type: JobType.ReconcileBalance,
+                    jobId: oldJob?.id,
+                }
+            )
+            return false
+        }
+        // Skip if balance snapshot is within cooldown (avoid rescan too soon)
+        if (bot.balanceSnapshots?.snapshotAt) {
+            const diffMs = this.dayjsService.now().diff(
+                this.dayjsService.from(bot.balanceSnapshots.snapshotAt),
+                "millisecond"
+            )
+            if (diffMs <= envConfig().executor.runtime.operation.reconcileBalance.cooldown.rescan) {
+                this.winstonService.log(
+                    WinstonLog.JobSkippedBotBalanceSnapshotWithinCooldown,
+                    {
+                        botId: bot.id,
+                        type: JobType.ReconcileBalance,
+                        jobId: oldJob?.id,
+                    }
+                )
+                return false
+            }
+        }
+        // Wait to ensure no job for this bot is already in the queue
+        const bullmqJob = await this.actionQueue.getJob(bot.id)
+        if (bullmqJob) {
+            this.winstonService.log(
+                WinstonLog.JobSkippedFoundInQueue,
+                {
+                    botId: bot.id,
+                    type: JobType.ReconcileBalance,
+                    bullmqJobId: bullmqJob.id ?? "",
+                    jobId: oldJob?.id,
+                }
+            )
+            return false
+        }
+        // Acquire lock authority; return if not acquired
+        const acquired = await this.lockAuthorityService.acquire(
             {
-                jobId: bot.id,
+                botId: bot.id,
             }
         )
+        if (!acquired) {
+            this.winstonService.log(
+                WinstonLog.JobSkippedBotAuthorityNotAcquired,
+                {
+                    botId: bot.id,
+                    type: JobType.ReconcileBalance,
+                    jobId: oldJob?.id,
+                }
+            )
+            return false
+        }
+        return true
     }
 }

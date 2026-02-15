@@ -43,6 +43,7 @@ import {
     CryptoModule 
 } from "@modules/crypto"
 import {
+    LockAuthorityModule,
     SemaModule 
 } from "@modules/lock"
 import {
@@ -102,6 +103,9 @@ import {
 import {
     GraphModule 
 } from "@modules/graph"
+import {
+    DiagnosticsModule 
+} from "@modules/diagnostics"
 
 @Module({
     imports: [
@@ -166,6 +170,12 @@ import {
             isGlobal: true,
         }),
         ApolloClientModule.register({
+            isGlobal: true,
+        }),
+        LockAuthorityModule.register({
+            isGlobal: true,
+        }),
+        DiagnosticsModule.register({
             isGlobal: true,
         }),
         MixinModule.register({

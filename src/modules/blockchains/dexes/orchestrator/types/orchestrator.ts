@@ -1,5 +1,6 @@
 import {
     BotSchema,
+    JobSchema,
     LiquidityPoolSchema
 } from "@modules/databases"
 import {
@@ -25,8 +26,8 @@ export interface EnqueueOpenPositionParams {
     bot: BotSchema
     /** Liquidity pool schema. */
     liquidityPool: LiquidityPoolSchema
-    /** Job ID. */
-    jobId: string
+    /** Old job (Optional) */
+    oldJob?: JobSchema
     /** Whether this is a retry. */
     isRetry?: boolean
 }
@@ -39,8 +40,8 @@ export interface EnqueueClosePositionParams {
     bot: BotSchema
     /** Liquidity pool schema. */
     liquidityPool: LiquidityPoolSchema
-    /** Job ID. */
-    jobId: string
     /** Whether this is a retry. */
     isRetry?: boolean
+    /** Old job (Optional) */
+    oldJob?: JobSchema
 }

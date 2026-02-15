@@ -24,9 +24,6 @@ import {
 import {
     EnqueueWithdrawParams
 } from "./withdraw"
-import {
-    Job
-} from "bullmq"
 
 /**
  * Core interface for balance action operations.
@@ -51,12 +48,12 @@ export interface IBalanceFetcherService {
  * Core interface for reconcile-balance enqueue operations.
  */
 export interface IReconcileBalanceEnqueueService {
-    enqueue(params: EnqueueReconcileBalanceParams): Promise<Job<string>>
+    enqueue(params: EnqueueReconcileBalanceParams): Promise<void>
 }
 
 /**
  * Core interface for withdraw enqueue operations.
  */
 export interface IWithdrawEnqueueService {
-    enqueue(params: EnqueueWithdrawParams): Promise<Job<string>>
+    enqueue(params: EnqueueWithdrawParams): Promise<void>
 }

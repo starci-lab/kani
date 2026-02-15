@@ -1,5 +1,6 @@
 import {
     BotSchema, 
+    JobSchema,
 } from "@modules/databases"
 import {
     PrepareTx,
@@ -38,7 +39,7 @@ export interface ExecuteWithdrawTransactionResult {
 /** Parameters for enqueuing a withdraw job. */
 export interface EnqueueWithdrawParams {
     bot: BotSchema
-    jobId: string
+    oldJob?: JobSchema
     isRetry?: boolean
 }
 

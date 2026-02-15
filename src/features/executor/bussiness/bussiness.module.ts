@@ -10,12 +10,6 @@ import {
 import {
     RotationModule 
 } from "./rotation"
-import {
-    DiagnosticsModule 
-} from "./diagnostics"
-import {
-    LockAuthorityService 
-} from "./lock-authority.service"
 
 @Module({
 })
@@ -28,11 +22,6 @@ export class BussinessModule extends ConfigurableModuleClass {
             ...dynamicModule,
             global: options.isGlobal,
             imports: [
-                DiagnosticsModule.register(
-                    {
-                        isGlobal: options.isGlobal,
-                    }
-                ),
                 SubscriptionsModule.register(
                     {
                         isGlobal: options.isGlobal,
@@ -43,12 +32,6 @@ export class BussinessModule extends ConfigurableModuleClass {
                         isGlobal: options.isGlobal,
                     }
                 ),
-            ],
-            exports: [
-                LockAuthorityService,
-            ],
-            providers: [
-                LockAuthorityService,
             ],
         }
     }
