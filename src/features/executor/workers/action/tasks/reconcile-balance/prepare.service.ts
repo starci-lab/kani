@@ -106,9 +106,11 @@ export class ReconcileBalanceTaskPrepareService {
             )
         }
         // check eligibility
-        const { eligible } = await this.evalSnapshotService.eval({
-            bot
-        })
+        const { eligible } = await this.evalSnapshotService.eval(
+            {
+                bot
+            }
+        )
         if (!eligible || !payload.swap) {
             // Push a "no-op" task (0 steps) so dispatcher can mark it done immediately
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(

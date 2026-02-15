@@ -13,7 +13,7 @@ import {
     JobType,
     TaskType,
     PrimaryMemoryStorageService,
-    TransactionType
+    TransactionType,
 } from "@modules/databases"
 import {
     Connection
@@ -159,7 +159,7 @@ export class ClosePositionTaskConfirmService {
             await session.withTransaction(async (
                 clientSession
             ) => {
-            // update balance snapshots
+                // update balance snapshots
                 await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
                     {
                         bot,
@@ -195,8 +195,10 @@ export class ClosePositionTaskConfirmService {
                         quoteToken,
                         gasToken,
                         session: clientSession,
+                        bot,
                     }
                 )
+                // update the transaction records
                 for (const signedTx of signedTxs) {
                     await this.transactionSnapshotService.addTransactionRecord(
                         {
@@ -231,6 +233,7 @@ export class ClosePositionTaskConfirmService {
                         session: clientSession,
                     },
                 )
+                // throw an exception to stimulate the mongo session
                 if (envConfig().executor.runtime.operation.closePosition.stimulate) {
                     throw new ActionJobStimulateMongoSessionException({
                         botId: bot.id,

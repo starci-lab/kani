@@ -8,7 +8,8 @@ import {
     PositionSchema,
     InjectPrimaryMongoose,
     PositionSnapshotsSchema,
-    PositionPerformanceSchema
+    PositionPerformanceSchema,
+    BotSchema
 } from "@modules/databases"
 import {
     DayjsService
@@ -53,6 +54,7 @@ export class ClosePositionSnapshotService {
      */
     async updateClosePositionRecord(
         {
+            bot,
             before,
             after,
             positionId,
@@ -137,5 +139,20 @@ export class ClosePositionSnapshotService {
         {
             session,
         })
+
+        // clear the bot's active position
+        await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+            {
+                _id: bot.id,
+            },
+            {
+                $set: {
+                    activePosition: "",
+                },
+            },
+            {
+                session,
+            },
+        )
     }
 }   

@@ -2,7 +2,8 @@ import type {
     ClientSession 
 } from "mongoose"
 import type {
-    TokenSchema 
+    TokenSchema,
+    BotSchema 
 } from "@modules/databases"
 import type {
     BalanceSnapshotParams 
@@ -10,6 +11,7 @@ import type {
 
 /** Params for updating a close-position record with before/after balances. */
 export interface UpdateClosePositionRecordParams {
+    bot: BotSchema
     before: BalanceSnapshotParams
     after: BalanceSnapshotParams
     positionId: string
