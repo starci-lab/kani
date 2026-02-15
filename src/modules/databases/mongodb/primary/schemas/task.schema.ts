@@ -122,6 +122,20 @@ export class TaskSchema extends AbstractSchema {
         type: Boolean, required: false 
     })
         confirmed?: boolean  
+
+    /**
+     * The index of the open position step.
+     */
+    @Field(() => Int,
+        {
+            description: "The index of the open position step",
+            nullable: true,
+        }
+    )
+    @Prop({
+        type: Number, required: false 
+    })
+        openPositionStepIndex?: number
 }
 
 

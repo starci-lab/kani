@@ -66,6 +66,8 @@ import {
     TaskSchemaClass,
     StepSchema,
     StepSchemaClass,
+    TxFailureSchemaClass,
+    TxFailureSchema,
 } from "./schemas"
 import {
     MongooseModule as NestMongooseModule 
@@ -311,6 +313,10 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     {
                         name: StepSchema.name,
                         useFactory: () => StepSchemaClass,
+                    },
+                    {
+                        name: TxFailureSchema.name,
+                        useFactory: () => TxFailureSchemaClass,
                     },
                 ],
                 CONNECTION_NAME),

@@ -6,6 +6,7 @@ import {
     LiquidityPoolId,
     QuoteRatioStatus,
     TokenId,
+    TaskType,
 } from "@modules/databases"
 
 /**
@@ -105,6 +106,8 @@ export interface ActiveJobTaskPreparedMessage {
     metadata?: unknown
     /** Task index. */
     taskIndex: number
+    /** Task type. */
+    taskType: TaskType
 }
 
 /**
@@ -121,6 +124,8 @@ export interface ActionJobTaskConfirmedMessage {
     metadata?: unknown
     /** Task index. */
     taskIndex: number
+    /** Task type. */
+    taskType: TaskType
 }
 
 /**

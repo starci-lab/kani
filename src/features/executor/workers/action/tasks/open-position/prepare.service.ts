@@ -89,6 +89,7 @@ export class OpenPositionTaskPrepareService {
                         type: TaskType.OpenPosition,
                         prepareResult: this.superJson.stringify(prepareResult),
                         activeStep: 0,
+                        openPositionStepIndex: 0,
                         stepCount: prepareResult.prepareTxs.length,
                         steps: prepareResult.prepareTxs.map(
                             (prepareTx, index) => (
@@ -112,6 +113,7 @@ export class OpenPositionTaskPrepareService {
                 txCount: prepareResult.prepareTxs.length,
                 metadata: job.metadata,
                 taskIndex,
+                taskType: TaskType.OpenPosition,
             }
         )
     }
