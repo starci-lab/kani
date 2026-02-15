@@ -88,7 +88,6 @@ export class ReconcileBalanceTaskPrepareService {
         let quoteBalanceAmount = new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? 0)
         let gasBalanceAmount = new BN(bot.balanceSnapshots?.gasBalanceAmount ?? 0)
         // if reconcile is not disabled, fetch the balances and update the balance snapshots
-        console.log(payload)
         if (payload.reconcile) {
             const fetched = await this.balanceFetcherService.fetchBalances({
                 bot
@@ -106,7 +105,7 @@ export class ReconcileBalanceTaskPrepareService {
                 }
             )
         }
-        // 2) Eligibility gate
+        // check eligibility
         const { eligible } = await this.evalSnapshotService.eval({
             bot
         })
@@ -144,7 +143,7 @@ export class ReconcileBalanceTaskPrepareService {
             return
         }
 
-        // 3) Determine plan (swap steps)
+        // determine swap steps
         const { swapSteps, quoteRatioResult } =
             await this.balanceActionService.determineReconcileBalancePlan(
                 {
