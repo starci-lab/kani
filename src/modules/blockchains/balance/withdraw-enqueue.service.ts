@@ -77,7 +77,6 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
             bot,
             jobId,
             isRetry,
-            payload: cacheResult,
         }: EnqueueWithdrawParams
     ): Promise<Job<string>> {
         // build withdraw payload
@@ -91,7 +90,8 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                     /** Withdraw task */
                     type: TaskType.Withdraw,
                     /** Payload for withdraw task */
-                    payload: cacheResult,
+                    payload: {
+                    },
                 },
             ],
         }

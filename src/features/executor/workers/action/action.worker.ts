@@ -119,7 +119,7 @@ export class ActionWorker extends WorkerHost {
         }
         // end load the job and bot context
         try {
-            for (let taskIndex = 0; taskIndex < tasks.length; taskIndex++) {
+            for (let taskIndex = context.job.taskIndex; taskIndex < tasks.length; taskIndex++) {
                 const task = tasks[taskIndex]
                 switch (task.type) {
                 case TaskType.ClosePosition: {

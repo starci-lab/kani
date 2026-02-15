@@ -29,8 +29,6 @@ export class ReconcileBalanceTaskConfirmService {
      * @param params - The parameters for the CLOSE POSITION TASK CONFIRM step.
      * @param params.bot - The bot.
      * @param params.job - The job.
-     * @param params.liquidityPool - The liquidity pool.
-     * @param params.state - The state of the liquidity pool.
      * @param params.isRetry - Whether the task is being retried.
      * @param params.taskIndex - The index of the task.
      */
@@ -43,12 +41,13 @@ export class ReconcileBalanceTaskConfirmService {
     ) {
         // simply logging
         this.winstonService.log(
-            WinstonLog.ActionJobConfirmed,
+            WinstonLog.ActionJobTaskConfirmed,
             {
                 botId: bot.id,
                 jobId: job.id,
                 type: JobType.ReconcileBalance,
                 metadata: job.metadata,
+                taskIndex,
             }
         )
         // update the job with the confirmed status
@@ -59,6 +58,9 @@ export class ReconcileBalanceTaskConfirmService {
             {
                 $set: {
                     "tasks.$[task].confirmed": true,
+                },
+                $inc: {
+                    taskIndex: 1,
                 },
             },
             {

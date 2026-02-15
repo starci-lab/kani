@@ -104,14 +104,14 @@ export class OpenPositionTaskPrepareService {
             },
         )
         this.winstonService.log(
-            WinstonLog.ActiveJobPrepared,
+            WinstonLog.ActiveJobTaskPrepared,
             {
                 botId: bot.id,
                 jobId: job.id,
                 type: JobType.OpenPosition,
                 txCount: prepareResult.prepareTxs.length,
-                liquidityPoolId: liquidityPool.displayId,
                 metadata: job.metadata,
+                taskIndex,
             }
         )
     }

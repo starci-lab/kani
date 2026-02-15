@@ -21,7 +21,6 @@ import {
     ActionJobCompletedMessage,
     ActionJobFailedMessage,
     ActionJobContextLoadFailedMessage,
-    ActiveJobPreparedMessage,
     MetricInitializedMessage,
     ClosePositionTransactionExecutedMessage,
     ClosePositionTransactionFailedMessage,
@@ -232,8 +231,18 @@ import {
     JobEnqueuedMessage,
     JobEnqueueFailedMessage,
     TransactionSignedMessage,
-    ActionJobConfirmedMessage,
+    ActionJobTaskConfirmedMessage,
+    ActiveJobTaskPreparedMessage,
     ReconcileBalancePlanDeterminedMessage,
+    JobSkippedFoundInQueueMessage,
+    JobSkippedAuthorityNotAcquiredMessage,
+    JobRequeuedMessage,
+    JobRequeueFailedMessage,
+    JobSkippedNotFoundInDatabaseMessage,
+    JobSkippedContextLoadFailedMessage,
+    JobSkippedBotAlreadyHasActivePositionMessage,
+    JobSkippedBotNotHasActivePositionMessage,
+    JobSkippedBotNotRunningMessage,
 } from "./types"
 
 /** Map of Winston log names to level, Loki flag, and message type. */
@@ -2169,7 +2178,7 @@ export const configMap = {
     // Action Job Completed
     [WinstonLog.ActionJobCompleted]: {
         name: WinstonLog.ActionJobCompleted,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as ActionJobCompletedMessage,
@@ -2191,12 +2200,12 @@ export const configMap = {
         } as ActionJobContextLoadFailedMessage,
     },
     // Active Job Prepared
-    [WinstonLog.ActiveJobPrepared]: {
-        name: WinstonLog.ActiveJobPrepared,
+    [WinstonLog.ActiveJobTaskPrepared]: {
+        name: WinstonLog.ActiveJobTaskPrepared,
         level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
-        } as ActiveJobPreparedMessage,
+        } as ActiveJobTaskPreparedMessage,
     },
     // Transaction Signed
     [WinstonLog.TransactionSigned]: {
@@ -2207,12 +2216,12 @@ export const configMap = {
         } as TransactionSignedMessage,
     },
     // Action Job Confirmed
-    [WinstonLog.ActionJobConfirmed]: {
-        name: WinstonLog.ActionJobConfirmed,
+    [WinstonLog.ActionJobTaskConfirmed]: {
+        name: WinstonLog.ActionJobTaskConfirmed,
         level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
-        } as ActionJobConfirmedMessage,
+        } as ActionJobTaskConfirmedMessage,
     },
     // Reconcile Balance Plan Determined
     [WinstonLog.ReconcileBalancePlanDetermined]: {
@@ -2221,5 +2230,77 @@ export const configMap = {
         loki: true,
         messageType: {
         } as ReconcileBalancePlanDeterminedMessage,
+    },
+    // Action Skipped Active Job Found In Queue
+    [WinstonLog.JobSkippedFoundInQueue]: {
+        name: WinstonLog.JobSkippedFoundInQueue,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedFoundInQueueMessage,
+    },
+    // Action Job Skipped Not Found In Database
+    [WinstonLog.JobSkippedNotFoundInDatabase]: {
+        name: WinstonLog.JobSkippedNotFoundInDatabase,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedNotFoundInDatabaseMessage,
+    },
+    // Action Job Skipped Authority Not Acquired
+    [WinstonLog.JobSkippedAuthorityNotAcquired]: {
+        name: WinstonLog.JobSkippedAuthorityNotAcquired,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedAuthorityNotAcquiredMessage,
+    },
+    // Job Requeued
+    [WinstonLog.JobRequeued]: {
+        name: WinstonLog.JobRequeued,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as JobRequeuedMessage,
+    },
+    // Job Requeue Failed
+    [WinstonLog.JobRequeueFailed]: {
+        name: WinstonLog.JobRequeueFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as JobRequeueFailedMessage,
+    },
+    // Job Skipped Context Load Failed
+    [WinstonLog.JobSkippedContextLoadFailed]: {
+        name: WinstonLog.JobSkippedContextLoadFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as JobSkippedContextLoadFailedMessage,
+    },
+    // Job Skipped Bot Already Has Active Position
+    [WinstonLog.JobSkippedBotAlreadyHasActivePosition]: {
+        name: WinstonLog.JobSkippedBotAlreadyHasActivePosition,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedBotAlreadyHasActivePositionMessage,
+    },
+    // Job Skipped Bot Not Has Active Position
+    [WinstonLog.JobSkippedBotNotHasActivePosition]: {
+        name: WinstonLog.JobSkippedBotNotHasActivePosition,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedBotNotHasActivePositionMessage,
+    },
+    // Job Skipped Bot Not Running
+    [WinstonLog.JobSkippedBotNotRunning]: {
+        name: WinstonLog.JobSkippedBotNotRunning,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedBotNotRunningMessage,
     },
 }

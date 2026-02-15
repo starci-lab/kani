@@ -140,6 +140,19 @@ export class JobSchema extends AbstractSchema {
         type: [TaskSchemaClass], required: true 
     })
         tasks: Array<TaskSchema>
+
+    /**
+     * The index of the task that the job is currently processing.
+     */
+    @Field(() => Int,
+        {
+            description: "The index of the task that the job is currently processing",
+        }
+    )
+    @Prop({
+        type: Number, default: 0 
+    })
+        taskIndex: number
 }
 
 export const JobSchemaClass = SchemaFactory.createForClass(JobSchema)

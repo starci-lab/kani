@@ -40,12 +40,13 @@ export class WithdrawTaskConfirmService {
     ) {
         // simply logging
         this.winstonService.log(
-            WinstonLog.ActionJobConfirmed,
+            WinstonLog.ActionJobTaskConfirmed,
             {
                 botId: bot.id,
                 jobId: job.id,
                 type: JobType.Withdraw,
                 metadata: job.metadata,
+                taskIndex,
             }
         )
         // update the job with the confirmed status
@@ -56,6 +57,9 @@ export class WithdrawTaskConfirmService {
             {
                 $set: {
                     "tasks.$[task].confirmed": true,
+                },
+                $inc: {
+                    taskIndex: 1,
                 },
             },
             {

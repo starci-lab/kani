@@ -39,19 +39,18 @@ export class OpenPositionTaskConfirmService {
         {
             bot,
             job,
-            liquidityPool,
             taskIndex,
         }: OpenPositionTaskConfirmParams
     ) {
         // simply logging
         this.winstonService.log(
-            WinstonLog.ActionJobConfirmed,
+            WinstonLog.ActionJobTaskConfirmed,
             {
                 botId: bot.id,
                 jobId: job.id,
-                liquidityPoolId: liquidityPool.displayId,
                 type: JobType.OpenPosition,
                 metadata: job.metadata,
+                taskIndex,
             }
         )
         // update the job with the confirmed status
@@ -62,6 +61,9 @@ export class OpenPositionTaskConfirmService {
             {
                 $set: {
                     "tasks.$[task].confirmed": true,
+                },
+                $inc: {
+                    taskIndex: 1,
                 },
             },
             {

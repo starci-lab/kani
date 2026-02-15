@@ -18,14 +18,11 @@ import {
 } from "@modules/blockchains"
 import {
     JobType,
-    PositionAssociateService 
+    PositionAssociateService,
 } from "@modules/databases"
 import {
     envConfig 
 } from "@modules/env"
-import {
-    WaitService
-} from "@modules/mixin"
 import {
     InjectQueue
 } from "@nestjs/bullmq"
@@ -54,7 +51,6 @@ export class HandleClosePositionService {
         private readonly settlementService: SettlementService,
         private readonly liquidityPoolStateService: LiquidityPoolStateService,
         private readonly positionAssociateService: PositionAssociateService,
-        private readonly waitService: WaitService,
         @InjectQueue(bullData[BullQueueName.Action].name)
         private readonly actionQueue: Queue<string>,
     ) {}
@@ -73,31 +69,25 @@ export class HandleClosePositionService {
             liquidityPool,
         }: HandleClosePositionParams
     ) {
+        const jobId = new Types.ObjectId().toString()
         // Skip if bot has no active position to close
         if (!bot.activePosition) {
             this.winstonService.log(
-                WinstonLog.ClosePositionSkippedBotHasNoActivePosition,
+                WinstonLog.JobSkippedBotNotHasActivePosition,
                 {
                     botId: bot.id,
-                    liquidityPoolId: liquidityPool.displayId,
+                    type: JobType.ClosePosition,
+                    jobId,
                 }
             )
             return
         }
-        if (bot.activeJob) {
-            this.winstonService.log(
-                WinstonLog.ClosePositionSkippedBotAlreadyHasActiveJob,
-                {
-                    botId: bot.id,
-                    liquidityPoolId: liquidityPool.displayId,
-                }
-            )
-            return
-        }
-        await this.positionAssociateService.associateActivePosition({
-            bot 
-        })
-        const jobId = new Types.ObjectId().toString()
+        // Associate the active position
+        await this.positionAssociateService.associateActivePosition(
+            {
+                bot
+            }
+        )
         // Settle the position to determine if we should close
         const state = await this.liquidityPoolStateService.getState(liquidityPool)
         const { 
@@ -125,21 +115,16 @@ export class HandleClosePositionService {
             )
             return
         }
-        // Wait to ensure no job for this bot is already in the queue
-        const noActiveJobFound = await this.waitService.wait(
-            {
-                action: async () => {
-                    const job = await this.actionQueue.getJob(bot.id)
-                    return !job
-                }
-            }
-        )
-        if (!noActiveJobFound) {
+        // Ensure no job for this bot is already in the queue
+        const bullmqJob = await this.actionQueue.getJob(jobId)
+        if (bullmqJob) {
             this.winstonService.log(
-                WinstonLog.ClosePositionSkippedActiveJobFoundInQueue,
+                WinstonLog.JobSkippedFoundInQueue,
                 {
                     botId: bot.id,
-                    liquidityPoolId: liquidityPool.displayId,
+                    jobId,
+                    type: JobType.ClosePosition,
+                    bullmqJobId: bullmqJob.id ?? "",
                 }
             )
             return
@@ -152,9 +137,11 @@ export class HandleClosePositionService {
         )
         if (!acquired) {
             this.winstonService.log(
-                WinstonLog.ClosePositionLockAuthorityNotAcquired,
+                WinstonLog.JobSkippedAuthorityNotAcquired,
                 {
                     botId: bot.id,
+                    jobId: bot.activeJob?.job?.toString() ?? "",
+                    type: JobType.ClosePosition,
                 }
             )
             return

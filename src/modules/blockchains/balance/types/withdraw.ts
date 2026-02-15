@@ -6,9 +6,6 @@ import {
     SignedTx
 } from "../../types"
 import {
-    WithdrawCacheResult 
-} from "@modules/cache"
-import {
     BalanceWithdrawTokenInput
 } from "./balance"
 
@@ -43,7 +40,6 @@ export interface EnqueueWithdrawParams {
     bot: BotSchema
     jobId: string
     isRetry?: boolean
-    payload: WithdrawCacheResult
 }
 
 /** Parameters for signing a withdraw transaction. */

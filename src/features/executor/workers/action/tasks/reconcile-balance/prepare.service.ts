@@ -109,13 +109,15 @@ export class ReconcileBalanceTaskPrepareService {
                 },
             )
 
-            this.winstonService.log(WinstonLog.ActiveJobPrepared,
+            this.winstonService.log(
+                WinstonLog.ActiveJobTaskPrepared,
                 {
                     botId: bot.id,
                     jobId: job.id,
                     type: JobType.ReconcileBalance,
                     txCount: 0,
                     metadata: job.metadata,
+                    taskIndex,
                 })
 
             return
@@ -254,13 +256,14 @@ export class ReconcileBalanceTaskPrepareService {
         )
 
         this.winstonService.log(
-            WinstonLog.ActiveJobPrepared,
+            WinstonLog.ActiveJobTaskPrepared,
             {
                 botId: bot.id,
                 jobId: job.id,
                 type: JobType.ReconcileBalance,
                 txCount: prepareResult.prepareTxs.length,
                 metadata: job.metadata,
+                taskIndex,
             }
         )
     }

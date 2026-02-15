@@ -37,11 +37,6 @@ export interface WithdrawTokenInput {
   amount: BN
 }
 
-/** Payload for withdraw action tasks. */
-export interface WithdrawActionTaskPayload {
-  tokenInputs: Array<WithdrawTokenInput>
-}
-
 /** Task for an action. */
 export interface OpenPositionActionTask {
   type: TaskType.OpenPosition
@@ -61,6 +56,7 @@ export interface ReconcileBalanceActionTask {
   useContext?: boolean
 }
 
+export type WithdrawActionTaskPayload = Record<string, never>
 /** Task for an action. */
 export interface WithdrawActionTask {
   type: TaskType.Withdraw

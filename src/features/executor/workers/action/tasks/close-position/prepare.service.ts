@@ -52,10 +52,10 @@ export class ClosePositionTaskPrepareService {
         {
             bot,
             job,
-            liquidityPool,
             state,
             taskIndex,
             bullmqJob,
+            liquidityPool,
         }: ClosePositionTaskPrepareParams
     ) {
         // Send heartbeat
@@ -104,14 +104,14 @@ export class ClosePositionTaskPrepareService {
             },
         )
         this.winstonService.log(
-            WinstonLog.ActiveJobPrepared,
+            WinstonLog.ActiveJobTaskPrepared,
             {
                 botId: bot.id,
                 jobId: job.id,
                 type: JobType.ClosePosition,
                 txCount: prepareResult.prepareTxs.length,
-                liquidityPoolId: liquidityPool.displayId,
                 metadata: job.metadata,
+                taskIndex,
             }
         )
     }

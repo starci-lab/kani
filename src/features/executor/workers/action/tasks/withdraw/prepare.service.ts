@@ -162,7 +162,7 @@ export class WithdrawTaskPrepareService {
         // 4) Convert inputs -> BalanceWithdrawTokenInput
         const withdrawTokenInputs: Array<BalanceWithdrawTokenInput> = cacheResult.tokenInputs.map(
             (tokenInput: { tokenId: string; amount: BN }) => {
-                const token = tokens.find((t) => t.id.toString() === tokenInput.tokenId)
+                const token = tokens.find((token) => token.id.toString() === tokenInput.tokenId)
                 if (!token) {
                     throw new JobFailureException({
                         originalError: new TokenNotFoundException({
@@ -230,13 +230,14 @@ export class WithdrawTaskPrepareService {
         )
 
         this.winstonService.log(
-            WinstonLog.ActiveJobPrepared,
+            WinstonLog.ActiveJobTaskPrepared,
             {
                 botId: bot.id,
                 jobId: job.id,
                 type: JobType.Withdraw,
                 txCount: prepareResult.prepareTxs.length,
                 metadata: job.metadata,
+                taskIndex,
             }
         )
     }
