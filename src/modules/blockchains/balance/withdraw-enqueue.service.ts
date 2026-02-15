@@ -48,6 +48,9 @@ import {
 import {
     LockAuthorityService 
 } from "@modules/lock"
+import {
+    CacheKey, CacheService 
+} from "@modules/cache"
 
 /**
  * Service responsible for enqueuing withdraw jobs.
@@ -69,6 +72,7 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
         private readonly dayjsService: DayjsService,
         private readonly winstonService: WinstonService,
         private readonly lockAuthorityService: LockAuthorityService,
+        private readonly cacheService: CacheService,
     ) {
     }
 
@@ -221,9 +225,26 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
     private async validate(
         { bot }: EnqueueWithdrawParams
     ): Promise<boolean> {
+        // check cache result
+        const cacheResult = await this.cacheService.get(
+            {
+                key: CacheKey.Withdraw,
+                args: [bot.id],
+            }
+        )
+        if (!cacheResult) {
+            this.winstonService.log(
+                WinstonLog.JobSkippedBotCacheResultFound,
+                {
+                    botId: bot.id,
+                    type: JobType.Withdraw,
+                }
+            )
+            return false
+        }
         // Skip if bot is not running
-        if (!bot.running) {
-            this.winstonService.log(WinstonLog.JobSkippedBotNotRunning,
+        if (bot.running) {
+            this.winstonService.log(WinstonLog.JobSkippedBotRunning,
                 {
                     botId: bot.id,
                     type: JobType.Withdraw,

@@ -255,6 +255,7 @@ import {
     JobSkippedBotRunningMessage,
     JobSkippedLiquidityPoolNotOwnedByBotMessage,
     JobSkippedQuoteRatioNotGoodMessage,
+    JobSkippedBotCacheResultFoundMessage,
 } from "./types"
 
 /** Map of Winston log names to level, Loki flag, and message type. */
@@ -2410,5 +2411,13 @@ export const configMap = {
         loki: true,
         messageType: {
         } as JobSkippedQuoteRatioNotGoodMessage,
+    },
+    // Job Skipped Bot Cache Result Found
+    [WinstonLog.JobSkippedBotCacheResultFound]: {
+        name: WinstonLog.JobSkippedBotCacheResultFound,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedBotCacheResultFoundMessage,
     },
 }

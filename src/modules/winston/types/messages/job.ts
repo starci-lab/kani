@@ -434,3 +434,15 @@ export interface JobSkippedQuoteRatioNotGoodMessage {
     /** Quote ratio status. */
     quoteRatioStatus: QuoteRatioStatus
 }
+
+/**
+ * Job skipped bot cache result found message.
+ */
+export interface JobSkippedBotCacheResultFoundMessage {
+    /** Job ID. */
+    jobId?: string
+    /** Bot ID. */
+    botId: string
+    /** Job type. */
+    type: JobType
+}

@@ -48,14 +48,6 @@ import {
     }
 )
 export class RuntimeContextService {
-    /**
-     * Cached bot state for the current request lifecycle.
-     *
-     * This value is refreshed either from the database or from the
-     * `BotUpdatedEvent` payload.
-     */
-    private bot: BotSchema | null = null
-
     constructor(
         @Inject(REQUEST)
         private readonly context: RuntimeContext,
@@ -103,9 +95,6 @@ export class RuntimeContextService {
         callback: () => Promise<void>,
     ) {
         setInterval(async () => {
-            if (!this.bot) {
-                return
-            }
             await callback()
         },
         interval)
@@ -245,10 +234,5 @@ export class RuntimeContextService {
      * Called when the request scope is destroyed.
      */
     async dispose() {
-        if (!this.bot) {
-            return
-        }
-        // clear the cached bot
-        this.bot = null
     }
 }

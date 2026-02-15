@@ -86,7 +86,6 @@ export class SuiExecuteService {
                 ),
             })
         }
-
         // stage: confirmation
         await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
@@ -96,7 +95,6 @@ export class SuiExecuteService {
                 })
             },
         })
-
         // stage: logging
         this.winstonService.log(
             WinstonLog.TransactionExecuted,

@@ -146,7 +146,7 @@ export class ClosePositionSnapshotService {
                 _id: bot.id,
             },
             {
-                $set: {
+                $unset: {
                     activePosition: "",
                 },
             },

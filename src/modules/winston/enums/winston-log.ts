@@ -269,4 +269,5 @@ export enum WinstonLog {
     JobSkippedNoPayload = "Job.Skipped.No.Payload",
     JobSkippedLiquidityPoolNotOwnedByBot = "Job.Skipped.Liquidity.Pool.Not.Owned.By.Bot",
     JobSkippedQuoteRatioNotGood = "Job.Skipped.Quote.Ratio.Not.Good",
+    JobSkippedBotCacheResultFound = "Job.Skipped.Bot.Cache.Result.Found",
 }
