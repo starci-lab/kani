@@ -89,7 +89,7 @@ export class ReservesWithFeesService {
                 id: activePosition.liquidityPool.toString(),
             })
         }
-        const state = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
+        const state = await this.liquidityPoolStateService.getState(liquidityPool)
         const {
             reserveA,
             reserveB,
