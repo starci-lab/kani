@@ -57,7 +57,7 @@ export class ClientsModule extends ConfigurableModuleClass {
             SuiClientService,
             // chain-specific services
             ...(
-                options.fetchOnly ? [] : [
+                options.disableExtensions ? [] : [
                     SolanaExecuteService,
                     SuiExecuteService,
                     SuiStimulateService,
