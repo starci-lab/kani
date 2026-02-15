@@ -10,11 +10,20 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
-    JobType 
+    JobType,
+    TaskType
 } from "@modules/databases"
 import {
     Connection 
 } from "mongoose"
+import {
+    SendHeartbeatService 
+} from "../../send-heartbeat.service"
+import {
+    BalanceSnapshotService,
+    BalanceFetcherService
+} from "@modules/blockchains"
+import BN from "bn.js"
 
 @Injectable()
 export class ReconcileBalanceTaskConfirmService {
@@ -22,6 +31,9 @@ export class ReconcileBalanceTaskConfirmService {
         private readonly winstonService: WinstonService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly sendHeartbeatService: SendHeartbeatService,
+        private readonly balanceSnapshotService: BalanceSnapshotService,
+        private readonly balanceFetcherService: BalanceFetcherService,
     ) { }
 
     /**
@@ -37,9 +49,74 @@ export class ReconcileBalanceTaskConfirmService {
             bot,
             job,
             taskIndex,
+            bullmqJob,
         }: ReconcileBalanceTaskConfirmParams
     ) {
-        // simply logging
+        // send heartbeat
+        await this.sendHeartbeatService.process(
+            {
+                bot,
+                job,
+                bullmqJob,
+            }
+        )
+        // check tx
+        const stepCount = job.tasks[taskIndex].stepCount
+        let targetBalanceAmount = new BN(0)
+        let quoteBalanceAmount = new BN(0)
+        let gasBalanceAmount = new BN(0)
+        if (stepCount > 0) {
+            // we need to refresh the balance snapshots
+            const fetched = await this.balanceFetcherService.fetchBalances(
+                {
+                    bot,
+                }
+            )
+            targetBalanceAmount = new BN(fetched.targetBalanceAmount)
+            quoteBalanceAmount = new BN(fetched.quoteBalanceAmount)
+            gasBalanceAmount = new BN(fetched.gasBalanceAmount)
+        }
+        const session = await this.connection.startSession()
+        await session.withTransaction(async (
+            clientSession
+        ) => {
+            if (stepCount > 0) {
+                // update the balance snapshots
+                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
+                    {
+                        bot,
+                        targetBalanceAmount,
+                        quoteBalanceAmount,
+                        gasBalanceAmount,
+                        session: clientSession,
+                    }
+                )
+            }
+            // update the job with the confirmed status
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                {
+                    _id: job.id,
+                },
+                {
+                    $set: {
+                        "tasks.$[task].confirmed": true,
+                    },
+                    $inc: {
+                        taskIndex: 1,
+                    },
+                },
+                {
+                    arrayFilters: [
+                        {
+                            "task.index": taskIndex,
+                            "task.type": TaskType.ReconcileBalance,
+                        },
+                    ],
+                    session: clientSession,
+                },
+            )
+        })
+
         this.winstonService.log(
             WinstonLog.ActionJobTaskConfirmed,
             {
@@ -48,28 +125,8 @@ export class ReconcileBalanceTaskConfirmService {
                 type: JobType.ReconcileBalance,
                 metadata: job.metadata,
                 taskIndex,
+                taskType: TaskType.ReconcileBalance,
             }
-        )
-        // update the job with the confirmed status
-        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-            {
-                _id: job.id,
-            },
-            {
-                $set: {
-                    "tasks.$[task].confirmed": true,
-                },
-                $inc: {
-                    taskIndex: 1,
-                },
-            },
-            {
-                arrayFilters: [
-                    {
-                        "task.index": taskIndex,
-                    },
-                ],
-            },
         )
     }
 }

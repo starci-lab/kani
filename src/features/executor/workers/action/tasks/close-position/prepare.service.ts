@@ -112,6 +112,7 @@ export class ClosePositionTaskPrepareService {
                 txCount: prepareResult.prepareTxs.length,
                 metadata: job.metadata,
                 taskIndex,
+                taskType: TaskType.ClosePosition,
             }
         )
     }

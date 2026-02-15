@@ -26,7 +26,8 @@ import {
     PrepareOpenPositionResult,
     SignedTx,
     OpenPositionActionService,
-    TransactionSnapshotService
+    TransactionSnapshotService,
+    BalanceSnapshotService
 } from "@modules/blockchains"
 import {
     envConfig 
@@ -58,6 +59,7 @@ export class OpenPositionTaskConfirmService {
         private readonly superJson: SuperJSON,
         private readonly openPositionActionService: OpenPositionActionService,
         private readonly transactionSnapshotService: TransactionSnapshotService,
+        private readonly balanceSnapshotService: BalanceSnapshotService,
     ) { }
 
     /**
@@ -153,7 +155,7 @@ export class OpenPositionTaskConfirmService {
             const session = await this.connection.startSession()
             await session.withTransaction(
                 async (clientSession) => {
-                // add the open position record
+                    // add the open position record
                     await this.openPositionSnapshotService.addOpenPositionRecord(
                         {
                             bot,
@@ -210,6 +212,16 @@ export class OpenPositionTaskConfirmService {
                             ],
                             session: clientSession,
                         },
+                    )
+                    // update balance snapshots
+                    await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
+                        {
+                            bot,
+                            targetBalanceAmount,
+                            quoteBalanceAmount,
+                            gasBalanceAmount,
+                            session,
+                        }
                     )
                     // add the transaction records
                     for (const signedTx of signedTxs) {

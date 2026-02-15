@@ -118,6 +118,7 @@ export class ReconcileBalanceTaskPrepareService {
                     txCount: 0,
                     metadata: job.metadata,
                     taskIndex,
+                    taskType: TaskType.ReconcileBalance,
                 })
 
             return
@@ -264,6 +265,7 @@ export class ReconcileBalanceTaskPrepareService {
                 txCount: prepareResult.prepareTxs.length,
                 metadata: job.metadata,
                 taskIndex,
+                taskType: TaskType.ReconcileBalance,
             }
         )
     }

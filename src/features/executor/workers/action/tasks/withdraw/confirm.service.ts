@@ -10,7 +10,8 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
-    JobType 
+    JobType,
+    TaskType
 } from "@modules/databases"
 import {
     Connection 
@@ -47,6 +48,7 @@ export class WithdrawTaskConfirmService {
                 type: JobType.Withdraw,
                 metadata: job.metadata,
                 taskIndex,
+                taskType: TaskType.Withdraw,
             }
         )
         // update the job with the confirmed status
@@ -66,6 +68,7 @@ export class WithdrawTaskConfirmService {
                 arrayFilters: [
                     {
                         "task.index": taskIndex,
+                        "task.type": TaskType.Withdraw,
                     },
                 ],
             },

@@ -238,6 +238,7 @@ export class WithdrawTaskPrepareService {
                 txCount: prepareResult.prepareTxs.length,
                 metadata: job.metadata,
                 taskIndex,
+                taskType: TaskType.Withdraw,
             }
         )
     }
