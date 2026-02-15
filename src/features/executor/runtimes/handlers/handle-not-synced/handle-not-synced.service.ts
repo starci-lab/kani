@@ -80,6 +80,11 @@ export class HandleNotSyncedService {
         }
     }
 
+    /**
+     * Handle liquidity pools became ready event.
+     *
+     * @param payload - Liquidity pools became ready event payload
+     */
     @OnEvent(EventName.LiquidityPoolsBecameReady)
     handleLiquidityPoolsBecameReady(
         { ids }: LiquidityPoolsBecameReadyEventPayload
