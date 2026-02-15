@@ -116,7 +116,7 @@ export class ReconcileBalanceTaskConfirmService {
                 },
             )
         })
-
+        // log the action job task confirmed
         this.winstonService.log(
             WinstonLog.ActionJobTaskConfirmed,
             {
