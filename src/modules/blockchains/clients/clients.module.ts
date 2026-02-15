@@ -45,23 +45,27 @@ export class ClientsModule extends ConfigurableModuleClass {
      */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
-
+  
         // register all client services
         const providers: Array<Provider> = [
             RpcExecutorService,
-            // chain-specific services
-            SolanaExecuteService,
-            SolanaStimulateService,
-            SolanaTxService,
             SolanaFetchService,
             SolanaGetErrorTypesService,
-            SolanaClientService,
-            SuiExecuteService,
-            SuiStimulateService,
-            SuiTxService,
-            SuiGetErrorTypesService,
-            SuiClientService,
             SuiFetchService,
+            SuiGetErrorTypesService,
+            SolanaClientService,
+            SuiClientService,
+            // chain-specific services
+            ...(
+                options.fetchOnly ? [] : [
+                    SolanaExecuteService,
+                    SuiExecuteService,
+                    SuiStimulateService,
+                    SuiTxService,
+                    SolanaStimulateService,
+                    SolanaTxService,
+                ]
+            ),
         ]
         
         return {

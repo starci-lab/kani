@@ -180,6 +180,7 @@ import {
         }),
         ClientsModule.register({
             isGlobal: true,
+            fetchOnly: true,
         }),
         BalanceModule.register({
             isGlobal: true,
