@@ -345,26 +345,25 @@ export class OpenPositionEnqueueService {
                 })
             return false
         }
-
+        if (!isRetry) {
         // Skip if the balance snapshot is outside the rescan cooldown window
-        const diffMs = this.dayjsService.now().diff(
-            this.dayjsService.from(bot.balanceSnapshots.snapshotAt),
-            "millisecond",
-        )
-
-        if (diffMs > envConfig().executor.runtime.operation.reconcileBalance.cooldown.rescan) {
-            this.winstonService.log(
-                WinstonLog.JobSkippedBotBalanceSnapshotWithinCooldown,
-                {
-                    botId: bot.id,
-                    type: JobType.OpenPosition,
-                    liquidityPoolId: liquidityPool.displayId,
-                    jobId: oldJob?.id,
-                }
+            const diffMs = this.dayjsService.now().diff(
+                this.dayjsService.from(bot.balanceSnapshots.snapshotAt),
+                "millisecond",
             )
-            return false
+            if (diffMs > envConfig().executor.runtime.operation.reconcileBalance.cooldown.rescan) {
+                this.winstonService.log(
+                    WinstonLog.JobSkippedBotBalanceSnapshotWithinCooldown,
+                    {
+                        botId: bot.id,
+                        type: JobType.OpenPosition,
+                        liquidityPoolId: liquidityPool.displayId,
+                        jobId: oldJob?.id,
+                    }
+                )
+                return false
+            }
         }
-
         // Skip if the bot is not eligible based on snapshot evaluation
         const { eligible } = await this.evalSnapshotService.eval({
             bot
@@ -379,7 +378,6 @@ export class OpenPositionEnqueueService {
                 })
             return false
         }
-
         // Skip if required diagnostics are not ready
         if (!
         (

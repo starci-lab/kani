@@ -281,9 +281,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             prepareTxs: [
                 {
                     chainId: ChainId.Sui,
-                    serializedTx: this.superJson.stringify(
-                        openPositionTxb.getData()
-                    ),
+                    serializedTx: await openPositionTxb.toJSON(),
                 }
             ],
             feeAmountA,

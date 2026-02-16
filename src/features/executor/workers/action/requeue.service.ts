@@ -112,7 +112,7 @@ export class ActionRequeueService implements OnApplicationBootstrap {
                         id: bot.activeJob?.liquidityPool.toString() ?? "",
                     })
                 }
-                const oldJob = await this.connection.model<JobSchema>(JobSchema.name).findById(bot.activeJob?.job)
+                const oldJob = await this.connection.model<JobSchema>(JobSchema.name).findById(bot.activeJob?.job.toString() ?? "")
                 if (!oldJob) {
                     throw new JobNotFoundException(
                         {
