@@ -27,6 +27,9 @@ import {
     WinstonLog,
     WinstonService 
 } from "@modules/winston"
+import {
+    strict as assert 
+} from "node:assert"
 /**
  * Service for the Open Position Task PREPARE step.
  */
@@ -77,7 +80,7 @@ export class OpenPositionTaskPrepareService {
                 }
             )
             // We update the database with the prepare result.
-            await this.connection.model<JobSchema>(
+            const updateJobResult = await this.connection.model<JobSchema>(
                 JobSchema.name
             ).updateOne(
                 {
@@ -105,6 +108,7 @@ export class OpenPositionTaskPrepareService {
                     },
                 },
             )
+            assert(updateJobResult.matchedCount > 0)
             this.winstonService.log(
                 WinstonLog.ActiveJobTaskPrepared,
                 {
@@ -127,6 +131,7 @@ export class OpenPositionTaskPrepareService {
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.OpenPosition,
+                    metadata: job.metadata,
                 }
             )
             throw error

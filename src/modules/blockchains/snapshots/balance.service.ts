@@ -15,6 +15,9 @@ import {
     UpdateBotSnapshotBalancesRecordParams,
     UpdateBotSnapshotBalancesRecordResult
 } from "./types"
+import {
+    strict as assert,
+} from "node:assert"
 
 /**
  * Service responsible for updating bot balance snapshot records.
@@ -101,7 +104,7 @@ export class BalanceSnapshotService {
         }
 
         // persist balance snapshot to bot document
-        await this.connection.model(BotSchema.name).updateOne(
+        const result = await this.connection.model(BotSchema.name).updateOne(
             {
                 _id: bot.id 
             },
@@ -114,5 +117,6 @@ export class BalanceSnapshotService {
                 session 
             }
         )
+        assert(result.matchedCount > 0)
     }
 }

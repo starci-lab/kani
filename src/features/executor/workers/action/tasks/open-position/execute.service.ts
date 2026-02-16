@@ -46,7 +46,9 @@ import {
     WinstonService,
     WinstonLog,
 } from "@modules/winston"
-    
+import {
+    strict as assert 
+} from "node:assert"
 /**
  * Service for the Close Position Task EXECUTE step.
  */
@@ -126,9 +128,8 @@ export class OpenPositionTaskExecuteService {
                 signedTx: this.superJson.parse<SignedTx>(signedTx),
                 stimulate: envConfig().executor.runtime.operation.openPosition.stimulate,
             })
-
             // update the job with the execute result + move to next step
-            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            const updateJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {
                     _id: job.id 
                 },
@@ -154,6 +155,7 @@ export class OpenPositionTaskExecuteService {
                     ],
                 },
             )
+            assert(updateJobResult.matchedCount > 0)
             this.winstonService.log(
                 WinstonLog.ActionJobTaskStepExecuted,
                 {
@@ -163,6 +165,7 @@ export class OpenPositionTaskExecuteService {
                     taskIndex,
                     taskType: TaskType.OpenPosition,
                     stepIndex,
+                    metadata: job.metadata,
                 }
             )
         } catch (error) {
@@ -176,6 +179,7 @@ export class OpenPositionTaskExecuteService {
                     taskType: TaskType.OpenPosition,
                     stepIndex,
                     error: error.message,
+                    metadata: job.metadata,
                 }
             )
             // If tx execution failed with a fatal RPC error, rollback to Sign and record failure atomically.

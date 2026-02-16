@@ -45,7 +45,9 @@ import {
 import {
     JobFailureStrategy,
 } from "@modules/common"
-
+import {
+    strict as assert 
+} from "node:assert"
 @Injectable()
 export class ReconcileBalanceTaskPrepareService {
     constructor(
@@ -260,7 +262,7 @@ export class ReconcileBalanceTaskPrepareService {
                 })
             }
 
-            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            const updateJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {
                     _id: job.id
                 },
@@ -283,7 +285,7 @@ export class ReconcileBalanceTaskPrepareService {
                     },
                 },
             )
-
+            assert(updateJobResult.matchedCount > 0)
             this.winstonService.log(
                 WinstonLog.ActiveJobTaskPrepared,
                 {
@@ -306,6 +308,7 @@ export class ReconcileBalanceTaskPrepareService {
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.ReconcileBalance,
+                    metadata: job.metadata,
                 }
             )
             throw error

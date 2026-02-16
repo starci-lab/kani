@@ -43,7 +43,9 @@ import {
     WinstonService,
     WinstonLog,
 } from "@modules/winston"
-
+import {
+    strict as assert 
+} from "node:assert"
 /**
  * Service for the Reconcile Balance Task EXECUTE step.
  */
@@ -105,7 +107,7 @@ export class ReconcileBalanceTaskExecuteService {
                     signedTx: this.superJson.parse<SignedTx>(signedTx),
                 })
             // persist execute result + move next step
-            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            const updateJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {
                     _id: job.id
                 },
@@ -131,6 +133,7 @@ export class ReconcileBalanceTaskExecuteService {
                     ],
                 },
             )
+            assert(updateJobResult.matchedCount > 0)
             this.winstonService.log(
                 WinstonLog.ActionJobTaskStepExecuted,
                 {
@@ -140,6 +143,7 @@ export class ReconcileBalanceTaskExecuteService {
                     taskIndex,
                     taskType: TaskType.ReconcileBalance,
                     stepIndex,
+                    metadata: job.metadata,
                 }
             )
         } catch (error) {
@@ -153,6 +157,7 @@ export class ReconcileBalanceTaskExecuteService {
                     taskType: TaskType.ReconcileBalance,
                     stepIndex,
                     error: error.message,
+                    metadata: job.metadata,
                 }
             )
             // If tx execution failed with a fatal RPC error, rollback to Sign and record failure atomically.

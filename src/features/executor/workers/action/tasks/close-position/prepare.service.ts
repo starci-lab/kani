@@ -33,6 +33,9 @@ import {
 import {
     JobFailureStrategy 
 } from "@modules/common"
+import {
+    strict as assert 
+} from "node:assert"
 /**
  * Service for the Close Position Task PREPARE step.
  */
@@ -84,7 +87,7 @@ export class ClosePositionTaskPrepareService {
                 }
             )
             // We update the database with the prepare result.
-            await this.connection.model<JobSchema>(
+            const updateJobResult = await this.connection.model<JobSchema>(
                 JobSchema.name
             ).updateOne(
                 {
@@ -111,6 +114,7 @@ export class ClosePositionTaskPrepareService {
                     },
                 },
             )
+            assert(updateJobResult.matchedCount > 0)
             this.winstonService.log(
                 WinstonLog.ActiveJobTaskPrepared,
                 {
@@ -134,6 +138,7 @@ export class ClosePositionTaskPrepareService {
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.ClosePosition,
+                    metadata: job.metadata,
                 }
             )
             // log the error

@@ -30,7 +30,9 @@ import {
 import {
     envConfig 
 } from "@modules/env"
-
+import {
+    strict as assert 
+} from "node:assert"
 @Injectable()
 export class ReconcileBalanceTaskConfirmService {
     constructor(
@@ -102,7 +104,7 @@ export class ReconcileBalanceTaskConfirmService {
                             )
                         }
                         // update the job with the confirmed status
-                        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                        const updateJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                             {
                                 _id: job.id,
                             },
@@ -124,6 +126,7 @@ export class ReconcileBalanceTaskConfirmService {
                                 session: clientSession,
                             },
                         )
+                        assert(updateJobResult.matchedCount > 0)
                         // throw an exception to stimulate the mongo session
                         if (envConfig().executor.runtime.operation.reconcileBalance.stimulate) {
                             throw new ActionJobStimulateMongoSessionException({
@@ -160,6 +163,7 @@ export class ReconcileBalanceTaskConfirmService {
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.ReconcileBalance,
+                    metadata: job.metadata,
                 }
             )
             throw error

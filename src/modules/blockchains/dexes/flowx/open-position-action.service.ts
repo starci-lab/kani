@@ -107,14 +107,25 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
      * @throws If the position object cannot be fetched or parsed by SuiFetchService
      */
     async confirm(
-        { positionId, liquidityPool }: ConfirmOpenPositionParams
+        { 
+            positionId, 
+            liquidityPool 
+        }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
+        // stimulate the confirm
+        if (envConfig().executor.runtime.operation.openPosition.stimulate) {
+            return {
+                liquidity: new BN(0),
+            }
+        }
+        // fetch the position
         const { liquidity } = await this.suiFetchService.fetchObject<FlowXClmmPosition>({
             objectId: positionId,
             kind: SuiObjectKind.Position,
             dexId: DexId.FlowX,
             liquidityPool,
         })
+        // return the position liquidity
         return {
             liquidity: new BN(liquidity),
         }

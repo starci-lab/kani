@@ -13,6 +13,9 @@ import {
     AddTransactionRecordResult
 } from "./types"
 import {
+    strict as assert,
+} from "node:assert"
+import {
     Connection
 } from "mongoose"
 
@@ -47,7 +50,7 @@ export class TransactionSnapshotService {
         session,
     }: AddTransactionRecordParams): Promise<AddTransactionRecordResult> {
         // persist transaction record with timestamp
-        await this.connection.model<TransactionSchema>(TransactionSchema.name)
+        const createTransactionResult = await this.connection.model<TransactionSchema>(TransactionSchema.name)
             .create(
                 [
                     {
@@ -62,5 +65,6 @@ export class TransactionSnapshotService {
                     session,
                 }
             )
+        assert(createTransactionResult.length > 0)
     }
 }

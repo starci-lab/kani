@@ -45,6 +45,9 @@ import {
 import {
     envConfig
 } from "@modules/env"
+import {
+    strict as assert 
+} from "node:assert"
 
 @Injectable()
 export class ClosePositionTaskConfirmService {
@@ -217,7 +220,7 @@ export class ClosePositionTaskConfirmService {
                         )
                     }
                     // update the job with the confirmed status
-                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                    const updateJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                         {
                             _id: job.id,
                         },
@@ -239,6 +242,7 @@ export class ClosePositionTaskConfirmService {
                             session: clientSession,
                         },
                     )
+                    assert(updateJobResult.matchedCount > 0)
                     // throw an exception to stimulate the mongo session
                     if (envConfig().executor.runtime.operation.closePosition.stimulate) {
                         throw new ActionJobStimulateMongoSessionException({
@@ -265,7 +269,6 @@ export class ClosePositionTaskConfirmService {
                     taskType: TaskType.ClosePosition,
                 }
             )
-
         } catch (error) {
             this.winstonService.log(
                 WinstonLog.ActionJobTaskConfirmedFailed,

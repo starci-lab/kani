@@ -21,7 +21,10 @@ import {
     AddOpenPositionRecordParams,
     AddOpenPositionRecordResult
 } from "./types"
-
+import {
+    strict as assert 
+} from "node:assert"
+    
 /**
  * Service responsible for creating open-position snapshot records.
  *
@@ -142,7 +145,7 @@ export class OpenPositionSnapshotService {
         )
         const position = positionRaw.toJSON<PositionSchema>()
         // set bot activePosition to new position
-        await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+        const updateBotResult = await this.connection.model<BotSchema>(BotSchema.name).updateOne(
             {
                 _id: bot.id
             },
@@ -159,5 +162,6 @@ export class OpenPositionSnapshotService {
                 session,
             }
         )
+        assert(updateBotResult.matchedCount > 0)
     }
 }

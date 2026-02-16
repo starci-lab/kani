@@ -44,7 +44,9 @@ import {
 import {
     JobStepTransitionService 
 } from "../../update"
-    
+import {
+    strict as assert 
+} from "node:assert"
 /**
  * Service for the Close Position Task EXECUTE step.
  */
@@ -113,7 +115,7 @@ export class ClosePositionTaskExecuteService {
                 stimulate: envConfig().executor.runtime.operation.closePosition.stimulate,
             })
             // persist execute result + move next step
-            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            const updateJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {
                     _id: job.id 
                 },
@@ -139,6 +141,7 @@ export class ClosePositionTaskExecuteService {
                     ],
                 },
             )
+            assert(updateJobResult.matchedCount > 0)
             this.winstonService.log(
                 WinstonLog.ActionJobTaskStepExecuted,
                 {

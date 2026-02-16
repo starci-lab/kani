@@ -463,6 +463,8 @@ export interface ActionJobTaskStepSignedMessage {
     taskType: TaskType
     /** Step index. */
     stepIndex: number
+    /** Metadata. */
+    metadata?: unknown
 }
 
 /**
@@ -481,6 +483,8 @@ export interface ActionJobTaskStepExecutedMessage {
     taskType: TaskType
     /** Step index. */
     stepIndex: number
+    /** Metadata. */
+    metadata?: unknown
 }
 
 /**
@@ -501,6 +505,8 @@ export interface ActionJobTaskStepSignedFailedMessage {
     stepIndex: number
     /** Error. */
     error: string
+    /** Metadata. */
+    metadata?: unknown
 }
 
 /**
@@ -521,6 +527,8 @@ export interface ActionJobTaskStepExecutedFailedMessage {
     stepIndex: number
     /** Error. */
     error: string
+    /** Metadata. */
+    metadata?: unknown
 }
 
 /**
@@ -539,6 +547,8 @@ export interface ActiveJobTaskPreparedFailedMessage {
     taskIndex: number
     /** Task type. */
     taskType: TaskType
+    /** Metadata. */
+    metadata?: unknown
 }
 
 /**
@@ -557,4 +567,6 @@ export interface ActionJobTaskConfirmedFailedMessage {
     taskIndex: number
     /** Task type. */
     taskType: TaskType
+    /** Metadata. */
+    metadata?: unknown
 }

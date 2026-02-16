@@ -48,6 +48,9 @@ import SuperJSON from "superjson"
 import {
     SendHeartbeatService
 } from "../../send-heartbeat.service"
+import {
+    strict as assert 
+} from "node:assert"
 
 @Injectable()
 export class OpenPositionTaskConfirmService {
@@ -202,7 +205,7 @@ export class OpenPositionTaskConfirmService {
                             }
                         )
                         // update the job with the confirmed status
-                        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                        const updateJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                             {
                                 _id: job.id,
                             },
@@ -224,6 +227,7 @@ export class OpenPositionTaskConfirmService {
                                 session: clientSession,
                             },
                         )
+                        assert(updateJobResult.matchedCount > 0)
                         // update balance snapshots
                         await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
                             {
@@ -256,17 +260,6 @@ export class OpenPositionTaskConfirmService {
                         }
                     }
                 )
-                this.winstonService.log(
-                    WinstonLog.ActionJobTaskConfirmed,
-                    {
-                        botId: bot.id,
-                        jobId: job.id,
-                        type: JobType.OpenPosition,
-                        metadata: job.metadata,
-                        taskIndex,
-                        taskType: TaskType.OpenPosition,
-                    }
-                )
             } catch (error) {
                 if (!(error instanceof ActionJobStimulateMongoSessionException)) {
                     throw error
@@ -293,6 +286,7 @@ export class OpenPositionTaskConfirmService {
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.OpenPosition,
+                    metadata: job.metadata,
                 }
             )
             throw error

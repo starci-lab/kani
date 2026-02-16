@@ -29,6 +29,9 @@ import {
     WinstonService,
     WinstonLog,
 } from "@modules/winston"
+import {
+    strict as assert 
+} from "node:assert"
 
 /**
  * Service for the Open Position Task SIGN step.
@@ -82,7 +85,7 @@ export class OpenPositionTaskSignService {
                     liquidityPool,
                 }
             )
-            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            const updateJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {
                     _id: job.id 
                 },
@@ -104,6 +107,7 @@ export class OpenPositionTaskSignService {
                     ],
                 },
             )
+            assert(updateJobResult.matchedCount > 0)
             this.winstonService.log(
                 WinstonLog.ActionJobTaskStepSigned,
                 {
@@ -113,6 +117,7 @@ export class OpenPositionTaskSignService {
                     taskIndex,
                     taskType: TaskType.OpenPosition,
                     stepIndex: activeStep,
+                    metadata: job.metadata,
                 }
             )
         } catch (error) {
@@ -126,6 +131,7 @@ export class OpenPositionTaskSignService {
                     taskType: TaskType.OpenPosition,
                     stepIndex: activeStep,
                     error: error.message,
+                    metadata: job.metadata,
                 }
             )
             throw error

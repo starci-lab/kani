@@ -28,7 +28,9 @@ import {
     WinstonService,
     WinstonLog,
 } from "@modules/winston"
-
+import {
+    strict as assert 
+} from "node:assert"
 /**
  * Service for the Reconcile Balance Task SIGN step.
  */
@@ -73,7 +75,7 @@ export class ReconcileBalanceTaskSignService {
             )
 
             // Persist signedTx and advance step type to Execute
-            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            const updateJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {
                     _id: job.id 
                 },
@@ -95,6 +97,7 @@ export class ReconcileBalanceTaskSignService {
                     ],
                 },
             )
+            assert(updateJobResult.matchedCount > 0)
             this.winstonService.log(
                 WinstonLog.ActionJobTaskStepSigned,
                 {
@@ -104,6 +107,7 @@ export class ReconcileBalanceTaskSignService {
                     taskIndex,
                     taskType: TaskType.ReconcileBalance,
                     stepIndex: activeStep,
+                    metadata: job.metadata,
                 }
             )
         } catch (error) {
@@ -117,6 +121,7 @@ export class ReconcileBalanceTaskSignService {
                     taskType: TaskType.ReconcileBalance,
                     stepIndex: activeStep,
                     error: error.message,
+                    metadata: job.metadata,
                 }
             )
             throw error

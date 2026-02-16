@@ -27,6 +27,9 @@ import {
     UpdateClosePositionRecordParams,
     UpdateClosePositionRecordResult
 } from "./types"
+import {
+    strict as assert 
+} from "node:assert"
 
 /**
  * Service responsible for updating close-position snapshot records and performance.
@@ -123,7 +126,7 @@ export class ClosePositionSnapshotService {
         }
 
         // persist close snapshot, tx hashes, and performance to position
-        await this.connection.model<PositionSchema>(
+        const updatePositionResult = await this.connection.model<PositionSchema>(
             PositionSchema.name
         ).updateOne({
             _id: positionId,
@@ -139,9 +142,9 @@ export class ClosePositionSnapshotService {
         {
             session,
         })
-
+        assert(updatePositionResult.matchedCount > 0)
         // clear the bot's active position
-        await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+        const updateBotResult = await this.connection.model<BotSchema>(BotSchema.name).updateOne(
             {
                 _id: bot.id,
             },
@@ -154,5 +157,6 @@ export class ClosePositionSnapshotService {
                 session,
             },
         )
+        assert(updateBotResult.matchedCount > 0)
     }
 }   
