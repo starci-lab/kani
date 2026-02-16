@@ -171,17 +171,6 @@ export class SolanaTxService {
                     botId: bot.id,
                 })
             }
-            console.log(
-                {
-                    transaction: solanaTx,
-                    lifetimeConstraint: {
-                        blockhash: latestBlockhash.value.blockhash,
-                        lastValidBlockHeight: latestBlockhash.value.lastValidBlockHeight,
-                    },
-                    walletId: bot.privyMetadata.walletId,
-                    encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
-                }
-            )
             const { txHash, signedTransaction } = await this.privySignService.signSolanaTransaction(
                 {
                     transaction: solanaTx,
