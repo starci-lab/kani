@@ -230,7 +230,7 @@ export class OpenPositionTaskConfirmService {
                             targetBalanceAmount,
                             quoteBalanceAmount,
                             gasBalanceAmount,
-                            session,
+                            session: clientSession,
                         }
                     )
                     // add the transaction records
@@ -241,6 +241,7 @@ export class OpenPositionTaskConfirmService {
                                 txHash: signedTx.txHash,
                                 chainId: bot.chainId,
                                 type: TransactionType.OpenPosition,
+                                session: clientSession,
                             }
                         )
                     }
