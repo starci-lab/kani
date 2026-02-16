@@ -513,7 +513,7 @@ export const envConfig = () => ({
                 }),
             },
             ttl: parseEnvMs({
-                key: "EXECUTOR_LOCK_AUTHORITY_TTL", defaultValue: "10s" 
+                key: "EXECUTOR_LOCK_AUTHORITY_TTL", defaultValue: "30s" 
             }),
         },
         workers: {

@@ -19,17 +19,17 @@ import {
     Interval
 } from "@nestjs/schedule"
 import {
-    EventEmitterService, 
+    EventEmitterService,
     EventName
 } from "@modules/event"
 import {
-    WinstonLog, WinstonService 
+    WinstonLog, WinstonService
 } from "@modules/winston"
 import {
-    sleep 
+    sleep
 } from "@modules/common"
 import {
-    AcquireParams, ReleaseParams, SendHeartbeatParams 
+    AcquireParams, ReleaseParams, SendHeartbeatParams
 } from "./types"
 const LOCK_AUTHORITY_KEY = "lock-authority"
 
@@ -123,7 +123,7 @@ export class LockAuthorityService implements OnApplicationBootstrap {
                     {
                         event: EventName.LockAuthorityTimeout,
                         payload: {
-                            botId 
+                            botId
                         },
                     }
                 )
@@ -160,8 +160,10 @@ export class LockAuthorityService implements OnApplicationBootstrap {
         try {
             const ttl = envConfig().executor.lockAuthority.ttl
             const now = this.dayjsService.now()
-            const expireAt = now.add(ttl,
-                "millisecond").valueOf()
+            const expireAt = now.add(
+                ttl,
+                "millisecond"
+            ).valueOf()
 
             /**
          * Lua script logic (atomic):
@@ -236,15 +238,15 @@ export class LockAuthorityService implements OnApplicationBootstrap {
         const key = this.getLockKey(botId)
         const lockSchedulerKey = this.getLockSchedulerKey()
         try {
-        /**
-         * Lua logic (atomic):
-         * - Delete lock key
-         * - Remove it from scheduler ZSET
-         * - Return 1 if lock existed, otherwise 0
-         *
-         * KEYS[1] -> lock key
-         * KEYS[2] -> scheduler ZSET key
-         */
+            /**
+             * Lua logic (atomic):
+             * - Delete lock key
+             * - Remove it from scheduler ZSET
+             * - Return 1 if lock existed, otherwise 0
+             *
+             * KEYS[1] -> lock key
+             * KEYS[2] -> scheduler ZSET key
+             */
             const lua = `
         if redis.call("DEL", KEYS[1]) == 1 then
             redis.call("ZREM", KEYS[2], KEYS[1])
@@ -285,7 +287,7 @@ export class LockAuthorityService implements OnApplicationBootstrap {
     async sendHeartbeat(
         { botId }: SendHeartbeatParams
     ): Promise<boolean> {
-    // create the key for the lock authority
+        // create the key for the lock authority
         const key = this.getLockKey(botId)
         const lockSchedulerKey = this.getLockSchedulerKey()
         try {
