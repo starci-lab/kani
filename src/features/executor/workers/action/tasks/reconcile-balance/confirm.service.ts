@@ -84,53 +84,54 @@ export class ReconcileBalanceTaskConfirmService {
         }
         try {
             const session = await this.connection.startSession()
-            await session.withTransaction(async (
-                clientSession
-            ) => {
-                if (stepCount > 0) {
-                // update the balance snapshots
-                    await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
-                        {
-                            bot,
-                            targetBalanceAmount,
-                            quoteBalanceAmount,
-                            gasBalanceAmount,
-                            session: clientSession,
-                        }
-                    )
-                }
-                // update the job with the confirmed status
-                await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                    {
-                        _id: job.id,
-                    },
-                    {
-                        $set: {
-                            "tasks.$[task].confirmed": true,
-                        },
-                        $inc: {
-                            taskIndex: 1,
-                        },
-                    },
-                    {
-                        arrayFilters: [
+            await session.withTransaction(
+                async (
+                    clientSession
+                ) => {
+                    if (stepCount > 0) {
+                        // update the balance snapshots
+                        await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
                             {
-                                "task.index": taskIndex,
-                                "task.type": TaskType.ReconcileBalance,
+                                bot,
+                                targetBalanceAmount,
+                                quoteBalanceAmount,
+                                gasBalanceAmount,
+                                session: clientSession,
+                            }
+                        )
+                    }
+                    // update the job with the confirmed status
+                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                        {
+                            _id: job.id,
+                        },
+                        {
+                            $set: {
+                                "tasks.$[task].confirmed": true,
                             },
-                        ],
-                        session: clientSession,
-                    },
-                )
-                // throw an exception to stimulate the mongo session
-                if (envConfig().executor.runtime.operation.reconcileBalance.stimulate) {
-                    throw new ActionJobStimulateMongoSessionException({
-                        botId: bot.id,
-                        jobId: job.id,
-                        taskIndex,
-                    })
-                }
-            })
+                            $inc: {
+                                taskIndex: 1,
+                            },
+                        },
+                        {
+                            arrayFilters: [
+                                {
+                                    "task.index": taskIndex,
+                                    "task.type": TaskType.ReconcileBalance,
+                                },
+                            ],
+                            session: clientSession,
+                        },
+                    )
+                    // throw an exception to stimulate the mongo session
+                    if (envConfig().executor.runtime.operation.reconcileBalance.stimulate) {
+                        throw new ActionJobStimulateMongoSessionException({
+                            botId: bot.id,
+                            jobId: job.id,
+                            taskIndex,
+                        })
+                    }
+                })
         } catch (error) {
             if (!(error instanceof ActionJobStimulateMongoSessionException)) {
                 throw error

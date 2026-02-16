@@ -72,8 +72,10 @@ export class ReconcileBalanceTaskDispatchService {
                     jobId: job.id,
                 })
             }
+            console.log(`job fetched: ${jobSnapshot.id}`)
             // if we do not find the task persisted in the job snapshot, we have to prepare 
             if (!jobSnapshot.tasks[taskIndex]) {
+                console.log("task not found, preparing...")
                 await this.reconcileBalanceTaskPrepareService.process(
                     {
                         bot,
@@ -95,6 +97,7 @@ export class ReconcileBalanceTaskDispatchService {
                 switch (stepType) {
                 // Sign step
                 case StepType.Sign: {
+                    console.log("signing...")
                     await this.reconcileBalanceTaskSignService.process(
                         {
                             bot,
@@ -109,6 +112,7 @@ export class ReconcileBalanceTaskDispatchService {
                 }
                 // Execute step
                 case StepType.Execute: {
+                    console.log("executing...")
                     await this.reconcileBalanceTaskExecuteService.process(
                         {
                             bot,
@@ -125,6 +129,7 @@ export class ReconcileBalanceTaskDispatchService {
             }
             // process confirm
             if (!jobSnapshot.tasks[taskIndex].confirmed) {
+                console.log("confirming...")
                 await this.reconcileBalanceTaskConfirmService.process(
                     {
                         bot,

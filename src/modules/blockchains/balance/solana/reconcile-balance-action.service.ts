@@ -169,9 +169,11 @@ export class SolanaReconcileBalanceActionService {
         Promise<ExecuteReconcileBalanceTransactionResult> {
         // check if transaction already exists on chain (for retries)
         if (txCheck && !stimulate) {
-            const transaction = await this.solanaFetchService.fetchTransaction({
-                txHash: signedTx.txHash,
-            })
+            const transaction = await this.solanaFetchService.fetchTransaction(
+                {
+                    txHash: signedTx.txHash,
+                }
+            )
             if (transaction) {
                 return {
                     txHash: signedTx.txHash,
