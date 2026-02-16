@@ -51,9 +51,9 @@ import {
 import {
     MintNftEvent, 
     parseTurbosSuiObjectPositionNFT, 
-    TurbosSuiObjectPosition, 
-    TurbosSuiObjectPositionNFT, 
-    parseTurbosPosition
+    parseTurbosPosition,
+    TurbosSuiObjectPositionNFTFields,
+    TurbosSuiObjectPositionFields
 } from "./struct"
 import {
     ChainId 
@@ -94,7 +94,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             }
         }
         // Stage: on-chain fetch (position NFT must exist)
-        const positionNftRaw = await this.suiFetchService.fetchObject<TurbosSuiObjectPositionNFT>(
+        const positionNftRaw = await this.suiFetchService.fetchObject<TurbosSuiObjectPositionNFTFields>(
             {
                 objectId: positionId,
                 kind: SuiObjectKind.PositionNFT,
@@ -102,9 +102,9 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                 liquidityPool,
             }
         )
-        const positionNft = parseTurbosSuiObjectPositionNFT(positionNftRaw.fields)
+        const positionNft = parseTurbosSuiObjectPositionNFT(positionNftRaw)
         // Stage: on-chain fetch (position must exist)
-        const positionRaw = await this.suiFetchService.fetchObject<TurbosSuiObjectPosition>(
+        const positionRaw = await this.suiFetchService.fetchObject<TurbosSuiObjectPositionFields>(
             {
                 objectId: positionNft.positionId,
                 kind: SuiObjectKind.Position,
@@ -112,7 +112,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                 liquidityPool,
             }
         )
-        const position = parseTurbosPosition(positionRaw.fields)
+        const position = parseTurbosPosition(positionRaw)
         // Stage: return position liquidity
         return {
             liquidity: new BN(position.liquidity),

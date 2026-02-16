@@ -225,6 +225,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
         {
             bot,
             oldJob,
+            isRetry
         }: EnqueueReconcileBalanceParams
     ): Promise<boolean> {
         // Skip if bot is not running
@@ -247,6 +248,18 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                     botId: bot.id,
                     type: JobType.ReconcileBalance,
                     jobId: oldJob?.id,
+                }
+            )
+            return false
+        }
+        // Skip if bot has an active job
+        if (bot.activeJob && !isRetry) {
+            this.winstonService.log(
+                WinstonLog.JobSkippedBotAlreadyHasActiveJob,
+                {
+                    botId: bot.id,
+                    jobId: bot.activeJob.job.toString(),
+                    type: JobType.ReconcileBalance,
                 }
             )
             return false

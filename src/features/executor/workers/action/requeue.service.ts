@@ -5,6 +5,7 @@ import {
 } from "@nestjs/common"
 import {
     BotSchema,
+    JobSchema,
     JobType,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
@@ -33,6 +34,7 @@ import {
     Connection
 } from "mongoose"
 import {
+    JobNotFoundException,
     LiquidityPoolNotFoundException
 } from "@modules/exceptions"
 import {
@@ -100,27 +102,31 @@ export class ActionRequeueService implements OnApplicationBootstrap {
         // requeue each stale bot
         const promises = bots.map(
             async (bot) => {
-                const context = await this.jobContextService.load({
-                    botId: bot.id,
-                    jobId: bot.activeJob?.job?.toString() ?? "",
-                })
                 const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
                     id: {
-                        $eq: context.bot.activeJob?.liquidityPool.toString() ?? "",
+                        $eq: bot.activeJob?.liquidityPool.toString() ?? "",
                     }
                 })
                 if (!liquidityPool) {
                     throw new LiquidityPoolNotFoundException({
-                        id: context.bot.activeJob?.liquidityPool.toString() ?? "",
+                        id: bot.activeJob?.liquidityPool.toString() ?? "",
                     })
                 }
-                switch (context.job.type) {
+                const oldJob = await this.connection.model<JobSchema>(JobSchema.name).findById(bot.activeJob?.job)
+                if (!oldJob) {
+                    throw new JobNotFoundException(
+                        {
+                            jobId: bot.activeJob?.job.toString() ?? "",
+                        }
+                    )
+                }
+                switch (bot.activeJob?.jobType) {
                 case JobType.OpenPosition: {
                     await this.openPositionEnqueueService.enqueue(
                         {
                             liquidityPool,
                             bot,
-                            oldJob: context.job,
+                            oldJob,
                             isRetry: true,
                         }
                     )
@@ -131,7 +137,7 @@ export class ActionRequeueService implements OnApplicationBootstrap {
                         {
                             liquidityPool,
                             bot,
-                            oldJob: context.job,
+                            oldJob,
                             isRetry: true,
                         }
                     )
@@ -141,7 +147,7 @@ export class ActionRequeueService implements OnApplicationBootstrap {
                     await this.withdrawEnqueueService.enqueue(
                         {
                             bot,
-                            oldJob: context.job,
+                            oldJob,
                             isRetry: true,
                         }
                     )
@@ -151,7 +157,7 @@ export class ActionRequeueService implements OnApplicationBootstrap {
                     await this.reconcileBalanceEnqueueService.enqueue(
                         {
                             bot,
-                            oldJob: context.job,
+                            oldJob,
                             isRetry: true,
                         }
                     )

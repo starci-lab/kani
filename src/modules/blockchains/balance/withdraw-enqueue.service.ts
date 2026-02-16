@@ -223,7 +223,7 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
      * @returns True if the job is valid, false otherwise.
      */
     private async validate(
-        { bot }: EnqueueWithdrawParams
+        { bot, isRetry }: EnqueueWithdrawParams
     ): Promise<boolean> {
         // check cache result
         const cacheResult = await this.cacheService.get(
@@ -263,7 +263,7 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
         }
       
         // Skip if bot already has an active job
-        if (bot.activeJob) {
+        if (bot.activeJob && !isRetry) {
             this.winstonService.log(WinstonLog.JobSkippedBotAlreadyHasActiveJob,
                 {
                     botId: bot.id,

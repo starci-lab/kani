@@ -255,6 +255,7 @@ export class ClosePositionEnqueueService {
             bot, 
             liquidityPool,
             oldJob,
+            isRetry,
         }: EnqueueClosePositionParams
     ): Promise<boolean> {
       
@@ -267,6 +268,20 @@ export class ClosePositionEnqueueService {
                     type: JobType.ClosePosition,
                     liquidityPoolId: liquidityPool.displayId,
                     jobId: oldJob?.id,
+                }
+            )
+            return false
+        }
+
+        // Skip if bot has an active job
+        if (bot.activeJob && !isRetry) {
+            this.winstonService.log(
+                WinstonLog.JobSkippedBotAlreadyHasActiveJob,
+                {
+                    botId: bot.id,
+                    jobId: bot.activeJob.job.toString(),
+                    type: JobType.ClosePosition,
+                    liquidityPoolId: liquidityPool.displayId,
                 }
             )
             return false

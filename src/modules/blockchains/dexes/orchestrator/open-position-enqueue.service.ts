@@ -268,7 +268,8 @@ export class OpenPositionEnqueueService {
         {
             bot,
             liquidityPool,
-            oldJob
+            oldJob,
+            isRetry
         }: EnqueueOpenPositionParams
     ): Promise<boolean> {
 
@@ -299,7 +300,7 @@ export class OpenPositionEnqueueService {
         }
 
         // Skip if the bot already has an active job
-        if (bot.activeJob) {
+        if (bot.activeJob && !isRetry) {
             this.winstonService.log(
                 WinstonLog.JobSkippedBotAlreadyHasActiveJob,
                 {
@@ -307,7 +308,8 @@ export class OpenPositionEnqueueService {
                     jobId: bot.activeJob.job.toString(),
                     liquidityPoolId: liquidityPool.displayId,
                     type: JobType.OpenPosition,
-                })
+                }
+            )
             return false
         }
 

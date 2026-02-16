@@ -246,7 +246,6 @@ export class OpenPositionActionService {
         const dex = this.getDexOrThrow(dexId)
         this.assertDexEnabledOrThrow(dexId,
             dex.displayId)
-
         // Route to DEX-specific confirm service
         switch (dex.displayId) {
         case DexId.FlowX:
