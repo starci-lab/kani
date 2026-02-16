@@ -182,7 +182,6 @@ export class CetusOpenPositionActionService implements IOpenActionService {
      * @param param.liquidityPool - Liquidity pool schema
      * @returns Prepared transaction with signature and fee amounts
      * @throws {BalanceSnapshotsNotFoundException} If balance snapshots are missing
-     * @throws {BotEvalSnapshotNotEligibleException} If bot is not eligible for an eval snapshot
      * @throws {LiquidityPoolClmmStateNotFoundException} If CLMM state is missing for the pool
      * @throws {InvalidPoolTokensException} If pool token metadata is missing
      * @throws {SlippageToleranceExceededException} If slippage tolerance is exceeded

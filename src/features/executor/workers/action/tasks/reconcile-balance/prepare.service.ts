@@ -81,9 +81,11 @@ export class ReconcileBalanceTaskPrepareService {
         }: ReconcileBalanceTaskPrepareParams
     ) {
         // Heartbeat
-        await this.sendHeartbeatService.process({
-            bot, job, bullmqJob
-        })
+        await this.sendHeartbeatService.process(
+            {
+                bot, job, bullmqJob
+            }
+        )
         let targetBalanceAmount = new BN(bot.balanceSnapshots?.targetBalanceAmount ?? 0)
         let quoteBalanceAmount = new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? 0)
         let gasBalanceAmount = new BN(bot.balanceSnapshots?.gasBalanceAmount ?? 0)
@@ -232,12 +234,16 @@ export class ReconcileBalanceTaskPrepareService {
         }
 
         // 6) Prepare transactions
-        const [prepareResult,
-            error] = await this.asyncService.resolveTuple(
-            this.balanceActionService.prepareReconcileBalanceTransaction({
-                bot,
-                tokenInputs,
-            }),
+        const [
+            prepareResult,
+            error
+        ] = await this.asyncService.resolveTuple(
+            this.balanceActionService.prepareReconcileBalanceTransaction(
+                {
+                    bot,
+                    tokenInputs,
+                }
+            ),
         )
 
         if (error) {

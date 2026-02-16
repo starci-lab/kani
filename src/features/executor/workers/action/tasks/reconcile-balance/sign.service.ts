@@ -47,47 +47,52 @@ export class ReconcileBalanceTaskSignService {
         bullmqJob,
         taskIndex,
     }: ReconcileBalanceTaskSignParams) {
+        try {
         // Send heartbeat
-        await this.sendHeartbeatService.process({
-            bot, job, bullmqJob 
-        })
+            await this.sendHeartbeatService.process(
+                {
+                    bot, job, bullmqJob 
+                }
+            )
+            const activeStep = job.tasks[taskIndex].activeStep ?? 0
+            const step = job.tasks[taskIndex].steps?.[activeStep]
+            // prepareTx is persisted per-step by prepare service
+            const prepareTx = this.superJson.parse<PrepareTx>(step.prepareTx)
+            // Sign tx
+            const { signedTx } = await this.balanceActionService.signReconcileBalanceTransaction(
+                {
+                    bot,
+                    prepareTx,
+                }
+            )
 
-        const activeStep = job.tasks[taskIndex].activeStep ?? 0
-        const step = job.tasks[taskIndex].steps?.[activeStep]
-
-        // prepareTx is persisted per-step by prepare service
-        const prepareTx = this.superJson.parse<PrepareTx>(step.prepareTx)
-
-        // Sign tx
-        const { signedTx } = await this.balanceActionService.signReconcileBalanceTransaction(
-            {
-                bot,
-                prepareTx,
-            }
-        )
-
-        // Persist signedTx and advance step type to Execute
-        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-            {
-                _id: job.id 
-            },
-            {
-                $set: {
-                    "tasks.$[task].steps.$[step].type": StepType.Execute,
-                    "tasks.$[task].steps.$[step].signedTx": this.superJson.stringify(signedTx),
+            // Persist signedTx and advance step type to Execute
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                {
+                    _id: job.id 
                 },
-            },
-            {
-                arrayFilters: [
-                    {
-                        "task.index": taskIndex, 
-                        "task.type": TaskType.ReconcileBalance 
+                {
+                    $set: {
+                        "tasks.$[task].steps.$[step].type": StepType.Execute,
+                        "tasks.$[task].steps.$[step].signedTx": this.superJson.stringify(signedTx),
                     },
-                    {
-                        "step.index": activeStep 
-                    },
-                ],
-            },
-        )
+                },
+                {
+                    arrayFilters: [
+                        {
+                            "task.index": taskIndex, 
+                            "task.type": TaskType.ReconcileBalance 
+                        },
+                        {
+                            "step.index": activeStep 
+                        },
+                    ],
+                },
+            )
+        } catch (error) {
+            console.error("Error signing reconcile balance transaction",
+                error)
+            throw error
+        }
     }
 }

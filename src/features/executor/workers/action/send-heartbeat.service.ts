@@ -41,7 +41,6 @@ export class SendHeartbeatService {
                 botId: bot.id,
             }
         )
-
         if (!ok) {
             throw new JobFailureException(
                 {
