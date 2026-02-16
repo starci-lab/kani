@@ -60,16 +60,17 @@ export class ReconcileBalanceTaskConfirmService {
             bullmqJob,
         }: ReconcileBalanceTaskConfirmParams
     ) {
-        // send heartbeat
-        await this.sendHeartbeatService.process(
-            {
-                bot,
-                job,
-                bullmqJob,
-            }
-        )
+        
         try {
-        // check tx
+            // send heartbeat
+            await this.sendHeartbeatService.process(
+                {
+                    bot,
+                    job,
+                    bullmqJob,
+                }
+            )
+            // check tx
             const stepCount = job.tasks[taskIndex].stepCount
             let targetBalanceAmount = new BN(0)
             let quoteBalanceAmount = new BN(0)

@@ -64,20 +64,21 @@ export class ClosePositionTaskSignService {
         bot,
         liquidityPool,
     }: ClosePositionTaskSignParams) {
-        
-        // Send heartbeat
-        await this.sendHeartbeatService.process(
-            {
-                bot,
-                job,
-                bullmqJob,
-            }
-        )
-        const activeStep = job.tasks[taskIndex].activeStep
+        // active step index
+        const stepIndex = job.tasks[taskIndex].activeStep
+        // prepare tx
         const prepareTx = this.superJson.parse<PrepareTx>(
-            job.tasks[taskIndex].steps[activeStep].prepareTx
+            job.tasks[taskIndex].steps[stepIndex].prepareTx
         )
         try {
+            // Send heartbeat
+            await this.sendHeartbeatService.process(
+                {
+                    bot,
+                    job,
+                    bullmqJob,
+                }
+            )
             const { signedTx } = await this.closePositionActionService.sign(
                 {
                     bot,
@@ -102,7 +103,7 @@ export class ClosePositionTaskSignService {
                             "task.type": TaskType.ClosePosition 
                         },
                         {
-                            "step.index": activeStep 
+                            "step.index": stepIndex 
                         },
                     ],
                 },
@@ -116,7 +117,7 @@ export class ClosePositionTaskSignService {
                     type: JobType.ClosePosition,
                     taskIndex,
                     taskType: TaskType.ClosePosition,
-                    stepIndex: activeStep,
+                    stepIndex,
                     metadata: job.metadata,
                 }
             )
@@ -129,7 +130,7 @@ export class ClosePositionTaskSignService {
                     type: JobType.ClosePosition,
                     taskIndex,
                     taskType: TaskType.ClosePosition,
-                    stepIndex: activeStep,
+                    stepIndex,
                     error: error.message,
                     metadata: job.metadata,
                 }

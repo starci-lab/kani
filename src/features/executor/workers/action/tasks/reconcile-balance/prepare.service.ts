@@ -82,13 +82,14 @@ export class ReconcileBalanceTaskPrepareService {
             bullmqJob,
         }: ReconcileBalanceTaskPrepareParams
     ) {
-        // Heartbeat
-        await this.sendHeartbeatService.process(
-            {
-                bot, job, bullmqJob
-            }
-        )
         try {
+            // heartbeat
+            await this.sendHeartbeatService.process(
+                {
+                    bot, job, bullmqJob
+                }
+            )
+            // fetch the balances and update the balance snapshots
             let targetBalanceAmount = new BN(bot.balanceSnapshots?.targetBalanceAmount ?? 0)
             let quoteBalanceAmount = new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? 0)
             let gasBalanceAmount = new BN(bot.balanceSnapshots?.gasBalanceAmount ?? 0)

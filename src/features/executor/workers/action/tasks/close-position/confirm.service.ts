@@ -48,6 +48,9 @@ import {
 import {
     strict as assert 
 } from "node:assert"
+import {
+    SendHeartbeatService
+} from "../../send-heartbeat.service"
 
 @Injectable()
 export class ClosePositionTaskConfirmService {
@@ -59,6 +62,7 @@ export class ClosePositionTaskConfirmService {
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly closePositionSnapshotService: ClosePositionSnapshotService,
+        private readonly sendHeartbeatService: SendHeartbeatService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         private readonly transactionSnapshotService: TransactionSnapshotService,
@@ -80,71 +84,77 @@ export class ClosePositionTaskConfirmService {
             taskIndex,
             state,
             liquidityPool,
+            bullmqJob,
         }: ClosePositionTaskConfirmParams
     ) {
-
-        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: liquidityPool.tokenA.toString(),
-            },
-        })
-        if (!targetToken) {
-            throw new TokenNotFoundException(
-                {
-                    id: liquidityPool.tokenA.toString(),
-                }
+        try {
+            // send heartbeat
+            await this.sendHeartbeatService.process({
+                bot,
+                job,
+                bullmqJob,
+            })
+            const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+                id: {
+                    $eq: liquidityPool.tokenA.toString(),
+                },
+            })
+            if (!targetToken) {
+                throw new TokenNotFoundException(
+                    {
+                        id: liquidityPool.tokenA.toString(),
+                    }
+                )
+            }
+            const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+                id: {
+                    $eq: liquidityPool.tokenB.toString(),
+                },
+            })
+            if (!quoteToken) {
+                throw new TokenNotFoundException(
+                    {
+                        id: liquidityPool.tokenB.toString(),
+                    }
+                )
+            }
+            const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+                type: {
+                    $eq: TokenType.Native,
+                },
+                chainId: {
+                    $eq: bot.chainId,
+                },
+            })
+            if (!gasToken) {
+                throw new TokenNotFoundException(
+                    {
+                        conditions: {
+                            type: TokenType.Native,
+                            chainId: bot.chainId,
+                        },
+                    }
+                )
+            }
+            const rewardTokenAddresses = state.rewards.map((
+                reward: DynamicClmmRewardInfo | DynamicDlmmRewardInfo
+            ) => reward.tokenAddress
             )
-        }
-        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: liquidityPool.tokenB.toString(),
-            },
-        })
-        if (!quoteToken) {
-            throw new TokenNotFoundException(
-                {
-                    id: liquidityPool.tokenB.toString(),
-                }
+            // Get reward tokens that are NOT target or quote token
+            const nonPairRewardTokenAddresses = _.difference(
+                rewardTokenAddresses,
+                [
+                    targetToken.tokenAddress,
+                    quoteToken.tokenAddress
+                ]
             )
-        }
-        const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            type: {
-                $eq: TokenType.Native,
-            },
-            chainId: {
-                $eq: bot.chainId,
-            },
-        })
-        if (!gasToken) {
-            throw new TokenNotFoundException(
+            const nonPairRewardTokens = this.primaryMemoryStorageService.tokenCollection.find(
                 {
-                    conditions: {
-                        type: TokenType.Native,
-                        chainId: bot.chainId,
+                    tokenAddress: {
+                        $in: nonPairRewardTokenAddresses,
                     },
                 }
             )
-        }
-        const rewardTokenAddresses = state.rewards.map((
-            reward: DynamicClmmRewardInfo | DynamicDlmmRewardInfo
-        ) => reward.tokenAddress
-        )
-        // Get reward tokens that are NOT target or quote token
-        const nonPairRewardTokenAddresses = _.difference(
-            rewardTokenAddresses,
-            [
-                targetToken.tokenAddress,
-                quoteToken.tokenAddress
-            ]
-        )
-        const nonPairRewardTokens = this.primaryMemoryStorageService.tokenCollection.find(
-            {
-                tokenAddress: {
-                    $in: nonPairRewardTokenAddresses,
-                },
-            }
-        )
-        try {
             const {
                 targetBalanceAmount,
                 quoteBalanceAmount,

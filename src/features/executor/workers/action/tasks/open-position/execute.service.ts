@@ -79,20 +79,12 @@ export class OpenPositionTaskExecuteService {
             taskIndex,
         }: OpenPositionTaskExecuteParams
     ) {
-        await this.sendHeartbeatService.process({
-            bot,
-            job,
-            bullmqJob,
-        })
-        // get the previous attempts
+        // previous attempts from BullMQ
         const hasPreviousAttempts = bullmqJob.attemptsMade > 0
-
-        // get the active step index
+        // active step index
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
-
-        // get the step (may be undefined if steps not initialized)
+        // step snapshot (may be undefined)
         const step = job.tasks[taskIndex].steps?.[stepIndex]
-
         try {
             // send heartbeat
             await this.sendHeartbeatService.process({

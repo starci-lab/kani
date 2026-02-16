@@ -65,19 +65,21 @@ export class OpenPositionTaskSignService {
         bot,
         liquidityPool,
     }: OpenPositionTaskSignParams) {
-        // Send heartbeat
-        await this.sendHeartbeatService.process(
-            {
-                bot,
-                job,
-                bullmqJob,
-            }
-        )
+        // active step index
         const activeStep = job.tasks[taskIndex].activeStep
+        // prepare tx
         const prepareTx = this.superJson.parse<PrepareTx>(
             job.tasks[taskIndex].steps[activeStep].prepareTx
         )
         try {
+            // Send heartbeat
+            await this.sendHeartbeatService.process(
+                {
+                    bot,
+                    job,
+                    bullmqJob,
+                }
+            )
             const { signedTx } = await this.openPositionActionService.sign(
                 {
                     bot,

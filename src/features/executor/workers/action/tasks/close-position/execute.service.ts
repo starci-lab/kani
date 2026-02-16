@@ -81,7 +81,6 @@ export class ClosePositionTaskExecuteService {
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
         // step snapshot (may be undefined)
         const step = job.tasks[taskIndex].steps?.[stepIndex]
-
         try {
             // heartbeat
             await this.sendHeartbeatService.process({

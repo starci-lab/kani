@@ -68,13 +68,12 @@ export class ClosePositionTaskPrepareService {
         }: ClosePositionTaskPrepareParams
     ) {
         try {
-        // Send heartbeat
+            // send heartbeat
             await this.sendHeartbeatService.process(
                 {
                     bot,
                     job,
                     bullmqJob,
-                    fatal: true,
                 }
             )
             // We prepare the close position transaction.

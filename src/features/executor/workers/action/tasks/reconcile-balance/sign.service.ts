@@ -55,16 +55,19 @@ export class ReconcileBalanceTaskSignService {
         bullmqJob,
         taskIndex,
     }: ReconcileBalanceTaskSignParams) {
-        // Send heartbeat
-        await this.sendHeartbeatService.process(
-            {
-                bot, job, bullmqJob 
-            }
-        )
-        const activeStep = job.tasks[taskIndex].activeStep ?? 0
-        const step = job.tasks[taskIndex].steps?.[activeStep]
+        // active step index
+        const stepIndex = job.tasks[taskIndex].activeStep ?? 0
+        // step snapshot (may be undefined)
+        const step = job.tasks[taskIndex].steps?.[stepIndex]
+        // if step is undefined, throw an error
         try {
-        // prepareTx is persisted per-step by prepare service
+            // send heartbeat
+            await this.sendHeartbeatService.process(
+                {
+                    bot, job, bullmqJob 
+                }
+            )
+            // prepareTx is persisted per-step by prepare service
             const prepareTx = this.superJson.parse<PrepareTx>(step.prepareTx)
             // Sign tx
             const { signedTx } = await this.balanceActionService.signReconcileBalanceTransaction(
@@ -92,7 +95,7 @@ export class ReconcileBalanceTaskSignService {
                             "task.type": TaskType.ReconcileBalance 
                         },
                         {
-                            "step.index": activeStep 
+                            "step.index": stepIndex 
                         },
                     ],
                 },
@@ -106,7 +109,7 @@ export class ReconcileBalanceTaskSignService {
                     type: JobType.ReconcileBalance,
                     taskIndex,
                     taskType: TaskType.ReconcileBalance,
-                    stepIndex: activeStep,
+                    stepIndex,
                     metadata: job.metadata,
                 }
             )
@@ -119,7 +122,7 @@ export class ReconcileBalanceTaskSignService {
                     type: JobType.ReconcileBalance,
                     taskIndex,
                     taskType: TaskType.ReconcileBalance,
-                    stepIndex: activeStep,
+                    stepIndex,
                     error: error.message,
                     metadata: job.metadata,
                 }

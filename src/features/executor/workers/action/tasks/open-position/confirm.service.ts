@@ -89,74 +89,74 @@ export class OpenPositionTaskConfirmService {
             bullmqJob,
         }: OpenPositionTaskConfirmParams
     ) {
-        await this.sendHeartbeatService.process({
-            bot,
-            job,
-            bullmqJob,
-        })
-        const fetch = await this.balanceFetcherService.fetchBalances({
-            bot
-        })
-        const targetBalanceAmount = new BN(fetch.targetBalanceAmount)
-        const quoteBalanceAmount = new BN(fetch.quoteBalanceAmount)
-        const gasBalanceAmount = new BN(fetch.gasBalanceAmount)
-        // update the job with the confirmed status
-        if (!bot.balanceSnapshots) {
-            throw new BalanceSnapshotsNotFoundException(
-                {
-                    botId: bot.id,
-                }
-            )
-        }
-        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: liquidityPool.tokenA.toString(),
-            },
-        })
-        if (!targetToken) {
-            throw new TokenNotFoundException(
-                {
-                    id: liquidityPool.tokenA.toString(),
-                }
-            )
-        }
-        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: liquidityPool.tokenB.toString(),
-            },
-        })
-        if (!quoteToken) {
-            throw new TokenNotFoundException(
-                {
-                    id: liquidityPool.tokenB.toString(),
-                }
-            )
-        }
-        const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            type: {
-                $eq: TokenType.Native,
-            },
-            chainId: {
-                $eq: bot.chainId,
-            },
-        })
-        if (!gasToken) {
-            throw new TokenNotFoundException(
-                {
-                    conditions: {
-                        type: TokenType.Native,
-                        chainId: bot.chainId,
-                    },
-                }
-            )
-        }
-        const targetIsA = liquidityPool.tokenA.toString() === targetToken.id
-        const openPositionStepIndex = job.tasks[taskIndex].openPositionStepIndex ?? 0
-        const executeResult = this.superJson.parse<ExecuteOpenPositionResult>(job.tasks[taskIndex].steps?.[openPositionStepIndex].executeResult ?? "")
-        const prepareResult = this.superJson.parse<PrepareOpenPositionResult>(job.tasks[taskIndex].prepareResult ?? "")
-        const signedTxs = (job.tasks[taskIndex].steps ?? []).map((step) => this.superJson.parse<SignedTx>(step.signedTx ?? ""))
         try {
-        // confirm the open position
+            await this.sendHeartbeatService.process({
+                bot,
+                job,
+                bullmqJob,
+            })
+            const fetch = await this.balanceFetcherService.fetchBalances({
+                bot
+            })
+            const targetBalanceAmount = new BN(fetch.targetBalanceAmount)
+            const quoteBalanceAmount = new BN(fetch.quoteBalanceAmount)
+            const gasBalanceAmount = new BN(fetch.gasBalanceAmount)
+            // update the job with the confirmed status
+            if (!bot.balanceSnapshots) {
+                throw new BalanceSnapshotsNotFoundException(
+                    {
+                        botId: bot.id,
+                    }
+                )
+            }
+            const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+                id: {
+                    $eq: liquidityPool.tokenA.toString(),
+                },
+            })
+            if (!targetToken) {
+                throw new TokenNotFoundException(
+                    {
+                        id: liquidityPool.tokenA.toString(),
+                    }
+                )
+            }
+            const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+                id: {
+                    $eq: liquidityPool.tokenB.toString(),
+                },
+            })
+            if (!quoteToken) {
+                throw new TokenNotFoundException(
+                    {
+                        id: liquidityPool.tokenB.toString(),
+                    }
+                )
+            }
+            const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+                type: {
+                    $eq: TokenType.Native,
+                },
+                chainId: {
+                    $eq: bot.chainId,
+                },
+            })
+            if (!gasToken) {
+                throw new TokenNotFoundException(
+                    {
+                        conditions: {
+                            type: TokenType.Native,
+                            chainId: bot.chainId,
+                        },
+                    }
+                )
+            }
+            const targetIsA = liquidityPool.tokenA.toString() === targetToken.id
+            const openPositionStepIndex = job.tasks[taskIndex].openPositionStepIndex ?? 0
+            const executeResult = this.superJson.parse<ExecuteOpenPositionResult>(job.tasks[taskIndex].steps?.[openPositionStepIndex].executeResult ?? "")
+            const prepareResult = this.superJson.parse<PrepareOpenPositionResult>(job.tasks[taskIndex].prepareResult ?? "")
+            const signedTxs = (job.tasks[taskIndex].steps ?? []).map((step) => this.superJson.parse<SignedTx>(step.signedTx ?? ""))
+            // confirm the open position
             const confirmResult = await this.openPositionActionService.confirm(
                 {
                     bot,

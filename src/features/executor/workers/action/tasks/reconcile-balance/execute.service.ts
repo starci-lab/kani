@@ -72,31 +72,31 @@ export class ReconcileBalanceTaskExecuteService {
         bullmqJob,
         taskIndex,
     }: ReconcileBalanceTaskExecuteParams) {
-        await this.sendHeartbeatService.process({
-            bot,
-            job,
-            bullmqJob,
-        })
         // previous attempts from BullMQ
         const hasPreviousAttempts = bullmqJob.attemptsMade > 0
         // active step index
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
         // step snapshot (may be undefined)
         const step = job.tasks[taskIndex].steps?.[stepIndex]
-        // signed tx
-        const signedTx = step?.signedTx
-        if (!signedTx) {
-            throw new JobFailureException({
-                originalError: new SignedTxNotFoundException({
-                    botId: bot.id,
-                    jobId: job.id,
-                    taskIndex,
-                    stepIndex,
-                }),
-                strategy: JobFailureStrategy.Fatal,
-            })
-        }
         try {
+            await this.sendHeartbeatService.process({
+                bot,
+                job,
+                bullmqJob,
+            })
+            // signed tx
+            const signedTx = step?.signedTx
+            if (!signedTx) {
+                throw new JobFailureException({
+                    originalError: new SignedTxNotFoundException({
+                        botId: bot.id,
+                        jobId: job.id,
+                        taskIndex,
+                        stepIndex,
+                    }),
+                    strategy: JobFailureStrategy.Fatal,
+                })
+            }
             // execute
             const executeResult =
                 await this.balanceActionService.executeReconcileBalanceTransaction({

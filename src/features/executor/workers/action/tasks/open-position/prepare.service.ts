@@ -61,16 +61,16 @@ export class OpenPositionTaskPrepareService {
             bullmqJob,
         }: OpenPositionTaskPrepareParams
     ) {
-        // Send heartbeat
-        await this.sendHeartbeatService.process(
-            {
-                bot,
-                job,
-                bullmqJob,
-            }
-        )
         try {
-        // We prepare the open position transaction.
+            // send heartbeat
+            await this.sendHeartbeatService.process(
+                {
+                    bot,
+                    job,
+                    bullmqJob,
+                }
+            )
+            // we prepare the open position transaction.
             const prepareResult =
             await this.openPositionActionService.prepare(
                 {
