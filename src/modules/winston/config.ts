@@ -269,7 +269,7 @@ export const configMap = {
     // Transaction Stimulated
     [WinstonLog.TransactionStimulated]: {
         name: WinstonLog.TransactionStimulated,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as TransactionStimulatedMessage,
@@ -2229,7 +2229,7 @@ export const configMap = {
     // Transaction Signed
     [WinstonLog.TransactionSigned]: {
         name: WinstonLog.TransactionSigned,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as TransactionSignedMessage,
