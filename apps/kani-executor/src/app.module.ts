@@ -142,7 +142,6 @@ import {
             isGlobal: true,
             serviceName: ServiceName.KaniExecutor,
             id: envConfig().executor.id,
-            //level: WinstonLevel.Info,
             level: envConfig().winston.level as WinstonLevel,
         }),
         FormulasModule.register({

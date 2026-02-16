@@ -66,8 +66,9 @@ export class OpenPositionTaskPrepareService {
                 bullmqJob,
             }
         )
+        try {
         // We prepare the open position transaction.
-        const prepareResult =
+            const prepareResult =
             await this.openPositionActionService.prepare(
                 {
                     bot,
@@ -75,46 +76,60 @@ export class OpenPositionTaskPrepareService {
                     state,
                 }
             )
-        // We update the database with the prepare result.
-        await this.connection.model<JobSchema>(
-            JobSchema.name
-        ).updateOne(
-            {
-                _id: job.id,
-            },
-            {
-                $push: {
-                    tasks: {
-                        index: taskIndex,
-                        type: TaskType.OpenPosition,
-                        prepareResult: this.superJson.stringify(prepareResult),
-                        activeStep: 0,
-                        openPositionStepIndex: 0,
-                        stepCount: prepareResult.prepareTxs.length,
-                        steps: prepareResult.prepareTxs.map(
-                            (prepareTx, index) => (
-                                {
-                                    index,
-                                    type: StepType.Sign,
-                                    prepareTx: this.superJson.stringify(prepareTx),
-                                }
-                            )
-                        ),
+            // We update the database with the prepare result.
+            await this.connection.model<JobSchema>(
+                JobSchema.name
+            ).updateOne(
+                {
+                    _id: job.id,
+                },
+                {
+                    $push: {
+                        tasks: {
+                            index: taskIndex,
+                            type: TaskType.OpenPosition,
+                            prepareResult: this.superJson.stringify(prepareResult),
+                            activeStep: 0,
+                            openPositionStepIndex: 0,
+                            stepCount: prepareResult.prepareTxs.length,
+                            steps: prepareResult.prepareTxs.map(
+                                (prepareTx, index) => (
+                                    {
+                                        index,
+                                        type: StepType.Sign,
+                                        prepareTx: this.superJson.stringify(prepareTx),
+                                    }
+                                )
+                            ),
+                        },
                     },
                 },
-            },
-        )
-        this.winstonService.log(
-            WinstonLog.ActiveJobTaskPrepared,
-            {
-                botId: bot.id,
-                jobId: job.id,
-                type: JobType.OpenPosition,
-                txCount: prepareResult.prepareTxs.length,
-                metadata: job.metadata,
-                taskIndex,
-                taskType: TaskType.OpenPosition,
-            }
-        )
+            )
+            this.winstonService.log(
+                WinstonLog.ActiveJobTaskPrepared,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.OpenPosition,
+                    txCount: prepareResult.prepareTxs.length,
+                    metadata: job.metadata,
+                    taskIndex,
+                    taskType: TaskType.OpenPosition,
+                }
+            )
+        } catch (error) {
+            this.winstonService.log(
+                WinstonLog.ActiveJobTaskPreparedFailed,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.OpenPosition,
+                    error: error.message,
+                    taskIndex,
+                    taskType: TaskType.OpenPosition,
+                }
+            )
+            throw error
+        }
     }
 }

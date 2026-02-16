@@ -8,6 +8,7 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
+    JobType,
     StepType, 
     TaskType,
 } from "@modules/databases"
@@ -24,6 +25,10 @@ import {
 import {
     ClosePositionTaskSignParams 
 } from "../types"
+import {
+    WinstonService,
+    WinstonLog,
+} from "@modules/winston"
 
 /**
  * Service for the Close Position Task SIGN step.
@@ -33,6 +38,7 @@ export class ClosePositionTaskSignService {
     constructor(
         private readonly closePositionActionService: ClosePositionActionService,
         private readonly sendHeartbeatService: SendHeartbeatService,
+        private readonly winstonService: WinstonService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         @InjectPrimaryMongoose()
@@ -56,19 +62,20 @@ export class ClosePositionTaskSignService {
         bot,
         liquidityPool,
     }: ClosePositionTaskSignParams) {
-        try {
+        
         // Send heartbeat
-            await this.sendHeartbeatService.process(
-                {
-                    bot,
-                    job,
-                    bullmqJob,
-                }
-            )
-            const activeStep = job.tasks[taskIndex].activeStep
-            const prepareTx = this.superJson.parse<PrepareTx>(
-                job.tasks[taskIndex].steps[activeStep].prepareTx
-            )
+        await this.sendHeartbeatService.process(
+            {
+                bot,
+                job,
+                bullmqJob,
+            }
+        )
+        const activeStep = job.tasks[taskIndex].activeStep
+        const prepareTx = this.superJson.parse<PrepareTx>(
+            job.tasks[taskIndex].steps[activeStep].prepareTx
+        )
+        try {
             const { signedTx } = await this.closePositionActionService.sign(
                 {
                     bot,
@@ -98,8 +105,31 @@ export class ClosePositionTaskSignService {
                     ],
                 },
             )
+            this.winstonService.log(
+                WinstonLog.ActionJobTaskStepSigned,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.ClosePosition,
+                    taskIndex,
+                    taskType: TaskType.ClosePosition,
+                    stepIndex: activeStep,
+                }
+            )
         } catch (error) {
-            console.log(error)
+            this.winstonService.log(
+                WinstonLog.ActionJobTaskStepSignedFailed,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.ClosePosition,
+                    taskIndex,
+                    taskType: TaskType.ClosePosition,
+                    stepIndex: activeStep,
+                    error: error.message,
+                }
+            )
+            // log the error
             throw error
         }
     }

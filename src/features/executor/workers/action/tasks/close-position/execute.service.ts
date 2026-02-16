@@ -7,6 +7,7 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
+    JobType,
     StepType,
     TaskType,
 } from "@modules/databases"
@@ -37,8 +38,9 @@ import {
     sleep,
 } from "@modules/common"
 import {
-    DayjsService 
-} from "@modules/mixin"
+    WinstonService,
+    WinstonLog,
+} from "@modules/winston"
 import {
     JobStepTransitionService 
 } from "../../update"
@@ -55,7 +57,7 @@ export class ClosePositionTaskExecuteService {
     @InjectSuperJson()
     private readonly superJson: SuperJSON,
     private readonly sendHeartbeatService: SendHeartbeatService,
-    private readonly dayjsService: DayjsService,
+    private readonly winstonService: WinstonService,
     private readonly jobStepTransitionService: JobStepTransitionService,
     ) {}
 
@@ -137,7 +139,30 @@ export class ClosePositionTaskExecuteService {
                     ],
                 },
             )
+            this.winstonService.log(
+                WinstonLog.ActionJobTaskStepExecuted,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.ClosePosition,
+                    taskIndex,
+                    taskType: TaskType.ClosePosition,
+                    stepIndex,
+                }
+            )
         } catch (error) {
+            this.winstonService.log(
+                WinstonLog.ActionJobTaskStepExecutedFailed,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.ClosePosition,
+                    taskIndex,
+                    taskType: TaskType.ClosePosition,
+                    stepIndex,
+                    error: error.message,
+                }
+            )
             if (error instanceof RpcClientFatalException) {
                 // retry cap (use in-memory snapshot)
                 const retries = step?.retries ?? 0
@@ -197,7 +222,6 @@ export class ClosePositionTaskExecuteService {
                 )               
                 return
             }
-
             throw error
         }
     }

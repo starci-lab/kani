@@ -21,3 +21,11 @@ export interface LoadJobContextResult {
     /** Bot. */
     bot: BotSchema
 }
+/**
+ * Runtime context for a job.
+ */
+export interface JobRuntimeContext {
+    /** Job. */
+    /** Bot. */
+    bot: BotSchema
+}

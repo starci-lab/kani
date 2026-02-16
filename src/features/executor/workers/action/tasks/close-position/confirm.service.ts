@@ -19,31 +19,31 @@ import {
     Connection
 } from "mongoose"
 import {
-    BalanceFetcherService, 
+    BalanceFetcherService,
     BalanceSnapshotService,
     ClosePositionSnapshotService,
     SignedTx,
     TransactionSnapshotService
 } from "@modules/blockchains"
 import {
-    DynamicClmmRewardInfo, 
-    DynamicDlmmRewardInfo 
+    DynamicClmmRewardInfo,
+    DynamicDlmmRewardInfo
 } from "@modules/cache"
 import {
     ActionJobStimulateMongoSessionException,
-    TokenNotFoundException 
+    TokenNotFoundException
 } from "@modules/exceptions"
 import _ from "lodash"
 import BN from "bn.js"
 import {
-    InjectSuperJson 
+    InjectSuperJson
 } from "@modules/mixin"
 import SuperJSON from "superjson"
 import {
-    TokenType 
+    TokenType
 } from "@modules/common"
 import {
-    envConfig 
+    envConfig
 } from "@modules/env"
 
 @Injectable()
@@ -141,123 +141,144 @@ export class ClosePositionTaskConfirmService {
                 },
             }
         )
-        const {
-            targetBalanceAmount,
-            quoteBalanceAmount,
-            gasBalanceAmount,
-            incentiveBalanceAmounts,
-        } = await this.balanceFetcherService.fetchBalances(
-            {
-                bot,
-                incentiveTokens: nonPairRewardTokens,
-            }
-        )
-        const signedTxs = (job.tasks[taskIndex].steps ?? []).map((step) => this.superJson.parse<SignedTx>(step.signedTx ?? ""))
-
         try {
-            const session = await this.connection.startSession()
-            await session.withTransaction(async (
-                clientSession
-            ) => {
-                // update balance snapshots
-                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
-                    {
-                        bot,
-                        targetBalanceAmount,
-                        quoteBalanceAmount,
-                        gasBalanceAmount,
-                        session: clientSession,
-                        incentiveBalanceAmounts,
-                    }
-                )
-                // update the close position record
-                await this.closePositionSnapshotService.updateClosePositionRecord(
-                    {
-                        before: {
-                            targetBalanceAmount: new BN(bot.balanceSnapshots?.targetBalanceAmount ?? 0),
-                            quoteBalanceAmount: new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? 0),
-                            gasBalanceAmount: new BN(bot.balanceSnapshots?.gasBalanceAmount ?? 0),
-                            incentiveBalanceAmounts: bot.balanceSnapshots?.incentiveSnapshots ? Object.fromEntries(
-                                Object.entries(bot.balanceSnapshots?.incentiveSnapshots).map(([key,
-                                    value]) => [key,
-                                    new BN(value.amount)])
-                            ) : undefined,
-                        },
-                        after: {
+            const {
+                targetBalanceAmount,
+                quoteBalanceAmount,
+                gasBalanceAmount,
+                incentiveBalanceAmounts,
+            } = await this.balanceFetcherService.fetchBalances(
+                {
+                    bot,
+                    incentiveTokens: nonPairRewardTokens,
+                }
+            )
+            const signedTxs = (job.tasks[taskIndex].steps ?? []).map((step) => this.superJson.parse<SignedTx>(step.signedTx ?? ""))
+
+            try {
+                const session = await this.connection.startSession()
+                await session.withTransaction(async (
+                    clientSession
+                ) => {
+                    // update balance snapshots
+                    await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
+                        {
+                            bot,
                             targetBalanceAmount,
                             quoteBalanceAmount,
                             gasBalanceAmount,
-                            incentiveBalanceAmounts,
-                        },
-                        positionId: bot.activePosition?.associatedPosition?.id ?? "",
-                        closeTxHashes: signedTxs.map((signedTx) => signedTx.txHash),
-                        targetToken,
-                        quoteToken,
-                        gasToken,
-                        session: clientSession,
-                        bot,
-                    }
-                )
-                // update the transaction records
-                for (const signedTx of signedTxs) {
-                    await this.transactionSnapshotService.addTransactionRecord(
-                        {
-                            bot,
-                            txHash: signedTx.txHash,
-                            chainId: bot.chainId,
-                            type: TransactionType.ClosePosition,
                             session: clientSession,
+                            incentiveBalanceAmounts,
                         }
                     )
-                }
-                // update the job with the confirmed status
-                await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                    {
-                        _id: job.id,
-                    },
-                    {
-                        $set: {
-                            "tasks.$[task].confirmed": true,
-                        },
-                        $inc: {
-                            taskIndex: 1,
-                        },
-                    },
-                    {
-                        arrayFilters: [
-                            {
-                                "task.index": taskIndex,
-                                "task.type": TaskType.ClosePosition,
+                    // update the close position record
+                    await this.closePositionSnapshotService.updateClosePositionRecord(
+                        {
+                            before: {
+                                targetBalanceAmount: new BN(bot.balanceSnapshots?.targetBalanceAmount ?? 0),
+                                quoteBalanceAmount: new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? 0),
+                                gasBalanceAmount: new BN(bot.balanceSnapshots?.gasBalanceAmount ?? 0),
+                                incentiveBalanceAmounts: bot.balanceSnapshots?.incentiveSnapshots ? Object.fromEntries(
+                                    Object.entries(bot.balanceSnapshots?.incentiveSnapshots).map((
+                                        [
+                                            key,
+                                            value
+                                        ]) => [
+                                        key,
+                                        new BN(value.amount)
+                                    ])
+                                ) : undefined,
                             },
-                        ],
-                        session: clientSession,
-                    },
-                )
-                // throw an exception to stimulate the mongo session
-                if (envConfig().executor.runtime.operation.closePosition.stimulate) {
-                    throw new ActionJobStimulateMongoSessionException({
-                        botId: bot.id,
-                        jobId: job.id,
-                        taskIndex,
-                        liquidityPoolId: liquidityPool.displayId,
-                    })
+                            after: {
+                                targetBalanceAmount,
+                                quoteBalanceAmount,
+                                gasBalanceAmount,
+                                incentiveBalanceAmounts,
+                            },
+                            positionId: bot.activePosition?.associatedPosition?.id ?? "",
+                            closeTxHashes: signedTxs.map((signedTx) => signedTx.txHash),
+                            targetToken,
+                            quoteToken,
+                            gasToken,
+                            session: clientSession,
+                            bot,
+                        }
+                    )
+                    // update the transaction records
+                    for (const signedTx of signedTxs) {
+                        await this.transactionSnapshotService.addTransactionRecord(
+                            {
+                                bot,
+                                txHash: signedTx.txHash,
+                                chainId: bot.chainId,
+                                type: TransactionType.ClosePosition,
+                                session: clientSession,
+                            }
+                        )
+                    }
+                    // update the job with the confirmed status
+                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                        {
+                            _id: job.id,
+                        },
+                        {
+                            $set: {
+                                "tasks.$[task].confirmed": true,
+                            },
+                            $inc: {
+                                taskIndex: 1,
+                            },
+                        },
+                        {
+                            arrayFilters: [
+                                {
+                                    "task.index": taskIndex,
+                                    "task.type": TaskType.ClosePosition,
+                                },
+                            ],
+                            session: clientSession,
+                        },
+                    )
+                    // throw an exception to stimulate the mongo session
+                    if (envConfig().executor.runtime.operation.closePosition.stimulate) {
+                        throw new ActionJobStimulateMongoSessionException({
+                            botId: bot.id,
+                            jobId: job.id,
+                            taskIndex,
+                            liquidityPoolId: liquidityPool.displayId,
+                        })
+                    }
+                })
+            } catch (error) {
+                if (!(error instanceof ActionJobStimulateMongoSessionException)) {
+                    throw error
                 }
-            })
+            }
+            this.winstonService.log(
+                WinstonLog.ActionJobTaskConfirmed,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.ClosePosition,
+                    metadata: job.metadata,
+                    taskIndex,
+                    taskType: TaskType.ClosePosition,
+                }
+            )
+
         } catch (error) {
-            if (!(error instanceof ActionJobStimulateMongoSessionException)) {
-                throw error
-            }
+            this.winstonService.log(
+                WinstonLog.ActionJobTaskConfirmedFailed,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.ClosePosition,
+                    taskIndex,
+                    taskType: TaskType.ClosePosition,
+                    error: error.message,
+                }
+            )
+            throw error
         }
-        this.winstonService.log(
-            WinstonLog.ActionJobTaskConfirmed,
-            {
-                botId: bot.id,
-                jobId: job.id,
-                type: JobType.ClosePosition,
-                metadata: job.metadata,
-                taskIndex,
-                taskType: TaskType.ClosePosition,
-            }
-        )
     }
 }

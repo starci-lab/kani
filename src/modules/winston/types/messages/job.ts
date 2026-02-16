@@ -446,3 +446,115 @@ export interface JobSkippedBotCacheResultFoundMessage {
     /** Job type. */
     type: JobType
 }
+
+/**
+ * Action job task step signed message.
+ */
+export interface ActionJobTaskStepSignedMessage {
+    /** Bot ID. */
+    botId: string
+    /** Job ID. */
+    jobId: string
+    /** Job type. */
+    type: JobType
+    /** Task index. */
+    taskIndex: number
+    /** Task type. */
+    taskType: TaskType
+    /** Step index. */
+    stepIndex: number
+}
+
+/**
+ * Action job task step executed message.
+ */
+export interface ActionJobTaskStepExecutedMessage {
+    /** Bot ID. */
+    botId: string
+    /** Job ID. */
+    jobId: string
+    /** Job type. */
+    type: JobType
+    /** Task index. */
+    taskIndex: number
+    /** Task type. */
+    taskType: TaskType
+    /** Step index. */
+    stepIndex: number
+}
+
+/**
+ * Action job task step signed failed message.
+ */
+export interface ActionJobTaskStepSignedFailedMessage {
+    /** Bot ID. */
+    botId: string
+    /** Job ID. */
+    jobId: string
+    /** Job type. */
+    type: JobType
+    /** Task index. */
+    taskIndex: number
+    /** Task type. */
+    taskType: TaskType
+    /** Step index. */
+    stepIndex: number
+    /** Error. */
+    error: string
+}
+
+/**
+ * Action job task step executed failed message.
+ */
+export interface ActionJobTaskStepExecutedFailedMessage {
+    /** Bot ID. */
+    botId: string
+    /** Job ID. */
+    jobId: string
+    /** Job type. */
+    type: JobType
+    /** Task index. */
+    taskIndex: number
+    /** Task type. */
+    taskType: TaskType
+    /** Step index. */
+    stepIndex: number
+    /** Error. */
+    error: string
+}
+
+/**
+ * Active job task prepared failed message.
+ */
+export interface ActiveJobTaskPreparedFailedMessage {
+    /** Bot ID. */
+    botId: string
+    /** Job ID. */
+    jobId: string
+    /** Job type. */
+    type: JobType
+    /** Error. */
+    error: string
+    /** Task index. */
+    taskIndex: number
+    /** Task type. */
+    taskType: TaskType
+}
+
+/**
+ * Action job task confirmed failed message.
+ */
+export interface ActionJobTaskConfirmedFailedMessage {
+    /** Bot ID. */
+    botId: string
+    /** Job ID. */
+    jobId: string
+    /** Job type. */
+    type: JobType
+    /** Error. */
+    error: string
+    /** Task index. */
+    taskIndex: number
+    /** Task type. */
+    taskType: TaskType
+}

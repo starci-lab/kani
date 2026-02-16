@@ -252,7 +252,9 @@ export enum WinstonLog {
     JobSkippedContextLoadFailed = "Job.Skipped.Context.Load.Failed",
     JobSkippedLiquidityPoolContextLoadFailed = "Job.Skipped.Liquidity.Pool.Context.Load.Failed",
     ActionJobTaskConfirmed = "Action.Job.Task.Confirmed",
+    ActionJobTaskConfirmedFailed = "Action.Job.Task.Confirmed.Failed",
     ActiveJobTaskPrepared = "Active.Job.Task.Prepared",
+    ActiveJobTaskPreparedFailed = "Active.Job.Task.Prepared.Failed",
     TransactionSigned = "Transaction.Signed",
     ReconcileBalancePlanDetermined = "Reconcile.Balance.Plan.Determined",
     JobSkippedBotAlreadyHasActivePosition = "Job.Skipped.Bot.Already.Has.Active.Position",
@@ -270,4 +272,8 @@ export enum WinstonLog {
     JobSkippedLiquidityPoolNotOwnedByBot = "Job.Skipped.Liquidity.Pool.Not.Owned.By.Bot",
     JobSkippedQuoteRatioNotGood = "Job.Skipped.Quote.Ratio.Not.Good",
     JobSkippedBotCacheResultFound = "Job.Skipped.Bot.Cache.Result.Found",
+    ActionJobTaskStepSigned = "Action.Job.Task.Step.Signed",
+    ActionJobTaskStepExecuted = "Action.Job.Task.Step.Executed",
+    ActionJobTaskStepSignedFailed = "Action.Job.Task.Step.Signed.Failed",
+    ActionJobTaskStepExecutedFailed = "Action.Job.Task.Step.Executed.Failed",
 }

@@ -125,6 +125,17 @@ export class ClosePositionTaskPrepareService {
             )
         } catch (error) 
         {
+            this.winstonService.log(
+                WinstonLog.ActiveJobTaskPreparedFailed,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.ClosePosition,
+                    error: error.message,
+                    taskIndex,
+                    taskType: TaskType.ClosePosition,
+                }
+            )
             // log the error
             throw new JobFailureException(
                 {

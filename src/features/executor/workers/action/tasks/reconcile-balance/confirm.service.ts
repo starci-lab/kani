@@ -66,88 +66,103 @@ export class ReconcileBalanceTaskConfirmService {
                 bullmqJob,
             }
         )
+        try {
         // check tx
-        const stepCount = job.tasks[taskIndex].stepCount
-        let targetBalanceAmount = new BN(0)
-        let quoteBalanceAmount = new BN(0)
-        let gasBalanceAmount = new BN(0)
-        if (stepCount > 0) {
+            const stepCount = job.tasks[taskIndex].stepCount
+            let targetBalanceAmount = new BN(0)
+            let quoteBalanceAmount = new BN(0)
+            let gasBalanceAmount = new BN(0)
+            if (stepCount > 0) {
             // we need to refresh the balance snapshots
-            const fetched = await this.balanceFetcherService.fetchBalances(
+                const fetched = await this.balanceFetcherService.fetchBalances(
+                    {
+                        bot,
+                    }
+                )
+                targetBalanceAmount = new BN(fetched.targetBalanceAmount)
+                quoteBalanceAmount = new BN(fetched.quoteBalanceAmount)
+                gasBalanceAmount = new BN(fetched.gasBalanceAmount)
+            }
+            try {
+                const session = await this.connection.startSession()
+                await session.withTransaction(
+                    async (
+                        clientSession
+                    ) => {
+                        if (stepCount > 0) {
+                        // update the balance snapshots
+                            await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
+                                {
+                                    bot,
+                                    targetBalanceAmount,
+                                    quoteBalanceAmount,
+                                    gasBalanceAmount,
+                                    session: clientSession,
+                                }
+                            )
+                        }
+                        // update the job with the confirmed status
+                        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                            {
+                                _id: job.id,
+                            },
+                            {
+                                $set: {
+                                    "tasks.$[task].confirmed": true,
+                                },
+                                $inc: {
+                                    taskIndex: 1,
+                                },
+                            },
+                            {
+                                arrayFilters: [
+                                    {
+                                        "task.index": taskIndex,
+                                        "task.type": TaskType.ReconcileBalance,
+                                    },
+                                ],
+                                session: clientSession,
+                            },
+                        )
+                        // throw an exception to stimulate the mongo session
+                        if (envConfig().executor.runtime.operation.reconcileBalance.stimulate) {
+                            throw new ActionJobStimulateMongoSessionException({
+                                botId: bot.id,
+                                jobId: job.id,
+                                taskIndex,
+                            })
+                        }
+                    })
+            } catch (error) {
+                if (!(error instanceof ActionJobStimulateMongoSessionException)) {
+                    throw error
+                }
+            }
+            // log the action job task confirmed
+            this.winstonService.log(
+                WinstonLog.ActionJobTaskConfirmed,
                 {
-                    bot,
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.ReconcileBalance,
+                    metadata: job.metadata,
+                    taskIndex,
+                    taskType: TaskType.ReconcileBalance,
                 }
             )
-            targetBalanceAmount = new BN(fetched.targetBalanceAmount)
-            quoteBalanceAmount = new BN(fetched.quoteBalanceAmount)
-            gasBalanceAmount = new BN(fetched.gasBalanceAmount)
-        }
-        try {
-            const session = await this.connection.startSession()
-            await session.withTransaction(
-                async (
-                    clientSession
-                ) => {
-                    if (stepCount > 0) {
-                        // update the balance snapshots
-                        await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
-                            {
-                                bot,
-                                targetBalanceAmount,
-                                quoteBalanceAmount,
-                                gasBalanceAmount,
-                                session: clientSession,
-                            }
-                        )
-                    }
-                    // update the job with the confirmed status
-                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                        {
-                            _id: job.id,
-                        },
-                        {
-                            $set: {
-                                "tasks.$[task].confirmed": true,
-                            },
-                            $inc: {
-                                taskIndex: 1,
-                            },
-                        },
-                        {
-                            arrayFilters: [
-                                {
-                                    "task.index": taskIndex,
-                                    "task.type": TaskType.ReconcileBalance,
-                                },
-                            ],
-                            session: clientSession,
-                        },
-                    )
-                    // throw an exception to stimulate the mongo session
-                    if (envConfig().executor.runtime.operation.reconcileBalance.stimulate) {
-                        throw new ActionJobStimulateMongoSessionException({
-                            botId: bot.id,
-                            jobId: job.id,
-                            taskIndex,
-                        })
-                    }
-                })
         } catch (error) {
-            if (!(error instanceof ActionJobStimulateMongoSessionException)) {
-                throw error
-            }
+            this.winstonService.log(
+                WinstonLog.ActionJobTaskConfirmedFailed,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.ReconcileBalance,
+                    error: error.message,
+                    taskIndex,
+                    taskType: TaskType.ReconcileBalance,
+                }
+            )
+            throw error
         }
-        // log the action job task confirmed
-        this.winstonService.log(
-            WinstonLog.ActionJobTaskConfirmed,
-            {
-                botId: bot.id,
-                jobId: job.id,
-                type: JobType.ReconcileBalance,
-                metadata: job.metadata,
-                taskIndex,
-                taskType: TaskType.ReconcileBalance,
-            }
-        )
     }
 }

@@ -7,6 +7,7 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
+    JobType,
     StepType,
     TaskType,
 } from "@modules/databases"
@@ -23,6 +24,10 @@ import {
 import {
     ReconcileBalanceTaskSignParams 
 } from "../types"
+import {
+    WinstonService,
+    WinstonLog,
+} from "@modules/winston"
 
 /**
  * Service for the Reconcile Balance Task SIGN step.
@@ -36,6 +41,7 @@ export class ReconcileBalanceTaskSignService {
     private readonly superJson: SuperJSON,
     @InjectPrimaryMongoose()
     private readonly connection: Connection,
+    private readonly winstonService: WinstonService,
     ) {}
 
     /**
@@ -55,38 +61,65 @@ export class ReconcileBalanceTaskSignService {
         )
         const activeStep = job.tasks[taskIndex].activeStep ?? 0
         const step = job.tasks[taskIndex].steps?.[activeStep]
+        try {
         // prepareTx is persisted per-step by prepare service
-        const prepareTx = this.superJson.parse<PrepareTx>(step.prepareTx)
-        // Sign tx
-        const { signedTx } = await this.balanceActionService.signReconcileBalanceTransaction(
-            {
-                bot,
-                prepareTx,
-            }
-        )
+            const prepareTx = this.superJson.parse<PrepareTx>(step.prepareTx)
+            // Sign tx
+            const { signedTx } = await this.balanceActionService.signReconcileBalanceTransaction(
+                {
+                    bot,
+                    prepareTx,
+                }
+            )
 
-        // Persist signedTx and advance step type to Execute
-        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-            {
-                _id: job.id 
-            },
-            {
-                $set: {
-                    "tasks.$[task].steps.$[step].type": StepType.Execute,
-                    "tasks.$[task].steps.$[step].signedTx": this.superJson.stringify(signedTx),
+            // Persist signedTx and advance step type to Execute
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                {
+                    _id: job.id 
                 },
-            },
-            {
-                arrayFilters: [
-                    {
-                        "task.index": taskIndex, 
-                        "task.type": TaskType.ReconcileBalance 
+                {
+                    $set: {
+                        "tasks.$[task].steps.$[step].type": StepType.Execute,
+                        "tasks.$[task].steps.$[step].signedTx": this.superJson.stringify(signedTx),
                     },
-                    {
-                        "step.index": activeStep 
-                    },
-                ],
-            },
-        )
+                },
+                {
+                    arrayFilters: [
+                        {
+                            "task.index": taskIndex, 
+                            "task.type": TaskType.ReconcileBalance 
+                        },
+                        {
+                            "step.index": activeStep 
+                        },
+                    ],
+                },
+            )
+            this.winstonService.log(
+                WinstonLog.ActionJobTaskStepSigned,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.ReconcileBalance,
+                    taskIndex,
+                    taskType: TaskType.ReconcileBalance,
+                    stepIndex: activeStep,
+                }
+            )
+        } catch (error) {
+            this.winstonService.log(
+                WinstonLog.ActionJobTaskStepSignedFailed,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.ReconcileBalance,
+                    taskIndex,
+                    taskType: TaskType.ReconcileBalance,
+                    stepIndex: activeStep,
+                    error: error.message,
+                }
+            )
+            throw error
+        }
     }
 }

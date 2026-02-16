@@ -9,6 +9,7 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
+    JobType,
     StepType,
     TaskType,
 } from "@modules/databases"
@@ -41,6 +42,10 @@ import {
 import {
     JobStepTransitionService 
 } from "../../update"
+import {
+    WinstonService,
+    WinstonLog,
+} from "@modules/winston"
     
 /**
  * Service for the Close Position Task EXECUTE step.
@@ -55,6 +60,7 @@ export class OpenPositionTaskExecuteService {
     private readonly superJson: SuperJSON,
     private readonly sendHeartbeatService: SendHeartbeatService,
     private readonly jobStepTransitionService: JobStepTransitionService,
+    private readonly winstonService: WinstonService,
     ) {}
 
     /**
@@ -148,7 +154,30 @@ export class OpenPositionTaskExecuteService {
                     ],
                 },
             )
+            this.winstonService.log(
+                WinstonLog.ActionJobTaskStepExecuted,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.OpenPosition,
+                    taskIndex,
+                    taskType: TaskType.OpenPosition,
+                    stepIndex,
+                }
+            )
         } catch (error) {
+            this.winstonService.log(
+                WinstonLog.ActionJobTaskStepExecutedFailed,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.OpenPosition,
+                    taskIndex,
+                    taskType: TaskType.OpenPosition,
+                    stepIndex,
+                    error: error.message,
+                }
+            )
             // If tx execution failed with a fatal RPC error, rollback to Sign and record failure atomically.
             if (error instanceof RpcClientFatalException) {
                 // get the tx failure index

@@ -8,6 +8,7 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
+    JobType,
     StepType, 
     TaskType,
 } from "@modules/databases"
@@ -24,6 +25,10 @@ import {
 import {
     OpenPositionTaskSignParams 
 } from "../types"
+import {
+    WinstonService,
+    WinstonLog,
+} from "@modules/winston"
 
 /**
  * Service for the Open Position Task SIGN step.
@@ -37,6 +42,7 @@ export class OpenPositionTaskSignService {
         private readonly superJson: SuperJSON,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly winstonService: WinstonService,
     ) { }
     /**
      * Process the Open Position Task SIGN step.
@@ -68,34 +74,61 @@ export class OpenPositionTaskSignService {
         const prepareTx = this.superJson.parse<PrepareTx>(
             job.tasks[taskIndex].steps[activeStep].prepareTx
         )
-        const { signedTx } = await this.openPositionActionService.sign(
-            {
-                bot,
-                prepareTx,
-                liquidityPool,
-            }
-        )
-        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-            {
-                _id: job.id 
-            },
-            {
-                $set: {
-                    "tasks.$[task].steps.$[step].type": StepType.Execute,
-                    "tasks.$[task].steps.$[step].signedTx": this.superJson.stringify(signedTx),
+        try {
+            const { signedTx } = await this.openPositionActionService.sign(
+                {
+                    bot,
+                    prepareTx,
+                    liquidityPool,
+                }
+            )
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                {
+                    _id: job.id 
                 },
-            },
-            {
-                arrayFilters: [
-                    {
-                        "task.index": taskIndex, 
-                        "task.type": TaskType.OpenPosition 
+                {
+                    $set: {
+                        "tasks.$[task].steps.$[step].type": StepType.Execute,
+                        "tasks.$[task].steps.$[step].signedTx": this.superJson.stringify(signedTx),
                     },
-                    {
-                        "step.index": activeStep 
-                    },
-                ],
-            },
-        )
+                },
+                {
+                    arrayFilters: [
+                        {
+                            "task.index": taskIndex, 
+                            "task.type": TaskType.OpenPosition 
+                        },
+                        {
+                            "step.index": activeStep 
+                        },
+                    ],
+                },
+            )
+            this.winstonService.log(
+                WinstonLog.ActionJobTaskStepSigned,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.OpenPosition,
+                    taskIndex,
+                    taskType: TaskType.OpenPosition,
+                    stepIndex: activeStep,
+                }
+            )
+        } catch (error) {
+            this.winstonService.log(
+                WinstonLog.ActionJobTaskStepSignedFailed,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.OpenPosition,
+                    taskIndex,
+                    taskType: TaskType.OpenPosition,
+                    stepIndex: activeStep,
+                    error: error.message,
+                }
+            )
+            throw error
+        }
     }
 }

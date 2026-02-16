@@ -256,6 +256,12 @@ import {
     JobSkippedLiquidityPoolNotOwnedByBotMessage,
     JobSkippedQuoteRatioNotGoodMessage,
     JobSkippedBotCacheResultFoundMessage,
+    ActionJobTaskStepSignedMessage,
+    ActionJobTaskStepExecutedMessage,
+    ActiveJobTaskPreparedFailedMessage,
+    ActionJobTaskConfirmedFailedMessage,
+    ActionJobTaskStepSignedFailedMessage,
+    ActionJobTaskStepExecutedFailedMessage,
 } from "./types"
 
 /** Map of Winston log names to level, Loki flag, and message type. */
@@ -2420,4 +2426,52 @@ export const configMap = {
         messageType: {
         } as JobSkippedBotCacheResultFoundMessage,
     },
+    // Action Job Task Step Signed
+    [WinstonLog.ActionJobTaskStepSigned]: {
+        name: WinstonLog.ActionJobTaskStepSigned,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ActionJobTaskStepSignedMessage,
+    },
+    // Action Job Task Step Executed
+    [WinstonLog.ActionJobTaskStepExecuted]: {
+        name: WinstonLog.ActionJobTaskStepExecuted,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ActionJobTaskStepExecutedMessage,
+    },
+    // Action Job Task Step Signed Failed
+    [WinstonLog.ActionJobTaskStepSignedFailed]: {
+        name: WinstonLog.ActionJobTaskStepSignedFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ActionJobTaskStepSignedFailedMessage,
+    },
+    // Action Job Task Step Executed Failed
+    [WinstonLog.ActionJobTaskStepExecutedFailed]: {
+        name: WinstonLog.ActionJobTaskStepExecutedFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ActionJobTaskStepExecutedFailedMessage,
+    },
+    // Active Job Task Prepared Failed
+    [WinstonLog.ActiveJobTaskPreparedFailed]: {
+        name: WinstonLog.ActiveJobTaskPreparedFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ActiveJobTaskPreparedFailedMessage,
+    },
+    // Action Job Task Confirmed Failed
+    [WinstonLog.ActionJobTaskConfirmedFailed]: {
+        name: WinstonLog.ActionJobTaskConfirmedFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {  
+        } as ActionJobTaskConfirmedFailedMessage,
+    },  
 }
