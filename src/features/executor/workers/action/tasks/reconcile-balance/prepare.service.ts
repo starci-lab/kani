@@ -86,7 +86,10 @@ export class ReconcileBalanceTaskPrepareService {
             // heartbeat
             await this.sendHeartbeatService.process(
                 {
-                    bot, job, bullmqJob
+                    bot, 
+                    job, 
+                    bullmqJob, 
+                    fatal: taskIndex === 0,
                 }
             )
             // fetch the balances and update the balance snapshots
@@ -312,7 +315,10 @@ export class ReconcileBalanceTaskPrepareService {
                     metadata: job.metadata,
                 }
             )
-            throw error
+            throw new JobFailureException({
+                originalError: error,
+                strategy: taskIndex === 0 ? JobFailureStrategy.Fatal : JobFailureStrategy.Requeue,
+            })
         }
     }
 }

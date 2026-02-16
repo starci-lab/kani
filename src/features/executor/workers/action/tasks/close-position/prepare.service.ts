@@ -74,6 +74,7 @@ export class ClosePositionTaskPrepareService {
                     bot,
                     job,
                     bullmqJob,
+                    fatal: taskIndex === 0,
                 }
             )
             // We prepare the close position transaction.
@@ -144,7 +145,7 @@ export class ClosePositionTaskPrepareService {
             throw new JobFailureException(
                 {
                     originalError: error,
-                    strategy: JobFailureStrategy.Fatal,
+                    strategy: taskIndex === 0 ? JobFailureStrategy.Fatal : JobFailureStrategy.Requeue,
                 }
             )
         }

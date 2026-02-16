@@ -30,6 +30,12 @@ import {
 import {
     strict as assert 
 } from "node:assert"
+import {
+    JobFailureStrategy 
+} from "@modules/common"
+import {
+    JobFailureException 
+} from "@modules/exceptions"
 /**
  * Service for the Open Position Task PREPARE step.
  */
@@ -68,6 +74,7 @@ export class OpenPositionTaskPrepareService {
                     bot,
                     job,
                     bullmqJob,
+                    fatal: taskIndex === 0,
                 }
             )
             // we prepare the open position transaction.
@@ -134,7 +141,12 @@ export class OpenPositionTaskPrepareService {
                     metadata: job.metadata,
                 }
             )
-            throw error
+            throw new JobFailureException(
+                {
+                    originalError: error,
+                    strategy: taskIndex === 0 ? JobFailureStrategy.Fatal : JobFailureStrategy.Requeue,
+                }
+            )
         }
     }
 }

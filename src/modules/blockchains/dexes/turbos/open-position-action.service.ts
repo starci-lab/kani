@@ -58,6 +58,9 @@ import {
 import {
     ChainId 
 } from "@modules/common"
+import {
+    envConfig
+} from "@modules/env"
         
 @Injectable()
 export class TurbosOpenPositionActionService implements IOpenActionService {
@@ -85,6 +88,11 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             liquidityPool 
         }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
+        if (envConfig().executor.runtime.operation.openPosition.stimulate) {
+            return {
+                liquidity: new BN(0),
+            }
+        }
         // Stage: on-chain fetch (position NFT must exist)
         const positionNftRaw = await this.suiFetchService.fetchObject<TurbosSuiObjectPositionNFT>(
             {
