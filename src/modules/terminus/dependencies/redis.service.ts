@@ -44,7 +44,8 @@ export class RedisService {
     }
 
     async pingCacheRedis(): Promise<HealthIndicatorResult> {
-        console.log("pingCacheRedis")
+        console.log("pingCacheRedis",
+            this.buildRedisOptions("cache"))
         return await this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
             DependencyName.CacheRedis,
             this.buildRedisOptions("cache"),
@@ -52,6 +53,8 @@ export class RedisService {
     }
 
     async pingAdapterRedis(): Promise<HealthIndicatorResult> {
+        console.log("pingAdapterRedis",
+            this.buildRedisOptions("adapter"))
         return await this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
             DependencyName.AdapterRedis,
             this.buildRedisOptions("adapter"),
@@ -59,6 +62,8 @@ export class RedisService {
     }
 
     async pingBullmqRedis(): Promise<HealthIndicatorResult> {
+        console.log("pingBullmqRedis",
+            this.buildRedisOptions("bullmq"))
         return await this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
             DependencyName.BullmqRedis,
             this.buildRedisOptions("bullmq"),
@@ -66,6 +71,8 @@ export class RedisService {
     }
 
     async pingThrottlerRedis(): Promise<HealthIndicatorResult> {
+        console.log("pingThrottlerRedis",
+            this.buildRedisOptions("throttler"))
         return await this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
             DependencyName.ThrottlerRedis,
             this.buildRedisOptions("throttler"),
@@ -73,6 +80,8 @@ export class RedisService {
     }
 
     async pingLockAuthorityRedis(): Promise<HealthIndicatorResult> {
+        console.log("pingLockAuthorityRedis",
+            this.buildRedisOptions("lockAuthority"))
         return await this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
             DependencyName.LockAuthorityRedis,
             this.buildRedisOptions("lockAuthority"),
