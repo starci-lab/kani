@@ -388,8 +388,8 @@ export class OpenPositionEnqueueService {
                 liquidityPool,
                 oldJob
             )
+        ) && !isRetry
         )
-        ) 
         {
             return false
         }
