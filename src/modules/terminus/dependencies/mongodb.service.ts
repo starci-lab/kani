@@ -38,7 +38,8 @@ export class MongodbService {
             getPrimaryConnectionToken(),
             {
                 strict: false 
-            })
+            }
+        )
         return this.db.pingCheck(
             DependencyName.MongodbPrimary,
             {

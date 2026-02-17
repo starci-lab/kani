@@ -44,6 +44,7 @@ export class RedisService {
     }
 
     async pingCacheRedis(): Promise<HealthIndicatorResult> {
+        console.log("pingCacheRedis")
         return await this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
             DependencyName.CacheRedis,
             this.buildRedisOptions("cache"),
