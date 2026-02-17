@@ -317,6 +317,11 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         positionId,
         liquidityPool,
     }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
+        if (envConfig().executor.runtime.operation.openPosition.stimulate) {
+            return {
+                liquidity: new BN(0),
+            }
+        }
         const accountInfo = await this.solanaFetchService.fetchAccount({
             address: positionId,
             kind: AccountKind.PersonalPosition,

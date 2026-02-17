@@ -195,6 +195,9 @@ export class OpenPositionTaskExecuteService {
                                     "task.index": taskIndex,
                                     "task.type": TaskType.OpenPosition,
                                 },
+                                {
+                                    "step.index": stepIndex,
+                                },
                             ],
                         }
                     )

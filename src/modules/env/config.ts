@@ -300,7 +300,7 @@ export const envConfig = () => ({
         meteora: {
             openPosition: {
                 slippage: parseEnvFloat({
-                    key: "DEXES_METEORA_OPEN_POSITION_SLIPPAGE", defaultValue: 0.05 
+                    key: "DEXES_METEORA_OPEN_POSITION_SLIPPAGE", defaultValue: 0.2
                 }),
             },
             interval: {

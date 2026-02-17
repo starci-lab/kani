@@ -54,6 +54,9 @@ import {
 } from "@modules/mixin"
 import SuperJSON from "superjson"
 import bs58 from "bs58"
+import {
+    PersonalPositionState 
+} from "../raydium/beets"
 
 /**
  * Service responsible for opening positions on Orca DEX.
@@ -100,14 +103,23 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         positionId,
         liquidityPool,
     }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
-        await this.solanaFetchService.fetchAccount({
+        if (envConfig().executor.runtime.operation.openPosition.stimulate) {
+            return {
+                liquidity: new BN(0),
+            } 
+        }
+        const accountInfo = await this.solanaFetchService.fetchAccount({
             address: positionId,
             kind: AccountKind.PersonalPosition,
             dexId: DexId.Orca,
             liquidityPoolId: liquidityPool.displayId,
         })
+        const [personalPositionState] = PersonalPositionState.struct.deserialize(
+            Buffer.from(accountInfo.data),
+            8,
+        )
         return {
-            // Temporary empty, will need other logic to get liquidity
+            liquidity: new BN(personalPositionState.liquidity.toString()),
         }
     }
 
@@ -244,6 +256,8 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             amountB,
             positionId: personalPosition.toString(),
             metadata,
+            tickLower,
+            tickUpper,
         }
     }
 

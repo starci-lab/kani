@@ -36,7 +36,7 @@ import {
     InjectSuperJson
 } from "@modules/mixin"
 import SuperJSON from "superjson"
-import _ from "lodash"
+// import _ from "lodash"
 import {
     InjectQueue
 } from "@nestjs/bullmq"
@@ -325,26 +325,26 @@ export class OpenPositionEnqueueService {
             return false
         }
 
-        /**
-         * Ownership check:
-         * Ensure the liquidity pool is associated with this bot.
-         */
-        if (
-            !_.some(
-                bot.liquidityPools,
-                _liquidityPool => _liquidityPool.toString() === liquidityPool.id.toString()
-            )
-        ) {
-            this.winstonService.log(
-                WinstonLog.JobSkippedLiquidityPoolNotOwnedByBot,
-                {
-                    botId: bot.id,
-                    liquidityPoolId: liquidityPool.displayId,
-                    type: JobType.OpenPosition,
-                    jobId: oldJob?.id,
-                })
-            return false
-        }
+        // /**
+        //  * Ownership check:
+        //  * Ensure the liquidity pool is associated with this bot.
+        //  */
+        // if (
+        //     !_.some(
+        //         bot.liquidityPools,
+        //         _liquidityPool => _liquidityPool.toString() === liquidityPool.id.toString()
+        //     )
+        // ) {
+        //     this.winstonService.log(
+        //         WinstonLog.JobSkippedLiquidityPoolNotOwnedByBot,
+        //         {
+        //             botId: bot.id,
+        //             liquidityPoolId: liquidityPool.displayId,
+        //             type: JobType.OpenPosition,
+        //             jobId: oldJob?.id,
+        //         })
+        //     return false
+        // }
         if (!isRetry) {
         // Skip if the balance snapshot is outside the rescan cooldown window
             const diffMs = this.dayjsService.now().diff(

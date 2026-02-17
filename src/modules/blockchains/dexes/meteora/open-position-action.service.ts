@@ -41,6 +41,9 @@ import {
 } from "@modules/mixin"
 import SuperJSON from "superjson"
 import bs58 from "bs58"
+import {
+    envConfig 
+} from "@modules/env"
 
 /**
  * Service responsible for opening positions on Meteora DEX.
@@ -86,6 +89,10 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         positionId,
         liquidityPool,
     }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
+        if (envConfig().executor.runtime.operation.openPosition.stimulate) {
+            return {
+            }
+        }
         await this.solanaFetchService.fetchAccount({
             address: positionId,
             kind: AccountKind.PersonalPosition, 
@@ -149,15 +156,11 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
             })
         }
         // stage: transaction building (extract balance amounts)
-        const {
-            targetBalanceAmount: snapshotTargetBalanceAmount,
-            quoteBalanceAmount: snapshotQuoteBalanceAmount
-        } = bot.balanceSnapshots
-        const snapshotTargetBalanceAmountBN = new BN(snapshotTargetBalanceAmount)
-        const snapshotQuoteBalanceAmountBN = new BN(snapshotQuoteBalanceAmount)
+        const snapshotTargetBalanceAmount = new BN(bot.balanceSnapshots.targetBalanceAmount)
+        const snapshotQuoteBalanceAmount = new BN(bot.balanceSnapshots.quoteBalanceAmount)
         // stage: transaction building (calculate amounts based on target token)
-        const amountA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
-        const amountB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
+        const amountA = targetIsA ? snapshotTargetBalanceAmount : snapshotQuoteBalanceAmount
+        const amountB = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount
         // stage: transaction building (create open position instructions)
         const {
             instructions: openPositionInstructions,

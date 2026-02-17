@@ -84,8 +84,7 @@ export class SolanaExecuteService {
         )
 
         if (error) {
-            console.error("Error executing Solana transaction",
-                error)
+            console.log(error)
             throw new RpcClientFatalException(
                 {
                     originalError: new TransactionExecutionFailedException(

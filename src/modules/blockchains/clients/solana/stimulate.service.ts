@@ -84,7 +84,7 @@ export class SolanaStimulateService {
         // validate error
         if (result.value.err) {
             throw new RpcClientFatalException({
-                message: result.value.err.toString(),
+                message: result.value.logs?.join("\n") ?? "Unknown error",
                 originalError: new TransactionStimulatedFailedException(
                     {
                         botId: bot.id,

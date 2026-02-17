@@ -123,12 +123,6 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
             state: _state,
             liquidityPool,
         })
-        console.dir(
-            instructions,
-            {
-                depth: null 
-            }
-        )
         return {
             prepareTxs: [
                 {

@@ -37,9 +37,6 @@ import {
     JobNotFoundException,
     LiquidityPoolNotFoundException
 } from "@modules/exceptions"
-import {
-    JobContextService,
-} from "./context"
 
 /**
  * Service for requeueing open-position jobs when active jobs exceed TTL.
@@ -54,7 +51,6 @@ export class ActionRequeueService implements OnApplicationBootstrap {
         private readonly dayjsService: DayjsService,
         private readonly asyncService: AsyncService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly jobContextService: JobContextService,
         private readonly openPositionEnqueueService: OpenPositionEnqueueService,
         private readonly closePositionEnqueueService: ClosePositionEnqueueService,
         private readonly withdrawEnqueueService: WithdrawEnqueueService,
