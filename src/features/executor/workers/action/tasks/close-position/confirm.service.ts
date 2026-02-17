@@ -167,7 +167,6 @@ export class ClosePositionTaskConfirmService {
                 }
             )
             const signedTxs = (job.tasks[taskIndex].steps ?? []).map((step) => this.superJson.parse<SignedTx>(step.signedTx ?? ""))
-
             try {
                 const session = await this.connection.startSession()
                 await session.withTransaction(async (
@@ -253,6 +252,7 @@ export class ClosePositionTaskConfirmService {
                         },
                     )
                     assert(updateJobResult.matchedCount > 0)
+                    throw new Error("test")
                     // throw an exception to stimulate the mongo session
                     if (envConfig().executor.runtime.operation.closePosition.stimulate) {
                         throw new ActionJobStimulateMongoSessionException({

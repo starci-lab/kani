@@ -55,8 +55,8 @@ import {
 import SuperJSON from "superjson"
 import bs58 from "bs58"
 import {
-    PersonalPositionState 
-} from "../raydium/beets"
+    Position 
+} from "./beets"
 
 /**
  * Service responsible for opening positions on Orca DEX.
@@ -114,7 +114,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             dexId: DexId.Orca,
             liquidityPoolId: liquidityPool.displayId,
         })
-        const [personalPositionState] = PersonalPositionState.struct.deserialize(
+        const [personalPositionState] = Position.struct.deserialize(
             Buffer.from(accountInfo.data),
             8,
         )

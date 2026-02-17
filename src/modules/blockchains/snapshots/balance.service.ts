@@ -61,7 +61,6 @@ export class BalanceSnapshotService {
                     ])
                 )
                 : null
-
         // build update payload for balance snapshot fields
         const $set = {
             "balanceSnapshots.targetBalanceAmount": targetBalanceAmount.toString(),
@@ -72,31 +71,68 @@ export class BalanceSnapshotService {
 
         // only override incentiveSnapshots when incentive amounts provided
         if (incentiveObj && Object.keys(incentiveObj).length > 0) {
+            const keys = Object.keys(incentiveObj)
             $set["balanceSnapshots.incentiveSnapshots"] = {
-                $map: {
-                    input: "$balanceSnapshots.incentiveSnapshots",
-                    as: "i",
+                $let: {
+                    vars: {
+                        current: {
+                            $ifNull: [
+                                "$balanceSnapshots.incentiveSnapshots",
+                                []
+                            ] 
+                        },
+                    },
                     in: {
                         $cond: [
+                            // if already have array -> update matching tokens
                             {
-                                $in: [
-                                    {
-                                        $toString: "$$i.token" 
-                                    },
-                                    Object.keys(incentiveObj)],
+                                $gt: [{
+                                    $size: "$$current" 
+                                },
+                                0] 
                             },
                             {
-                                token: "$$i.token",
-                                amount: {
-                                    $getField: {
-                                        field: {
-                                            $toString: "$$i.token" 
-                                        },
-                                        input: incentiveObj,
+                                $map: {
+                                    input: "$$current",
+                                    as: "i",
+                                    in: {
+                                        $cond: [
+                                            {
+                                                $in: [{
+                                                    $toString: "$$i.token" 
+                                                },
+                                                keys] 
+                                            },
+                                            {
+                                                token: "$$i.token",
+                                                amount: {
+                                                    $getField: {
+                                                        field: {
+                                                            $toString: "$$i.token" 
+                                                        },
+                                                        input: incentiveObj,
+                                                    },
+                                                },
+                                            },
+                                            "$$i",
+                                        ],
                                     },
                                 },
                             },
-                            "$$i",
+          
+                            // if null/empty -> seed new from incentiveObj
+                            {
+                                $map: {
+                                    input: {
+                                        $objectToArray: incentiveObj 
+                                    },
+                                    as: "kv",
+                                    in: {
+                                        token: "$$kv.k", // if token schema is ObjectId then need $toObjectId
+                                        amount: "$$kv.v",
+                                    },
+                                },
+                            },
                         ],
                     },
                 },

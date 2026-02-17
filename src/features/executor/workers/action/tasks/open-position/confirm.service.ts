@@ -95,9 +95,11 @@ export class OpenPositionTaskConfirmService {
                 job,
                 bullmqJob,
             })
-            const fetch = await this.balanceFetcherService.fetchBalances({
-                bot
-            })
+            const fetch = await this.balanceFetcherService.fetchBalances(
+                {
+                    bot,
+                }
+            )
             const targetBalanceAmount = new BN(fetch.targetBalanceAmount)
             const quoteBalanceAmount = new BN(fetch.quoteBalanceAmount)
             const gasBalanceAmount = new BN(fetch.gasBalanceAmount)
@@ -167,14 +169,9 @@ export class OpenPositionTaskConfirmService {
             )
             try {
                 const session = await this.connection.startSession()
-                console.log({
-                    liquidity: confirmResult?.liquidity ?? new BN(0),
-                    tickLower: prepareResult?.tickLower ?? new BN(0),
-                    tickUpper: prepareResult?.tickUpper ?? new BN(0),
-                })
                 await session.withTransaction(
                     async (clientSession) => {
-                    // add the open position record
+                        // add the open position record
                         await this.openPositionSnapshotService.addOpenPositionRecord(
                             {
                                 bot,

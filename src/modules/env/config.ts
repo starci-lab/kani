@@ -465,7 +465,10 @@ export const envConfig = () => ({
                         }),
                     },
                     stimulate: parseEnvBoolean({
-                        key: "EXECUTOR_OPERATION_CLOSE_POSITION_STIMULATE", defaultValue: false 
+                        key: "EXECUTOR_OPERATION_CLOSE_POSITION_STIMULATE", defaultValue: false
+                    }),
+                    stimulateConfirm: parseEnvBoolean({
+                        key: "EXECUTOR_OPERATION_CLOSE_POSITION_STIMULATE_CONFIRM", defaultValue: false
                     }),
                 },
                 reconcileBalance: {

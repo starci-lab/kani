@@ -218,7 +218,7 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
         }
 
         // stage: execution
-        const { txHash }= await this.solanaExecuteService.execute({
+        const { txHash } = await this.solanaExecuteService.execute({
             signedTx,
             bot,
             transactionType: TransactionType.ClosePosition,

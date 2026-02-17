@@ -1,33 +1,36 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import BN from "bn.js"
 import Decimal from "decimal.js"
 import {
-    PriceService 
+    PriceService
 } from "./price.service"
 import {
-    TokenSchema,
-    PrimaryMemoryStorageService,
+    PrimaryMemoryStorageService
 } from "@modules/databases"
 import {
-    toDecimalAmount 
+    toDecimalAmount
 } from "@modules/common"
 import {
-    AsyncService 
+    AsyncService
 } from "@modules/mixin"
 import {
     CalculatePositionValueParams,
-    CalculatePositionValueResult
+    CalculatePositionValueResult,
 } from "./types"
+import {
+    TokenSchema
+} from "@modules/databases"
 
 /**
- * Service for calculating the value of a position based on balance changes.
- * Computes position value differences and converts to USD using token prices.
+ * Service responsible for calculating position value and balance value.
  *
- * @example
- * const service = new PositionValueService(...)
- * const result = await service.calculatePositionValue({ before, after, targetToken, quoteToken, gasToken })
+ * All token amounts are converted into the target token denomination first,
+ * then converted into USD using the target token price.
+ *
+ * Position value = absolute delta of total portfolio value (in target token).
+ * Balance value  = total portfolio value before position change (in target token).
  */
 @Injectable()
 export class PositionValueService {
@@ -35,24 +38,85 @@ export class PositionValueService {
         private readonly priceService: PriceService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
-    ) {}
+    ) { }
 
     /**
-     * Calculates the value of a position based on balance changes.
-     * Computes differences in target, quote, gas, and incentive token balances,
-     * converts all values to target token denomination, then to USD.
-     *
-     * @param param - Parameters for calculating position value
-     * @param param.before - Balance amounts before the position change
-     * @param param.after - Balance amounts after the position change
-     * @param param.targetToken - Target token schema
-     * @param param.quoteToken - Quote token schema
-     * @param param.gasToken - Gas token schema
-     * @returns Position value calculation result with values in target token and USD
-     *
-     * @example
-     * const result = await service.calculatePositionValue({ before, after, targetToken, quoteToken, gasToken })
-     */
+   * Converts a map of incentive token balances into a single aggregated value
+   * denominated in the target token.
+   *
+   * Each incentive token is:
+   * 1. Converted from raw amount (BN) into decimal amount.
+   * 2. Converted into target token denomination using relative price.
+   * 3. Summed into a total value.
+   *
+   * @returns Total incentive value expressed in target token.
+   */
+    private async resolveIncentivesValueInTarget(
+        targetToken: TokenSchema,
+        incentiveBalanceAmounts?: Record<string, BN>,
+    ): Promise<Decimal> {
+        const map = incentiveBalanceAmounts ?? {
+        }
+        const tokenIds = Object.keys(map)
+
+        if (tokenIds.length === 0) {
+            return new Decimal(0)
+        }
+
+        const values = await this.asyncService.allMustDone(
+            tokenIds.map(async (tokenId) => {
+                const amount = map[tokenId] ?? new BN(0)
+
+                if (amount.isZero()) {
+                    return new Decimal(0)
+                }
+
+                // Retrieve incentive token metadata from memory storage
+                const incentiveToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+                    id: {
+                        $eq: tokenId
+                    },
+                })
+
+                if (!incentiveToken) {
+                    return new Decimal(0)
+                }
+
+                // Resolve relative price between incentive token and target token
+                const { price: relativeIncentivePrice } =
+                    await this.priceService.resolveRelativePrice({
+                        tokenA: incentiveToken,
+                        tokenB: targetToken,
+                    })
+
+                // Convert raw amount -> decimal -> target denomination
+                return toDecimalAmount({
+                    amount,
+                    decimals: new Decimal(incentiveToken.decimals),
+                }).mul(relativeIncentivePrice)
+            }),
+        )
+
+        // Aggregate all incentive values
+        return values.reduce((acc, v) => acc.add(v),
+            new Decimal(0))
+    }
+
+    /**
+   * Calculates position value change and balance value.
+   *
+   * Steps:
+   * 1. Convert target, quote, gas balances into target denomination.
+   * 2. Convert incentive token balances into target denomination.
+   * 3. Compute delta between before and after states.
+   * 4. Convert results into USD.
+   *
+   * @returns
+   * - positionValue: absolute portfolio delta in target token
+   * - positionValueInUsd: absolute portfolio delta in USD
+   * - balanceValue: portfolio value before change (in target token)
+   * - balanceValueInUsd: portfolio value before change (in USD)
+   */
     async calculatePositionValue({
         before,
         after,
@@ -60,7 +124,8 @@ export class PositionValueService {
         quoteToken,
         gasToken,
     }: CalculatePositionValueParams): Promise<CalculatePositionValueResult> {
-        // Resolve relative prices
+
+        // Resolve relative prices for quote and gas tokens
         const { price: relativeQuotePrice } =
             await this.priceService.resolveRelativePrice({
                 tokenA: quoteToken,
@@ -73,109 +138,74 @@ export class PositionValueService {
                 tokenB: targetToken,
             })
 
-        // ===== Target token diff =====
-        const targetBalanceAmount = toDecimalAmount({
+        // ===== Target token balances =====
+        const targetBalanceBefore = toDecimalAmount({
             amount: before.targetBalanceAmount,
             decimals: new Decimal(targetToken.decimals),
         })
 
-        const targetBalanceAmountAfter = toDecimalAmount({
+        const targetBalanceAfter = toDecimalAmount({
             amount: after.targetBalanceAmount,
             decimals: new Decimal(targetToken.decimals),
         })
 
-        const targetBalanceAmountDiff =
-            targetBalanceAmountAfter.sub(targetBalanceAmount)
+        const targetBalanceDiff = targetBalanceAfter.sub(targetBalanceBefore)
 
-        // ===== Quote token diff (convert to target) =====
-        const quoteBalanceAmount = toDecimalAmount({
+        // ===== Quote token balances (converted into target token) =====
+        const quoteBalanceBefore = toDecimalAmount({
             amount: before.quoteBalanceAmount,
             decimals: new Decimal(quoteToken.decimals),
         }).mul(relativeQuotePrice)
 
-        const quoteBalanceAmountAfter = toDecimalAmount({
+        const quoteBalanceAfter = toDecimalAmount({
             amount: after.quoteBalanceAmount,
             decimals: new Decimal(quoteToken.decimals),
         }).mul(relativeQuotePrice)
 
-        const quoteBalanceAmountDiff =
-            quoteBalanceAmountAfter.sub(quoteBalanceAmount)
+        const quoteBalanceDiff = quoteBalanceAfter.sub(quoteBalanceBefore)
 
-        // ===== Gas token diff (convert to target) =====
-        const gasBalanceAmount = toDecimalAmount({
+        // ===== Gas token balances (converted into target token) =====
+        const gasBalanceBefore = toDecimalAmount({
             amount: before.gasBalanceAmount,
             decimals: new Decimal(gasToken.decimals),
         }).mul(relativeGasPrice)
 
-        const gasBalanceAmountAfter = toDecimalAmount({
+        const gasBalanceAfter = toDecimalAmount({
             amount: after.gasBalanceAmount,
             decimals: new Decimal(gasToken.decimals),
         }).mul(relativeGasPrice)
 
-        const gasBalanceAmountDiff =
-            gasBalanceAmountAfter.sub(gasBalanceAmount)
+        const gasBalanceDiff = gasBalanceAfter.sub(gasBalanceBefore)
+        // ===== Incentive token balances =====
+        const incentiveTotalBefore =
+            await this.resolveIncentivesValueInTarget(targetToken,
+                before.incentiveBalanceAmounts)
 
-        // ===== Incentive token diffs (convert to target) =====
-        const incentiveDiffs = await this.asyncService.allMustDone(
-            Object.entries(before.incentiveBalanceAmounts ?? {
-            }).map(
-                async ([tokenId,
-                    beforeAmount]) => {
-                    const afterAmount =
-                        after.incentiveBalanceAmounts?.[tokenId] ?? new BN(0)
+        const incentiveTotalAfter =
+            await this.resolveIncentivesValueInTarget(targetToken,
+                after.incentiveBalanceAmounts)
 
-                    const incentiveToken =
-                        this.primaryMemoryStorageService.tokenCollection.findOne({
-                            id: {
-                                $eq: tokenId 
-                            },
-                        })
-
-                    if (!incentiveToken) {
-                        return new Decimal(0)
-                    }
-
-                    const { price: relativeIncentivePrice } =
-                        await this.priceService.resolveRelativePrice({
-                            tokenA: incentiveToken,
-                            tokenB: targetToken,
-                        })
-                    const beforeDecimal = toDecimalAmount({
-                        amount: beforeAmount,
-                        decimals: new Decimal(incentiveToken.decimals),
-                    }).mul(relativeIncentivePrice)
-                    
-                    const afterDecimal = toDecimalAmount({
-                        amount: afterAmount,
-                        decimals: new Decimal(incentiveToken.decimals),
-                    }).mul(relativeIncentivePrice)
-
-                    return afterDecimal.sub(beforeDecimal)
-                }
-            )
-        )
-
-        const incentiveTotalDiff = incentiveDiffs.reduce(
-            (acc, value) => acc.add(value),
-            new Decimal(0)
-        )
-
-        // ===== Total position value (target token) =====
-        const positionValue = targetBalanceAmountDiff
-            .add(quoteBalanceAmountDiff)
-            .add(gasBalanceAmountDiff)
+        const incentiveTotalDiff =
+            incentiveTotalAfter.sub(incentiveTotalBefore)
+        // ===== Position value (absolute portfolio delta) =====
+        const positionValue = targetBalanceDiff
+            .add(quoteBalanceDiff)
+            .add(gasBalanceDiff)
             .add(incentiveTotalDiff)
             .abs()
 
-        // ===== Convert to USD =====
+        // ===== Total portfolio value BEFORE change =====
+        const balanceValue = targetBalanceBefore
+            .add(quoteBalanceBefore)
+            .add(gasBalanceBefore)
+            .add(incentiveTotalBefore)
+            .abs()
+
+        // ===== Convert to USD using target token price =====
         const { price: targetPrice } =
             await this.priceService.resolvePrice({
                 token: targetToken,
             })
-
-        const balanceValue = targetBalanceAmount
-            .add(quoteBalanceAmount)
-            .add(gasBalanceAmount)
 
         const balanceValueInUsd = balanceValue.mul(targetPrice)
         const positionValueInUsd = positionValue.mul(targetPrice)
