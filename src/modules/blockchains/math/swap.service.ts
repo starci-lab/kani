@@ -599,6 +599,24 @@ export class SwapMathService {
                 quoteBalanceAmount,
             }
         )
+        // if stimulate, we return mock transactions
+        if (envConfig().executor.runtime.operation.reconcileBalance.stimulate) {
+            return {
+                swapSteps: [
+                    {
+                        direction: SwapDirection.TargetToGas,
+                        usedAmount: new BN(1000),
+                        swappedAmount: new BN(1000),
+                    },
+                    {
+                        direction: SwapDirection.TargetToQuote,
+                        usedAmount: new BN(1000),
+                        swappedAmount: new BN(1000),
+                    },
+                ],
+                quoteRatioResult,
+            }
+        }
         switch (gasStatus) {
         case GasStatus.IsTarget: {
             return this.computeSwapAmountsWhenTargetIsGas({

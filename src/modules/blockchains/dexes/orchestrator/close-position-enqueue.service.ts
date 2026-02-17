@@ -258,9 +258,8 @@ export class ClosePositionEnqueueService {
             isRetry,
         }: EnqueueClosePositionParams
     ): Promise<boolean> {
-      
         // Ensure the bot has an active position
-        if (!bot.activePosition) {
+        if (!bot.activePosition && !isRetry) {
             this.winstonService.log(
                 WinstonLog.JobSkippedBotNotHasActivePosition,
                 {
@@ -272,7 +271,6 @@ export class ClosePositionEnqueueService {
             )
             return false
         }
-
         // Skip if bot has an active job
         if (bot.activeJob && !isRetry) {
             this.winstonService.log(
@@ -286,42 +284,42 @@ export class ClosePositionEnqueueService {
             )
             return false
         }
-      
         // Retrieve the latest pool state
         const state = await this.liquidityPoolStateService.getState(liquidityPool)
-      
         // Run settlement logic to determine whether position should close
-        const { settled, strategyResults } =
+        if (!isRetry) {
+            const { settled, strategyResults } =
           await this.settlementService.settle({
               bot,
               liquidityPool,
               state,
           })
-      
-        const settleEnabled =
+            // if settle is enabled, we check if the position can be settled
+            const settleEnabled =
           envConfig().executor.runtime.operation.closePosition.settle.enabled
-      
-        if (
-            !settled &&
-          !bot.activePosition?.forceClose &&
-          settleEnabled
-        ) {
-            this.winstonService.log(
-                WinstonLog.JobSkippedCannotSettlePosition,
-                {
-                    botId: bot.id,
-                    liquidityPoolId: liquidityPool.displayId,
-                    type: JobType.ClosePosition,
-                    strategyResults,
-                    jobId: oldJob?.id,
-                }
-            )
-            return false
+            // if the position is not settled and the bot has an active position and the position is not forced to close and the job is not a retry and settle is enabled, we skip the job
+            if (
+                (!settled) &&
+            (!bot.activePosition?.forceClose) &&
+            (!isRetry) &&
+            settleEnabled
+            ) {
+                this.winstonService.log(
+                    WinstonLog.JobSkippedCannotSettlePosition,
+                    {
+                        botId: bot.id,
+                        liquidityPoolId: liquidityPool.displayId,
+                        type: JobType.ClosePosition,
+                        strategyResults,
+                        jobId: oldJob?.id,
+                    }
+                )
+                return false
+            }
         }
-      
+
         // Ensure there is no existing job in the queue for this bot
         const bullmqJob = await this.actionQueue.getJob(bot.id)
-      
         if (bullmqJob) {
             this.winstonService.log(
                 WinstonLog.JobSkippedFoundInQueue,

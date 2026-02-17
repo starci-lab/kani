@@ -96,6 +96,7 @@ export class ReconcileBalanceTaskPrepareService {
             let targetBalanceAmount = new BN(bot.balanceSnapshots?.targetBalanceAmount ?? 0)
             let quoteBalanceAmount = new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? 0)
             let gasBalanceAmount = new BN(bot.balanceSnapshots?.gasBalanceAmount ?? 0)
+            
             // if reconcile is not disabled, fetch the balances and update the balance snapshots
             if (payload.reconcile) {
                 const fetched = await this.balanceFetcherService.fetchBalances({
@@ -174,7 +175,6 @@ export class ReconcileBalanceTaskPrepareService {
                     swapSteps: swapSteps,
                 }
             )
-
             // 4) Resolve tokens
             const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
                 id: {

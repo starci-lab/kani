@@ -190,15 +190,15 @@ export class ActionWorker extends WorkerHost {
                     break
                 }
                 }
-                await this.onCompletedService.process(
-                    {
-                        job: context.job,
-                        bot: context.bot,
-                        bullmqJob,
-                        payload,
-                    }
-                )
             }
+            await this.onCompletedService.process(
+                {
+                    job: context.job,
+                    bot: context.bot,
+                    bullmqJob,
+                    payload,
+                }
+            )
         } catch (error) {
             await this.onFailedService.process(
                 {
