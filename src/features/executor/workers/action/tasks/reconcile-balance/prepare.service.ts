@@ -209,7 +209,6 @@ export class ReconcileBalanceTaskPrepareService {
                     },
                 })
             }
-
             // 5) Convert swap steps -> tokenInputs
             const tokenInputs: Array<BalanceReconcileBalanceTokenInput> = []
 

@@ -199,7 +199,6 @@ export class PositionValueService {
             .add(quoteBalanceBefore)
             .add(gasBalanceBefore)
             .add(incentiveTotalBefore)
-            .abs()
 
         // ===== Convert to USD using target token price =====
         const { price: targetPrice } =

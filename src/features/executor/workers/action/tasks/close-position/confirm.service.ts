@@ -252,7 +252,6 @@ export class ClosePositionTaskConfirmService {
                         },
                     )
                     assert(updateJobResult.matchedCount > 0)
-                    throw new Error("test")
                     // throw an exception to stimulate the mongo session
                     if (envConfig().executor.runtime.operation.closePosition.stimulate) {
                         throw new ActionJobStimulateMongoSessionException({
