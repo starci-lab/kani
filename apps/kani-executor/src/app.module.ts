@@ -278,7 +278,7 @@ import {
                 DependencyName.MongodbPrimary,
                 DependencyName.CacheRedis,
                 //DependencyName.ThrottlerRedis,
-                DependencyName.Kafka,
+                //DependencyName.Kafka,
                 //DependencyName.Memory,
                 //DependencyName.Disk,
                 //DependencyName.LockAuthorityRedis,
