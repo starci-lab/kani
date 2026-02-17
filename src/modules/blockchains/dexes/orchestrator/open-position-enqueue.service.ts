@@ -287,7 +287,7 @@ export class OpenPositionEnqueueService {
         }
 
         // Skip if the bot already has an active position
-        if (bot.activePosition) {
+        if (bot.activePosition && !isRetry) {
             this.winstonService.log(
                 WinstonLog.JobSkippedBotAlreadyHasActivePosition,
                 {
@@ -364,19 +364,21 @@ export class OpenPositionEnqueueService {
                 return false
             }
         }
+        if (!isRetry) {
         // Skip if the bot is not eligible based on snapshot evaluation
-        const { eligible } = await this.evalSnapshotService.eval({
-            bot
-        })
-        if (!eligible) {
-            this.winstonService.log(WinstonLog.JobSkippedBotNotEligible,
-                {
-                    botId: bot.id,
-                    liquidityPoolId: liquidityPool.displayId,
-                    type: JobType.OpenPosition,
-                    jobId: oldJob?.id,
-                })
-            return false
+            const { eligible } = await this.evalSnapshotService.eval({
+                bot
+            })
+            if (!eligible) {
+                this.winstonService.log(WinstonLog.JobSkippedBotNotEligible,
+                    {
+                        botId: bot.id,
+                        liquidityPoolId: liquidityPool.displayId,
+                        type: JobType.OpenPosition,
+                        jobId: oldJob?.id,
+                    })
+                return false
+            }
         }
         // Skip if required diagnostics are not ready
         if (!
@@ -400,7 +402,7 @@ export class OpenPositionEnqueueService {
                 liquidityPool,
                 oldJob
             )
-        )
+        ) && !isRetry
         ) {
             return false
         }
