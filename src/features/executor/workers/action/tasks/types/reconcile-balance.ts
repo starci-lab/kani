@@ -2,12 +2,12 @@ import {
     ReconcileBalanceActionTaskPayload,
 } from "@modules/blockchains"
 import {
-    BotSchema, 
-    JobSchema, 
-} from "@modules/databases"
-import {
-    Job 
+    Job,
 } from "bullmq"
+import {
+    BotSchema,
+    JobSchema,
+} from "@modules/databases"
 
 /** Base params for the CLOSE POSITION task. */
 export interface ReconcileBalanceTaskBaseParams {
@@ -54,7 +54,11 @@ export interface ReconcileBalanceTaskConfirmParams extends ReconcileBalanceTaskB
 }
 
 /** Params for the RECONCILE BALANCE DISPATCHER step. */
-export interface ReconcileBalanceTaskDispatcherParams extends ReconcileBalanceTaskBaseParams {
+export interface ReconcileBalanceTaskDispatcherParams extends Omit<ReconcileBalanceTaskBaseParams, "bot" | "job"> {
+    /** Bot */
+    botId: string
+    /** Job */
+    jobId: string
     /** Task index */
     taskIndex: number
 }

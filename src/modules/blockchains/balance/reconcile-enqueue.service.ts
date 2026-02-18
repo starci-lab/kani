@@ -229,7 +229,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
         }: EnqueueReconcileBalanceParams
     ): Promise<boolean> {
         // Skip if bot is not running
-        if (!bot.running) {
+        if (!bot.running && !isRetry) {
             this.winstonService.log(
                 WinstonLog.JobSkippedBotNotRunning,
                 {
@@ -241,7 +241,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
             return false
         }
         // Skip if bot has an active position
-        if (bot.activePosition) {
+        if (bot.activePosition && !isRetry) {
             this.winstonService.log(
                 WinstonLog.JobSkippedBotAlreadyHasActivePosition,
                 {
@@ -265,7 +265,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
             return false
         }
         // Skip if balance snapshot is within cooldown (avoid rescan too soon)
-        if (bot.balanceSnapshots?.snapshotAt) {
+        if (bot.balanceSnapshots?.snapshotAt && !isRetry) {
             const diffMs = this.dayjsService.now().diff(
                 this.dayjsService.from(bot.balanceSnapshots.snapshotAt),
                 "millisecond"

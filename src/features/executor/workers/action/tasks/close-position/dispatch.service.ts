@@ -22,11 +22,18 @@ import {
     Connection 
 } from "mongoose"
 import {
-    JobNotFoundException 
-} from "@modules/exceptions"
-import {
     ClosePositionTaskPrepareService 
 } from "./prepare.service"
+import {
+    AsyncService 
+} from "@modules/mixin"
+import {
+    LoadJobContextResult,
+    JobContextService 
+} from "../../context"
+import {
+    JobContextNotFoundException 
+} from "@modules/exceptions"
 
 /**
  * Dispatcher service for the CLOSE POSITION task.
@@ -38,6 +45,8 @@ export class ClosePositionTaskDispatchService {
         private readonly closePositionTaskSignService: ClosePositionTaskSignService,
         private readonly closePositionTaskExecuteService: ClosePositionTaskExecuteService,
         private readonly closePositionTaskConfirmService: ClosePositionTaskConfirmService,
+        private readonly asyncService: AsyncService,
+        private readonly jobContextService: JobContextService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
     ) { }
@@ -55,8 +64,8 @@ export class ClosePositionTaskDispatchService {
      */
     async dispatch(
         {
-            bot,
-            job,
+            botId,
+            jobId,
             liquidityPool,
             state,
             payload,
@@ -65,24 +74,37 @@ export class ClosePositionTaskDispatchService {
             isRetry
         }: ClosePositionTaskDispatcherParams
     ) {
-        let jobSnapshot: JobSchema | null = null
-        // do the loop until the task is completed
+        // context in use
+        let context: LoadJobContextResult | null = null
         do {
-            // we retrieve the latest job snapshot
-            jobSnapshot = await this.connection
-                .model<JobSchema>(JobSchema.name)
-                .findById(job.id)
-            if (!jobSnapshot) {
-                throw new JobNotFoundException({
-                    jobId: job.id,
+            const [
+                _context,
+                error
+            ] = await this.asyncService.resolveTuple(
+                this.jobContextService.load(
+                    {
+                        jobId, 
+                        botId 
+                    }
+                )
+            )
+            context = _context
+            if (error) {
+                throw error
+            }
+            if (!context) {
+                throw new JobContextNotFoundException({
+                    jobId,
+                    botId,
                 })
             }
+            // we retrieve the latest job snapshot
             // if we do not find the task persisted in the job snapshot, we have to prepare 
-            if (!jobSnapshot.tasks[taskIndex] || jobSnapshot.tasks[taskIndex].initialized === false) {
+            if (!context.job.tasks[taskIndex] || context.job.tasks[taskIndex].initialized === false) {
                 await this.closePositionTaskPrepareService.process(
                     {
-                        bot,
-                        job: jobSnapshot,
+                        bot: context.bot,
+                        job: context.job,
                         payload,
                         bullmqJob,
                         liquidityPool,
@@ -94,18 +116,18 @@ export class ClosePositionTaskDispatchService {
                 continue
             }
             // we take the next step
-            const activeStep = jobSnapshot.tasks[taskIndex].activeStep
-            const stepCount = jobSnapshot.tasks[taskIndex].stepCount
+            const activeStep = context.job.tasks[taskIndex].activeStep
+            const stepCount = context.job.tasks[taskIndex].stepCount
             if (activeStep <= stepCount - 1) {
                 // get the current step type
-                const stepType = jobSnapshot.tasks[taskIndex].steps[activeStep].type
+                const stepType = context.job.tasks[taskIndex].steps[activeStep].type
                 switch (stepType) {
                 // Sign step
                 case StepType.Sign: {
                     await this.closePositionTaskSignService.process(
                         {
-                            bot,
-                            job: jobSnapshot,
+                            bot: context.bot,
+                            job: context.job,
                             liquidityPool,
                             payload,
                             state,
@@ -120,8 +142,8 @@ export class ClosePositionTaskDispatchService {
                 case StepType.Execute: {
                     await this.closePositionTaskExecuteService.process(
                         {
-                            bot,
-                            job: jobSnapshot,
+                            bot: context.bot,
+                            job: context.job,
                             liquidityPool,
                             payload,
                             state,
@@ -135,11 +157,11 @@ export class ClosePositionTaskDispatchService {
                 }
             }
             // process confirm
-            if (!jobSnapshot.tasks[taskIndex].confirmed) {
+            if (!context.job.tasks[taskIndex].confirmed) {
                 await this.closePositionTaskConfirmService.process(
                     {
-                        bot,
-                        job: jobSnapshot,
+                        bot: context.bot,
+                        job: context.job,
                         liquidityPool,
                         payload,
                         state,
@@ -151,7 +173,7 @@ export class ClosePositionTaskDispatchService {
             }
         } while (
             !this.isTaskCompleted(
-                jobSnapshot,
+                context.job,
                 taskIndex,
             )
         )

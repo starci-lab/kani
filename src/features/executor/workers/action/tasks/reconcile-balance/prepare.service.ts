@@ -147,24 +147,18 @@ export class ReconcileBalanceTaskPrepareService {
                 }
             )
             if (!eligible || !payload.swap) {
-            // Push a "no-op" task (0 steps) so dispatcher can mark it done immediately
-                await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                // Push a "no-op" task (0 steps) so dispatcher can mark it done immediately
+                // upsert the prepared task into the database
+                await this.jobTaskService.upsertPreparedTask(
                     {
-                        _id: job.id
-                    },
-                    {
-                        $push: {
-                            tasks: {
-                                index: taskIndex,
-                                type: TaskType.ReconcileBalance,
-                                activeStep: 0,
-                                stepCount: 0,
-                                steps: [],
-                            },
+                        jobId: job.id,
+                        taskType: TaskType.ReconcileBalance,
+                        taskIndex,
+                        prepareResult: {
+                            prepareTxs: [],
                         },
-                    },
+                    }
                 )
-
                 this.winstonService.log(
                     WinstonLog.ActiveJobTaskPrepared,
                     {
@@ -179,7 +173,6 @@ export class ReconcileBalanceTaskPrepareService {
                 )
                 return
             }
-
             // determine swap steps
             const { swapSteps, quoteRatioResult } =
             await this.balanceActionService.determineReconcileBalancePlan(

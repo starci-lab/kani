@@ -3,8 +3,8 @@ import {
     LiquidityPoolState,
 } from "@modules/blockchains"
 import {
-    BotSchema, 
-    JobSchema, 
+    BotSchema,
+    JobSchema,
     LiquidityPoolSchema 
 } from "@modules/databases"
 import {
@@ -60,7 +60,11 @@ export interface ClosePositionTaskConfirmParams extends ClosePositionTaskBasePar
 }
 
 /** Params for the CLOSE POSITION DISPATCHER step. */
-export interface ClosePositionTaskDispatcherParams extends ClosePositionTaskBaseParams {
+export interface ClosePositionTaskDispatcherParams extends Omit<ClosePositionTaskBaseParams, "bot" | "job"> {
+    /** Bot */
+    botId: string
+    /** Job */
+    jobId: string
     /** Task index */
     taskIndex: number
 }
