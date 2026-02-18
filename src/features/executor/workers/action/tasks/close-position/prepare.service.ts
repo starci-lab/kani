@@ -5,21 +5,12 @@ import {
     ClosePositionActionService,
 } from "@modules/blockchains"
 import {
-    InjectPrimaryMongoose, JobSchema,
     JobType,
-    StepType,
     TaskType
 } from "@modules/databases"
 import {
-    Connection
-} from "mongoose"
-import {
     ClosePositionTaskPrepareParams 
 } from "../types"
-import {
-    InjectSuperJson 
-} from "@modules/mixin"
-import SuperJSON from "superjson"
 import {
     SendHeartbeatService 
 } from "../../send-heartbeat.service"
@@ -34,8 +25,8 @@ import {
     JobFailureStrategy 
 } from "@modules/common"
 import {
-    strict as assert 
-} from "node:assert"
+    JobTaskService 
+} from "../../update"
 /**
  * Service for the Close Position Task PREPARE step.
  */
@@ -43,12 +34,9 @@ import {
 export class ClosePositionTaskPrepareService {
     constructor(
         private readonly closePositionActionService: ClosePositionActionService,
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
         private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly winstonService: WinstonService,
+        private readonly jobTaskService: JobTaskService,
     ) { }
 
     /**
@@ -87,34 +75,12 @@ export class ClosePositionTaskPrepareService {
                 }
             )
             // We update the database with the prepare result.
-            const updateJobResult = await this.connection.model<JobSchema>(
-                JobSchema.name
-            ).updateOne(
-                {
-                    _id: job.id,
-                },
-                {
-                    $push: {
-                        tasks: {
-                            index: taskIndex,
-                            type: TaskType.ClosePosition,
-                            prepareResult: this.superJson.stringify(prepareResult),
-                            activeStep: 0,
-                            stepCount: prepareResult.prepareTxs.length,
-                            steps: prepareResult.prepareTxs.map(
-                                (prepareTx, index) => (
-                                    {
-                                        index,
-                                        type: StepType.Sign,
-                                        prepareTx: this.superJson.stringify(prepareTx),
-                                    }
-                                )
-                            ),
-                        },
-                    },
-                },
-            )
-            assert(updateJobResult.matchedCount > 0)
+            await this.jobTaskService.upsertPreparedTask({
+                jobId: job.id,
+                taskType: TaskType.ClosePosition,
+                taskIndex,
+                prepareResult,
+            })
             this.winstonService.log(
                 WinstonLog.ActiveJobTaskPrepared,
                 {

@@ -28,7 +28,6 @@ import {
     JobFailureException,
     RpcClientFatalException,
     SignedTxNotFoundException,
-    ActionJobTaskTxSendMaxAttemptsException,
 } from "@modules/exceptions"
 import {
     envConfig 
@@ -42,7 +41,8 @@ import {
     WinstonLog,
 } from "@modules/winston"
 import {
-    JobStepTransitionService 
+    JobStepService,
+    JobTaskService,
 } from "../../update"
 import {
     strict as assert 
@@ -60,7 +60,8 @@ export class ClosePositionTaskExecuteService {
     private readonly superJson: SuperJSON,
     private readonly sendHeartbeatService: SendHeartbeatService,
     private readonly winstonService: WinstonService,
-    private readonly jobStepTransitionService: JobStepTransitionService,
+    private readonly jobStepService: JobStepService,
+    private readonly jobTaskService: JobTaskService,
     ) {}
 
     /**
@@ -171,45 +172,16 @@ export class ClosePositionTaskExecuteService {
                 const maxAttempts = envConfig().executor.workers.job.txSendMaxAttempts
                 // if tx failure index is greater than or equal to max attempts, throw a job failure exception
                 if (retries >= maxAttempts) {
-                    // reset retries to 0
-                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                    await this.jobTaskService.rollbackRemoveTaskByIndex(
                         {
-                            _id: job.id 
-                        },
-                        {
-                            $set: {
-                                "tasks.$[task].steps.$[step].retries": 0 
-                            },
-                        },
-                        {
-                            arrayFilters: [
-                                {
-                                    "task.index": taskIndex,
-                                    "task.type": TaskType.ClosePosition,
-                                },
-                                {
-                                    "step.index": stepIndex,
-                                },
-                            ],
+                            jobId: job.id,
+                            taskIndex,
                         }
-                    )
-                    throw new JobFailureException(
-                        {
-                            originalError: new ActionJobTaskTxSendMaxAttemptsException({
-                                maxAttempts,
-                                originalError: error,
-                                botId: bot.id,
-                                jobId: job.id,
-                                liquidityPoolId: liquidityPool.displayId,
-                                metadata: job.metadata,
-                                type: TaskType.ClosePosition,
-                            }),
-                            strategy: JobFailureStrategy.Requeue,
-                        }
-                    )
+                    )   
+                    return
                 }
                 // rollback to sign with failure
-                await this.jobStepTransitionService.rollbackToSignWithFailure(
+                await this.jobStepService.rollbackToSignWithFailure(
                     {
                         jobId: job.id,
                         taskType: TaskType.ClosePosition,
