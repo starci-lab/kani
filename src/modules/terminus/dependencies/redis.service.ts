@@ -2,7 +2,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    HealthIndicatorResult, MicroserviceHealthIndicator, MicroserviceHealthIndicatorOptions 
+    HealthIndicatorResult, MicroserviceHealthIndicator 
 } from "@nestjs/terminus"
 import {
     MicroserviceOptions, Transport 
@@ -14,77 +14,80 @@ import {
     envConfig 
 } from "@modules/env"
 
-type RedisTarget = "cache" | "adapter" | "bullmq" | "throttler" | "lockAuthority"
-
 @Injectable()
 export class RedisService {
-    // Cache config once (avoid calling envConfig() repeatedly)
-    private readonly redis = envConfig().redis
     constructor(
         private readonly microserviceHealthIndicator: MicroserviceHealthIndicator,
     ) {}
 
-    /**
-     * Build Redis microservice options with retry + timeout.
-     * @param target - The target of the Redis.
-     * @returns The Redis options.
-     */
-    private buildRedisOptions(target: RedisTarget): MicroserviceHealthIndicatorOptions<MicroserviceOptions> {
-        const cfg = this.redis[target]
-
-        const options: MicroserviceHealthIndicatorOptions<MicroserviceOptions> = {
-            transport: Transport.REDIS,
-            options: {
-                host: cfg.host,
-                port: cfg.port,
-                password: cfg.password,
-            },
-        }
-        return options
-    }
 
     async pingCacheRedis(): Promise<HealthIndicatorResult> {
-        console.log("pingCacheRedis",
-            this.buildRedisOptions("cache"))
-        return await this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
+        return this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
             DependencyName.CacheRedis,
-            this.buildRedisOptions("cache"),
+            {
+                transport: Transport.REDIS,
+                options: {
+                    host: envConfig().redis.cache.host,
+                    port: envConfig().redis.cache.port,
+                    password: envConfig().redis.cache.password,
+                },
+            },
         )
     }
 
     async pingAdapterRedis(): Promise<HealthIndicatorResult> {
-        console.log("pingAdapterRedis",
-            this.buildRedisOptions("adapter"))
-        return await this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
+        return this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
             DependencyName.AdapterRedis,
-            this.buildRedisOptions("adapter"),
+            {
+                transport: Transport.REDIS,
+                options: {
+                    host: envConfig().redis.adapter.host,
+                    port: envConfig().redis.adapter.port,
+                    password: envConfig().redis.adapter.password,
+                },
+            },
         )
     }
 
     async pingBullmqRedis(): Promise<HealthIndicatorResult> {
-        console.log("pingBullmqRedis",
-            this.buildRedisOptions("bullmq"))
-        return await this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
+        return this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
             DependencyName.BullmqRedis,
-            this.buildRedisOptions("bullmq"),
+            {
+                transport: Transport.REDIS,
+                options: {
+                    host: envConfig().redis.bullmq.host,
+                    port: envConfig().redis.bullmq.port,
+                    password: envConfig().redis.bullmq.password,
+                },
+            },
         )
     }
 
     async pingThrottlerRedis(): Promise<HealthIndicatorResult> {
-        console.log("pingThrottlerRedis",
-            this.buildRedisOptions("throttler"))
-        return await this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
+        return this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
             DependencyName.ThrottlerRedis,
-            this.buildRedisOptions("throttler"),
+            {
+                transport: Transport.REDIS,
+                options: {
+                    host: envConfig().redis.throttler.host,
+                    port: envConfig().redis.throttler.port,
+                    password: envConfig().redis.throttler.password,
+                },
+            },
         )
     }
 
     async pingLockAuthorityRedis(): Promise<HealthIndicatorResult> {
-        console.log("pingLockAuthorityRedis",
-            this.buildRedisOptions("lockAuthority"))
-        return await this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
+        return this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
             DependencyName.LockAuthorityRedis,
-            this.buildRedisOptions("lockAuthority"),
+            {
+                transport: Transport.REDIS,
+                options: {
+                    host: envConfig().redis.lockAuthority.host,
+                    port: envConfig().redis.lockAuthority.port,
+                    password: envConfig().redis.lockAuthority.password,
+                },
+            },
         )
     }
 }
