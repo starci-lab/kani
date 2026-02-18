@@ -137,8 +137,10 @@ export class JobTaskService {
                                             },
                                             {
                                                 // append new task
-                                                $concatArrays: ["$$tasksSafe",
-                                                    [taskDoc]],
+                                                $concatArrays: [
+                                                    "$$tasksSafe",
+                                                    [taskDoc]
+                                                ],
                                             },
                                         ],
                                     },
