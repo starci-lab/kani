@@ -1,19 +1,19 @@
 import {
-    AbstractSchema 
+    AbstractSchema
 } from "./abstract"
 import {
-    Prop, Schema, SchemaFactory 
+    Prop, Schema, SchemaFactory
 } from "@nestjs/mongoose"
 import {
     GraphQLTypeTaskType,
-    TaskType 
+    TaskType
 } from "../enums"
 import {
     ObjectType, Field,
     Int
 } from "@nestjs/graphql"
 import {
-    StepSchema, StepSchemaClass 
+    StepSchema, StepSchemaClass
 } from "./step.schema"
 
 /**
@@ -36,9 +36,37 @@ export class TaskSchema extends AbstractSchema {
         }
     )
     @Prop({
-        type: Number, required: true 
+        type: Number, required: true
     })
         index: number
+
+    /**
+     * The retries of the task.
+     */
+    @Field(() => Int,
+        {
+            description: "The retries of the task",
+        }
+    )
+    @Prop({
+        type: Number
+    })
+        retries: number
+    
+    /**
+    * Whether the task is initialized.
+    */
+    @Field(() => Boolean,
+        {
+            description: "Whether the task is initialized",
+        }
+    )
+    @Prop(
+        {
+            type: Boolean
+        }
+    )
+        initialized: boolean
 
     /**
      * The type of the task.
@@ -49,9 +77,9 @@ export class TaskSchema extends AbstractSchema {
         }
     )
     @Prop({
-        type: String, 
-        required: true, 
-        enum: TaskType 
+        type: String,
+        required: true,
+        enum: TaskType
     })
         type: TaskType
 
@@ -66,7 +94,7 @@ export class TaskSchema extends AbstractSchema {
         }
     )
     @Prop({
-        type: String, required: false 
+        type: String, required: false
     })
         prepareResult?: string
 
@@ -79,7 +107,7 @@ export class TaskSchema extends AbstractSchema {
         }
     )
     @Prop({
-        type: [StepSchemaClass], required: true 
+        type: [StepSchemaClass], required: true
     })
         steps: Array<StepSchema>
 
@@ -92,7 +120,7 @@ export class TaskSchema extends AbstractSchema {
         }
     )
     @Prop({
-        type: Number, required: true 
+        type: Number, required: true
     })
         stepCount: number
 
@@ -105,7 +133,7 @@ export class TaskSchema extends AbstractSchema {
         }
     )
     @Prop({
-        type: Number, required: true 
+        type: Number, required: true
     })
         activeStep: number
 
@@ -119,9 +147,9 @@ export class TaskSchema extends AbstractSchema {
         }
     )
     @Prop({
-        type: Boolean, required: false 
+        type: Boolean, required: false
     })
-        confirmed?: boolean  
+        confirmed?: boolean
 
     /**
      * The index of the open position step.
@@ -133,7 +161,7 @@ export class TaskSchema extends AbstractSchema {
         }
     )
     @Prop({
-        type: Number, required: false 
+        type: Number, required: false
     })
         openPositionStepIndex?: number
 }

@@ -74,7 +74,7 @@ export class WithdrawTaskDispatchService {
                 })
             }
             // if we do not find the task persisted in the job snapshot, we have to prepare 
-            if (!jobSnapshot.tasks[taskIndex]) {
+            if (!jobSnapshot.tasks[taskIndex] || jobSnapshot.tasks[taskIndex].initialized === false) {
                 await this.withdrawTaskPrepareService.process(
                     {
                         bot,

@@ -6,7 +6,6 @@ import {
     InjectPrimaryMongoose,
     JobSchema,
     JobType,
-    StepType,
     TaskType,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
@@ -14,9 +13,8 @@ import {
     Connection
 } from "mongoose"
 import {
-    InjectSuperJson, AsyncService
+    AsyncService
 } from "@modules/mixin"
-import SuperJSON from "superjson"
 import {
     TokenType
 } from "@modules/common"
@@ -29,7 +27,9 @@ import {
     BalanceSnapshotService
 } from "@modules/blockchains"
 import {
+    ActionJobTaskPrepareMaxAttemptsException,
     JobFailureException,
+    JobNotFoundException,
     PrepareReconcileBalanceTransactionResultNotFoundException,
     TokenNotFoundException,
 } from "@modules/exceptions"
@@ -46,11 +46,17 @@ import {
     JobFailureStrategy,
 } from "@modules/common"
 import {
-    strict as assert 
-} from "node:assert"
+    JobTaskService 
+} from "../../update"
+import {
+    envConfig 
+} from "@modules/env"
+
 @Injectable()
 export class ReconcileBalanceTaskPrepareService {
     constructor(
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
         private readonly balanceActionService: BalanceActionService,
         private readonly balanceFetcherService: BalanceFetcherService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
@@ -59,10 +65,7 @@ export class ReconcileBalanceTaskPrepareService {
         private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly winstonService: WinstonService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
+        private readonly jobTaskService: JobTaskService,
     ) { }
 
     /**
@@ -92,6 +95,28 @@ export class ReconcileBalanceTaskPrepareService {
                     fatal: taskIndex === 0,
                 }
             )
+
+            // we take the latest job snapshot
+            const snapshotJob = await this.connection.model<JobSchema>(JobSchema.name).findById(job.id)
+            if (!snapshotJob) {
+                throw new JobNotFoundException({
+                    jobId: job.id,
+                })
+            }
+            // we check if the task has reached the maximum number of attempts
+            const retries = snapshotJob.tasks?.[taskIndex]?.retries ?? 0
+            if (retries >= envConfig().executor.workers.job.prepareMaxAttempts) {
+                throw new JobFailureException({
+                    originalError: new ActionJobTaskPrepareMaxAttemptsException({
+                        maxAttempts: envConfig().executor.workers.job.prepareMaxAttempts,
+                        botId: bot.id,
+                        jobId: job.id,
+                        metadata: job.metadata,
+                        type: TaskType.ReconcileBalance,
+                    }),
+                    strategy: taskIndex === 0 ? JobFailureStrategy.Fatal : JobFailureStrategy.Requeue,
+                })
+            }
             // fetch the balances and update the balance snapshots
             let targetBalanceAmount = new BN(bot.balanceSnapshots?.targetBalanceAmount ?? 0)
             let quoteBalanceAmount = new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? 0)
@@ -264,31 +289,14 @@ export class ReconcileBalanceTaskPrepareService {
                     jobId: job.id,
                 })
             }
-
-            const updateJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                {
-                    _id: job.id
-                },
-                {
-                    $push: {
-                        tasks: {
-                            index: taskIndex,
-                            type: TaskType.ReconcileBalance,
-                            prepareResult: this.superJson.stringify(prepareResult),
-                            activeStep: 0,
-                            stepCount: prepareResult.prepareTxs.length,
-                            steps: prepareResult.prepareTxs.map((prepareTx, index) => (
-                                {
-                                    index,
-                                    type: StepType.Sign,
-                                    prepareTx: this.superJson.stringify(prepareTx),
-                                }
-                            )),
-                        },
-                    },
-                },
-            )
-            assert(updateJobResult.matchedCount > 0)
+            // upsert the prepared task into the database
+            await this.jobTaskService.upsertPreparedTask({
+                jobId: job.id,
+                taskType: TaskType.ReconcileBalance,
+                taskIndex,
+                prepareResult,
+            })
+            // log the prepared task
             this.winstonService.log(
                 WinstonLog.ActiveJobTaskPrepared,
                 {

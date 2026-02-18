@@ -28,7 +28,6 @@ import {
     JobFailureException,
     RpcClientFatalException,
     SignedTxNotFoundException,
-    ActionJobTaskTxSendMaxAttemptsException,
 } from "@modules/exceptions"
 import {
     envConfig
@@ -37,14 +36,15 @@ import {
     JobFailureStrategy, sleep
 } from "@modules/common"
 import {
-    JobStepTransitionService
+    JobStepService,
+    JobTaskService,
 } from "../../update"
 import {
     WinstonService,
     WinstonLog,
 } from "@modules/winston"
 import {
-    strict as assert 
+    strict as assert
 } from "node:assert"
 /**
  * Service for the Reconcile Balance Task EXECUTE step.
@@ -58,8 +58,9 @@ export class ReconcileBalanceTaskExecuteService {
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         private readonly sendHeartbeatService: SendHeartbeatService,
-        private readonly jobStepTransitionService: JobStepTransitionService,
+        private readonly jobStepService: JobStepService,
         private readonly winstonService: WinstonService,
+        private readonly jobTaskService: JobTaskService,
     ) { }
 
     /**
@@ -163,46 +164,18 @@ export class ReconcileBalanceTaskExecuteService {
             // If tx execution failed with a fatal RPC error, rollback to Sign and record failure atomically.
             if (error instanceof RpcClientFatalException) {
                 const retries = step?.retries ?? 0
-                const maxAttempts = envConfig().executor.workers.job.txSendMaxAttempts
                 // if tx failure index is greater than or equal to max attempts, throw a job failure exception
-                if (retries >= maxAttempts) {
-                    // reset retries to 0 (same behavior as OpenPosition)
-                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                if (retries >= envConfig().executor.workers.job.txExecuteMaxAttempts) {
+                    await this.jobTaskService.rollbackToPrepared(
                         {
-                            _id: job.id
-                        },
-                        {
-                            $set: {
-                                "tasks.$[task].steps.$[step].retries": 0,
-                            },
-                        },
-                        {
-                            arrayFilters: [
-                                {
-                                    "task.index": taskIndex,
-                                    "task.type": TaskType.ReconcileBalance,
-                                },
-                                {
-                                    "step.index": stepIndex,
-                                },
-                            ],
-                        },
-                    )
-                    throw new JobFailureException({
-                        originalError: new ActionJobTaskTxSendMaxAttemptsException({
-                            maxAttempts,
-                            originalError: error,
-                            botId: bot.id,
                             jobId: job.id,
-                            // reconcile không có liquidityPoolId -> giữ API sạch, không truyền
-                            metadata: job.metadata,
-                            type: TaskType.ReconcileBalance,
-                        }),
-                        strategy: JobFailureStrategy.Requeue,
-                    })
+                            taskIndex,
+                        }
+                    )
+                    return
                 }
                 // rollback to sign with failure
-                await this.jobStepTransitionService.rollbackToSignWithFailure(
+                await this.jobStepService.rollbackToSignWithFailure(
                     {
                         jobId: job.id,
                         taskType: TaskType.ReconcileBalance,

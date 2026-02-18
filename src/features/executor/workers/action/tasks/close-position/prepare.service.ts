@@ -5,21 +5,14 @@ import {
     ClosePositionActionService,
 } from "@modules/blockchains"
 import {
-    InjectPrimaryMongoose, JobSchema,
+    InjectPrimaryMongoose,
+    JobSchema,
     JobType,
-    StepType,
     TaskType
 } from "@modules/databases"
 import {
-    Connection
-} from "mongoose"
-import {
     ClosePositionTaskPrepareParams 
 } from "../types"
-import {
-    InjectSuperJson 
-} from "@modules/mixin"
-import SuperJSON from "superjson"
 import {
     SendHeartbeatService 
 } from "../../send-heartbeat.service"
@@ -28,14 +21,25 @@ import {
     WinstonService 
 } from "@modules/winston"
 import {
+    ActionJobTaskPrepareMaxAttemptsException,
     JobFailureException, 
+    JobNotFoundException,
 } from "@modules/exceptions"
 import {
     JobFailureStrategy 
 } from "@modules/common"
 import {
-    strict as assert 
-} from "node:assert"
+    JobTaskService,
+} from "../../update"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    Connection
+} from "mongoose"
+import {
+    DebugFileLoggerService
+} from "@modules/debug"
 /**
  * Service for the Close Position Task PREPARE step.
  */
@@ -43,12 +47,12 @@ import {
 export class ClosePositionTaskPrepareService {
     constructor(
         private readonly closePositionActionService: ClosePositionActionService,
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
         private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly winstonService: WinstonService,
+        private readonly jobTaskService: JobTaskService,
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
+        private readonly debugFileLoggerService: DebugFileLoggerService,
     ) { }
 
     /**
@@ -77,6 +81,35 @@ export class ClosePositionTaskPrepareService {
                     fatal: taskIndex === 0,
                 }
             )
+            // we take the latest job snapshot
+            const snapshotJob = await this.connection.model<JobSchema>(JobSchema.name).findById(job.id)
+            if (!snapshotJob) {
+                throw new JobNotFoundException({
+                    jobId: job.id,
+                })
+            }
+            // we check if the task has reached the maximum number of attempts
+            const retries = snapshotJob.tasks?.[taskIndex]?.retries ?? 0
+            await this.debugFileLoggerService.debug({
+                message: "prepare retries",
+                retries,
+            })
+            if (retries >= envConfig().executor.workers.job.prepareMaxAttempts) {
+                await this.debugFileLoggerService.debug({
+                    message: "prepare max attempts",
+                    retries,
+                })
+                throw new JobFailureException({
+                    originalError: new ActionJobTaskPrepareMaxAttemptsException({
+                        maxAttempts: envConfig().executor.workers.job.prepareMaxAttempts,
+                        botId: bot.id,
+                        jobId: job.id,
+                        metadata: job.metadata,
+                        type: TaskType.ClosePosition,
+                    }),
+                    strategy: taskIndex === 0 ? JobFailureStrategy.Fatal : JobFailureStrategy.Requeue,
+                })
+            }
             // We prepare the close position transaction.
             const prepareResult =
             await this.closePositionActionService.prepare(
@@ -87,34 +120,12 @@ export class ClosePositionTaskPrepareService {
                 }
             )
             // We update the database with the prepare result.
-            const updateJobResult = await this.connection.model<JobSchema>(
-                JobSchema.name
-            ).updateOne(
-                {
-                    _id: job.id,
-                },
-                {
-                    $push: {
-                        tasks: {
-                            index: taskIndex,
-                            type: TaskType.ClosePosition,
-                            prepareResult: this.superJson.stringify(prepareResult),
-                            activeStep: 0,
-                            stepCount: prepareResult.prepareTxs.length,
-                            steps: prepareResult.prepareTxs.map(
-                                (prepareTx, index) => (
-                                    {
-                                        index,
-                                        type: StepType.Sign,
-                                        prepareTx: this.superJson.stringify(prepareTx),
-                                    }
-                                )
-                            ),
-                        },
-                    },
-                },
-            )
-            assert(updateJobResult.matchedCount > 0)
+            await this.jobTaskService.upsertPreparedTask({
+                jobId: job.id,
+                taskType: TaskType.ClosePosition,
+                taskIndex,
+                prepareResult,
+            })
             this.winstonService.log(
                 WinstonLog.ActiveJobTaskPrepared,
                 {

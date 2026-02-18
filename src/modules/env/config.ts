@@ -56,6 +56,11 @@ export const envConfig = () => ({
             },
         },
     },
+    debug: {
+        enabled: parseEnvBoolean({
+            key: "DEBUG_ENABLED", defaultValue: false 
+        }),
+    },
     /** Generic retry policy (exponential backoff): retries, factor, timeouts, randomize. */
     retry: {
         base: {
@@ -327,7 +332,7 @@ export const envConfig = () => ({
             },
             openPosition: {
                 slippage: parseEnvFloat({
-                    key: "DEXES_RAYDIUM_OPEN_POSITION_SLIPPAGE", defaultValue: 0.05 
+                    key: "DEXES_RAYDIUM_OPEN_POSITION_SLIPPAGE", defaultValue: 0.2 
                 }),
             },
         },
@@ -533,8 +538,11 @@ export const envConfig = () => ({
                 level: parseEnvInt({
                     key: "EXECUTOR_WORKERS_JOB_LEVEL", defaultValue: 0 
                 }),
-                txSendMaxAttempts: parseEnvInt({
-                    key: "EXECUTOR_WORKERS_JOB_TX_SEND_MAX_ATTEMPTS", defaultValue: 3 
+                txExecuteMaxAttempts: parseEnvInt({
+                    key: "EXECUTOR_WORKERS_JOB_TX_EXECUTE_MAX_ATTEMPTS", defaultValue: 3 
+                }),
+                prepareMaxAttempts: parseEnvInt({
+                    key: "EXECUTOR_WORKERS_JOB_PREPARE_MAX_ATTEMPTS", defaultValue: 3 
                 }),
             },
         },

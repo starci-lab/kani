@@ -48,7 +48,7 @@ export class SeedersService implements OnModuleInit {
      * @returns void.
      */
     private async process() {
-        this.readinessWatcherFactoryService.createWatcher(SeedersService.name)
+        
         const session = await this.connection.startSession()
         // drop and seed in a transaction
         await session.withTransaction(
@@ -67,7 +67,7 @@ export class SeedersService implements OnModuleInit {
                 await this.configService.seed(session)
             }
         )
-        this.readinessWatcherFactoryService.setReady(SeedersService.name)
+        
     }
 
     /**
@@ -75,11 +75,13 @@ export class SeedersService implements OnModuleInit {
      * @returns void.
      */
     async onModuleInit() {
+        this.readinessWatcherFactoryService.createWatcher(SeedersService.name)
         // if manual seed, do not seed
         if (this.options.manualSeed) {
             return
         }
         await this.process()
+        this.readinessWatcherFactoryService.setReady(SeedersService.name)
     }
 
     /**

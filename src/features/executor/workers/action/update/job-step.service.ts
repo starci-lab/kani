@@ -13,12 +13,14 @@ import {
 import {
     RollbackToSignWithFailureParams 
 } from "./types"
-
+import {
+    strict as assert 
+} from "node:assert"
 /**
- * Service responsible for rolling back a step to Sign and appending a failure record, incrementing retries atomically.
+ * Service responsible for managing job steps.
  */
 @Injectable()
-export class JobStepTransitionService {
+export class JobStepService {
     constructor(
     @InjectPrimaryMongoose()
     private readonly connection: Connection,
@@ -37,7 +39,7 @@ export class JobStepTransitionService {
         stepIndex,
         error,
     }: RollbackToSignWithFailureParams): Promise<void> {
-        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+        const updatedJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
             {
                 _id: jobId 
             },
@@ -128,5 +130,7 @@ export class JobStepTransitionService {
                 },
             ],
         )
+        assert(updatedJobResult.modifiedCount > 0)
     }
+    
 }

@@ -97,14 +97,12 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
         liquidityPool,
     }: ReservesWithFeesParams): Promise<ReservesWithFeesResult> {
         const _state = state as ClmmLiquidityPoolState
-
         // Stage: state validation (requires an active position)
         if (!bot.activePosition || !bot.activePosition.position) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
-
         // Stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: liquidityPool.tokenA.toString(),
@@ -317,11 +315,7 @@ export class TurbosReservesWithFeesService implements IReservesWithFeesService {
                 const {
                     tokenAddress
                 } = _state.rewards[index]
-                const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-                    tokenAddress: {
-                        $eq: tokenAddress,
-                    },
-                })
+                const token = this.primaryMemoryStorageService.getTokenByAddress(tokenAddress)
                 if (!token) {
                     throw new TokenNotFoundException({
                         tokenAddress,
