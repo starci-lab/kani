@@ -600,4 +600,39 @@ const data: Array<DeepPartial<TokenSchema>> = [
         type: TokenType.Regular,
         selectable: true,
     },
+    {
+        _id: createObjectId(TokenId.SuiTurbos),
+        displayId: TokenId.SuiTurbos,
+        name: "TURBOS",
+        symbol: "TURBOS",
+        chainId: ChainId.Sui,
+        tokenAddress: "0x5d1f47ea69bb0de31c313d7acf89b890dbb8991ea8e03c6c355171f84bb1ba4a::turbos::TURBOS",
+        decimals: 9,
+        iconUrl: "https://r2.kanibot.xyz/tokens/turbos.svg",
+        projectUrl: "https://turbos.finance/",
+        type: TokenType.Regular,
+        selectable: true,
+        marketListings: [
+            {
+                id: MarketListingId.CoinMarketCap,
+                symbol: "25179",
+                priority: 1,
+            },
+            {
+                id: MarketListingId.Coingecko,
+                symbol: "turbos-finance",
+                priority: 2,
+            },
+            {
+                id: MarketListingId.Gate,
+                symbol: "TURBOS_USDT",
+                priority: 3,
+            },
+            {
+                id: MarketListingId.Pyth,
+                symbol: "0xf9c2e890443dd995d0baafc08eea3358be1ffb874f93f99c30b3816c460bbac3",
+                priority: 4,
+            },
+        ],
+    },
 ]

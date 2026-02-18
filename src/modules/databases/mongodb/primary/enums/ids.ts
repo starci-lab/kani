@@ -17,6 +17,7 @@ export enum TokenId {
     SuiDeep = "suiDeep",
     SuiEth = "suiEth",
     SuiXStakedSui = "suiXStakedSui",
+    SuiTurbos = "suiTurbos",
 
     // --- Solana ---
     SolUsdc = "solUsdc",

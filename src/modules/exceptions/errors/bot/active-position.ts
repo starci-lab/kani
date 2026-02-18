@@ -15,7 +15,8 @@ export class ActivePositionNotFoundException extends AbstractException {
     constructor(
         { botId, originalError }: ActivePositionNotFoundExceptionMetadata,
     ) {
-        super("Active position not found",
+        super(
+            "Active position not found",
             "ACTIVE_POSITION_NOT_FOUND_EXCEPTION",
             {
                 botId,

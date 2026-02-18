@@ -94,13 +94,6 @@ export class ClosePositionTaskExecuteService {
                 bullmqJob,
             })
 
-            if (Math.random() < 2) {
-                throw new RpcClientFatalException({
-                    message: "test",
-                    originalError: new Error("test"),
-                })
-            }
-
             // signed tx
             const signedTx = step?.signedTx
             if (!signedTx) {
