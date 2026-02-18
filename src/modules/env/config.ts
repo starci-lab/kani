@@ -332,7 +332,7 @@ export const envConfig = () => ({
             },
             openPosition: {
                 slippage: parseEnvFloat({
-                    key: "DEXES_RAYDIUM_OPEN_POSITION_SLIPPAGE", defaultValue: 0.05 
+                    key: "DEXES_RAYDIUM_OPEN_POSITION_SLIPPAGE", defaultValue: 0.2 
                 }),
             },
         },
