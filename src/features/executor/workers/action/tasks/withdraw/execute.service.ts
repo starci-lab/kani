@@ -25,7 +25,7 @@ import {
     SendHeartbeatService 
 } from "../../send-heartbeat.service"
 import {
-    ActionJobTaskTxSendMaxAttemptsException,
+    ActionJobTasktxExecuteMaxAttemptsException,
     JobFailureException,
     RpcClientFatalException,
     SignedTxNotFoundException 
@@ -142,7 +142,7 @@ export class WithdrawTaskExecuteService {
             // If tx execution failed with a fatal RPC error, rollback to Sign and record failure atomically.
             if (error instanceof RpcClientFatalException) {
                 const retries = step?.retries ?? 0
-                const maxAttempts = envConfig().executor.workers.job.txSendMaxAttempts
+                const maxAttempts = envConfig().executor.workers.job.txExecuteMaxAttempts
                 // if tx failure index is greater than or equal to max attempts, throw a job failure exception
                 if (retries >= maxAttempts) {
                     // reset retries to 0
@@ -168,7 +168,7 @@ export class WithdrawTaskExecuteService {
                         },
                     )
                     throw new JobFailureException({
-                        originalError: new ActionJobTaskTxSendMaxAttemptsException({
+                        originalError: new ActionJobTasktxExecuteMaxAttemptsException({
                             maxAttempts,
                             originalError: error,
                             botId: bot.id,

@@ -179,7 +179,7 @@ export class OpenPositionTaskExecuteService {
             if (error instanceof RpcClientFatalException) {
                 // get the tx failure index
                 const retries = step?.retries ?? 0
-                if (retries >= envConfig().executor.workers.job.txSendMaxAttempts) {
+                if (retries >= envConfig().executor.workers.job.txExecuteMaxAttempts) {
                     await this.jobTaskService.rollbackRemoveTaskByIndex(
                         {
                             jobId: job.id,

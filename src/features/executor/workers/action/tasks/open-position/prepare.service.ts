@@ -5,6 +5,7 @@ import {
     OpenPositionActionService,
 } from "@modules/blockchains"
 import {
+    JobSchema,
     JobType,
     TaskType
 } from "@modules/databases"
@@ -22,11 +23,22 @@ import {
     JobFailureStrategy 
 } from "@modules/common"
 import {
-    JobFailureException 
+    ActionJobTaskPrepareMaxAttemptsException,
+    JobFailureException, 
+    JobNotFoundException
 } from "@modules/exceptions"
 import {
     JobTaskService 
 } from "../../update"
+import {
+    InjectPrimaryMongoose
+} from "@modules/databases"
+import {
+    Connection
+} from "mongoose"
+import {
+    envConfig 
+} from "@modules/env"
 /**
  * Service for the Open Position Task PREPARE step.
  */
@@ -37,6 +49,8 @@ export class OpenPositionTaskPrepareService {
         private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly winstonService: WinstonService,
         private readonly jobTaskService: JobTaskService,
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
     ) { }
 
     /**
@@ -65,6 +79,27 @@ export class OpenPositionTaskPrepareService {
                     fatal: taskIndex === 0,
                 }
             )
+            // we take the latest job snapshot
+            const snapshotJob = await this.connection.model<JobSchema>(JobSchema.name).findById(job.id)
+            if (!snapshotJob) {
+                throw new JobNotFoundException({
+                    jobId: job.id,
+                })
+            }
+            // we check if the task has reached the maximum number of attempts
+            const retries = snapshotJob.tasks?.[taskIndex]?.retries ?? 0
+            if (retries >= envConfig().executor.workers.job.prepareMaxAttempts) {
+                throw new JobFailureException({
+                    originalError: new ActionJobTaskPrepareMaxAttemptsException({
+                        maxAttempts: envConfig().executor.workers.job.prepareMaxAttempts,
+                        botId: bot.id,
+                        jobId: job.id,
+                        metadata: job.metadata,
+                        type: TaskType.OpenPosition,
+                    }),
+                    strategy: taskIndex === 0 ? JobFailureStrategy.Fatal : JobFailureStrategy.Requeue,
+                })
+            }
             // we prepare the open position transaction.
             const prepareResult =
             await this.openPositionActionService.prepare(

@@ -54,6 +54,8 @@ export class JobTaskService {
             type: taskType,
             prepareResult: this.superJson.stringify(prepareResult),
             activeStep: 0,
+            initialized: true,
+            retries: 0,
             stepCount: prepareResult.prepareTxs.length,
             steps: prepareResult.prepareTxs.map((prepareTx, index: number) => ({
                 index,
@@ -108,8 +110,21 @@ export class JobTaskService {
                                                                     taskIndex] 
                                                             },
                                                             {
-                                                                $mergeObjects: ["$$t",
-                                                                    taskDoc] 
+                                                                $mergeObjects: [
+                                                                    "$$t",
+                                                                    taskDoc,
+                                                                    {
+                                                                        // if task already exists -> mark not-initialized + bump retries
+                                                                        initialized: false,
+                                                                        retries: {
+                                                                            $add: [{
+                                                                                $ifNull: ["$$t.retries",
+                                                                                    0] 
+                                                                            },
+                                                                            1],
+                                                                        },
+                                                                    },
+                                                                ],
                                                             },
                                                             "$$t",
                                                         ],
@@ -117,8 +132,9 @@ export class JobTaskService {
                                                 },
                                             },
                                             {
+                                                // if task doesn't exist -> append new taskDoc (initialized=true, retries=0)
                                                 $concatArrays: ["$$tasksSafe",
-                                                    [taskDoc]] 
+                                                    [taskDoc]],
                                             },
                                         ],
                                     },
@@ -128,10 +144,11 @@ export class JobTaskService {
                     },
                 ],
                 {
-                    session,
+                    session 
                 }
-            )    
-        assert(updatedJobResult.modifiedCount > 0)     
+            )
+      
+        assert(updatedJobResult.modifiedCount > 0)      
     }
 
     /**

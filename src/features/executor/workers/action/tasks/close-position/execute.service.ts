@@ -169,7 +169,7 @@ export class ClosePositionTaskExecuteService {
             if (error instanceof RpcClientFatalException) {
                 // retry cap (use in-memory snapshot)
                 const retries = step?.retries ?? 0
-                const maxAttempts = envConfig().executor.workers.job.txSendMaxAttempts
+                const maxAttempts = envConfig().executor.workers.job.txExecuteMaxAttempts
                 // if tx failure index is greater than or equal to max attempts, throw a job failure exception
                 if (retries >= maxAttempts) {
                     await this.jobTaskService.rollbackRemoveTaskByIndex(

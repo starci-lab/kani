@@ -5,6 +5,8 @@ import {
     ClosePositionActionService,
 } from "@modules/blockchains"
 import {
+    InjectPrimaryMongoose,
+    JobSchema,
     JobType,
     TaskType
 } from "@modules/databases"
@@ -19,14 +21,22 @@ import {
     WinstonService 
 } from "@modules/winston"
 import {
+    ActionJobTaskPrepareMaxAttemptsException,
     JobFailureException, 
+    JobNotFoundException,
 } from "@modules/exceptions"
 import {
     JobFailureStrategy 
 } from "@modules/common"
 import {
-    JobTaskService 
+    JobTaskService,
 } from "../../update"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    Connection
+} from "mongoose"
 /**
  * Service for the Close Position Task PREPARE step.
  */
@@ -37,6 +47,8 @@ export class ClosePositionTaskPrepareService {
         private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly winstonService: WinstonService,
         private readonly jobTaskService: JobTaskService,
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
     ) { }
 
     /**
@@ -65,6 +77,27 @@ export class ClosePositionTaskPrepareService {
                     fatal: taskIndex === 0,
                 }
             )
+            // we take the latest job snapshot
+            const snapshotJob = await this.connection.model<JobSchema>(JobSchema.name).findById(job.id)
+            if (!snapshotJob) {
+                throw new JobNotFoundException({
+                    jobId: job.id,
+                })
+            }
+            // we check if the task has reached the maximum number of attempts
+            const retries = snapshotJob.tasks?.[taskIndex]?.retries ?? 0
+            if (retries >= envConfig().executor.workers.job.prepareMaxAttempts) {
+                throw new JobFailureException({
+                    originalError: new ActionJobTaskPrepareMaxAttemptsException({
+                        maxAttempts: envConfig().executor.workers.job.prepareMaxAttempts,
+                        botId: bot.id,
+                        jobId: job.id,
+                        metadata: job.metadata,
+                        type: TaskType.ClosePosition,
+                    }),
+                    strategy: taskIndex === 0 ? JobFailureStrategy.Fatal : JobFailureStrategy.Requeue,
+                })
+            }
             // We prepare the close position transaction.
             const prepareResult =
             await this.closePositionActionService.prepare(
