@@ -3,7 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     ClosePositionActionService, 
-    PrepareTx
+    PrepareTx,
 } from "@modules/blockchains"
 import {
     InjectPrimaryMongoose,
