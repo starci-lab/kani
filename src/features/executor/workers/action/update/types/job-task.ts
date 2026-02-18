@@ -41,9 +41,9 @@ export interface UpsertPreparedTaskParams<T extends UpsertPreparedResult> {
 }
   
 /**
- * Represents the parameters for removing a task by index.
+ * Represents the parameters for rolling back to prepared.
  */
-export interface RollbackRemoveTaskByIndexParams {
+export interface RollbackToPreparedParams {
     /**
      * The ID of the job.
      */

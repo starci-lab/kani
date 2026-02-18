@@ -12,14 +12,12 @@ import {
 } from "mongoose"
 import {
     UpsertPreparedTaskParams,
-    UpsertPreparedResult 
+    UpsertPreparedResult, 
+    RollbackToPreparedParams
 } from "./types"
 import {
     Injectable 
 } from "@nestjs/common"
-import {   
-    RollbackRemoveTaskByIndexParams 
-} from "./types"
 import { 
     strict as assert 
 } from "node:assert"
@@ -63,6 +61,7 @@ export class JobTaskService {
                 prepareTx: this.superJson.stringify(prepareTx),
             })),
         }
+
         // upsert the task into the database
         const updatedJobResult = await this.connection
             .model<JobSchema>(JobSchema.name)
@@ -100,6 +99,7 @@ export class JobTaskService {
                                         $cond: [
                                             "$$exists",
                                             {
+                                                // update existing task
                                                 $map: {
                                                     input: "$$tasksSafe",
                                                     as: "t",
@@ -114,14 +114,18 @@ export class JobTaskService {
                                                                     "$$t",
                                                                     taskDoc,
                                                                     {
-                                                                        // if task already exists -> mark not-initialized + bump retries
-                                                                        initialized: false,
+                                                                        // refresh prepared snapshot and mark it as initialized again
+                                                                        initialized: true,
+
+                                                                        // bump retries because we are re-preparing/retrying the task
                                                                         retries: {
-                                                                            $add: [{
-                                                                                $ifNull: ["$$t.retries",
-                                                                                    0] 
-                                                                            },
-                                                                            1],
+                                                                            $add: [
+                                                                                {
+                                                                                    $ifNull: ["$$t.retries",
+                                                                                        0] 
+                                                                                },
+                                                                                1,
+                                                                            ],
                                                                         },
                                                                     },
                                                                 ],
@@ -132,7 +136,7 @@ export class JobTaskService {
                                                 },
                                             },
                                             {
-                                                // if task doesn't exist -> append new taskDoc (initialized=true, retries=0)
+                                                // append new task
                                                 $concatArrays: ["$$tasksSafe",
                                                     [taskDoc]],
                                             },
@@ -145,51 +149,76 @@ export class JobTaskService {
                 ],
                 {
                     session 
-                }
+                },
             )
-      
-        assert(updatedJobResult.modifiedCount > 0)      
+
+        // Ensure job exists (and ideally the update is applied)
+        assert(updatedJobResult.matchedCount > 0)
     }
 
     /**
-     * Rolls back a task by index.
-     * @param params - The parameters for the rollback.
-     * @returns A promise that resolves when the rollback is complete.
+     * Rolls back a task to prepared.
+     * @param params The parameters for rolling back a task to prepared.
+     * @returns A promise that resolves when the task is rolled back to prepared.
      */
-    async rollbackRemoveTaskByIndex(
+    async rollbackToPrepared(
         {
             jobId,
             taskIndex,
             session,
-        }: RollbackRemoveTaskByIndexParams
+        }: RollbackToPreparedParams
     ): Promise<void> {
-        const updatedJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-            {
-                _id: jobId 
-            },
-            [
+        const updatedJobResult = await this.connection
+            .model<JobSchema>(JobSchema.name)
+            .updateOne(
                 {
-                    $set: {
-                        tasks: {
-                            $filter: {
-                                input: {
-                                    $ifNull: ["$tasks",
-                                        []] 
-                                },
-                                as: "t",
-                                cond: {
-                                    $ne: ["$$t.index",
-                                        taskIndex] 
+                    _id: jobId,
+                },
+                [
+                    {
+                        $set: {
+                            tasks: {
+                                $map: {
+                                    input: {
+                                        $ifNull: ["$tasks",
+                                            []] 
+                                    },
+                                    as: "t",
+                                    in: {
+                                        $cond: [
+                                            {
+                                                $eq: ["$$t.index",
+                                                    taskIndex] 
+                                            },
+                                            {
+                                                $mergeObjects: [
+                                                    "$$t",
+                                                    {
+                                                        initialized: false,
+                                                        retries: {
+                                                            $add: [
+                                                                {
+                                                                    $ifNull: ["$$t.retries",
+                                                                        0] 
+                                                                },
+                                                                1,
+                                                            ],
+                                                        },
+                                                    },
+                                                ],
+                                            },
+                                            "$$t",
+                                        ],
+                                    },
                                 },
                             },
                         },
                     },
+                ],
+                {
+                    session 
                 },
-            ],
-            {
-                session 
-            },
-        )
+            )
     
         assert(updatedJobResult.matchedCount > 0)
     }

@@ -38,7 +38,8 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    JobStepTransitionService 
+    JobStepService,
+    JobTaskService 
 } from "../../update"
     
 /**
@@ -53,7 +54,8 @@ export class WithdrawTaskExecuteService {
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         private readonly sendHeartbeatService: SendHeartbeatService,
-        private readonly jobStepTransitionService: JobStepTransitionService,
+        private readonly jobTaskService: JobTaskService,
+        private readonly jobStepService: JobStepService,
     ) { }
     
     /**
@@ -180,7 +182,7 @@ export class WithdrawTaskExecuteService {
                     })
                 }
                 // rollback to sign with failure
-                await this.jobStepTransitionService.rollbackToSignWithFailure(
+                await this.jobStepService.rollbackToSignWithFailure(
                     {
                         jobId: job.id,
                         taskType: TaskType.Withdraw,

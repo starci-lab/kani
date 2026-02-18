@@ -166,7 +166,7 @@ export class ReconcileBalanceTaskExecuteService {
                 const retries = step?.retries ?? 0
                 // if tx failure index is greater than or equal to max attempts, throw a job failure exception
                 if (retries >= envConfig().executor.workers.job.txExecuteMaxAttempts) {
-                    await this.jobTaskService.rollbackRemoveTaskByIndex(
+                    await this.jobTaskService.rollbackToPrepared(
                         {
                             jobId: job.id,
                             taskIndex,

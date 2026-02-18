@@ -56,6 +56,11 @@ export const envConfig = () => ({
             },
         },
     },
+    debug: {
+        enabled: parseEnvBoolean({
+            key: "DEBUG_ENABLED", defaultValue: false 
+        }),
+    },
     /** Generic retry policy (exponential backoff): retries, factor, timeouts, randomize. */
     retry: {
         base: {

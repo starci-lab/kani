@@ -37,6 +37,9 @@ import {
 import {
     Connection
 } from "mongoose"
+import {
+    DebugFileLoggerService
+} from "@modules/debug"
 /**
  * Service for the Close Position Task PREPARE step.
  */
@@ -49,6 +52,7 @@ export class ClosePositionTaskPrepareService {
         private readonly jobTaskService: JobTaskService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly debugFileLoggerService: DebugFileLoggerService,
     ) { }
 
     /**
@@ -86,7 +90,15 @@ export class ClosePositionTaskPrepareService {
             }
             // we check if the task has reached the maximum number of attempts
             const retries = snapshotJob.tasks?.[taskIndex]?.retries ?? 0
+            await this.debugFileLoggerService.debug({
+                message: "prepare retries",
+                retries,
+            })
             if (retries >= envConfig().executor.workers.job.prepareMaxAttempts) {
+                await this.debugFileLoggerService.debug({
+                    message: "prepare max attempts",
+                    retries,
+                })
                 throw new JobFailureException({
                     originalError: new ActionJobTaskPrepareMaxAttemptsException({
                         maxAttempts: envConfig().executor.workers.job.prepareMaxAttempts,

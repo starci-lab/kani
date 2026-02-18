@@ -88,6 +88,8 @@ export class OpenPositionTaskPrepareService {
             }
             // we check if the task has reached the maximum number of attempts
             const retries = snapshotJob.tasks?.[taskIndex]?.retries ?? 0
+            console.log("tx job prepare retries",
+                retries)
             if (retries >= envConfig().executor.workers.job.prepareMaxAttempts) {
                 throw new JobFailureException({
                     originalError: new ActionJobTaskPrepareMaxAttemptsException({

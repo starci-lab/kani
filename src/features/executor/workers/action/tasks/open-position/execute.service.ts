@@ -180,7 +180,7 @@ export class OpenPositionTaskExecuteService {
                 // get the tx failure index
                 const retries = step?.retries ?? 0
                 if (retries >= envConfig().executor.workers.job.txExecuteMaxAttempts) {
-                    await this.jobTaskService.rollbackRemoveTaskByIndex(
+                    await this.jobTaskService.rollbackToPrepared(
                         {
                             jobId: job.id,
                             taskIndex,

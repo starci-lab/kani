@@ -104,6 +104,9 @@ import {
 import {
     GraphModule 
 } from "@modules/graph"
+import {
+    DebugLoggersModule
+} from "@modules/debug"
 
 @Module({
     imports: [
@@ -174,6 +177,10 @@ import {
         }),
         LockAuthorityModule.register({
             isGlobal: true,
+        }),
+        DebugLoggersModule.register({
+            isGlobal: true,
+            logFileName: "kani-executor.log",
         }),
         DiagnosticsModule.register({
             isGlobal: true,

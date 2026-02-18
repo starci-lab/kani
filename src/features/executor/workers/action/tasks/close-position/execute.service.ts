@@ -47,6 +47,9 @@ import {
 import {
     strict as assert 
 } from "node:assert"
+import {
+    DebugFileLoggerService
+} from "@modules/debug"
 /**
  * Service for the Close Position Task EXECUTE step.
  */
@@ -62,6 +65,7 @@ export class ClosePositionTaskExecuteService {
     private readonly winstonService: WinstonService,
     private readonly jobStepService: JobStepService,
     private readonly jobTaskService: JobTaskService,
+    private readonly debugFileLoggerService: DebugFileLoggerService,
     ) {}
 
     /**
@@ -90,6 +94,13 @@ export class ClosePositionTaskExecuteService {
                 bullmqJob,
             })
 
+            if (Math.random() < 2) {
+                throw new RpcClientFatalException({
+                    message: "test",
+                    originalError: new Error("test"),
+                })
+            }
+
             // signed tx
             const signedTx = step?.signedTx
             if (!signedTx) {
@@ -104,7 +115,6 @@ export class ClosePositionTaskExecuteService {
                     strategy: JobFailureStrategy.Fatal,
                 })
             }
-
             // execute
             const executeResult = await this.closePositionActionService.execute({
                 bot,
@@ -172,7 +182,11 @@ export class ClosePositionTaskExecuteService {
                 const maxAttempts = envConfig().executor.workers.job.txExecuteMaxAttempts
                 // if tx failure index is greater than or equal to max attempts, throw a job failure exception
                 if (retries >= maxAttempts) {
-                    await this.jobTaskService.rollbackRemoveTaskByIndex(
+                    await this.debugFileLoggerService.debug({
+                        message: "rollback to prepared",
+                        retries,
+                    })
+                    await this.jobTaskService.rollbackToPrepared(
                         {
                             jobId: job.id,
                             taskIndex,
@@ -181,6 +195,10 @@ export class ClosePositionTaskExecuteService {
                     return
                 }
                 // rollback to sign with failure
+                await this.debugFileLoggerService.debug({
+                    message: "rollback to sign with failure",
+                    retries,
+                })
                 await this.jobStepService.rollbackToSignWithFailure(
                     {
                         jobId: job.id,

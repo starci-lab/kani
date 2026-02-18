@@ -74,7 +74,7 @@ export class ReconcileBalanceTaskDispatchService {
             }
             console.log(`job fetched: ${jobSnapshot.id}`)
             // if we do not find the task persisted in the job snapshot, we have to prepare 
-            if (!jobSnapshot.tasks[taskIndex]) {
+            if (!jobSnapshot.tasks[taskIndex] || jobSnapshot.tasks[taskIndex].initialized === false) {
                 console.log("task not found, preparing...")
                 await this.reconcileBalanceTaskPrepareService.process(
                     {
