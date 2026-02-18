@@ -3,15 +3,10 @@ import {
 } from "@nestjs/common"
 import BN from "bn.js"
 import {
-    InjectPrimaryMongoose,
-    JobSchema,
     JobType,
     TaskType,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
-import {
-    Connection
-} from "mongoose"
 import {
     AsyncService
 } from "@modules/mixin"
@@ -29,7 +24,6 @@ import {
 import {
     ActionJobTaskPrepareMaxAttemptsException,
     JobFailureException,
-    JobNotFoundException,
     PrepareReconcileBalanceTransactionResultNotFoundException,
     TokenNotFoundException,
 } from "@modules/exceptions"
@@ -55,8 +49,6 @@ import {
 @Injectable()
 export class ReconcileBalanceTaskPrepareService {
     constructor(
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
         private readonly balanceActionService: BalanceActionService,
         private readonly balanceFetcherService: BalanceFetcherService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
@@ -95,16 +87,8 @@ export class ReconcileBalanceTaskPrepareService {
                     fatal: taskIndex === 0,
                 }
             )
-
-            // we take the latest job snapshot
-            const snapshotJob = await this.connection.model<JobSchema>(JobSchema.name).findById(job.id)
-            if (!snapshotJob) {
-                throw new JobNotFoundException({
-                    jobId: job.id,
-                })
-            }
             // we check if the task has reached the maximum number of attempts
-            const retries = snapshotJob.tasks?.[taskIndex]?.retries ?? 0
+            const retries = job.tasks?.[taskIndex]?.retries ?? 0
             if (retries >= envConfig().executor.workers.job.prepareMaxAttempts) {
                 throw new JobFailureException({
                     originalError: new ActionJobTaskPrepareMaxAttemptsException({
