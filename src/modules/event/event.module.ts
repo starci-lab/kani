@@ -23,7 +23,7 @@ export class EventModule extends ConfigurableModuleClass {
         const dynamicModule = super.register(options)
         const imports: Array<DynamicModule> = []
         const kafkaOptions = options?.kafka || {
-            serviceName: ServiceName.KaniUnknown,
+            groupId: ServiceName.KaniUnknown,
         }
         imports.push(
             KafkaModule.register({

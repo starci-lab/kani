@@ -109,12 +109,15 @@ implements
         ).map(([eventName]) => eventName)
 
         // if user provided topics, use intersection of config and provided topics
-        if (this.options.topics) {
-            this.topics = _.intersection(allKafkaTopics,
-                this.options.topics)
-        } else {
-            this.topics = allKafkaTopics
-        }
+        this.topics = _.intersection(
+            allKafkaTopics,
+            _.uniq(
+                [
+                    ...(this.options.topics || []),
+                    EventName.Ping
+                ]
+            )
+        )
         // bridge all Kafka events to EventEmitter
         await this.bridgeAllKafkaEvents()
     }

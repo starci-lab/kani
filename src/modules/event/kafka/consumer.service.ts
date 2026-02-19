@@ -26,9 +26,6 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    InstanceService 
-} from "@modules/mixin"
-import {
     MODULE_OPTIONS_TOKEN, OPTIONS_TYPE
 } from "./kafka.module-definition"
 import {
@@ -45,7 +42,6 @@ export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown
         private readonly kafka: Kafka,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly retryService: RetryService,
-        private readonly instanceService: InstanceService,
     ) {}
     
     /**
