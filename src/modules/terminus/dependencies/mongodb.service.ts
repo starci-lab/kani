@@ -16,6 +16,9 @@ import {
 import {
     getPrimaryConnectionToken 
 } from "@modules/databases"
+import {
+    envConfig 
+} from "@modules/env"
 
 export type MongodbTarget = "primary"
 
@@ -43,6 +46,7 @@ export class MongodbService {
         return this.db.pingCheck(
             DependencyName.MongodbPrimary,
             {
+                timeout: envConfig().terminus.timeout,
                 connection
             }
         )

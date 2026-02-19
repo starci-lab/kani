@@ -108,13 +108,15 @@ import {
         PrivyModule.register({
             isGlobal: true,
         }),
-        IoRedisModule.register({
-            isGlobal: true,
-            instanceKeys: [
-                IoRedisInstanceKey.Adapter,
-                IoRedisInstanceKey.Throttler,
-            ],
-        }),
+        IoRedisModule.register(
+            {
+                isGlobal: true,
+                instanceKeys: [
+                    IoRedisInstanceKey.Adapter,
+                    IoRedisInstanceKey.Throttler,
+                ],
+            }
+        ),
         RedisModule.register({
             isGlobal: true,
             instanceKeys: [

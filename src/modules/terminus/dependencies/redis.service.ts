@@ -31,6 +31,7 @@ export class RedisService {
                     port: envConfig().redis.cache.port,
                     password: envConfig().redis.cache.password,
                 },
+                timeout: envConfig().terminus.timeout,
             },
         )
     }
@@ -45,6 +46,7 @@ export class RedisService {
                     port: envConfig().redis.adapter.port,
                     password: envConfig().redis.adapter.password,
                 },
+                timeout: envConfig().terminus.timeout,
             },
         )
     }
@@ -59,6 +61,7 @@ export class RedisService {
                     port: envConfig().redis.bullmq.port,
                     password: envConfig().redis.bullmq.password,
                 },
+                timeout: envConfig().terminus.timeout,
             },
         )
     }
@@ -73,6 +76,7 @@ export class RedisService {
                     port: envConfig().redis.throttler.port,
                     password: envConfig().redis.throttler.password,
                 },
+                timeout: envConfig().terminus.timeout,
             },
         )
     }
@@ -87,6 +91,7 @@ export class RedisService {
                     port: envConfig().redis.lockAuthority.port,
                     password: envConfig().redis.lockAuthority.password,
                 },
+                timeout: envConfig().terminus.timeout,
             },
         )
     }

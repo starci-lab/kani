@@ -50,6 +50,7 @@ export class KafkaService {
                     } : undefined,
                 },
             },
+            timeout: envConfig().terminus.timeout,
         }
         return options
     }
