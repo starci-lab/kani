@@ -2,12 +2,12 @@ import {
     WithdrawActionTaskPayload,
 } from "@modules/blockchains"
 import {
-    BotSchema, 
-    JobSchema, 
-} from "@modules/databases"
-import {
     Job 
 } from "bullmq"
+import {
+    BotSchema,
+    JobSchema,
+} from "@modules/databases"
 
 /** Base params for the CLOSE POSITION task. */
 export interface WithdrawTaskBaseParams {
@@ -54,7 +54,11 @@ export interface WithdrawTaskConfirmParams extends WithdrawTaskBaseParams {
 }
 
 /** Params for the RECONCILE BALANCE DISPATCHER step. */
-export interface WithdrawTaskDispatcherParams extends WithdrawTaskBaseParams {
+export interface WithdrawTaskDispatcherParams extends Omit<WithdrawTaskBaseParams, "bot" | "job"> {
+    /** Bot */
+    botId: string
+    /** Job */
+    jobId: string
     /** Task index */
     taskIndex: number
 }

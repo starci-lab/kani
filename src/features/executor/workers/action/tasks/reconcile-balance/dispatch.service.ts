@@ -1,32 +1,34 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    ReconcileBalanceTaskDispatcherParams 
+    ReconcileBalanceTaskDispatcherParams
 } from "../types"
 import {
-    InjectPrimaryMongoose, 
     JobSchema,
     StepType
 } from "@modules/databases"
 import {
-    Connection 
-} from "mongoose"
-import {
-    JobNotFoundException 
+    JobContextNotFoundException 
 } from "@modules/exceptions"
 import {
-    ReconcileBalanceTaskPrepareService 
+    ReconcileBalanceTaskPrepareService
 } from "./prepare.service"
 import {
-    ReconcileBalanceTaskSignService 
+    ReconcileBalanceTaskSignService
 } from "./sign.service"
 import {
-    ReconcileBalanceTaskExecuteService 
+    ReconcileBalanceTaskExecuteService
 } from "./execute.service"
 import {
-    ReconcileBalanceTaskConfirmService 
+    ReconcileBalanceTaskConfirmService
 } from "./confirm.service"
+import {
+    LoadJobContextResult, JobContextService
+} from "../../context"
+import {
+    AsyncService
+} from "@modules/mixin"
 
 /**
  * Dispatcher service for the RECONCILE BALANCE task.
@@ -38,8 +40,8 @@ export class ReconcileBalanceTaskDispatchService {
         private readonly reconcileBalanceTaskSignService: ReconcileBalanceTaskSignService,
         private readonly reconcileBalanceTaskExecuteService: ReconcileBalanceTaskExecuteService,
         private readonly reconcileBalanceTaskConfirmService: ReconcileBalanceTaskConfirmService,
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
+        private readonly asyncService: AsyncService,
+        private readonly jobContextService: JobContextService,
     ) { }
 
     /**
@@ -52,34 +54,45 @@ export class ReconcileBalanceTaskDispatchService {
      */
     async dispatch(
         {
-            bot,
-            job,
+            botId,
+            jobId,
             payload,
             bullmqJob,
             taskIndex,
-            isRetry
+            isRetry,
         }: ReconcileBalanceTaskDispatcherParams
     ) {
-        let jobSnapshot: JobSchema | null = null
+        let context: LoadJobContextResult | null = null
         // do the loop until the task is completed
         do {
             // we retrieve the latest job snapshot
-            jobSnapshot = await this.connection
-                .model<JobSchema>(JobSchema.name)
-                .findById(job.id)
-            if (!jobSnapshot) {
-                throw new JobNotFoundException({
-                    jobId: job.id,
+            const [
+                _context,
+                error
+            ] = await this.asyncService.resolveTuple(
+                this.jobContextService.load(
+                    {
+                        jobId,
+                        botId
+                    }
+                )
+            )
+            context = _context
+            if (error) {
+                throw error
+            }
+            if (!context) {
+                throw new JobContextNotFoundException({
+                    jobId,
+                    botId,
                 })
             }
-            console.log(`job fetched: ${jobSnapshot.id}`)
             // if we do not find the task persisted in the job snapshot, we have to prepare 
-            if (!jobSnapshot.tasks[taskIndex] || jobSnapshot.tasks[taskIndex].initialized === false) {
-                console.log("task not found, preparing...")
+            if (!context.job.tasks[taskIndex] || context.job.tasks[taskIndex].initialized === false) {
                 await this.reconcileBalanceTaskPrepareService.process(
                     {
-                        bot,
-                        job: jobSnapshot,
+                        bot: context.bot,
+                        job: context.job,
                         payload,
                         bullmqJob,
                         taskIndex,
@@ -89,19 +102,18 @@ export class ReconcileBalanceTaskDispatchService {
                 continue
             }
             // we take the next step
-            const activeStep = jobSnapshot.tasks[taskIndex].activeStep
-            const stepCount = jobSnapshot.tasks[taskIndex].stepCount
+            const activeStep = context.job.tasks[taskIndex].activeStep
+            const stepCount = context.job.tasks[taskIndex].stepCount
             if (activeStep <= stepCount - 1) {
-                // get the current step type
-                const stepType = jobSnapshot.tasks[taskIndex].steps[activeStep].type
+            // get the current step type
+                const stepType = context.job.tasks[taskIndex].steps[activeStep].type
                 switch (stepType) {
                 // Sign step
                 case StepType.Sign: {
-                    console.log("signing...")
                     await this.reconcileBalanceTaskSignService.process(
                         {
-                            bot,
-                            job: jobSnapshot,
+                            bot: context.bot,
+                            job: context.job,
                             payload,
                             bullmqJob,
                             taskIndex,
@@ -112,11 +124,10 @@ export class ReconcileBalanceTaskDispatchService {
                 }
                 // Execute step
                 case StepType.Execute: {
-                    console.log("executing...")
                     await this.reconcileBalanceTaskExecuteService.process(
                         {
-                            bot,
-                            job: jobSnapshot,
+                            bot: context.bot,
+                            job: context.job,
                             payload,
                             bullmqJob,
                             taskIndex,
@@ -128,12 +139,11 @@ export class ReconcileBalanceTaskDispatchService {
                 }
             }
             // process confirm
-            if (!jobSnapshot.tasks[taskIndex].confirmed) {
-                console.log("confirming...")
+            if (!context.job.tasks[taskIndex].confirmed) {
                 await this.reconcileBalanceTaskConfirmService.process(
                     {
-                        bot,
-                        job: jobSnapshot,
+                        bot: context.bot,
+                        job: context.job,
                         payload,
                         bullmqJob,
                         taskIndex,
@@ -141,9 +151,9 @@ export class ReconcileBalanceTaskDispatchService {
                     }
                 )
             }
-        } while (
+        } while(
             !this.isTaskCompleted(
-                jobSnapshot,
+                context.job,
                 taskIndex,
             )
         )
@@ -151,7 +161,7 @@ export class ReconcileBalanceTaskDispatchService {
 
     /**
      * Checks if the task is complete.
-     * @param jobSnapshot - The job snapshot.
+     * @param job - The job.
      * @param taskIndex - The index of the task.
      * @returns True if the task is complete, false otherwise.
      */

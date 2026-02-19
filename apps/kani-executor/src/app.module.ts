@@ -282,7 +282,7 @@ import {
         TerminusModule.register({
             isGlobal: true,
             dependencies: [
-                DependencyName.MongodbPrimary,
+                // DependencyName.MongodbPrimary,
                 DependencyName.CacheRedis,
                 //DependencyName.ThrottlerRedis,
                 //DependencyName.Kafka,

@@ -1,32 +1,34 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    WithdrawTaskDispatcherParams 
+    WithdrawTaskDispatcherParams
 } from "../types"
 import {
-    InjectPrimaryMongoose, 
     JobSchema,
     StepType
 } from "@modules/databases"
 import {
-    Connection 
-} from "mongoose"
-import {
-    JobNotFoundException 
+    JobContextNotFoundException,
 } from "@modules/exceptions"
 import {
-    WithdrawTaskPrepareService 
+    WithdrawTaskPrepareService
 } from "./prepare.service"
 import {
-    WithdrawTaskSignService 
+    WithdrawTaskSignService
 } from "./sign.service"
 import {
-    WithdrawTaskExecuteService 
+    WithdrawTaskExecuteService
 } from "./execute.service"
 import {
-    WithdrawTaskConfirmService 
+    WithdrawTaskConfirmService
 } from "./confirm.service"
+import {
+    LoadJobContextResult, JobContextService 
+} from "../../context"
+import {
+    AsyncService 
+} from "@modules/mixin"
 
 /**
  * Dispatcher service for the WITHDRAW task.
@@ -38,8 +40,8 @@ export class WithdrawTaskDispatchService {
         private readonly withdrawTaskSignService: WithdrawTaskSignService,
         private readonly withdrawTaskExecuteService: WithdrawTaskExecuteService,
         private readonly withdrawTaskConfirmService: WithdrawTaskConfirmService,
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
+        private readonly asyncService: AsyncService,
+        private readonly jobContextService: JobContextService,
     ) { }
 
     /**
@@ -53,32 +55,44 @@ export class WithdrawTaskDispatchService {
      */
     async dispatch(
         {
-            bot,
-            job,
+            botId,
+            jobId,
             payload,
             bullmqJob,
             taskIndex,
-            isRetry
+            isRetry,
         }: WithdrawTaskDispatcherParams
     ) {
-        let jobSnapshot: JobSchema | null = null
+        let context: LoadJobContextResult | null = null
         // do the loop until the task is completed
         do {
-            // we retrieve the latest job snapshot
-            jobSnapshot = await this.connection
-                .model<JobSchema>(JobSchema.name)
-                .findById(job.id)
-            if (!jobSnapshot) {
-                throw new JobNotFoundException({
-                    jobId: job.id,
+            const [
+                _context,
+                error
+            ] = await this.asyncService.resolveTuple(
+                this.jobContextService.load(
+                    {
+                        jobId,
+                        botId
+                    }
+                )
+            )
+            context = _context
+            if (error) {
+                throw error
+            }
+            if (!context) {
+                throw new JobContextNotFoundException({
+                    jobId,
+                    botId,
                 })
             }
             // if we do not find the task persisted in the job snapshot, we have to prepare 
-            if (!jobSnapshot.tasks[taskIndex] || jobSnapshot.tasks[taskIndex].initialized === false) {
+            if (!context.job.tasks[taskIndex] || context.job.tasks[taskIndex].initialized === false) {
                 await this.withdrawTaskPrepareService.process(
                     {
-                        bot,
-                        job: jobSnapshot,
+                        bot: context.bot,
+                        job: context.job,
                         payload,
                         bullmqJob,
                         taskIndex,
@@ -88,18 +102,18 @@ export class WithdrawTaskDispatchService {
                 continue
             }
             // we take the next step
-            const activeStep = jobSnapshot.tasks[taskIndex].activeStep
-            const stepCount = jobSnapshot.tasks[taskIndex].stepCount
+            const activeStep = context.job.tasks[taskIndex].activeStep
+            const stepCount = context.job.tasks[taskIndex].stepCount
             if (activeStep <= stepCount - 1) {
                 // get the current step type
-                const stepType = jobSnapshot.tasks[taskIndex].steps[activeStep].type
+                const stepType = context.job.tasks[taskIndex].steps[activeStep].type
                 switch (stepType) {
                 // Sign step
                 case StepType.Sign: {
                     await this.withdrawTaskSignService.process(
                         {
-                            bot,
-                            job: jobSnapshot,
+                            bot: context.bot,
+                            job: context.job,
                             payload,
                             bullmqJob,
                             taskIndex,
@@ -112,8 +126,8 @@ export class WithdrawTaskDispatchService {
                 case StepType.Execute: {
                     await this.withdrawTaskExecuteService.process(
                         {
-                            bot,
-                            job: jobSnapshot,
+                            bot: context.bot,
+                            job: context.job,
                             payload,
                             bullmqJob,
                             taskIndex,
@@ -125,11 +139,11 @@ export class WithdrawTaskDispatchService {
                 }
             }
             // process confirm
-            if (!jobSnapshot.tasks[taskIndex].confirmed) {
+            if (!context.job.tasks[taskIndex].confirmed) {
                 await this.withdrawTaskConfirmService.process(
                     {
-                        bot,
-                        job: jobSnapshot,
+                        bot: context.bot,
+                        job: context.job,
                         payload,
                         bullmqJob,
                         taskIndex,
@@ -139,7 +153,7 @@ export class WithdrawTaskDispatchService {
             }
         } while (
             !this.isTaskCompleted(
-                jobSnapshot,
+                context.job,
                 taskIndex,
             )
         )

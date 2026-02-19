@@ -3,15 +3,10 @@ import {
 } from "@nestjs/common"
 import BN from "bn.js"
 import {
-    InjectPrimaryMongoose,
-    JobSchema,
     JobType,
     TaskType,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
-import {
-    Connection
-} from "mongoose"
 import {
     AsyncService
 } from "@modules/mixin"
@@ -29,7 +24,6 @@ import {
 import {
     ActionJobTaskPrepareMaxAttemptsException,
     JobFailureException,
-    JobNotFoundException,
     PrepareReconcileBalanceTransactionResultNotFoundException,
     TokenNotFoundException,
 } from "@modules/exceptions"
@@ -55,8 +49,6 @@ import {
 @Injectable()
 export class ReconcileBalanceTaskPrepareService {
     constructor(
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
         private readonly balanceActionService: BalanceActionService,
         private readonly balanceFetcherService: BalanceFetcherService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
@@ -95,16 +87,8 @@ export class ReconcileBalanceTaskPrepareService {
                     fatal: taskIndex === 0,
                 }
             )
-
-            // we take the latest job snapshot
-            const snapshotJob = await this.connection.model<JobSchema>(JobSchema.name).findById(job.id)
-            if (!snapshotJob) {
-                throw new JobNotFoundException({
-                    jobId: job.id,
-                })
-            }
             // we check if the task has reached the maximum number of attempts
-            const retries = snapshotJob.tasks?.[taskIndex]?.retries ?? 0
+            const retries = job.tasks?.[taskIndex]?.retries ?? 0
             if (retries >= envConfig().executor.workers.job.prepareMaxAttempts) {
                 throw new JobFailureException({
                     originalError: new ActionJobTaskPrepareMaxAttemptsException({
@@ -147,24 +131,18 @@ export class ReconcileBalanceTaskPrepareService {
                 }
             )
             if (!eligible || !payload.swap) {
-            // Push a "no-op" task (0 steps) so dispatcher can mark it done immediately
-                await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                // Push a "no-op" task (0 steps) so dispatcher can mark it done immediately
+                // upsert the prepared task into the database
+                await this.jobTaskService.upsertPreparedTask(
                     {
-                        _id: job.id
-                    },
-                    {
-                        $push: {
-                            tasks: {
-                                index: taskIndex,
-                                type: TaskType.ReconcileBalance,
-                                activeStep: 0,
-                                stepCount: 0,
-                                steps: [],
-                            },
+                        jobId: job.id,
+                        taskType: TaskType.ReconcileBalance,
+                        taskIndex,
+                        prepareResult: {
+                            prepareTxs: [],
                         },
-                    },
+                    }
                 )
-
                 this.winstonService.log(
                     WinstonLog.ActiveJobTaskPrepared,
                     {
@@ -179,7 +157,6 @@ export class ReconcileBalanceTaskPrepareService {
                 )
                 return
             }
-
             // determine swap steps
             const { swapSteps, quoteRatioResult } =
             await this.balanceActionService.determineReconcileBalancePlan(

@@ -120,3 +120,26 @@ export class SignedTxNotFoundException extends AbstractException {
         )
     }
 }
+
+/** Thrown when job context is not found. */
+export interface JobContextNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    jobId: string
+    botId: string
+}
+
+/** Thrown when job context is not found. */
+export class JobContextNotFoundException extends AbstractException {
+    constructor({
+        jobId,
+        botId,
+    }: JobContextNotFoundExceptionMetadata) {
+        super(
+            "Job context not found",
+            "JOB_CONTEXT_NOT_FOUND_EXCEPTION",
+            {
+                jobId,
+                botId,
+            }
+        )
+    }
+}

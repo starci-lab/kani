@@ -131,8 +131,8 @@ export class ActionWorker extends WorkerHost {
                     })
                     await this.closePositionTaskDispatchService.dispatch(
                         {
-                            job: context.job,
-                            bot: context.bot,
+                            jobId,
+                            botId,
                             liquidityPool,
                             payload: task.payload,
                             state,
@@ -151,8 +151,8 @@ export class ActionWorker extends WorkerHost {
                     })
                     await this.openPositionTaskDispatchService.dispatch(
                         {
-                            job: context.job,
-                            bot: context.bot,
+                            jobId,
+                            botId,
                             liquidityPool,
                             payload: task.payload,
                             state,
@@ -166,8 +166,8 @@ export class ActionWorker extends WorkerHost {
                 case TaskType.ReconcileBalance: {
                     await this.reconcileBalanceTaskDispatchService.dispatch(
                         {
-                            job: context.job,
-                            bot: context.bot,
+                            jobId,
+                            botId,
                             payload: task.payload,
                             isRetry,
                             bullmqJob,
@@ -179,8 +179,8 @@ export class ActionWorker extends WorkerHost {
                 case TaskType.Withdraw: {
                     await this.withdrawTaskDispatchService.dispatch(
                         {
-                            job: context.job,
-                            bot: context.bot,
+                            jobId,
+                            botId,
                             payload: task.payload,
                             bullmqJob,
                             taskIndex,
