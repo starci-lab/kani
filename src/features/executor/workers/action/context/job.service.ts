@@ -17,6 +17,9 @@ import {
 import {
     LoadJobContextParams, LoadJobContextResult 
 } from "./types"
+import {
+    AsyncService 
+} from "@modules/mixin"
 
 /**
  * Service responsible for building the execution context for a given job, bot, and liquidity pool.
@@ -27,6 +30,7 @@ export class JobContextService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly activePositionAssociateService: ActivePositionAssociateService,
+        private readonly asyncService: AsyncService,
     ) { }
 
     /**
@@ -41,19 +45,24 @@ export class JobContextService {
         }: LoadJobContextParams
     ): Promise<LoadJobContextResult> {
         const day = new Date()
-        // Find the job by id.
-        const job = await this.connection
-            .model<JobSchema>(JobSchema.name)
-            .findById(jobId)
+        const [
+            job,
+            bot
+        ] = await this.asyncService.allMustDone(
+            [
+                this.connection
+                    .model<JobSchema>(JobSchema.name)
+                    .findById(jobId),
+                this.connection
+                    .model<BotSchema>(BotSchema.name)
+                    .findById(botId),
+            ]
+        )
         if (!job) {
             throw new JobNotFoundException({
                 jobId,
             })
         }
-        // Find the state by job id.
-        const bot = await this.connection
-            .model<BotSchema>(BotSchema.name)
-            .findById(botId)
         if (!bot) {
             throw new BotNotFoundException({
                 id: botId,
@@ -63,15 +72,19 @@ export class JobContextService {
         const jobJson = job.toJSON()
         const botJson = bot.toJSON()
         // Associate the active position to the bot.
-        await this.activePositionAssociateService.attachAssociatedLiquidityPoolToBotActivePositions(
-            {
-                bots: [botJson],
-            }
-        )
-        await this.activePositionAssociateService.attachAssociatedPositionsToBotActivePositions(
-            {
-                bots: [botJson],
-            }
+        await this.asyncService.allMustDone(
+            [
+                this.activePositionAssociateService.attachAssociatedLiquidityPoolToBotActivePositions(
+                    {
+                        bots: [botJson],
+                    }
+                ),
+                this.activePositionAssociateService.attachAssociatedPositionsToBotActivePositions(
+                    {
+                        bots: [botJson],
+                    }
+                ),
+            ]
         )
         const end = new Date()
         console.log(`Time taken: ${end.getTime() - day.getTime()} milliseconds`)
