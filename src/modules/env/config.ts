@@ -1239,7 +1239,7 @@ export const envConfig = () => ({
                         key: "KANI_EXECUTOR_PROBES_LIVENESS_INITIAL_DELAY_SECONDS", defaultValue: "60s" 
                     }),
                     periodSeconds: parseEnvSecond({
-                        key: "KANI_EXECUTOR_PROBES_LIVENESS_PERIOD_SECONDS", defaultValue: "120s" 
+                        key: "KANI_EXECUTOR_PROBES_LIVENESS_PERIOD_SECONDS", defaultValue: "60s" 
                     }),
                     successThreshold: parseEnvInt({
                         key: "KANI_EXECUTOR_PROBES_LIVENESS_SUCCESS_THRESHOLD", defaultValue: 1 
