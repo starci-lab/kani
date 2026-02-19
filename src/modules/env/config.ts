@@ -1245,7 +1245,7 @@ export const envConfig = () => ({
                         key: "KANI_EXECUTOR_PROBES_LIVENESS_SUCCESS_THRESHOLD", defaultValue: 1 
                     }),
                     timeoutSeconds: parseEnvSecond({
-                        key: "KANI_EXECUTOR_PROBES_LIVENESS_TIMEOUT_SECONDS", defaultValue: "5s" 
+                        key: "KANI_EXECUTOR_PROBES_LIVENESS_TIMEOUT_SECONDS", defaultValue: "30s" 
                     }),
                 },
                 readiness: {
@@ -1273,7 +1273,7 @@ export const envConfig = () => ({
                         key: "KANI_EXECUTOR_PROBES_READINESS_SUCCESS_THRESHOLD", defaultValue: 1 
                     }),
                     timeoutSeconds: parseEnvSecond({
-                        key: "KANI_EXECUTOR_PROBES_READINESS_TIMEOUT_SECONDS", defaultValue: "5s" 
+                        key: "KANI_EXECUTOR_PROBES_READINESS_TIMEOUT_SECONDS", defaultValue: "30s" 
                     }),
                 },
                 startup: {
@@ -1301,7 +1301,7 @@ export const envConfig = () => ({
                         key: "KANI_EXECUTOR_PROBES_STARTUP_SUCCESS_THRESHOLD", defaultValue: 1 
                     }),
                     timeoutSeconds: parseEnvSecond({
-                        key: "KANI_EXECUTOR_PROBES_STARTUP_TIMEOUT_SECONDS", defaultValue: "5s" 
+                        key: "KANI_EXECUTOR_PROBES_STARTUP_TIMEOUT_SECONDS", defaultValue: "30s" 
                     }),
                 }
             },
