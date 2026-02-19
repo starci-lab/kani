@@ -40,6 +40,7 @@ export class JobContextService {
             botId,
         }: LoadJobContextParams
     ): Promise<LoadJobContextResult> {
+        const day = new Date()
         // Find the job by id.
         const job = await this.connection
             .model<JobSchema>(JobSchema.name)
@@ -72,6 +73,8 @@ export class JobContextService {
                 bots: [botJson],
             }
         )
+        const end = new Date()
+        console.log(`Time taken: ${end.getTime() - day.getTime()} milliseconds`)
         return {
             job: jobJson,
             bot: botJson,
