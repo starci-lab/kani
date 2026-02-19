@@ -224,6 +224,7 @@ import {
         }),
         EventModule.register({
             kafka: {
+                groupId: `${ServiceName.KaniExecutor}-${envConfig().executor.id}`,
                 createTopicsIfNotExists: true,
                 topics: [
                     EventName.ReinitializeBalancers,
@@ -282,14 +283,13 @@ import {
         TerminusModule.register({
             isGlobal: true,
             dependencies: [
-                // DependencyName.MongodbPrimary,
+                DependencyName.MongodbPrimary,
                 DependencyName.CacheRedis,
-                //DependencyName.ThrottlerRedis,
-                //DependencyName.Kafka,
-                //DependencyName.Memory,
-                //DependencyName.Disk,
-                //DependencyName.LockAuthorityRedis,
-                //DependencyName.BullmqRedis,
+                DependencyName.Kafka,
+                DependencyName.Memory,
+                DependencyName.Disk,
+                DependencyName.LockAuthorityRedis,
+                DependencyName.BullmqRedis,
             ],
         }),
     ],

@@ -28,11 +28,19 @@ import {
 import {
     InstanceService 
 } from "@modules/mixin"
+import {
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE
+} from "./kafka.module-definition"
+import {
+    Inject 
+} from "@nestjs/common"
 
 @Injectable()
 export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown {
     public consumer: Consumer 
     constructor(
+        @Inject(MODULE_OPTIONS_TOKEN)   
+        private readonly options: typeof OPTIONS_TYPE,
         @InjectKafka()
         private readonly kafka: Kafka,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
@@ -60,7 +68,7 @@ export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown
                     // create consumer
                     this.consumer = this.kafka.consumer(
                         { 
-                            groupId: this.instanceService.getId(),
+                            groupId: this.options.groupId,
                             allowAutoTopicCreation: true,
                             heartbeatInterval: envConfig().kafka.heartbeatInterval,
                             retry: {

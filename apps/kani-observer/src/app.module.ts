@@ -159,6 +159,7 @@ import {
             isGlobal: true,
             kafka: {
                 createTopicsIfNotExists: true,
+                groupId: ServiceName.KaniObserver,
                 topics: [
                     EventName.ReinitializeBalancers,
                 ],

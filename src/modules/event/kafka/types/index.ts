@@ -1,6 +1,10 @@
 /** Options for configuring the Kafka module. */
 export interface KafkaOptions {
+    /** Group ID for the Kafka consumer. */
+    groupId: string
+    /** Whether to create topics if they do not exist. */
     createTopicsIfNotExists?: boolean
+    /** Topics to subscribe to. */
     topics?: Array<string>
 }
 
