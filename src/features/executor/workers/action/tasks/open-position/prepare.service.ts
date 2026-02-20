@@ -135,7 +135,7 @@ export class OpenPositionTaskPrepareService {
             throw new JobFailureException(
                 {
                     originalError: error,
-                    strategy: taskIndex === 0 ? JobFailureStrategy.Fatal : JobFailureStrategy.Requeue,
+                    strategy: JobFailureStrategy.Fatal,
                 }
             )
         }

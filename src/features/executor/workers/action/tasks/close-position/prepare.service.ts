@@ -66,7 +66,6 @@ export class ClosePositionTaskPrepareService {
                     bot,
                     job,
                     bullmqJob,
-                    fatal: taskIndex === 0,
                 }
             )
             // we check if the task has reached the maximum number of attempts
@@ -80,7 +79,7 @@ export class ClosePositionTaskPrepareService {
                         metadata: job.metadata,
                         type: TaskType.ClosePosition,
                     }),
-                    strategy: taskIndex === 0 ? JobFailureStrategy.Fatal : JobFailureStrategy.Requeue,
+                    strategy: JobFailureStrategy.Fatal,
                 })
             }
             // We prepare the close position transaction.
@@ -129,7 +128,7 @@ export class ClosePositionTaskPrepareService {
             throw new JobFailureException(
                 {
                     originalError: error,
-                    strategy: taskIndex === 0 ? JobFailureStrategy.Fatal : JobFailureStrategy.Requeue,
+                    strategy: JobFailureStrategy.Fatal,
                 }
             )
         }

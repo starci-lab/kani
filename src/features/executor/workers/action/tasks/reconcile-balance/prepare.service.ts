@@ -84,7 +84,6 @@ export class ReconcileBalanceTaskPrepareService {
                     bot, 
                     job, 
                     bullmqJob, 
-                    fatal: taskIndex === 0,
                 }
             )
             // we check if the task has reached the maximum number of attempts
@@ -98,7 +97,7 @@ export class ReconcileBalanceTaskPrepareService {
                         metadata: job.metadata,
                         type: TaskType.ReconcileBalance,
                     }),
-                    strategy: taskIndex === 0 ? JobFailureStrategy.Fatal : JobFailureStrategy.Requeue,
+                    strategy: JobFailureStrategy.Fatal,
                 })
             }
             // fetch the balances and update the balance snapshots
@@ -301,7 +300,7 @@ export class ReconcileBalanceTaskPrepareService {
             )
             throw new JobFailureException({
                 originalError: error,
-                strategy: taskIndex === 0 ? JobFailureStrategy.Fatal : JobFailureStrategy.Requeue,
+                strategy: JobFailureStrategy.Fatal,
             })
         }
     }
