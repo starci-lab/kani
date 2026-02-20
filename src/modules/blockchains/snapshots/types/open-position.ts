@@ -41,6 +41,7 @@ export interface AddOpenPositionRecordParams {
     targetToken: TokenSchema
     quoteToken: TokenSchema
     gasToken: TokenSchema
+    rentAmount?: BN
 }
 
 /** Result of adding an open-position record (no payload). */

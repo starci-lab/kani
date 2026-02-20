@@ -33,3 +33,24 @@ export class SolanaAccountNotFoundException extends AbstractException {
         )
     }
 }
+
+/** Metadata when Solana minimum balance for rent exemption is not found. */
+export interface SolanaMinimumBalanceForRentExemptionNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    dataLength: number
+}
+
+/** Thrown when Solana minimum balance for rent exemption cannot be found. */
+export class SolanaMinimumBalanceForRentExemptionNotFoundException extends AbstractException {
+    constructor(
+        { dataLength, originalError }: SolanaMinimumBalanceForRentExemptionNotFoundExceptionMetadata
+    ) {
+        super(
+            "Solana minimum balance for rent exemption not found",
+            "SOLANA_MINIMUM_BALANCE_FOR_RENT_EXEMPTION_NOT_FOUND_EXCEPTION",
+            {
+                dataLength,
+                originalError
+            }
+        )
+    }
+}

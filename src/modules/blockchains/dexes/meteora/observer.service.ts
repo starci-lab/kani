@@ -220,7 +220,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
                     address: liquidityPool.poolAddress,
                     kind: AccountKind.Pool,
                     dexId: DexId.Meteora,
-                    liquidityPoolId: liquidityPool.displayId,
+                    liquidityPool,
                 }
             )
             // Parse pool state from account data (skip 8-byte discriminator)

@@ -279,7 +279,7 @@ export class PositionSchema extends AbstractSchema {
     @Field(() => GraphQLJSON,
         {
             description:
-            "Additional position-specific metadata stored as flexible key-value JSON",
+                "Additional position-specific metadata stored as flexible key-value JSON",
             nullable: true,
         })
     @Prop({
@@ -331,7 +331,23 @@ export class PositionSchema extends AbstractSchema {
             description: "The liquidity pool associated with this position",
         })
         associatedLiquidityPool: LiquidityPoolSchema
-}
 
-export const PositionSchemaClass =
-    SchemaFactory.createForClass(PositionSchema)
+    /**
+     * Metadata stored as a flexible JSON object.
+     */
+    @Field(
+        () => String,
+        {
+            description: "Rent amount for the position in lamports",
+            nullable: true
+        }
+    )
+    @Prop({
+        type: String,
+        required: false,
+    })
+        rentAmount?: string
+}
+    
+
+export const PositionSchemaClass = SchemaFactory.createForClass(PositionSchema)

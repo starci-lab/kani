@@ -55,7 +55,7 @@ import {
 import SuperJSON from "superjson"
 import bs58 from "bs58"
 import {
-    Position 
+    Position
 } from "./beets"
 
 /**
@@ -99,27 +99,52 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
      * @param param.liquidityPool - Liquidity pool
      * @returns Confirmation result
      */
-    async confirm({
-        positionId,
-        liquidityPool,
-    }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
+    async confirm(
+        {
+            positionId,
+            liquidityPool,
+            metadata,
+        }: ConfirmOpenPositionParams
+    ): Promise<ConfirmOpenPositionResult> {
+        const _metadata = metadata as OrcaPositionMetadata
         if (envConfig().executor.runtime.operation.openPosition.stimulate) {
             return {
                 liquidity: new BN(0),
-            } 
+                rentAmount: new BN(0),
+            }
         }
         const accountInfo = await this.solanaFetchService.fetchAccount({
             address: positionId,
             kind: AccountKind.PersonalPosition,
             dexId: DexId.Orca,
-            liquidityPoolId: liquidityPool.displayId,
+            liquidityPool,
         })
         const [personalPositionState] = Position.struct.deserialize(
             Buffer.from(accountInfo.data),
             8,
         )
+        const liquidity = new BN(personalPositionState.liquidity.toString())
+        // calculate mint account rent amount
+        const mintAccountInfo = await this.solanaFetchService.fetchAccount({
+            address: _metadata.nftMintAddress,
+            kind: AccountKind.PositionMint,
+            dexId: DexId.Orca,
+            liquidityPool,
+        })
+        // calculate ATA account rent amount
+        const ataAccountInfo = await this.solanaFetchService.fetchAccount({
+            address: _metadata.ataAddress,
+            kind: AccountKind.PositionMint,
+            dexId: DexId.Orca,
+            liquidityPool,
+        })
+        const rentAmount = 
+            new BN(accountInfo.lamports.valueOf().toString())
+                .add(new BN(mintAccountInfo.lamports.valueOf().toString()))
+                .add(new BN(ataAccountInfo.lamports.valueOf().toString()))
         return {
-            liquidity: new BN(personalPositionState.liquidity.toString()),
+            liquidity,
+            rentAmount,
         }
     }
 

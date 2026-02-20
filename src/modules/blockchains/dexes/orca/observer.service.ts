@@ -211,7 +211,7 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
                 address: liquidityPool.poolAddress,
                 kind: AccountKind.Pool,
                 dexId: DexId.Orca,
-                liquidityPoolId: liquidityPool.displayId,
+                liquidityPool,
             })  
             // Parse pool state from account data (skip 8-byte discriminator)
             const state = Whirlpool.struct.read(Buffer.from(accountInfo.data),

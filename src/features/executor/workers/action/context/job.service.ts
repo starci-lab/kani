@@ -44,7 +44,6 @@ export class JobContextService {
             botId,
         }: LoadJobContextParams
     ): Promise<LoadJobContextResult> {
-        const day = new Date()
         const [
             job,
             bot
@@ -86,8 +85,6 @@ export class JobContextService {
                 ),
             ]
         )
-        const end = new Date()
-        console.log(`Time taken: ${end.getTime() - day.getTime()} milliseconds`)
         return {
             job: jobJson,
             bot: botJson,

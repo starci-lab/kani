@@ -66,6 +66,7 @@ export class OpenPositionSnapshotService {
             targetToken,
             quoteToken,
             gasToken,
+            rentAmount,
         }: AddOpenPositionRecordParams
     ): Promise<AddOpenPositionRecordResult> {
         const now = this.dayjsService.now().toDate()
@@ -137,6 +138,7 @@ export class OpenPositionSnapshotService {
                     dlmmState,
                     openSnapshot,
                     fees,
+                    rentAmount: rentAmount?.toString(),
                 }
             ],
             {

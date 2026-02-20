@@ -213,7 +213,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
                 address: liquidityPool.poolAddress,
                 kind: AccountKind.Pool,
                 dexId: DexId.Raydium,
-                liquidityPoolId: liquidityPool.displayId,
+                liquidityPool,
             })
             const state = PoolState.struct.read(
                 Buffer.from(accountInfo.data),

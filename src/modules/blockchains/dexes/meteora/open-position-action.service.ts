@@ -97,7 +97,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
             address: positionId,
             kind: AccountKind.PersonalPosition, 
             dexId: DexId.Meteora,
-            liquidityPoolId: liquidityPool.displayId,
+            liquidityPool,
         })
         return {
             // Temporary empty, will need other logic to get liquidity

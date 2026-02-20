@@ -14,7 +14,8 @@ import {
     RpcAccessType
 } from "@modules/filesystem"
 import {
-    SolanaAccountNotFoundException
+    SolanaAccountNotFoundException,
+    SolanaMinimumBalanceForRentExemptionNotFoundException
 } from "@modules/exceptions"
 import {
     AsyncService
@@ -23,6 +24,7 @@ import type {
     FetchSolanaAccountParams,
     FetchSolanaTransactionParams,
 } from "./types"
+import BN from "bn.js"
 
 /**
  * Service for fetching Solana accounts and transactions.
@@ -53,7 +55,7 @@ export class SolanaFetchService {
         address: accountAddress,
         kind,
         dexId,
-        liquidityPoolId,
+        liquidityPool,
     }: FetchSolanaAccountParams): Promise<EncodedAccount> {
         const accountInfo = await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
@@ -73,7 +75,7 @@ export class SolanaFetchService {
                 kind,
                 address: accountAddress,
                 dexId,
-                liquidityPoolId,
+                liquidityPoolId: liquidityPool.displayId,
             })
         }
 
@@ -106,5 +108,28 @@ export class SolanaFetchService {
             return null
         }
         return transaction
+    }
+
+    /**
+     * Fetches the minimum balance for rent exemption for a given data length.
+     *
+     * @param dataLength - The length of the data to fetch the minimum balance for rent exemption for.
+     * @returns The minimum balance for rent exemption.
+     */
+    async getMinimumBalanceForRentExemption(dataLength: number): Promise<BN> {
+        const [minimumBalanceForRentExemption] = await this.asyncService.resolveTuple(
+            this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Http,
+                callback: async ({ rpc }) => {
+                    return await rpc.getMinimumBalanceForRentExemption(BigInt(dataLength)).send()
+                },
+            })
+        )
+        if (!minimumBalanceForRentExemption) {
+            throw new SolanaMinimumBalanceForRentExemptionNotFoundException({
+                dataLength,
+            })
+        }
+        return new BN(minimumBalanceForRentExemption.valueOf().toString())
     }
 }

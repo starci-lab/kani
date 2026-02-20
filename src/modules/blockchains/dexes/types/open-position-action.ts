@@ -111,6 +111,7 @@ export interface ConfirmOpenPositionParams {
     positionId: string
     state: LiquidityPoolState
     liquidityPool: LiquidityPoolSchema
+    metadata?: unknown
 }
 
 /**
@@ -118,6 +119,7 @@ export interface ConfirmOpenPositionParams {
  */
 export interface ConfirmOpenPositionResult {
     liquidity?: BN
+    rentAmount?: BN
 }
 
 /**

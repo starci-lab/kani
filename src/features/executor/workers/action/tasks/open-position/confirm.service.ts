@@ -164,7 +164,8 @@ export class OpenPositionTaskConfirmService {
                     bot,
                     liquidityPool,
                     positionId: executeResult?.positionId ?? "",
-                    state
+                    state,
+                    metadata: prepareResult?.metadata,
                 }
             )
             try {
@@ -185,6 +186,7 @@ export class OpenPositionTaskConfirmService {
                                     quoteBalanceAmount,
                                     gasBalanceAmount,
                                 },
+                                rentAmount: confirmResult?.rentAmount ?? new BN(0),
                                 liquidityPool,
                                 feeTargetAmount: targetIsA ? prepareResult?.feeAmountA ?? new BN(0) : prepareResult?.feeAmountB ?? new BN(0),
                                 feeQuoteAmount: targetIsA ? prepareResult?.feeAmountB ?? new BN(0) : prepareResult?.feeAmountA ?? new BN(0),

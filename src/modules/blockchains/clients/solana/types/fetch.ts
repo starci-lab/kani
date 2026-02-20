@@ -1,6 +1,6 @@
 import type {
     DexId,
-    LiquidityPoolId
+    LiquidityPoolSchema
 } from "@modules/databases"
 import type {
     AccountKind
@@ -14,8 +14,8 @@ export interface FetchSolanaAccountParams {
     kind: AccountKind
     /** DEX ID for exception context */
     dexId: DexId
-    /** Liquidity pool ID for exception context */
-    liquidityPoolId: LiquidityPoolId
+    /** Liquidity pool for exception context */
+    liquidityPool: LiquidityPoolSchema
 }
 
 /** Params for fetching a Solana transaction by hash. */

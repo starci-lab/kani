@@ -316,24 +316,45 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
     async confirm({
         positionId,
         liquidityPool,
+        metadata,
     }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
+        const _metadata = metadata as RaydiumPositionMetadata
         if (envConfig().executor.runtime.operation.openPosition.stimulate) {
             return {
                 liquidity: new BN(0),
+                rentAmount: new BN(0),
             }
         }
         const accountInfo = await this.solanaFetchService.fetchAccount({
             address: positionId,
             kind: AccountKind.PersonalPosition,
             dexId: DexId.Raydium,
-            liquidityPoolId: liquidityPool.displayId,
+            liquidityPool,
         })
         const [personalPositionState]
             = PersonalPositionState.struct.deserialize(
                 Buffer.from(accountInfo.data),
                 8)
+
+        const mintAccountInfo = await this.solanaFetchService.fetchAccount({
+            address: _metadata.nftMintAddress,
+            kind: AccountKind.PositionMint,
+            dexId: DexId.Raydium,
+            liquidityPool,
+        })
+        const ataAccountInfo = await this.solanaFetchService.fetchAccount({
+            address: _metadata.ataAddress,
+            kind: AccountKind.PositionMint,
+            dexId: DexId.Raydium,
+            liquidityPool,
+        })
+        const rentAmount = 
+            new BN(accountInfo.lamports.valueOf().toString())
+                .add(new BN(mintAccountInfo.lamports.valueOf().toString()))
+                .add(new BN(ataAccountInfo.lamports.valueOf().toString()))
         return {
             liquidity: new BN(personalPositionState.liquidity.toString()),
+            rentAmount,
         }
     }
 

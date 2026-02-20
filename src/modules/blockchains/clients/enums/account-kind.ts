@@ -4,6 +4,7 @@ export enum AccountKind {
     TickArrayLower = "tickArrayLower",
     TickArrayUpper = "tickArrayUpper",
     PositionATA = "positionATA",
+    PositionMint = "positionMint",
     DLMMPosition = "dlmmPosition",
     PersonalPosition = "personalPosition",
     BinArray = "binArray",
