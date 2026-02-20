@@ -112,7 +112,7 @@ export class ClosePositionTaskExecuteService {
                 {
                     bot,
                     state,
-                    txCheck: executeRetries > 0,
+                    txCheck: true,
                     liquidityPool,
                     signedTx: this.superJson.parse<SignedTx>(signedTx),
                     stimulate: envConfig().executor.runtime.operation.closePosition.stimulate,

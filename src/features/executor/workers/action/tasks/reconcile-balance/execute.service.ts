@@ -105,7 +105,7 @@ export class ReconcileBalanceTaskExecuteService {
             const executeResult =
                 await this.balanceActionService.executeReconcileBalanceTransaction({
                     bot,
-                    txCheck: executeRetries > 0,
+                    txCheck: true,
                     stimulate:
                         envConfig().executor.runtime.operation.reconcileBalance.stimulate,
                     signedTx: this.superJson.parse<SignedTx>(signedTx),

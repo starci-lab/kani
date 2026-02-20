@@ -118,7 +118,7 @@ export class OpenPositionTaskExecuteService {
                 positionId: prepareResult?.positionId ?? "",
                 bot,
                 state,
-                txCheck: executeRetries > 0,
+                txCheck: true,
                 liquidityPool,
                 signedTx: this.superJson.parse<SignedTx>(signedTx),
                 stimulate: envConfig().executor.runtime.operation.openPosition.stimulate,
