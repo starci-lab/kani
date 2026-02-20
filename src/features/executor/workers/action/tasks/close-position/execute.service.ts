@@ -86,6 +86,9 @@ export class ClosePositionTaskExecuteService {
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
         // step snapshot (may be undefined)
         const step = job.tasks[taskIndex].steps?.[stepIndex]
+        // already retries
+        const alreadyRetries = ((job.tasks?.[taskIndex]?.retries ?? 0) > 0) 
+        && (job.tasks?.[taskIndex]?.steps?.[stepIndex]?.retries ?? 0) > 0
         try {
             // heartbeat
             await this.sendHeartbeatService.process({
@@ -112,7 +115,7 @@ export class ClosePositionTaskExecuteService {
             const executeResult = await this.closePositionActionService.execute({
                 bot,
                 state,
-                txCheck: (hasPreviousAttempts || isRetry) ?? false,
+                txCheck: (hasPreviousAttempts || isRetry || alreadyRetries) ?? false,
                 liquidityPool,
                 signedTx: this.superJson.parse<SignedTx>(signedTx),
                 stimulate: envConfig().executor.runtime.operation.closePosition.stimulate,

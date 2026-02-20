@@ -79,6 +79,9 @@ export class ReconcileBalanceTaskExecuteService {
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
         // step snapshot (may be undefined)
         const step = job.tasks[taskIndex].steps?.[stepIndex]
+        // already retries
+        const alreadyRetries = ((job.tasks?.[taskIndex]?.retries ?? 0) > 0) 
+        && (job.tasks?.[taskIndex]?.steps?.[stepIndex]?.retries ?? 0) > 0
         try {
             await this.sendHeartbeatService.process({
                 bot,
@@ -102,7 +105,7 @@ export class ReconcileBalanceTaskExecuteService {
             const executeResult =
                 await this.balanceActionService.executeReconcileBalanceTransaction({
                     bot,
-                    txCheck: (hasPreviousAttempts || isRetry) ?? false,
+                    txCheck: (hasPreviousAttempts || isRetry || alreadyRetries) ?? false,
                     stimulate:
                         envConfig().executor.runtime.operation.reconcileBalance.stimulate,
                     signedTx: this.superJson.parse<SignedTx>(signedTx),

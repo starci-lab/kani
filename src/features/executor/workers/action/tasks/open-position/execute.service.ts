@@ -86,6 +86,9 @@ export class OpenPositionTaskExecuteService {
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
         // step snapshot (may be undefined)
         const step = job.tasks[taskIndex].steps?.[stepIndex]
+        // already retries
+        const alreadyRetries = ((job.tasks?.[taskIndex]?.retries ?? 0) > 0) 
+        && (job.tasks?.[taskIndex]?.steps?.[stepIndex]?.retries ?? 0) > 0
         try {
             // send heartbeat
             await this.sendHeartbeatService.process({
@@ -116,7 +119,7 @@ export class OpenPositionTaskExecuteService {
                 positionId: prepareResult?.positionId ?? "",
                 bot,
                 state,
-                txCheck: (hasPreviousAttempts || isRetry) ?? false,
+                txCheck: (hasPreviousAttempts || isRetry || alreadyRetries) ?? false,
                 liquidityPool,
                 signedTx: this.superJson.parse<SignedTx>(signedTx),
                 stimulate: envConfig().executor.runtime.operation.openPosition.stimulate,
