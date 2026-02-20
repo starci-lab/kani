@@ -11,6 +11,7 @@ export interface CalculatePositionValueParams {
     targetToken: TokenSchema
     quoteToken: TokenSchema
     gasToken: TokenSchema
+    isClose?: boolean
 }
 
 /** Result of position value calculation. */

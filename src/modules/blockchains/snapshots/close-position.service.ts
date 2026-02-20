@@ -94,6 +94,7 @@ export class ClosePositionSnapshotService {
                 targetToken,
                 quoteToken,
                 gasToken,
+                isClose: true,
             }
         )
 

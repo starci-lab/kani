@@ -26,30 +26,30 @@ import {
 export class HistorySerieSchema {
     @Field(() => Date,
         {
-            description: "The date and time the position was closed (close snapshot timestamp)" 
+            description: "The date and time the position was snapshot (snapshot timestamp)" 
         })
     @Prop({
         type: Date, required: true 
     })
-        closedAt: Date
+        snapshotAt: Date
 
     @Field(() => Number,
         {
-            description: "The position value at close (close snapshot position value)" 
+            description: "The position value at snapshot (snapshot position value)" 
         })
     @Prop({
         type: Number, required: true 
     })
-        valueAtClose: number
+        balanceAmount: number
 
     @Field(() => Number,
         {
-            description: "The position value in USD at close (close snapshot position value in USD)" 
+            description: "The position value in USD at snapshot (snapshot position value in USD)" 
         })
     @Prop({
         type: Number, required: true 
     })
-        valueInUsdAtClose: number
+        balanceAmountInUsd: number
 }
 export const HistorySerieSchemaClass = SchemaFactory.createForClass(HistorySerieSchema)
 

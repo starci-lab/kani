@@ -197,7 +197,7 @@ export class HistoryService {
         for (const timestamp of timestamps) {
             while (
                 serieIndex < fullSeries.length &&
-                new Date(fullSeries[serieIndex].closedAt).getTime() <=
+                new Date(fullSeries[serieIndex].snapshotAt).getTime() <=
                     timestamp
             ) {
                 lastSerie = fullSeries[serieIndex]
@@ -206,7 +206,7 @@ export class HistoryService {
             series.push(
                 {
                     timestamp: new Date(timestamp),
-                    value: lastSerie?.valueAtClose ?? 0,
+                    value: lastSerie?.balanceAmount ?? 0,
                 }
             )
         }
@@ -224,6 +224,9 @@ export class HistoryService {
             .find({
                 bot: bot.id,
                 isActive: false,
+                closeSnapshot: {
+                    $exists: true,
+                },
             })
             .sort({
                 "closeSnapshot.snapshotAt": 1 
@@ -231,14 +234,14 @@ export class HistoryService {
             .limit(envConfig().history.serieCount)
 
         const series: Array<HistorySerieSchema> = []
-
+        console.log(positions.length)
         for (const position of positions) {
             if (!position.closeSnapshot)
                 continue
             series.push({
-                closedAt: position.closeSnapshot.snapshotAt,
-                valueAtClose: position.closeSnapshot.positionValue,
-                valueInUsdAtClose: position.closeSnapshot.positionValueInUsd,
+                snapshotAt: position.closeSnapshot.snapshotAt,
+                balanceAmount: position.closeSnapshot.balanceValue,
+                balanceAmountInUsd: position.closeSnapshot.balanceValueInUsd,
             })
         }
 
@@ -273,9 +276,9 @@ export class HistoryService {
                 continue
 
             seriesAppended.push({
-                closedAt: position.closeSnapshot.snapshotAt,
-                valueAtClose: position.closeSnapshot.positionValue,
-                valueInUsdAtClose: position.closeSnapshot.positionValueInUsd,
+                snapshotAt: position.closeSnapshot.snapshotAt,
+                balanceAmount: position.closeSnapshot.balanceValue,
+                balanceAmountInUsd: position.closeSnapshot.balanceValueInUsd,
             })
         }
 

@@ -123,8 +123,8 @@ export class PositionValueService {
         targetToken,
         quoteToken,
         gasToken,
+        isClose,
     }: CalculatePositionValueParams): Promise<CalculatePositionValueResult> {
-
         // Resolve relative prices for quote and gas tokens
         const { price: relativeQuotePrice } =
             await this.priceService.resolveRelativePrice({
@@ -195,11 +195,17 @@ export class PositionValueService {
             .abs()
 
         // ===== Total portfolio value BEFORE change =====
-        const balanceValue = targetBalanceBefore
-            .add(quoteBalanceBefore)
-            .add(gasBalanceBefore)
-            .add(incentiveTotalBefore)
-
+        const balanceValue = !isClose ? (
+            targetBalanceBefore
+                .add(quoteBalanceBefore)
+                .add(gasBalanceBefore)
+                .add(incentiveTotalBefore)
+        ) : (
+            targetBalanceAfter
+                .add(quoteBalanceAfter)
+                .add(gasBalanceAfter)
+                .add(incentiveTotalAfter)
+        )
         // ===== Convert to USD using target token price =====
         const { price: targetPrice } =
             await this.priceService.resolvePrice({
@@ -208,7 +214,6 @@ export class PositionValueService {
 
         const balanceValueInUsd = balanceValue.mul(targetPrice)
         const positionValueInUsd = positionValue.mul(targetPrice)
-
         return {
             positionValue,
             positionValueInUsd,

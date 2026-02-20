@@ -45,6 +45,15 @@ export class HistoryV2Service {
         private readonly dayjsService: DayjsService,
     ) {}
 
+    /**
+     * Get the history v2 response data.
+     *
+     * @param param - Parameters for getting history v2 response data
+     * @param param.botId - Bot ID
+     * @param param.filters - Filters
+     * @param param.response - Response
+     * @returns History v2 response data
+     */
     public async historyV2(
         { botId, filters }: HistoryV2Request,
         response: VerifyAccessTokenResponse,
@@ -137,6 +146,15 @@ export class HistoryV2Service {
         })
     }
 
+    /**
+     * Get the history response data.
+     *
+     * @param param - Parameters for getting history response data
+     * @param param.fullSeries - Full series
+     * @param param.filters - Filters
+     * @param param.botId - Bot ID
+     * @returns History response data
+     */
     private async getHistoryResponseData(
         { fullSeries, filters, botId }: GetHistoryResponseDataParams
     ): Promise<HistoryV2ResponseData> {
@@ -187,14 +205,17 @@ export class HistoryV2Service {
             timestamps.push(date.valueOf())
         }
         timestamps.push(toDate.valueOf())
-
         // we get the last position, if it is open
         const lastPosition = await this.connection
             .model<PositionSchema>(PositionSchema.name)
-            .findOne({
-                bot: botId,
-                isActive: true
-            }
+            .findOne(
+                {
+                    bot: botId,
+                    isActive: true,
+                    openSnapshot: {
+                        $exists: true,
+                    },
+                }
             )
         // Two-pointer scan
         const series: Array<HistoryV2ChartSerie> = []
@@ -208,7 +229,7 @@ export class HistoryV2Service {
                 // we are not at the last serie
                 serieIndex < fullSeries.length &&
                 // the serie is before the timestamp
-              new Date(fullSeries[serieIndex].closedAt).getTime() <= timestamp
+              new Date(fullSeries[serieIndex].snapshotAt).getTime() <= timestamp
             ) {
                 lastSerie = fullSeries[serieIndex]
                 serieIndex++
@@ -227,9 +248,9 @@ export class HistoryV2Service {
             ) {
                 lastActivePositionReached = true
                 lastSerie = {
-                    closedAt: lastPosition.openSnapshot.snapshotAt,
-                    valueAtClose: lastPosition.openSnapshot.balanceValue ?? 0,
-                    valueInUsdAtClose: lastPosition.openSnapshot.balanceValueInUsd ?? 0,
+                    snapshotAt: lastPosition.openSnapshot.snapshotAt,
+                    balanceAmount: lastPosition.openSnapshot.balanceValue ?? 0,
+                    balanceAmountInUsd: lastPosition.openSnapshot.balanceValueInUsd ?? 0,
                 }
             }
             if (!lastSerie) {
@@ -240,8 +261,8 @@ export class HistoryV2Service {
                     timestamp: new Date(timestamp),
                     value:
                 unit === ChartUnit.Target
-                    ? (lastSerie?.valueAtClose ?? 0)
-                    : (lastSerie?.valueInUsdAtClose ?? 0),
+                    ? (lastSerie?.balanceAmount ?? 0)
+                    : (lastSerie?.balanceAmountInUsd ?? 0),
                 }
             )
         }
@@ -251,6 +272,12 @@ export class HistoryV2Service {
         }
     }
 
+    /**
+     * Rebuild the history series.
+     *
+     * @param bot - Bot
+     * @returns History series response
+     */
     private async rebuildHistorySeries(
         bot: BotSchema,
     ): Promise<HistorySeriesResponse> {
@@ -259,6 +286,12 @@ export class HistoryV2Service {
             .find({
                 bot: bot.id,
                 isActive: false,
+                openSnapshot: {
+                    $exists: true,
+                },
+                closeSnapshot: {
+                    $exists: true,
+                },
             })
             .sort({
                 "closeSnapshot.snapshotAt": 1 
@@ -266,24 +299,44 @@ export class HistoryV2Service {
             .limit(envConfig().history.serieCount)
 
         const series: Array<HistorySerieSchema> = []
-
+        // push the first open snapshot
+        if (positions.length > 1) {
+            console.log(positions[0].openSnapshot)
+            if (positions[0]?.openSnapshot) {
+                series.push(
+                    {
+                        snapshotAt: positions[0].openSnapshot.snapshotAt,
+                        balanceAmount: positions[0].openSnapshot.balanceValue,
+                        balanceAmountInUsd: positions[0].openSnapshot.balanceValueInUsd,
+                    }
+                )
+            }
+        }
+        // push the close snapshots
         for (const position of positions) {
             if (!position.closeSnapshot)
                 continue
-
-            series.push({
-                closedAt: position.closeSnapshot.snapshotAt,
-                valueAtClose: position.closeSnapshot.balanceValue,
-                valueInUsdAtClose: position.closeSnapshot.balanceValueInUsd,
-            })
+            series.push(
+                {
+                    snapshotAt: position.closeSnapshot.snapshotAt,
+                    balanceAmount: position.closeSnapshot.balanceValue,
+                    balanceAmountInUsd: position.closeSnapshot.balanceValueInUsd,
+                }
+            )
         }
-
         return {
             seriesAppended: series,
             discardCount: 0,
         }
     }
 
+    /**
+     * Append the history series.
+     *
+     * @param bot - Bot
+     * @param history - History
+     * @returns History series response
+     */
     private async appendHistorySeries(
         bot: BotSchema,
         history: HistorySchema,
@@ -293,6 +346,12 @@ export class HistoryV2Service {
             .find({
                 bot: bot.id,
                 isActive: false,
+                openSnapshot: {
+                    $exists: true,
+                },
+                closeSnapshot: {
+                    $exists: true,
+                },
                 "closeSnapshot.snapshotAt": {
                     $gt: history.lastSeriesUpdatedAt 
                 },
@@ -307,9 +366,9 @@ export class HistoryV2Service {
                 continue
             seriesAppended.push(
                 {
-                    closedAt: position.closeSnapshot.snapshotAt,
-                    valueAtClose: position.closeSnapshot.balanceValue,
-                    valueInUsdAtClose: position.closeSnapshot.balanceValueInUsd,
+                    snapshotAt: position.closeSnapshot.snapshotAt,
+                    balanceAmount: position.closeSnapshot.balanceValue,
+                    balanceAmountInUsd: position.closeSnapshot.balanceValueInUsd,
                 }
             )
         }
