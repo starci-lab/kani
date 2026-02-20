@@ -80,15 +80,10 @@ export class ClosePositionTaskExecuteService {
         bullmqJob,
         taskIndex,
     }: ClosePositionTaskExecuteParams) {
-        // previous attempts from BullMQ
-        const hasPreviousAttempts = bullmqJob.attemptsMade > 0
         // active step index
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
         // step snapshot (may be undefined)
         const step = job.tasks[taskIndex].steps?.[stepIndex]
-        // already retries
-        const alreadyRetries = ((job.tasks?.[taskIndex]?.retries ?? 0) > 0) 
-        && (job.tasks?.[taskIndex]?.steps?.[stepIndex]?.retries ?? 0) > 0
         try {
             // heartbeat
             await this.sendHeartbeatService.process({
@@ -115,7 +110,7 @@ export class ClosePositionTaskExecuteService {
             const executeResult = await this.closePositionActionService.execute({
                 bot,
                 state,
-                txCheck: (hasPreviousAttempts || isRetry || alreadyRetries) ?? false,
+                txCheck: isRetry ?? false,
                 liquidityPool,
                 signedTx: this.superJson.parse<SignedTx>(signedTx),
                 stimulate: envConfig().executor.runtime.operation.closePosition.stimulate,
@@ -173,41 +168,70 @@ export class ClosePositionTaskExecuteService {
                 }
             )
             if (error instanceof RpcClientFatalException) {
-                // retry cap (use in-memory snapshot)
-                const retries = step?.retries ?? 0
-                const maxAttempts = envConfig().executor.workers.job.txExecuteMaxAttempts
-                // if tx failure index is greater than or equal to max attempts, throw a job failure exception
-                if (retries >= maxAttempts) {
-                    await this.debugFileLoggerService.debug({
-                        message: "rollback to prepared",
-                        retries,
-                    })
-                    await this.jobTaskService.rollbackToPrepared(
+                // execute retries
+                const executeRetries = step?.executeRetries ?? 0
+                // execute max retries
+                const executeMaxRetries = envConfig().executor.workers.job.txExecuteMaxRetries
+                // sign retries
+                const signRetries = step?.signRetries ?? 0
+                // sign max retries
+                const signMaxRetries = envConfig().executor.workers.job.txSignMaxRetries
+                // if execute retries is greater than or equal to execute max retries, throw a job failure exception
+                if (executeRetries < executeMaxRetries) {
+                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                         {
-                            jobId: job.id,
-                            taskIndex,
-                        }
-                    )   
+                            _id: job.id,
+                        },
+                        {
+                            $inc: {
+                                "tasks.$[task].steps.$[step].executeRetries": 1,
+                            },
+                        },
+                        {
+                            arrayFilters: [
+                                {
+                                    "task.index": taskIndex,
+                                    "task.type": TaskType.ClosePosition,
+                                },
+                                {
+                                    "step.index": stepIndex,
+                                },
+                            ],
+                        },
+                    )
+                    // sleep for the retry interval
+                    await sleep(
+                        envConfig().executor.workers.job.retryInterval
+                    )
                     return
                 }
-                // rollback to sign with failure
-                await this.debugFileLoggerService.debug({
-                    message: "rollback to sign with failure",
-                    retries,
-                })
-                await this.jobStepService.rollbackToSignWithFailure(
+                // if tx failure index is greater than or equal to max attempts, throw a job failure exception
+                if (signRetries < signMaxRetries) {
+                    await this.jobStepService.rollbackToSign(
+                        {
+                            jobId: job.id,
+                            taskType: TaskType.ClosePosition,
+                            taskIndex,
+                            stepIndex,
+                            error,
+                        }
+                    )
+                    // sleep for the retry interval
+                    await sleep(
+                        envConfig().executor.workers.job.retryInterval
+                    )
+                    return
+                }
+                await this.jobStepService.rollbackToPrepared(
                     {
                         jobId: job.id,
-                        taskType: TaskType.ClosePosition,
                         taskIndex,
-                        stepIndex,
-                        error,
                     }
-                )
+                )       
                 // sleep for the retry interval
                 await sleep(
                     envConfig().executor.workers.job.retryInterval
-                )               
+                )
                 return
             }
             throw error

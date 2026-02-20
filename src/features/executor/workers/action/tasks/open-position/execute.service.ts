@@ -88,7 +88,7 @@ export class OpenPositionTaskExecuteService {
         const step = job.tasks[taskIndex].steps?.[stepIndex]
         // already retries
         const alreadyRetries = ((job.tasks?.[taskIndex]?.retries ?? 0) > 0) 
-        && (job.tasks?.[taskIndex]?.steps?.[stepIndex]?.retries ?? 0) > 0
+        && (job.tasks?.[taskIndex]?.steps?.[stepIndex]?.executeRetries ?? 0) > 0
         try {
             // send heartbeat
             await this.sendHeartbeatService.process({
@@ -180,31 +180,68 @@ export class OpenPositionTaskExecuteService {
             )
             // If tx execution failed with a fatal RPC error, rollback to Sign and record failure atomically.
             if (error instanceof RpcClientFatalException) {
-                // get the tx failure index
-                const retries = step?.retries ?? 0
-                if (retries >= envConfig().executor.workers.job.txExecuteMaxAttempts) {
-                    await this.jobTaskService.rollbackToPrepared(
+                // execute retries
+                const executeRetries = step?.executeRetries ?? 0
+                // execute max retries
+                const executeMaxRetries = envConfig().executor.workers.job.txExecuteMaxRetries
+                // sign retries
+                const signRetries = step?.signRetries ?? 0
+                // sign max retries
+                const signMaxRetries = envConfig().executor.workers.job.txSignMaxRetries
+                // if execute retries is less than execute max retries, increment the execute retries
+                if (executeRetries < executeMaxRetries) {
+                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                         {
-                            jobId: job.id,
-                            taskIndex,
-                        }
+                            _id: job.id,
+                        },
+                        {
+                            $inc: {
+                                "tasks.$[task].steps.$[step].executeRetries": 1,
+                            },
+                            arrayFilters: [
+                                {
+                                    "task.index": taskIndex,
+                                    "task.type": TaskType.OpenPosition,
+                                },
+                                {
+                                    "step.index": stepIndex,
+                                },
+                            ],
+                        },
+                    )
+                    // sleep for the retry interval
+                    await sleep(
+                        envConfig().executor.workers.job.retryInterval
                     )
                     return
                 }
-                // rollback to sign with failure
-                await this.jobStepService.rollbackToSignWithFailure(
+                // if tx failure index is greater than or equal to max attempts, throw a job failure exception
+                if (signRetries < signMaxRetries) {
+                    await this.jobStepService.rollbackToSign(
+                        {
+                            jobId: job.id,
+                            taskType: TaskType.OpenPosition,
+                            taskIndex,
+                            stepIndex,
+                            error,
+                        }
+                    )
+                    // sleep for the retry interval
+                    await sleep(
+                        envConfig().executor.workers.job.retryInterval
+                    )
+                    return
+                }
+                await this.jobStepService.rollbackToPrepared(
                     {
                         jobId: job.id,
-                        taskType: TaskType.OpenPosition,
                         taskIndex,
-                        stepIndex,
-                        error,
                     }
-                )
+                )       
                 // sleep for the retry interval
                 await sleep(
                     envConfig().executor.workers.job.retryInterval
-                )               
+                )
                 return
             }
 

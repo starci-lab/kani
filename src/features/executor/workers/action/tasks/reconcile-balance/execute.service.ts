@@ -73,15 +73,18 @@ export class ReconcileBalanceTaskExecuteService {
         bullmqJob,
         taskIndex,
     }: ReconcileBalanceTaskExecuteParams) {
-        // previous attempts from BullMQ
-        const hasPreviousAttempts = bullmqJob.attemptsMade > 0
         // active step index
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
         // step snapshot (may be undefined)
         const step = job.tasks[taskIndex].steps?.[stepIndex]
-        // already retries
-        const alreadyRetries = ((job.tasks?.[taskIndex]?.retries ?? 0) > 0) 
-        && (job.tasks?.[taskIndex]?.steps?.[stepIndex]?.retries ?? 0) > 0
+        // execute retries
+        const executeRetries = step?.executeRetries ?? 0
+        // execute max retries
+        const executeMaxRetries = envConfig().executor.workers.job.txExecuteMaxRetries
+        // sign retries
+        const signRetries = step?.signRetries ?? 0
+        // sign max retries
+        const signMaxRetries = envConfig().executor.workers.job.txSignMaxRetries
         try {
             await this.sendHeartbeatService.process({
                 bot,
@@ -105,7 +108,7 @@ export class ReconcileBalanceTaskExecuteService {
             const executeResult =
                 await this.balanceActionService.executeReconcileBalanceTransaction({
                     bot,
-                    txCheck: (hasPreviousAttempts || isRetry || alreadyRetries) ?? false,
+                    txCheck: isRetry ?? false,
                     stimulate:
                         envConfig().executor.runtime.operation.reconcileBalance.stimulate,
                     signedTx: this.superJson.parse<SignedTx>(signedTx),

@@ -117,7 +117,7 @@ export class StepSchema extends AbstractSchema {
      */
     @Field(() => Int,
         {
-            description: "The number of retries of the step",
+            description: "The number of retries of the signing",
             nullable: true,
         }
     )
@@ -125,7 +125,20 @@ export class StepSchema extends AbstractSchema {
         type: Number, 
         required: false 
     })
-        retries?: number
+        signRetries?: number
+
+    /** 
+     * The number of retries of the execution.
+     */
+    @Field(() => Int,
+        {
+            description: "The number of retries of the execution",
+        })
+    @Prop({
+        type: Number, 
+        required: false 
+    })
+        executeRetries?: number
 }
 
 

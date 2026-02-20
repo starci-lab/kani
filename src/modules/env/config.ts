@@ -544,8 +544,11 @@ export const envConfig = () => ({
                 level: parseEnvInt({
                     key: "EXECUTOR_WORKERS_JOB_LEVEL", defaultValue: 0 
                 }),
-                txExecuteMaxAttempts: parseEnvInt({
-                    key: "EXECUTOR_WORKERS_JOB_TX_EXECUTE_MAX_ATTEMPTS", defaultValue: 3 
+                txSignMaxRetries: parseEnvInt({
+                    key: "EXECUTOR_WORKERS_JOB_TX_SIGN_MAX_RETRIES", defaultValue: 1 
+                }),
+                txExecuteMaxRetries: parseEnvInt({
+                    key: "EXECUTOR_WORKERS_JOB_TX_EXECUTE_MAX_RETRIES", defaultValue: 0 
                 }),
                 prepareMaxAttempts: parseEnvInt({
                     key: "EXECUTOR_WORKERS_JOB_PREPARE_MAX_ATTEMPTS", defaultValue: 3 

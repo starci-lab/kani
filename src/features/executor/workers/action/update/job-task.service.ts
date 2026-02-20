@@ -13,7 +13,6 @@ import {
 import {
     UpsertPreparedTaskParams,
     UpsertPreparedResult, 
-    RollbackToPreparedParams
 } from "./types"
 import {
     Injectable 
@@ -154,73 +153,6 @@ export class JobTaskService {
             )
 
         // Ensure job exists (and ideally the update is applied)
-        assert(updatedJobResult.matchedCount > 0)
-    }
-
-    /**
-     * Rolls back a task to prepared.
-     * @param params The parameters for rolling back a task to prepared.
-     * @returns A promise that resolves when the task is rolled back to prepared.
-     */
-    async rollbackToPrepared(
-        {
-            jobId,
-            taskIndex,
-            session,
-        }: RollbackToPreparedParams
-    ): Promise<void> {
-        const updatedJobResult = await this.connection
-            .model<JobSchema>(JobSchema.name)
-            .updateOne(
-                {
-                    _id: jobId,
-                },
-                [
-                    {
-                        $set: {
-                            tasks: {
-                                $map: {
-                                    input: {
-                                        $ifNull: ["$tasks",
-                                            []] 
-                                    },
-                                    as: "t",
-                                    in: {
-                                        $cond: [
-                                            {
-                                                $eq: ["$$t.index",
-                                                    taskIndex] 
-                                            },
-                                            {
-                                                $mergeObjects: [
-                                                    "$$t",
-                                                    {
-                                                        initialized: false,
-                                                        retries: {
-                                                            $add: [
-                                                                {
-                                                                    $ifNull: ["$$t.retries",
-                                                                        0] 
-                                                                },
-                                                                1,
-                                                            ],
-                                                        },
-                                                    },
-                                                ],
-                                            },
-                                            "$$t",
-                                        ],
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ],
-                {
-                    session 
-                },
-            )
-    
         assert(updatedJobResult.matchedCount > 0)
     }
 }

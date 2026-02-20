@@ -39,21 +39,3 @@ export interface UpsertPreparedTaskParams<T extends UpsertPreparedResult> {
      */
     session?: ClientSession
 }
-  
-/**
- * Represents the parameters for rolling back to prepared.
- */
-export interface RollbackToPreparedParams {
-    /**
-     * The ID of the job.
-     */
-    jobId: string
-    /**
-     * The index of the task.
-     */
-    taskIndex: number
-    /**
-     * The session to use for the operation.
-     */
-    session?: ClientSession
-}

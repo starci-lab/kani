@@ -1,10 +1,13 @@
 import {
     TaskType 
 } from "@modules/databases"
+import type {
+    ClientSession 
+} from "mongoose"
 /**
  * Parameters for rolling back a step to Sign with a failure.
  */
-export interface RollbackToSignWithFailureParams {
+export interface RollbackToSignParams {
     /**
      * The id of the job.
      */
@@ -25,4 +28,22 @@ export interface RollbackToSignWithFailureParams {
      * The error that occurred.
      */
     error: Error
-  }
+}
+
+/**
+ * Represents the parameters for rolling back to prepared.
+ */
+export interface RollbackToPreparedParams {
+    /**
+     * The ID of the job.
+     */
+    jobId: string
+    /**
+     * The index of the task.
+     */
+    taskIndex: number
+    /**
+     * The session to use for the operation.
+     */
+    session?: ClientSession
+}

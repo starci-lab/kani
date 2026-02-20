@@ -5,6 +5,7 @@ import {
     ClosePositionActionService,
 } from "@modules/blockchains"
 import {
+
     JobType,
     TaskType
 } from "@modules/databases"
@@ -29,9 +30,6 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    DebugFileLoggerService
-} from "@modules/debug"
-import {
     JobTaskService
 } from "../../update"
 /**
@@ -43,7 +41,6 @@ export class ClosePositionTaskPrepareService {
         private readonly closePositionActionService: ClosePositionActionService,
         private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly winstonService: WinstonService,
-        private readonly debugFileLoggerService: DebugFileLoggerService,
         private readonly jobTaskService: JobTaskService,
     ) { }
 
