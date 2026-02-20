@@ -103,7 +103,7 @@ export const envConfig = () => ({
     /** Terminus: timeout for health checks. */
     terminus: {
         timeout: parseEnvMs({
-            key: "TERMINUS_TIMEOUT", defaultValue: "5s", 
+            key: "TERMINUS_TIMEOUT", defaultValue: "30s", 
         }),
     },
     /** Numeric precision: fraction digits for amounts, rounding, and operations. */
