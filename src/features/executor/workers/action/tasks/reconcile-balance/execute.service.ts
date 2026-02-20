@@ -167,7 +167,7 @@ export class ReconcileBalanceTaskExecuteService {
             // If tx execution failed with a fatal RPC error, rollback to Sign and record failure atomically.
             if (error instanceof RpcClientFatalException) {
                 // if execute retries is less than execute max retries, increment the execute retries
-                if (executeRetries < executeMaxRetries) {
+                if (executeRetries < (executeMaxRetries - 1)) {
                     // update execute retries
                     await this.jobStepService.updateExecuteRetries({
                         jobId: job.id,
@@ -178,7 +178,7 @@ export class ReconcileBalanceTaskExecuteService {
                     return
                 }
                 // if tx failure index is greater than or equal to max attempts, throw a job failure exception
-                if (signRetries < signMaxRetries) {
+                if (signRetries < (signMaxRetries - 1)) {
                     await this.jobStepService.rollbackToSign({
                         jobId: job.id,
                         taskType: TaskType.ReconcileBalance,
