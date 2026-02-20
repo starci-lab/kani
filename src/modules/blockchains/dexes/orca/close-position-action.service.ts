@@ -18,7 +18,7 @@ import {
 } from "./transactions"
 import { 
     ActivePositionNotFoundException,
-    InvalidPoolTokensException, 
+    InvalidPoolTokensException,
     TransactionType,
 }from "@modules/exceptions"
 import {
@@ -218,12 +218,14 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
         }
 
         // stage: execution
-        const { txHash } = await this.solanaExecuteService.execute({
-            signedTx,
-            bot,
-            transactionType: TransactionType.ClosePosition,
-            liquidityPoolId: liquidityPool.displayId,
-        })
+        const { txHash } = await this.solanaExecuteService.execute(
+            {
+                signedTx,
+                bot,
+                transactionType: TransactionType.ClosePosition,
+                liquidityPoolId: liquidityPool.displayId,
+            }
+        )
         return {
             txHash,
         }

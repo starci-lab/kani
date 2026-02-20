@@ -64,23 +64,24 @@ export class SolanaExecuteService {
                 type: transactionType,
             })
         }
-        const sendAndConfirmTransaction = await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Write,
-            callback: async ({ rpc, rpcSubscriptions }) => {
-                return sendAndConfirmTransactionFactory({
-                    rpc,
-                    rpcSubscriptions,
-                })
-            },
-        })
-
         const [, error] = await this.asyncService.resolveTuple(
-            sendAndConfirmTransaction(
-                solanaTx,
+            this.rpcExecutorService.withSolanaRpc(
                 {
-                    commitment: "confirmed",
-                },
-            ),
+                    accessType: RpcAccessType.Write,
+                    callback: async ({ rpc, rpcSubscriptions }) => {
+                        const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
+                            rpc,
+                            rpcSubscriptions,
+                        })
+                        await sendAndConfirmTransaction(
+                            solanaTx,
+                            {
+                                commitment: "confirmed",
+                            },
+                        )
+                    },
+                }
+            )
         )
 
         if (error) {

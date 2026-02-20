@@ -355,7 +355,7 @@ export const envConfig = () => ({
             },
             openPosition: {
                 slippage: parseEnvFloat({
-                    key: "DEXES_ORCA_OPEN_POSITION_SLIPPAGE", defaultValue: 0.05 
+                    key: "DEXES_ORCA_OPEN_POSITION_SLIPPAGE", defaultValue: 0.2
                 }),
             },
         },
@@ -539,7 +539,7 @@ export const envConfig = () => ({
              */
             job: {
                 retryInterval: parseEnvMs({
-                    key: "EXECUTOR_WORKERS_JOB_RETRY_INTERVAL", defaultValue: "3s" 
+                    key: "EXECUTOR_WORKERS_JOB_RETRY_INTERVAL", defaultValue: "1s" 
                 }),
                 level: parseEnvInt({
                     key: "EXECUTOR_WORKERS_JOB_LEVEL", defaultValue: 0 
@@ -548,7 +548,7 @@ export const envConfig = () => ({
                     key: "EXECUTOR_WORKERS_JOB_TX_SIGN_MAX_RETRIES", defaultValue: 1 
                 }),
                 txExecuteMaxRetries: parseEnvInt({
-                    key: "EXECUTOR_WORKERS_JOB_TX_EXECUTE_MAX_RETRIES", defaultValue: 0 
+                    key: "EXECUTOR_WORKERS_JOB_TX_EXECUTE_MAX_RETRIES", defaultValue: 2
                 }),
                 prepareMaxAttempts: parseEnvInt({
                     key: "EXECUTOR_WORKERS_JOB_PREPARE_MAX_ATTEMPTS", defaultValue: 3 

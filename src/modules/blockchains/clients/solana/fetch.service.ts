@@ -90,7 +90,7 @@ export class SolanaFetchService {
     }: FetchSolanaTransactionParams) {
         const [transaction] = await this.asyncService.resolveTuple(
             this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Http,
+                accessType: RpcAccessType.Write,
                 callback: async ({ rpc }) => {
                     return await rpc.getTransaction(
                         signature(txHash),
@@ -104,7 +104,10 @@ export class SolanaFetchService {
             })
         )
         // if transaction is not found or failed, return null
-        if (!transaction || transaction.meta?.err) {
+        if (!transaction) {
+            return null
+        }
+        if (transaction.meta?.err) {
             return null
         }
         return transaction

@@ -91,7 +91,7 @@ export class SolanaTxService {
             transactionType,
         }: SignSolanaTxParams): Promise<SignedTx> {
         const latestBlockhash = await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Http,
+            accessType: RpcAccessType.Write,
             callback: async ({ rpc }) => {
                 return await rpc.getLatestBlockhash().send()
             },

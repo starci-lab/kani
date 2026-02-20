@@ -9,7 +9,8 @@ import {
 } from "mongoose"
 import {
     RollbackToPreparedParams,
-    RollbackToSignParams 
+    RollbackToSignParams, 
+    UpdateExecuteRetriesParams
 } from "./types"
 import {
     strict as assert 
@@ -230,6 +231,41 @@ export class JobStepService {
                     session 
                 },
             )
+        assert(updatedJobResult.matchedCount > 0)
+    }
+
+    /**
+     * Updates the execute retries of a step.
+     * @param params The parameters for updating the execute retries.
+     * @returns A promise that resolves when the execute retries are updated.
+     */
+    async updateExecuteRetries({
+        jobId,
+        taskIndex,
+        stepIndex,
+        taskType  
+    }: UpdateExecuteRetriesParams): Promise<void> {
+        const updatedJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            {
+                _id: jobId,
+            },
+            {
+                $inc: {
+                    "tasks.$[task].steps.$[step].executeRetries": 1,
+                },
+            },
+            {
+                arrayFilters: [
+                    {
+                        "task.index": taskIndex,
+                        "task.type": taskType,
+                    },
+                    {
+                        "step.index": stepIndex,
+                    },
+                ],
+            },
+        )
         assert(updatedJobResult.matchedCount > 0)
     }
 }

@@ -47,3 +47,25 @@ export interface RollbackToPreparedParams {
      */
     session?: ClientSession
 }
+
+/**
+ * Represents the parameters for updating the execute retries.
+ */
+export interface UpdateExecuteRetriesParams {
+    /**
+     * The id of the job.
+     */
+    jobId: string
+    /**
+     * The type of the task.
+     */
+    taskType: TaskType
+    /**
+     * The index of the task.
+     */
+    taskIndex: number
+    /**
+     * The index of the step.
+     */
+    stepIndex: number
+}

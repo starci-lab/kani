@@ -143,8 +143,8 @@ export class WithdrawTaskExecuteService {
         } catch (error) {
             // If tx execution failed with a fatal RPC error, rollback to Sign and record failure atomically.
             if (error instanceof RpcClientFatalException) {
-                const retries = step?.retries ?? 0
-                const maxAttempts = envConfig().executor.workers.job.txExecuteMaxAttempts
+                const retries = step?.executeRetries ?? 0
+                const maxAttempts = envConfig().executor.workers.job.txExecuteMaxRetries
                 // if tx failure index is greater than or equal to max attempts, throw a job failure exception
                 if (retries >= maxAttempts) {
                     // reset retries to 0
@@ -182,7 +182,7 @@ export class WithdrawTaskExecuteService {
                     })
                 }
                 // rollback to sign with failure
-                await this.jobStepService.rollbackToSignWithFailure(
+                await this.jobStepService.rollbackToSign(
                     {
                         jobId: job.id,
                         taskType: TaskType.Withdraw,

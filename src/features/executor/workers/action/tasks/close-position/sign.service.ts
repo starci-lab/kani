@@ -32,9 +32,6 @@ import {
 import {
     strict as assert 
 } from "node:assert"
-import {
-    DebugFileLoggerService
-} from "@modules/debug"
 /**
  * Service for the Close Position Task SIGN step.
  */
@@ -48,7 +45,6 @@ export class ClosePositionTaskSignService {
         private readonly superJson: SuperJSON,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly debugFileLoggerService: DebugFileLoggerService,
     ) { }
     /**
      * Process the Close Position Task SIGN step.
@@ -74,10 +70,6 @@ export class ClosePositionTaskSignService {
         const prepareTx = this.superJson.parse<PrepareTx>(
             job.tasks[taskIndex].steps[stepIndex].prepareTx
         )
-        this.debugFileLoggerService.debug({
-            message: "prepare tx",   
-            prepareTx: prepareTx.serializedTx,
-        })
         try {
             // Send heartbeat
             await this.sendHeartbeatService.process(

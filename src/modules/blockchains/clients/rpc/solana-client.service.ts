@@ -17,7 +17,8 @@ import {
     P2CBalancerService
 } from "@modules/p2c-balancer"
 import {
-    ChainId
+    ChainId,
+    httpsToWss
 } from "@modules/common"
 import {
     RpcAccessType
@@ -102,11 +103,7 @@ export class SolanaClientService {
                 } else {
                     // create both HTTP and WebSocket clients for write operations
                     rpc = createSolanaRpc(rpcUrl)
-                    const { url: wsUrl } = this.p2cBalancerService.balance({
-                        chainId: ChainId.Solana,
-                        accessType: RpcAccessType.Ws,
-                    })
-                    rpcSubscriptions = createSolanaRpcSubscriptions(wsUrl)
+                    rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(rpcUrl))
                 }
                 
                 try {
@@ -129,9 +126,10 @@ export class SolanaClientService {
                             if (result !== null) {
                                 return result
                             }
-                            
+    
                             // handle Solana-specific errors
                             if (isSolanaError(error)) {
+                                //console.log(error.cause)
                                 const errorType = this.solanaGetErrorTypesService.getErrorType({
                                     error 
                                 })
@@ -147,8 +145,7 @@ export class SolanaClientService {
                                 case RpcErrorType.Ignorable:
                                     throw new AbortError(new SolanaRpcIgnorableException(error?.message))
                                 }
-                            }
-                            
+                            } 
                             // handle non-Solana errors
                             throw new AbortError(new SolanaRpcIgnorableException(error?.message))
                         },

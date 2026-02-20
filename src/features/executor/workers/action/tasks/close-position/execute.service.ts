@@ -34,7 +34,6 @@ import {
 } from "@modules/env"
 import {
     JobFailureStrategy,
-    sleep,
 } from "@modules/common"
 import {
     WinstonService,
@@ -42,14 +41,11 @@ import {
 } from "@modules/winston"
 import {
     JobStepService,
-    JobTaskService,
 } from "../../update"
 import {
     strict as assert 
 } from "node:assert"
-import {
-    DebugFileLoggerService
-} from "@modules/debug"
+
 /**
  * Service for the Close Position Task EXECUTE step.
  */
@@ -64,8 +60,6 @@ export class ClosePositionTaskExecuteService {
     private readonly sendHeartbeatService: SendHeartbeatService,
     private readonly winstonService: WinstonService,
     private readonly jobStepService: JobStepService,
-    private readonly jobTaskService: JobTaskService,
-    private readonly debugFileLoggerService: DebugFileLoggerService,
     ) {}
 
     /**
@@ -76,7 +70,6 @@ export class ClosePositionTaskExecuteService {
         job,
         liquidityPool,
         state,
-        isRetry,
         bullmqJob,
         taskIndex,
     }: ClosePositionTaskExecuteParams) {
@@ -84,6 +77,14 @@ export class ClosePositionTaskExecuteService {
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
         // step snapshot (may be undefined)
         const step = job.tasks[taskIndex].steps?.[stepIndex]
+        // execute retries
+        const executeRetries = step?.executeRetries ?? 0
+        // execute max retries
+        const executeMaxRetries = envConfig().executor.workers.job.txExecuteMaxRetries
+        // sign retries
+        const signRetries = step?.signRetries ?? 0
+        // sign max retries
+        const signMaxRetries = envConfig().executor.workers.job.txSignMaxRetries
         try {
             // heartbeat
             await this.sendHeartbeatService.process({
@@ -107,14 +108,16 @@ export class ClosePositionTaskExecuteService {
                 })
             }
             // execute
-            const executeResult = await this.closePositionActionService.execute({
-                bot,
-                state,
-                txCheck: isRetry ?? false,
-                liquidityPool,
-                signedTx: this.superJson.parse<SignedTx>(signedTx),
-                stimulate: envConfig().executor.runtime.operation.closePosition.stimulate,
-            })
+            const executeResult = await this.closePositionActionService.execute(
+                {
+                    bot,
+                    state,
+                    txCheck: executeRetries > 0,
+                    liquidityPool,
+                    signedTx: this.superJson.parse<SignedTx>(signedTx),
+                    stimulate: envConfig().executor.runtime.operation.closePosition.stimulate,
+                }
+            )
             // persist execute result + move next step
             const updateJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {
@@ -168,40 +171,16 @@ export class ClosePositionTaskExecuteService {
                 }
             )
             if (error instanceof RpcClientFatalException) {
-                // execute retries
-                const executeRetries = step?.executeRetries ?? 0
-                // execute max retries
-                const executeMaxRetries = envConfig().executor.workers.job.txExecuteMaxRetries
-                // sign retries
-                const signRetries = step?.signRetries ?? 0
-                // sign max retries
-                const signMaxRetries = envConfig().executor.workers.job.txSignMaxRetries
                 // if execute retries is greater than or equal to execute max retries, throw a job failure exception
                 if (executeRetries < executeMaxRetries) {
-                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                    // update execute retries
+                    await this.jobStepService.updateExecuteRetries(
                         {
-                            _id: job.id,
-                        },
-                        {
-                            $inc: {
-                                "tasks.$[task].steps.$[step].executeRetries": 1,
-                            },
-                        },
-                        {
-                            arrayFilters: [
-                                {
-                                    "task.index": taskIndex,
-                                    "task.type": TaskType.ClosePosition,
-                                },
-                                {
-                                    "step.index": stepIndex,
-                                },
-                            ],
-                        },
-                    )
-                    // sleep for the retry interval
-                    await sleep(
-                        envConfig().executor.workers.job.retryInterval
+                            jobId: job.id,
+                            taskType: TaskType.ClosePosition,
+                            taskIndex,
+                            stepIndex,
+                        }
                     )
                     return
                 }
@@ -216,10 +195,6 @@ export class ClosePositionTaskExecuteService {
                             error,
                         }
                     )
-                    // sleep for the retry interval
-                    await sleep(
-                        envConfig().executor.workers.job.retryInterval
-                    )
                     return
                 }
                 await this.jobStepService.rollbackToPrepared(
@@ -228,10 +203,6 @@ export class ClosePositionTaskExecuteService {
                         taskIndex,
                     }
                 )       
-                // sleep for the retry interval
-                await sleep(
-                    envConfig().executor.workers.job.retryInterval
-                )
                 return
             }
             throw error

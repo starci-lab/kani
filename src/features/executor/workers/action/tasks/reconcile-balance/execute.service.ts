@@ -33,11 +33,10 @@ import {
     envConfig
 } from "@modules/env"
 import {
-    JobFailureStrategy, sleep
+    JobFailureStrategy,
 } from "@modules/common"
 import {
     JobStepService,
-    JobTaskService,
 } from "../../update"
 import {
     WinstonService,
@@ -60,7 +59,6 @@ export class ReconcileBalanceTaskExecuteService {
         private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly jobStepService: JobStepService,
         private readonly winstonService: WinstonService,
-        private readonly jobTaskService: JobTaskService,
     ) { }
 
     /**
@@ -69,7 +67,6 @@ export class ReconcileBalanceTaskExecuteService {
     async process({
         bot,
         job,
-        isRetry,
         bullmqJob,
         taskIndex,
     }: ReconcileBalanceTaskExecuteParams) {
@@ -108,7 +105,7 @@ export class ReconcileBalanceTaskExecuteService {
             const executeResult =
                 await this.balanceActionService.executeReconcileBalanceTransaction({
                     bot,
-                    txCheck: isRetry ?? false,
+                    txCheck: executeRetries > 0,
                     stimulate:
                         envConfig().executor.runtime.operation.reconcileBalance.stimulate,
                     signedTx: this.superJson.parse<SignedTx>(signedTx),
@@ -169,44 +166,33 @@ export class ReconcileBalanceTaskExecuteService {
             )
             // If tx execution failed with a fatal RPC error, rollback to Sign and record failure atomically.
             if (error instanceof RpcClientFatalException) {
-                const retries = step?.retries ?? 0
-                // if tx failure index is greater than or equal to max attempts, throw a job failure exception
-                if (retries >= envConfig().executor.workers.job.txExecuteMaxAttempts) {
-                    await this.jobTaskService.rollbackToPrepared(
-                        {
-                            jobId: job.id,
-                            taskIndex,
-                        }
-                    )
+                // if execute retries is less than execute max retries, increment the execute retries
+                if (executeRetries < executeMaxRetries) {
+                    // update execute retries
+                    await this.jobStepService.updateExecuteRetries({
+                        jobId: job.id,
+                        taskType: TaskType.ReconcileBalance,
+                        taskIndex,
+                        stepIndex,
+                    })
                     return
                 }
-                // rollback to sign with failure
-                await this.jobStepService.rollbackToSignWithFailure(
-                    {
+                // if tx failure index is greater than or equal to max attempts, throw a job failure exception
+                if (signRetries < signMaxRetries) {
+                    await this.jobStepService.rollbackToSign({
                         jobId: job.id,
                         taskType: TaskType.ReconcileBalance,
                         taskIndex,
                         stepIndex,
                         error,
-                    }
-                )
-                // sleep for the retry interval
-                await sleep(envConfig().executor.workers.job.retryInterval)
+                    })
+                }
+                await this.jobStepService.rollbackToPrepared({
+                    jobId: job.id,
+                    taskIndex,
+                })
                 return
             }
-
-            throw error
         }
-        this.winstonService.log(
-            WinstonLog.ActionJobTaskStepExecuted,
-            {
-                botId: bot.id,
-                jobId: job.id,
-                type: JobType.ReconcileBalance,
-                taskIndex,
-                taskType: TaskType.ReconcileBalance,
-                stepIndex,
-            }
-        )
     }
 }
