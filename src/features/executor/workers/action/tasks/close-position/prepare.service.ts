@@ -26,11 +26,14 @@ import {
     JobFailureStrategy 
 } from "@modules/common"
 import {
-    JobTaskService,
-} from "../../update"
-import {
     envConfig 
 } from "@modules/env"
+import {
+    DebugFileLoggerService
+} from "@modules/debug"
+import {
+    JobTaskService
+} from "../../update"
 /**
  * Service for the Close Position Task PREPARE step.
  */
@@ -40,6 +43,7 @@ export class ClosePositionTaskPrepareService {
         private readonly closePositionActionService: ClosePositionActionService,
         private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly winstonService: WinstonService,
+        private readonly debugFileLoggerService: DebugFileLoggerService,
         private readonly jobTaskService: JobTaskService,
     ) { }
 

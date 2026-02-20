@@ -116,7 +116,6 @@ export class JobTaskService {
                                                                     {
                                                                         // refresh prepared snapshot and mark it as initialized again
                                                                         initialized: true,
-
                                                                         // bump retries because we are re-preparing/retrying the task
                                                                         retries: {
                                                                             $add: [

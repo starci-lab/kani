@@ -29,12 +29,6 @@ import {
     JobTaskService 
 } from "../../update"
 import {
-    InjectPrimaryMongoose
-} from "@modules/databases"
-import {
-    Connection
-} from "mongoose"
-import {
     envConfig 
 } from "@modules/env"
 /**
@@ -47,8 +41,6 @@ export class OpenPositionTaskPrepareService {
         private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly winstonService: WinstonService,
         private readonly jobTaskService: JobTaskService,
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
     ) { }
 
     /**
@@ -74,7 +66,6 @@ export class OpenPositionTaskPrepareService {
                     bot,
                     job,
                     bullmqJob,
-                    fatal: taskIndex === 0,
                 }
             )
             // we check if the task has reached the maximum number of attempts
@@ -88,7 +79,7 @@ export class OpenPositionTaskPrepareService {
                         metadata: job.metadata,
                         type: TaskType.OpenPosition,
                     }),
-                    strategy: taskIndex === 0 ? JobFailureStrategy.Fatal : JobFailureStrategy.Requeue,
+                    strategy: JobFailureStrategy.Fatal,
                 })
             }
             // we prepare the open position transaction.
@@ -100,6 +91,7 @@ export class OpenPositionTaskPrepareService {
                     state,
                 }
             )
+
             // We update the database with the prepare result.
             await this.jobTaskService.upsertPreparedTask({
                 jobId: job.id,
