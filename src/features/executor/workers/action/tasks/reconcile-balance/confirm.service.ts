@@ -155,6 +155,7 @@ export class ReconcileBalanceTaskConfirmService {
                 }
             )
         } catch (error) {
+            console.log(error)
             this.winstonService.log(
                 WinstonLog.ActionJobTaskConfirmedFailed,
                 {
