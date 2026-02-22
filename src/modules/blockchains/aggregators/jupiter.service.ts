@@ -156,6 +156,7 @@ export class JupiterService implements IAggregatorService {
                             dynamicComputeUnitLimit: true,
                             dynamicSlippage: true,
                             feeAccount: referralTokenAccount,   
+                            nativeDestinationAccount
                         } 
                     })
                     // return swap transaction

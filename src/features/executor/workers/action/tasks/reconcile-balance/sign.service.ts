@@ -61,7 +61,7 @@ export class ReconcileBalanceTaskSignService {
         const step = job.tasks[taskIndex].steps?.[stepIndex]
         // if step is undefined, throw an error
         try {
-            // send heartbeat
+            // send heartbeat   
             await this.sendHeartbeatService.process(
                 {
                     bot, job, bullmqJob 

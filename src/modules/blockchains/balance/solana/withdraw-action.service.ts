@@ -30,12 +30,16 @@ import {
     SolanaAggregatorSelectorService
 } from "../../aggregators"
 import {
-    RpcExecutorService,
     SolanaTxService,
     SolanaFetchService,
     SolanaStimulateService,
     SolanaExecuteService,
-} from "@modules/blockchains"
+    RpcExecutorService,
+} from "../../clients"
+import {
+    PrepareTx,
+    WithdrawTokenOutput,
+} from "../../types"
 import {
     RpcAccessType
 } from "@modules/filesystem"
@@ -97,7 +101,9 @@ export class SolanaWithdrawActionService {
             toUsdc = false
         }: PrepareWithdrawTransactionParams):
         Promise<PrepareWithdrawTransactionResult> {
+        const prepareTxs: Array<PrepareTx> = []
         const instructions: Array<Instruction> = []
+        const tokenOutputs: Array<WithdrawTokenOutput> = []
         for (const tokenInput of tokenInputs) {
             if (toUsdc) {
                 // find USDC token
@@ -111,14 +117,22 @@ export class SolanaWithdrawActionService {
                         displayId: TokenId.SolUsdc,
                     })
                 }
-
                 // swap to USDC if token is not already USDC
                 if (tokenInput.token.displayId !== TokenId.SolUsdc) {
-                    const { response: { payload: serializedTransaction } } = await this.solanaAggregatorSelectorService.batchQuote({
+                    const { response, aggregatorId } = await this.solanaAggregatorSelectorService.batchQuote({
                         tokenIn: tokenInput.token,
                         tokenOut: usdcToken,
                         amountIn: tokenInput.amount,
                         senderAddress: bot.accountAddress,
+                    })
+                    const { payload: serializedTransaction } = await this.solanaAggregatorSelectorService.selectorSwap({
+                        aggregatorId,
+                        base: {
+                            payload: response.payload,
+                            tokenIn: tokenInput.token,
+                            tokenOut: usdcToken,
+                            accountAddress: bot.accountAddress,  
+                        },
                     })
                     // decode and decompile swap transaction
                     const swapTransactionBytes = getBase64Encoder().encode(serializedTransaction as string)
@@ -135,16 +149,26 @@ export class SolanaWithdrawActionService {
                             )
                         },
                     })
-
                     // add swap instructions
                     const swapInstructions = swapTransactionMessage.instructions
-                    instructions.push(...swapInstructions)
+                    // create transfer instructions
+                    const { instructions: transferInstructions } = await this.transferInstructionService.createTransferInstructions({
+                        fromAddress: address(bot.accountAddress),
+                        toAddress: address(toAddress),
+                        amount: response.amountOut,
+                        token: usdcToken,
+                    })
+                    const swapThenTransferInstructions = [...swapInstructions, ...transferInstructions]
+                    tokenOutputs.push({
+                        tokenId: usdcToken.id.toString(),
+                        amount: response.amountOut
+                    })
                 }
             } else {
                 // find target token for conversion
                 const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
                     id: {
-                        $eq: tokenInput.token.displayId,
+                        $eq: bot.targetToken.toString(),
                     }
                 })
                 if (!targetToken) {
@@ -152,16 +176,23 @@ export class SolanaWithdrawActionService {
                         displayId: tokenInput.token.displayId,
                     })
                 }
-
                 // swap to target token if needed
                 if (tokenInput.token.displayId !== targetToken.displayId) {
-                    const { response: { payload: serializedTransaction } } = await this.solanaAggregatorSelectorService.batchQuote({
+                    const { response, aggregatorId } = await this.solanaAggregatorSelectorService.batchQuote({
                         tokenIn: tokenInput.token,
                         tokenOut: targetToken,
                         amountIn: tokenInput.amount,
                         senderAddress: bot.accountAddress,
                     })
-
+                    const { payload: serializedTransaction } = await this.solanaAggregatorSelectorService.selectorSwap({
+                        aggregatorId,
+                        base: {
+                            payload: response.payload,
+                            tokenIn: tokenInput.token,
+                            tokenOut: targetToken,
+                            accountAddress: bot.accountAddress,  
+                        },
+                    })
                     // decode and decompile swap transaction
                     const swapTransactionBytes = getBase64Encoder().encode(serializedTransaction as string)
                     const swapTransaction = getTransactionDecoder().decode(swapTransactionBytes)
@@ -177,10 +208,13 @@ export class SolanaWithdrawActionService {
                             )
                         },
                     })
-
                     // add swap instructions
                     const swapInstructions = swapTransactionMessage.instructions
                     instructions.push(...swapInstructions)
+                    tokenOutputs.push({
+                        tokenId: targetToken.id.toString(),
+                        amount: response.amountOut
+                    })
                 }
             }
 
@@ -200,6 +234,7 @@ export class SolanaWithdrawActionService {
                     serializedTx: this.superJson.stringify(instructions),
                 }
             ],
+            tokenOutputs,
         }
     }
 

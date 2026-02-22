@@ -4,8 +4,15 @@ import {
 import {
     ConfigurableModuleClass 
 } from "./http.module-definition"
+import {
+    CallbackModule 
+} from "./callback"
 
 @Module({
-    imports: [],
+    imports: [
+        CallbackModule.register({
+            isGlobal: true,
+        }),
+    ],
 })
 export class HttpModule extends ConfigurableModuleClass {}

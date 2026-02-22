@@ -639,7 +639,7 @@ export const envConfig = () => ({
             }),
             withdraw: parseEnvMs({
                 key: "CACHE_TTL_WITHDRAW",
-                defaultValue: "5m"
+                defaultValue: "30m"
             }),
             sendOtpCode: parseEnvMs({
                 key: "CACHE_TTL_SEND_OTP_CODE",

@@ -37,6 +37,9 @@ import {
 import {
     ChainId,
 } from "@modules/common"
+import {
+    WithdrawTokenOutput,
+} from "../../types"
 
 /**
  * Service for handling withdraw transactions on Sui.
@@ -77,6 +80,7 @@ export class SuiWithdrawActionService {
             toAddress, 
             toUsdc = false 
         }: PrepareWithdrawTransactionParams): Promise<PrepareWithdrawTransactionResult> {
+        const tokenOutputs: Array<WithdrawTokenOutput> = []
         // initialize transaction block
         let txb = new Transaction()
         txb.setSender(bot.accountAddress)
@@ -90,7 +94,7 @@ export class SuiWithdrawActionService {
             })
             : null
 
-        if (toUsdc && !usdcToken) {
+        if (!usdcToken) {
             throw new TokenNotFoundException({
                 displayId: TokenId.SuiUsdc,
             })
@@ -148,6 +152,10 @@ export class SuiWithdrawActionService {
                         [outputCoin],
                         toAddress
                     )
+                    tokenOutputs.push({
+                        tokenId: usdcToken.id.toString(),
+                        amount: response.amountOut,
+                    })
                 } else {
                     // token is already USDC, transfer directly
                     const { sourceCoin } = await this.selectCoinsService.fetchAndMergeCoins({
@@ -160,6 +168,10 @@ export class SuiWithdrawActionService {
                         [sourceCoin.coinArg],
                         toAddress
                     )
+                    tokenOutputs.push({
+                        tokenId: tokenInput.token.id.toString(),
+                        amount: tokenInput.amount,
+                    })
                 }
                 continue
             }
@@ -227,6 +239,10 @@ export class SuiWithdrawActionService {
                     [outputCoin],
                     toAddress
                 )
+                tokenOutputs.push({
+                    tokenId: targetToken.id.toString(),
+                    amount: response.amountOut,
+                })
                 continue
             }
             
@@ -241,6 +257,10 @@ export class SuiWithdrawActionService {
                 [sourceCoin.coinArg],
                 toAddress
             )
+            tokenOutputs.push({
+                tokenId: tokenInput.token.id.toString(),
+                amount: tokenInput.amount,
+            })
             continue
         }
 
@@ -251,6 +271,7 @@ export class SuiWithdrawActionService {
                     serializedTx: await txb.toJSON(),
                 },
             ],
+            tokenOutputs,
         }
     }
 

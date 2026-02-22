@@ -15,7 +15,7 @@ import {
 import {
     AddWithdrawJobRequestDto,
     AddWithdrawJobResponseDto,
-} from "./add-withdraw-job.dto"
+} from "./dtos"
 import {
     AddWithdrawJobService,
 } from "./add-withdraw-job.service"

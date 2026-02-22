@@ -2,14 +2,14 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    SignedTx,
-    BalanceActionService
+    SignedTx, BalanceActionService 
 } from "@modules/blockchains"
 import {
     InjectPrimaryMongoose,
-    JobSchema, 
-    StepType, 
-    TaskType 
+    JobSchema,
+    JobType,
+    StepType,
+    TaskType,
 } from "@modules/databases"
 import {
     Connection 
@@ -25,74 +25,71 @@ import {
     SendHeartbeatService 
 } from "../../send-heartbeat.service"
 import {
-    ActionJobTasktxExecuteMaxAttemptsException,
     JobFailureException,
     RpcClientFatalException,
-    SignedTxNotFoundException 
+    SignedTxNotFoundException,
 } from "@modules/exceptions"
 import {
-    JobFailureStrategy,
-    sleep,
+    JobFailureStrategy 
 } from "@modules/common"
 import {
     envConfig 
 } from "@modules/env"
 import {
-    JobStepService,
-    JobTaskService 
+    JobStepService 
 } from "../../update"
-    
+import {
+    WinstonService, WinstonLog 
+} from "@modules/winston"
+import {
+    strict as assert 
+} from "node:assert"
+
 /**
  * Service for the WITHDRAW TASK EXECUTE step.
  */
 @Injectable()
 export class WithdrawTaskExecuteService {
     constructor(
-        private readonly balanceActionService: BalanceActionService,
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
-        private readonly sendHeartbeatService: SendHeartbeatService,
-        private readonly jobTaskService: JobTaskService,
-        private readonly jobStepService: JobStepService,
-    ) { }
-    
+    private readonly balanceActionService: BalanceActionService,
+    @InjectPrimaryMongoose()
+    private readonly connection: Connection,
+    @InjectSuperJson()
+    private readonly superJson: SuperJSON,
+    private readonly sendHeartbeatService: SendHeartbeatService,
+    private readonly jobStepService: JobStepService,
+    private readonly winstonService: WinstonService,
+    ) {}
+
     /**
-     * Process the WITHDRAW TASK EXECUTE step.
-     * @param params - The parameters for the WITHDRAW TASK EXECUTE step.
-     * @param params.bot - The bot.
-     * @param params.job - The job.
-     * @param params.taskIndex - The index of the task.
-     * @param params.bullmqJob - The bullmq job.
-     */
-    async process({
-        bot,
-        job,
-        isRetry,
-        bullmqJob,
-        taskIndex,
-    }: WithdrawTaskExecuteParams) {
-        // send heartbeat
-        await this.sendHeartbeatService.process(
-            {
+   * Process the WITHDRAW TASK EXECUTE step.
+   */
+    async process({ bot, job, bullmqJob, taskIndex }: WithdrawTaskExecuteParams) {
+    // active step index
+        const stepIndex = job.tasks[taskIndex].activeStep ?? 0
+        // step snapshot (may be undefined)
+        const step = job.tasks[taskIndex].steps?.[stepIndex]
+        // execute retries
+        const executeRetries = step?.executeRetries ?? 0
+        // execute max retries
+        const executeMaxRetries = envConfig().executor.workers.job.txExecuteMaxRetries
+        // sign retries
+        const signRetries = step?.signRetries ?? 0
+        // sign max retries
+        const signMaxRetries = envConfig().executor.workers.job.txSignMaxRetries
+
+        try {
+            // heartbeat
+            await this.sendHeartbeatService.process({
                 bot,
                 job,
                 bullmqJob,
-            }
-        )
-        // get the previous attempts
-        const hasPreviousAttempts = bullmqJob.attemptsMade > 0
-        // get the active step
-        const stepIndex = job.tasks[taskIndex].activeStep ?? 0
-        // get the step
-        const step = job.tasks[taskIndex].steps?.[stepIndex]
-        // get the signed tx
-        const signedTx = step?.signedTx
-        // if the signed tx is not found, throw an error
-        if (!signedTx) {
-            throw new JobFailureException(
-                {
+            })
+
+            // signed tx
+            const signedTx = step?.signedTx
+            if (!signedTx) {
+                throw new JobFailureException({
                     originalError: new SignedTxNotFoundException({
                         botId: bot.id,
                         jobId: job.id,
@@ -100,102 +97,108 @@ export class WithdrawTaskExecuteService {
                         stepIndex,
                     }),
                     strategy: JobFailureStrategy.Fatal,
-                }
-            )
-        }
-        try {
-        // execute the signed tx
+                })
+            }
+
+            // execute
             const executeResult = await this.balanceActionService.executeWithdrawTransaction(
                 {
                     bot,
-                    txCheck: (hasPreviousAttempts || isRetry) ?? false,
+                    txCheck: true,
                     stimulate: envConfig().executor.runtime.operation.withdraw.stimulate,
                     signedTx: this.superJson.parse<SignedTx>(signedTx),
-                }
-            )
-            // update the job with the execute result
-            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                {
-                    _id: job.id 
-                },
-                {
-                    $set: {
-                        "tasks.$[task].steps.$[step].executeResult": this.superJson.stringify(executeResult),
-                        "tasks.$[task].steps.$[step].type": StepType.Execute,
-                    },
-                    // Move to next step
-                    $inc: {
-                        "tasks.$[task].activeStep": 1,
-                    },
-                },
-                {
-                    arrayFilters: [
-                        {
-                            "task.index": taskIndex, 
-                            "task.type": TaskType.Withdraw 
-                        },
-                        {
-                            "step.index": stepIndex 
-                        },
-                    ],
                 },
             )
-        } catch (error) {
-            // If tx execution failed with a fatal RPC error, rollback to Sign and record failure atomically.
-            if (error instanceof RpcClientFatalException) {
-                const retries = step?.executeRetries ?? 0
-                const maxAttempts = envConfig().executor.workers.job.txExecuteMaxRetries
-                // if tx failure index is greater than or equal to max attempts, throw a job failure exception
-                if (retries >= maxAttempts) {
-                    // reset retries to 0
-                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                        {
-                            _id: job.id 
-                        },
-                        {
-                            $set: {
-                                "tasks.$[task].steps.$[step].retries": 0,
-                            },
-                        },
-                        {
-                            arrayFilters: [
-                                {
-                                    "task.index": taskIndex,
-                                    "task.type": TaskType.Withdraw,
-                                },
-                                {
-                                    "step.index": stepIndex,
-                                },
-                            ],
-                        },
-                    )
-                    throw new JobFailureException({
-                        originalError: new ActionJobTasktxExecuteMaxAttemptsException({
-                            maxAttempts,
-                            originalError: error,
-                            botId: bot.id,
-                            jobId: job.id,
-                            metadata: job.metadata,
-                            type: TaskType.Withdraw,
-                        }),
-                        strategy: JobFailureStrategy.Requeue,
-                    })
-                }
-                // rollback to sign with failure
-                await this.jobStepService.rollbackToSign(
+
+            // persist execute result + move next step
+            const updateJobResult = await this.connection
+                .model<JobSchema>(JobSchema.name)
+                .updateOne(
                     {
+                        _id: job.id 
+                    },
+                    {
+                        $set: {
+                            "tasks.$[task].steps.$[step].executeResult":
+                this.superJson.stringify(executeResult),
+                            "tasks.$[task].steps.$[step].type": StepType.Execute,
+                        },
+                        $inc: {
+                            "tasks.$[task].activeStep": 1,
+                        },
+                    },
+                    {
+                        arrayFilters: [
+                            {
+                                "task.index": taskIndex,
+                                "task.type": TaskType.Withdraw,
+                            },
+                            {
+                                "step.index": stepIndex,
+                            },
+                        ],
+                    },
+                )
+
+            assert(updateJobResult.matchedCount > 0)
+
+            this.winstonService.log(WinstonLog.ActionJobTaskStepExecuted,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.Withdraw,
+                    taskIndex,
+                    taskType: TaskType.Withdraw,
+                    stepIndex,
+                    metadata: job.metadata,
+                })
+        } catch (error) {
+            this.winstonService.log(WinstonLog.ActionJobTaskStepExecutedFailed,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.Withdraw,
+                    taskIndex,
+                    taskType: TaskType.Withdraw,
+                    stepIndex,
+                    error: error.message,
+                    metadata: job.metadata,
+                })
+
+            // Fatal RPC error -> retry ladder (same as ReconcileBalance)
+            if (error instanceof RpcClientFatalException) {
+                // 1) bump executeRetries until max-1
+                if (executeRetries < executeMaxRetries - 1) {
+                    await this.jobStepService.updateExecuteRetries({
+                        jobId: job.id,
+                        taskType: TaskType.Withdraw,
+                        taskIndex,
+                        stepIndex,
+                    })
+                    return
+                }
+
+                // 2) rollback to Sign if we still can retry signing
+                if (signRetries < signMaxRetries - 1) {
+                    await this.jobStepService.rollbackToSign({
                         jobId: job.id,
                         taskType: TaskType.Withdraw,
                         taskIndex,
                         stepIndex,
                         error,
-                    }
-                )
-                // sleep for the retry interval
-                await sleep(envConfig().executor.workers.job.retryInterval)
+                    })
+                    return
+                }
+
+                // 3) otherwise rollback whole task to Prepared
+                await this.jobStepService.rollbackToPrepared({
+                    jobId: job.id,
+                    taskIndex,
+                })
                 return
             }
 
+            // non-RPC fatal -> bubble up
             throw error
         }
     }

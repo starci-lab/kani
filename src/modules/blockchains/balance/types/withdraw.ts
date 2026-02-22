@@ -4,7 +4,8 @@ import {
 } from "@modules/databases"
 import {
     PrepareTx,
-    SignedTx
+    SignedTx,
+    WithdrawTokenOutput
 } from "../../types"
 import {
     BalanceWithdrawTokenInput
@@ -21,6 +22,7 @@ export interface PrepareWithdrawTransactionParams {
 /** Result of preparing a withdraw transaction. */
 export interface PrepareWithdrawTransactionResult {
     prepareTxs: Array<PrepareTx>
+    tokenOutputs: Array<WithdrawTokenOutput>
 }
 
 /** Parameters for executing a withdraw transaction. */

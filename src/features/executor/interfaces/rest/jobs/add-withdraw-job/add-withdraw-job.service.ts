@@ -3,7 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     AddWithdrawJobRequestDto,
-} from "./add-withdraw-job.dto"
+} from "./dtos"
 import {
     CacheService,
     CacheKey,

@@ -103,7 +103,7 @@ export class WithdrawV2Service implements OnModuleInit {
             ),
             {
                 id,
-                tokenInputs,
+                tokenInputs: tokenInputs.filter((tokenInput) => tokenInput.amount !== "0"),
                 toUsdc,
             },
         )

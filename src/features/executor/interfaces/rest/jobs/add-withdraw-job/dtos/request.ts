@@ -1,7 +1,4 @@
 import {
-    AbstractRestResponse, IAbstractRestResponse,
-} from "@modules/api"
-import {
     ApiProperty,
 } from "@nestjs/swagger"
 import {
@@ -50,10 +47,4 @@ export class AddWithdrawJobRequestDto {
     })
     @IsBoolean()
         toUsdc: boolean
-}
-
-/** DTO for add withdraw job REST response. */
-export class AddWithdrawJobResponseDto
-    extends AbstractRestResponse<undefined>
-    implements IAbstractRestResponse {
 }

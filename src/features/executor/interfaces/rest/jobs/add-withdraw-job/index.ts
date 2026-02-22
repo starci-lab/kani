@@ -1,2 +1,2 @@
 export * from "./add-withdraw-job.module"
-export * from "./add-withdraw-job.dto"
+export * from "./dtos"

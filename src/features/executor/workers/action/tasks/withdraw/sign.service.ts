@@ -7,6 +7,7 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
+    JobType,
     StepType,
     TaskType,
 } from "@modules/databases"
@@ -23,6 +24,12 @@ import {
 import {
     WithdrawTaskSignParams 
 } from "../types"
+import {
+    WinstonService, WinstonLog 
+} from "@modules/winston"
+import {
+    strict as assert 
+} from "node:assert"
 
 /**
  * Service for the WITHDRAW TASK SIGN step.
@@ -36,68 +43,94 @@ export class WithdrawTaskSignService {
     private readonly superJson: SuperJSON,
     @InjectPrimaryMongoose()
     private readonly connection: Connection,
+    private readonly winstonService: WinstonService,
     ) {}
 
     /**
    * Process the WITHDRAW TASK SIGN step.
-   * @param params - The parameters for the WITHDRAW TASK SIGN step.
-   * @param params.bot - The bot.
-   * @param params.job - The job.
-   * @param params.bullmqJob - The bullmq job.
-   * @param params.taskIndex - The index of the task.
    */
-    async process(
-        {
-            bot,
-            job,
-            bullmqJob,
-            taskIndex,
-        }: WithdrawTaskSignParams
-    ) {
-    // Send heartbeat
-        await this.sendHeartbeatService.process(
-            {
-                bot, 
-                job, 
-                bullmqJob 
-            }
-        )
+    async process({
+        bot,
+        job,
+        bullmqJob,
+        taskIndex,
+    }: WithdrawTaskSignParams) {
+    // active step index
+        const stepIndex = job.tasks[taskIndex].activeStep ?? 0
+        // step snapshot (may be undefined)
+        const step = job.tasks[taskIndex].steps?.[stepIndex]
 
-        const activeStep = job.tasks[taskIndex].activeStep ?? 0
-        const step = job.tasks[taskIndex].steps?.[activeStep]
-
-        // prepareTx is persisted per-step by prepare service
-        const prepareTx = this.superJson.parse<PrepareTx>(step.prepareTx)
-
-        // Sign tx
-        const { signedTx } = await this.balanceActionService.signReconcileBalanceTransaction(
-            {
+        try {
+            // send heartbeat
+            await this.sendHeartbeatService.process({
                 bot,
-                prepareTx,
-            }
-        )
+                job,
+                bullmqJob,
+            })
 
-        // Persist signedTx and advance step type to Execute
-        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-            {
-                _id: job.id 
-            },
-            {
-                $set: {
-                    "tasks.$[task].steps.$[step].type": StepType.Execute,
-                    "tasks.$[task].steps.$[step].signedTx": this.superJson.stringify(signedTx),
-                },
-            },
-            {
-                arrayFilters: [
+            // prepareTx is persisted per-step by prepare service
+            const prepareTx = this.superJson.parse<PrepareTx>(step.prepareTx)
+
+            // Sign tx
+            const { signedTx } =
+        await this.balanceActionService.signReconcileBalanceTransaction({
+            bot,
+            prepareTx,
+        })
+
+            // Persist signedTx and advance step type to Execute
+            const updateJobResult = await this.connection
+                .model<JobSchema>(JobSchema.name)
+                .updateOne(
                     {
-                        "task.index": taskIndex, "task.type": TaskType.Withdraw 
+                        _id: job.id,
                     },
                     {
-                        "step.index": activeStep 
+                        $set: {
+                            "tasks.$[task].steps.$[step].type": StepType.Execute,
+                            "tasks.$[task].steps.$[step].signedTx":
+                this.superJson.stringify(signedTx),
+                        },
                     },
-                ],
-            },
-        )
+                    {
+                        arrayFilters: [
+                            {
+                                "task.index": taskIndex,
+                                "task.type": TaskType.Withdraw,
+                            },
+                            {
+                                "step.index": stepIndex,
+                            },
+                        ],
+                    },
+                )
+
+            assert(updateJobResult.matchedCount > 0)
+
+            this.winstonService.log(WinstonLog.ActionJobTaskStepSigned,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.Withdraw,
+                    taskIndex,
+                    taskType: TaskType.Withdraw,
+                    stepIndex,
+                    metadata: job.metadata,
+                })
+        } catch (error) {
+            this.winstonService.log(WinstonLog.ActionJobTaskStepSignedFailed,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                    type: JobType.Withdraw,
+                    taskIndex,
+                    taskType: TaskType.Withdraw,
+                    stepIndex,
+                    error: error.message,
+                    metadata: job.metadata,
+                })
+
+            throw error
+        }
     }
 }

@@ -37,6 +37,12 @@ export interface WithdrawTokenInput {
   amount: BN
 }
 
+/** Token output for withdraw operations. */
+export interface WithdrawTokenOutput {
+  tokenId: string
+  amount: BN
+}
+
 /** Task for an action. */
 export interface OpenPositionActionTask {
   type: TaskType.OpenPosition

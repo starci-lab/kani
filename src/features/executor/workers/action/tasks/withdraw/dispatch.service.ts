@@ -1,27 +1,26 @@
 import {
-    Injectable
+    Injectable 
 } from "@nestjs/common"
 import {
-    WithdrawTaskDispatcherParams
+    WithdrawTaskDispatcherParams 
 } from "../types"
 import {
-    JobSchema,
-    StepType
+    JobSchema, StepType 
 } from "@modules/databases"
 import {
-    JobContextNotFoundException,
+    JobContextNotFoundException 
 } from "@modules/exceptions"
 import {
-    WithdrawTaskPrepareService
+    WithdrawTaskPrepareService 
 } from "./prepare.service"
 import {
-    WithdrawTaskSignService
+    WithdrawTaskSignService 
 } from "./sign.service"
 import {
-    WithdrawTaskExecuteService
+    WithdrawTaskExecuteService 
 } from "./execute.service"
 import {
-    WithdrawTaskConfirmService
+    WithdrawTaskConfirmService 
 } from "./confirm.service"
 import {
     LoadJobContextResult, JobContextService 
@@ -36,47 +35,38 @@ import {
 @Injectable()
 export class WithdrawTaskDispatchService {
     constructor(
-        private readonly withdrawTaskPrepareService: WithdrawTaskPrepareService,
-        private readonly withdrawTaskSignService: WithdrawTaskSignService,
-        private readonly withdrawTaskExecuteService: WithdrawTaskExecuteService,
-        private readonly withdrawTaskConfirmService: WithdrawTaskConfirmService,
-        private readonly asyncService: AsyncService,
-        private readonly jobContextService: JobContextService,
-    ) { }
+    private readonly withdrawTaskPrepareService: WithdrawTaskPrepareService,
+    private readonly withdrawTaskSignService: WithdrawTaskSignService,
+    private readonly withdrawTaskExecuteService: WithdrawTaskExecuteService,
+    private readonly withdrawTaskConfirmService: WithdrawTaskConfirmService,
+    private readonly asyncService: AsyncService,
+    private readonly jobContextService: JobContextService,
+    ) {}
 
     /**
-     * Dispatch the WITHDRAW task.
-     * @param params - The parameters for the WITHDRAW task.
-     * @param params.bot - The bot.
-     * @param params.job - The job.
-     * @param params.payload - The payload.
-     * @param params.isRetry - Whether the task is being retried.
-     * @param params.taskIndex - The index of the task.
-     */
-    async dispatch(
-        {
-            botId,
-            jobId,
-            payload,
-            bullmqJob,
-            taskIndex,
-            isRetry,
-        }: WithdrawTaskDispatcherParams
-    ) {
+   * Dispatch the WITHDRAW task.
+   */
+    async dispatch({
+        botId,
+        jobId,
+        payload,
+        bullmqJob,
+        taskIndex,
+        isRetry,
+    }: WithdrawTaskDispatcherParams) {
         let context: LoadJobContextResult | null = null
-        // do the loop until the task is completed
+
+        // loop until task completed
         do {
-            const [
-                _context,
-                error
-            ] = await this.asyncService.resolveTuple(
-                this.jobContextService.load(
-                    {
-                        jobId,
-                        botId
-                    }
-                )
+            // always load latest job snapshot
+            const [_context,
+                error] = await this.asyncService.resolveTuple(
+                this.jobContextService.load({
+                    jobId,
+                    botId,
+                }),
             )
+
             context = _context
             if (error) {
                 throw error
@@ -87,89 +77,77 @@ export class WithdrawTaskDispatchService {
                     botId,
                 })
             }
-            // if we do not find the task persisted in the job snapshot, we have to prepare 
-            if (!context.job.tasks[taskIndex] || context.job.tasks[taskIndex].initialized === false) {
-                await this.withdrawTaskPrepareService.process(
-                    {
-                        bot: context.bot,
-                        job: context.job,
-                        payload,
-                        bullmqJob,
-                        taskIndex,
-                        isRetry,
-                    }
-                )
+
+            const task = context.job.tasks[taskIndex]
+
+            // prepare if task not found or not initialized
+            if (!task || task.initialized === false) {
+                await this.withdrawTaskPrepareService.process({
+                    bot: context.bot,
+                    job: context.job,
+                    payload,
+                    bullmqJob,
+                    taskIndex,
+                    isRetry,
+                })
                 continue
             }
-            // we take the next step
-            const activeStep = context.job.tasks[taskIndex].activeStep
-            const stepCount = context.job.tasks[taskIndex].stepCount
+
+            const activeStep = task.activeStep
+            const stepCount = task.stepCount
+
+            // process step (Sign/Execute) when still in steps range
             if (activeStep <= stepCount - 1) {
-                // get the current step type
-                const stepType = context.job.tasks[taskIndex].steps[activeStep].type
+                const stepType = task.steps[activeStep].type
+
                 switch (stepType) {
-                // Sign step
                 case StepType.Sign: {
-                    await this.withdrawTaskSignService.process(
-                        {
-                            bot: context.bot,
-                            job: context.job,
-                            payload,
-                            bullmqJob,
-                            taskIndex,
-                            isRetry,
-                        }
-                    )
-                    continue
-                }
-                // Execute step
-                case StepType.Execute: {
-                    await this.withdrawTaskExecuteService.process(
-                        {
-                            bot: context.bot,
-                            job: context.job,
-                            payload,
-                            bullmqJob,
-                            taskIndex,
-                            isRetry,
-                        }
-                    )
-                    continue
-                }
-                }
-            }
-            // process confirm
-            if (!context.job.tasks[taskIndex].confirmed) {
-                await this.withdrawTaskConfirmService.process(
-                    {
+                    await this.withdrawTaskSignService.process({
                         bot: context.bot,
                         job: context.job,
                         payload,
                         bullmqJob,
                         taskIndex,
                         isRetry,
-                    }
-                )
+                    })
+                    continue
+                }
+
+                case StepType.Execute: {
+                    await this.withdrawTaskExecuteService.process({
+                        bot: context.bot,
+                        job: context.job,
+                        payload,
+                        bullmqJob,
+                        taskIndex,
+                        isRetry,
+                    })
+                    continue
+                }
+                }
             }
-        } while (
-            !this.isTaskCompleted(
-                context.job,
-                taskIndex,
-            )
-        )
+
+            // confirm after all steps executed
+            if (!task.confirmed) {
+                await this.withdrawTaskConfirmService.process({
+                    bot: context.bot,
+                    job: context.job,
+                    payload,
+                    bullmqJob,
+                    taskIndex,
+                    isRetry,
+                })
+            }
+        } while (!this.isTaskCompleted(context.job,
+            taskIndex))
     }
 
     /**
-     * Checks if the task is complete.
-     * @param jobSnapshot - The job snapshot.
-     * @param taskIndex - The index of the task.
-     * @returns True if the task is complete, false otherwise.
-     */
+   * Checks if the task is complete.
+   */
     private isTaskCompleted(job: JobSchema | null, taskIndex: number) {
         const task = job?.tasks[taskIndex]
-        if (!task) {
-            return false
-        }
-        return (task.activeStep) >= (task.stepCount)
+        if (!task) return false
+        return task.activeStep >= task.stepCount
     }
 }

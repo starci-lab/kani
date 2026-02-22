@@ -2,6 +2,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
+    toDecimalAmount,
     TokenType,
 } from "@modules/common"
 import {
@@ -9,6 +10,7 @@ import {
     FetchBalanceResult,
     FetchTokensParams,
     FetchTokensResult,
+    TokenBalance,
 } from "../types"
 import BN from "bn.js"
 import {
@@ -31,6 +33,16 @@ import {
 import {
     RpcAccessType 
 } from "@modules/filesystem"
+import {
+    PrimaryMemoryStorageService,
+    TokenId
+} from "@modules/databases"
+import {
+    Decimal 
+} from "decimal.js"
+import {
+    TokenNotFoundException 
+} from "@modules/exceptions"
 
 /**
  * Service responsible for fetching Solana balance information.
@@ -44,6 +56,7 @@ import {
 export class SolanaBalanceFetcherService {
     constructor(
         private readonly rpcExecutorService: RpcExecutorService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) { }
 
     /**
@@ -119,30 +132,108 @@ export class SolanaBalanceFetcherService {
      * const tokens = await service.fetchTokens({ bot })
      */
     async fetchTokens({ bot }: FetchTokensParams): Promise<FetchTokensResult> {
-        return await this.rpcExecutorService.withSolanaRpc({
+        const tokenAccounts = await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
-                // fetch token accounts from standard token program
-                await rpc.getTokenAccountsByOwner(
+                return await rpc.getTokenAccountsByOwner(
                     address(bot.accountAddress), 
                     {
                         programId: TOKEN_PROGRAM_ADDRESS,
+                    },
+                    {
+                        encoding: "jsonParsed",
                     }
                 ).send()
-                
-                // fetch token accounts from token-2022 program
-                await rpc.getTokenAccountsByOwner(
+            },
+        })
+        const token2022Accounts = await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Http,
+            callback: async ({ rpc }) => {
+                return await rpc.getTokenAccountsByOwner(
                     address(bot.accountAddress), 
                     {
                         programId: TOKEN_2022_PROGRAM_ADDRESS,
+                    },
+                    {
+                        encoding: "jsonParsed",
                     }
                 ).send()
-                
-                // TODO: implement token mapping and balance calculation
-                return {
-                    tokens: [],
-                }
             },
         })
+        const tokens: Array<TokenBalance> = tokenAccounts.value.map((tokenAccount) => {
+            if (tokenAccount.account.data.parsed.info.tokenAmount.decimals === 0) return undefined
+            const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+                tokenAddress: {
+                    $eq: tokenAccount.account.data.parsed.info.mint.toString(),
+                },
+            })
+            if (!token) {
+                throw new TokenNotFoundException({
+                    tokenAddress: tokenAccount.account.data.parsed.info.mint.toString(),
+                })
+            }
+            return {
+                token,
+                balanceAmount: new BN(tokenAccount.account.data.parsed.info.tokenAmount.amount.toString()),
+                balanceAmountDecimal: toDecimalAmount({
+                    amount: new BN(tokenAccount.account.data.parsed.info.tokenAmount.amount.toString()),
+                    decimals: new Decimal(token.decimals),
+                }), 
+            }
+        }).filter((token) => token !== undefined)
+        const token2022Tokens: Array<TokenBalance> = token2022Accounts.value.map((token2022Account) => {
+            if (token2022Account.account.data.parsed.info.tokenAmount.decimals === 0) return undefined
+            const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+                tokenAddress: {
+                    $eq: token2022Account.account.data.parsed.info.mint.toString(),
+                },
+            })
+            if (!token) {
+                throw new TokenNotFoundException(
+                    {
+                        tokenAddress: token2022Account.account.data.parsed.info.mint.toString(),
+                    }
+                )
+            }
+            return {
+                token,
+                balanceAmount: new BN(token2022Account.account.data.parsed.info.tokenAmount.amount.toString()),
+                balanceAmountDecimal: toDecimalAmount({
+                    amount: new BN(token2022Account.account.data.parsed.info.tokenAmount.amount.toString()),
+                    decimals: new Decimal(token.decimals),
+                }),
+            }
+        }).filter((token) => token !== undefined)
+        //native SOL balance
+        const nativeSolBalance = await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Http,
+            callback: async ({ rpc }) => {
+                return await rpc.getBalance(address(bot.accountAddress)).send()
+            },
+        })
+        const nativeSolToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            displayId: {
+                $eq: TokenId.SolNative.toString(),
+            },
+        })
+        if (!nativeSolToken) {
+            throw new TokenNotFoundException({
+                displayId: TokenId.SolNative,
+            })
+        }
+        return {
+            tokens: [
+                ...tokens,
+                ...token2022Tokens,
+                {
+                    token: nativeSolToken,
+                    balanceAmount: new BN(nativeSolBalance.value.toString()),
+                    balanceAmountDecimal: toDecimalAmount({
+                        amount: new BN(nativeSolBalance.value.toString()),
+                        decimals: new Decimal(nativeSolToken.decimals),
+                    }),
+                },
+            ],
+        }
     }
 }

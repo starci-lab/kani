@@ -66,9 +66,7 @@ export class TransferInstructionService {
                 ],
             }
         }
-
         const instructions: Array<Instruction> = []
-
         const {
             ataAddress: sourceAtaAddress,
             instructions: createAtaInstructions,
@@ -104,7 +102,6 @@ export class TransferInstructionService {
                 amount: BigInt(amount.toString()),
             })
         )
-
         return {
             instructions 
         }
