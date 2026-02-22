@@ -1,11 +1,11 @@
 
 import {
-    UseInterceptors, Post, Controller, 
+    UseInterceptors, Post, Controller,
     HttpStatus,
     HttpCode
 } from "@nestjs/common"
 import {
-    Body 
+    Body
 } from "@nestjs/common"
 import {
     ConfirmWithdrawalResponseDto,
@@ -18,14 +18,24 @@ import {
     ConfirmWithdrawalService,
 } from "./confirm-withdrawal.service"
 import {
-    ApiBody, ApiOperation, ApiResponse 
+    ApiBody, ApiOperation, ApiResponse,
+    ApiTags
 } from "@nestjs/swagger"
+import {
+    buildInterfaceEndpointPath,
+    interfaceRestConfig
+} from "@modules/service-configs"
 
-@Controller()
+@ApiTags(interfaceRestConfig().callback().tags)
+@Controller(buildInterfaceEndpointPath(
+    interfaceRestConfig().callback().tags,
+    interfaceRestConfig().callback().api().confirmWithdrawal.path
+)
+)
 export class ConfirmWithdrawalController {
     constructor(
         private readonly confirmWithdrawalService: ConfirmWithdrawalService,
-    ) {}
+    ) { }
 
     @RestSuccessMessage("Withdrawal confirmed successfully")
     @Post()

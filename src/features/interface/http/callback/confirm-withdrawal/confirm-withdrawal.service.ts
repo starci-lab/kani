@@ -4,6 +4,10 @@ import {
 import { 
     ConfirmWithdrawalRequestDto,
 } from "./dtos"
+import {
+    EventEmitterService, 
+    EventName
+} from "@modules/event"
 
 /**
  * Service to confirm a withdrawal for the given transaction hashes and received tokens.
@@ -11,6 +15,7 @@ import {
 @Injectable()
 export class ConfirmWithdrawalService {
     constructor(
+        private readonly eventEmitterService: EventEmitterService,
     ) {}
 
     /**
@@ -26,11 +31,14 @@ export class ConfirmWithdrawalService {
             txHashes,
             receivedTokens,
         } = request
-        console.log(
-            botId,
-            txHashes,
-            receivedTokens
-        )
+        this.eventEmitterService.emit({
+            event: EventName.ConfirmWithdrawal,
+            payload: {
+                botId,
+                txHashes,
+                receivedTokens,
+            },
+        })
     }
 }
 

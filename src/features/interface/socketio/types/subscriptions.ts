@@ -7,3 +7,9 @@ export interface SubscribeDynamicLiquidityPoolsInfoEventPayload {
 export interface SubscribePricesEventPayload {
     ids: Array<string>
 }
+
+
+/** Event payload for subscribing to confirm withdrawal. */
+export interface SubscribeConfirmWithdrawalEventPayload {
+    botId: string
+}

@@ -40,7 +40,14 @@ import {
 import {
     WithdrawTokenOutput,
 } from "../../types"
-
+import BN from "bn.js"
+import _ from "lodash"
+import {
+    SuiBalanceFetcherService 
+} from "./fetcher.service"
+import {
+    AsyncService 
+} from "@modules/mixin"
 /**
  * Service for handling withdraw transactions on Sui.
  * Supports withdrawing tokens directly or converting to USDC before withdrawal.
@@ -60,6 +67,8 @@ export class SuiWithdrawActionService {
         private readonly suiStimulateService: SuiStimulateService,
         private readonly suiExecuteService: SuiExecuteService,
         private readonly suiTxService: SuiTxService,
+        private readonly suiBalanceFetcherService: SuiBalanceFetcherService,
+        private readonly asyncService: AsyncService,
     ) {
     }
 
@@ -74,13 +83,13 @@ export class SuiWithdrawActionService {
      * const prepareTxs = await service.prepare({ bot, tokenInputs, toAddress, toUsdc: true })
      */
     public async prepare(
-        { 
-            bot, 
-            tokenInputs, 
-            toAddress, 
-            toUsdc = false 
+        {
+            bot,
+            tokenInputs,
+            toAddress,
+            toUsdc = false
         }: PrepareWithdrawTransactionParams): Promise<PrepareWithdrawTransactionResult> {
-        const tokenOutputs: Array<WithdrawTokenOutput> = []
+        let tokenOutputs: Array<WithdrawTokenOutput> = []
         // initialize transaction block
         let txb = new Transaction()
         txb.setSender(bot.accountAddress)
@@ -146,7 +155,7 @@ export class SuiWithdrawActionService {
                             type: TransactionType.Withdraw,
                         })
                     }
-                    
+
                     // transfer USDC to recipient
                     txb.transferObjects(
                         [outputCoin],
@@ -163,7 +172,7 @@ export class SuiWithdrawActionService {
                         owner: bot.accountAddress,
                         coinType: tokenInput.token.tokenAddress,
                         requiredAmount: tokenInput.amount,
-                    })  
+                    })
                     txb.transferObjects(
                         [sourceCoin.coinArg],
                         toAddress
@@ -175,7 +184,7 @@ export class SuiWithdrawActionService {
                 }
                 continue
             }
-            
+
             // find target token for conversion
             const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
                 id: {
@@ -187,7 +196,7 @@ export class SuiWithdrawActionService {
                     displayId: tokenInput.token.displayId,
                 })
             }
-            
+
             // swap to target token if needed
             if (tokenInput.token.displayId !== targetToken.displayId) {
                 // fetch and merge input coins
@@ -197,7 +206,7 @@ export class SuiWithdrawActionService {
                     coinType: tokenInput.token.tokenAddress,
                     requiredAmount: tokenInput.amount,
                 })
-                
+
                 // get best quote from aggregator
                 const { aggregatorId, response } = await this.suiAggregatorSelectorService.batchQuote({
                     tokenIn: tokenInput.token,
@@ -205,7 +214,7 @@ export class SuiWithdrawActionService {
                     amountIn: tokenInput.amount,
                     senderAddress: bot.accountAddress,
                 })
-                
+
                 // execute swap using selected aggregator
                 const { outputCoin, txb: swapTxb } = await this.suiAggregatorSelectorService.selectorSwap({
                     base: {
@@ -218,14 +227,14 @@ export class SuiWithdrawActionService {
                     },
                     aggregatorId,
                 })
-                
+
                 // validate swap transaction was created
                 if (!swapTxb) {
                     throw new TransactionNotFoundException({
                     })
                 }
                 txb = swapTxb
-                
+
                 // validate output coin exists
                 if (!outputCoin) {
                     throw new OutputCoinNotFoundException({
@@ -233,7 +242,7 @@ export class SuiWithdrawActionService {
                         type: TransactionType.Withdraw,
                     })
                 }
-                
+
                 // transfer target token to recipient
                 txb.transferObjects(
                     [outputCoin],
@@ -245,7 +254,7 @@ export class SuiWithdrawActionService {
                 })
                 continue
             }
-            
+
             // token matches target, transfer directly
             const { sourceCoin } = await this.selectCoinsService.fetchAndMergeCoins({
                 txb,
@@ -263,7 +272,39 @@ export class SuiWithdrawActionService {
             })
             continue
         }
-
+        tokenOutputs = Object.entries(_.groupBy(tokenOutputs,
+            "tokenId")).map(
+            ([tokenId,
+                outputs]) => ({
+                tokenId,
+                amount: outputs.reduce(
+                    (sum, o) => sum.add(o.amount),
+                    new BN(0)
+                ),
+            })
+        )
+        const tokenOutputSnapshots = await this.asyncService.allMustDone(
+            tokenOutputs.map(async (tokenOutput) => {
+                const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+                    id: {
+                        $eq: tokenOutput.tokenId,
+                    },
+                })
+                if (!token) {
+                    throw new TokenNotFoundException({
+                        id: tokenOutput.tokenId,
+                    })
+                }
+                const balance = await this.suiBalanceFetcherService.fetchBalance({
+                    bot,
+                    token,
+                })
+                return {
+                    tokenId: tokenOutput.tokenId,
+                    amount: balance.balanceAmount,
+                }
+            })  
+        )
         return {
             prepareTxs: [
                 {
@@ -272,6 +313,7 @@ export class SuiWithdrawActionService {
                 },
             ],
             tokenOutputs,
+            tokenOutputSnapshots,
         }
     }
 
@@ -285,12 +327,12 @@ export class SuiWithdrawActionService {
      * const txHash = await service.execute({ bot, signedTx })
      */
     public async execute(
-        { 
-            bot, 
-            signedTx, 
-            txCheck = false, 
-            stimulate = false 
-        }: ExecuteWithdrawTransactionParams): 
+        {
+            bot,
+            signedTx,
+            txCheck = false,
+            stimulate = false
+        }: ExecuteWithdrawTransactionParams):
         Promise<ExecuteWithdrawTransactionResult> {
         // check if transaction already exists on chain (for retries)
         if (txCheck && !stimulate) {
@@ -303,7 +345,7 @@ export class SuiWithdrawActionService {
                 }
             }
         }
-        
+
         // execute or simulate transaction
         if (stimulate) {
             const { txHash } = await this.suiStimulateService.stimulate({

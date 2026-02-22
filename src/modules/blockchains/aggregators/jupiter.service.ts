@@ -20,7 +20,8 @@ import {
     RetryService 
 } from "@modules/mixin"
 import {
-    ChainId 
+    ChainId, 
+    TokenType
 } from "@modules/common"
 import {
     address 
@@ -138,17 +139,22 @@ export class JupiterService implements IAggregatorService {
      * @example
      * const result = await service.swap({ payload, accountAddress })
      */
-    async swap({ payload, accountAddress }: SwapParams): Promise<SwapResult> {
+    async swap(
+        { 
+            payload, 
+            accountAddress, 
+            tokenOut, 
+            recipientAddress 
+        }: SwapParams
+    ): Promise<SwapResult> {
         try {
             // get referral token account address
             const referralTokenAccount = this.jupiterReferralTokenAccountAddress()
-            
             // execute swap with retry mechanism
             return await this.retryService.retry({
                 action: async () => {
                     // create Jupiter client
                     const client = this.createJupiterClient()  
-                    // build swap transaction
                     const { swapTransaction } = await client.swapPost({
                         swapRequest: {
                             quoteResponse: payload as JupiterQuoteResponse,
@@ -156,7 +162,15 @@ export class JupiterService implements IAggregatorService {
                             dynamicComputeUnitLimit: true,
                             dynamicSlippage: true,
                             feeAccount: referralTokenAccount,   
-                            nativeDestinationAccount
+                            
+                            ...(tokenOut.type === TokenType.Native ? {
+                                nativeDestinationAccount: recipientAddress 
+                            } : {
+                            }),
+                            ...(tokenOut.type !== TokenType.Native ? {
+                                destinationTokenAccount: recipientAddress 
+                            } : {
+                            }),
                         } 
                     })
                     // return swap transaction

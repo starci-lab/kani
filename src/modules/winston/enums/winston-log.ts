@@ -276,4 +276,6 @@ export enum WinstonLog {
     ActionJobTaskStepExecuted = "Action.Job.Task.Step.Executed",
     ActionJobTaskStepSignedFailed = "Action.Job.Task.Step.Signed.Failed",
     ActionJobTaskStepExecutedFailed = "Action.Job.Task.Step.Executed.Failed",
+    SocketIoClientIdNotFound = "Socket.Io.Client.Id.NotFound",
+    SocketIoClientNotFound = "Socket.Io.Client.NotFound",
 }

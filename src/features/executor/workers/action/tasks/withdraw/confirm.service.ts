@@ -11,6 +11,7 @@ import {
     InjectPrimaryMongoose,
     JobSchema,
     JobType,
+    PrimaryMemoryStorageService,
     TaskType
 } from "@modules/databases"
 import {
@@ -20,7 +21,8 @@ import {
     envConfig
 } from "@modules/env"
 import {
-    ActionJobStimulateMongoSessionException
+    ActionJobStimulateMongoSessionException,
+    TokenNotFoundException
 } from "@modules/exceptions"
 import {
     SendHeartbeatService
@@ -29,20 +31,33 @@ import {
     strict as assert
 } from "node:assert"
 import {
-    AxiosService 
+    AxiosService
 } from "@modules/axios"
 import {
-    AxiosInstance, 
+    AxiosInstance,
     AxiosResponse
 } from "axios"
 import {
-    buildInterfaceFullEndpointPath, 
+    buildInterfaceFullEndpointPath,
     interfaceRestConfig
 } from "@modules/service-configs"
 import type {
     ConfirmWithdrawalRequestDto
 } from "@features/interface"
-  
+import {
+    SuperJSON 
+} from "superjson"
+import {
+    InjectSuperJson
+} from "@modules/mixin"
+import {
+    BalanceFetcherService,
+    ExecuteWithdrawTransactionResult, 
+    PrepareWithdrawTransactionResult 
+} from "@modules/blockchains"
+import {
+    AsyncService 
+} from "@modules/mixin"
 /**
  * Service to process the WITHDRAW TASK CONFIRM step.
  */
@@ -57,19 +72,24 @@ export class WithdrawTaskConfirmService implements OnModuleInit {
      * @param axiosService - The Axios service for making HTTP requests.
      */
     constructor(
-      private readonly winstonService: WinstonService,
-      @InjectPrimaryMongoose()
-      private readonly connection: Connection,
-      private readonly sendHeartbeatService: SendHeartbeatService,
-      private readonly axiosService: AxiosService,
-    ) {}
+        private readonly winstonService: WinstonService,
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
+        private readonly sendHeartbeatService: SendHeartbeatService,
+        private readonly axiosService: AxiosService,
+        private readonly asyncService: AsyncService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly balanceFetcherService: BalanceFetcherService,
+    ) { }
     /**
      * Initialize the Axios instance for the interface.
      */
     onModuleInit() {
         this.axiosInstance = this.axiosService.create(
             {
-                key: "interface" 
+                key: "interface"
             }
         )
     }
@@ -85,44 +105,44 @@ export class WithdrawTaskConfirmService implements OnModuleInit {
         }: WithdrawTaskConfirmParams
     ) {
         try {
-        // 1) heartbeat
+            // 1) heartbeat
             await this.sendHeartbeatService.process({
                 bot,
                 job,
                 bullmqJob,
             })
-  
+
             // 2) transactional update
             try {
                 const session = await this.connection.startSession()
-  
+
                 await session.withTransaction(async (clientSession) => {
                     const updateJobResult =
-              await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                  {
-                      _id: job.id,
-                  },
-                  {
-                      $set: {
-                          "tasks.$[task].confirmed": true,
-                      },
-                      $inc: {
-                          taskIndex: 1,
-                      },
-                  },
-                  {
-                      arrayFilters: [
-                          {
-                              "task.index": taskIndex,
-                              "task.type": TaskType.Withdraw,
-                          },
-                      ],
-                      session: clientSession,
-                  },
-              )
-  
+                        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                            {
+                                _id: job.id,
+                            },
+                            {
+                                $set: {
+                                    "tasks.$[task].confirmed": true,
+                                },
+                                $inc: {
+                                    taskIndex: 1,
+                                },
+                            },
+                            {
+                                arrayFilters: [
+                                    {
+                                        "task.index": taskIndex,
+                                        "task.type": TaskType.Withdraw,
+                                    },
+                                ],
+                                session: clientSession,
+                            },
+                        )
+
                     assert(updateJobResult.matchedCount > 0)
-  
+
                     // stimulate mongo session if enabled
                     if (envConfig().executor.runtime.operation.withdraw.stimulate) {
                         throw new ActionJobStimulateMongoSessionException({
@@ -137,7 +157,7 @@ export class WithdrawTaskConfirmService implements OnModuleInit {
                     throw error
                 }
             }
-  
+
             // 3) log confirmed
             this.winstonService.log(
                 WinstonLog.ActionJobTaskConfirmed,
@@ -150,21 +170,65 @@ export class WithdrawTaskConfirmService implements OnModuleInit {
                     taskType: TaskType.Withdraw,
                 }
             )
-            // call api to the interface to confirm the withdraw
-            await this.axiosInstance.post<
-            undefined,
-            AxiosResponse<undefined>,
-            ConfirmWithdrawalRequestDto>(
-                buildInterfaceFullEndpointPath({
-                    tags: interfaceRestConfig().callback().tags,
-                    api: interfaceRestConfig().callback().api().confirmWithdrawal.path,
-                }),
-                {
-                    botId: bot.id,
-                    txHashes: [],
-                    receivedTokens: [],
-                }
+            const prepareResult = this.superJson.parse<PrepareWithdrawTransactionResult>(job.tasks[taskIndex].prepareResult ?? "")
+            const tokenOutputs = prepareResult.tokenOutputs
+            const tokenOutputSnapshots = prepareResult.tokenOutputSnapshots
+            const afterTokenOutputSnapshots = await this.asyncService.allMustDone(
+                tokenOutputSnapshots.map(async (tokenOutputSnapshot) => {
+                    const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+                        id: {
+                            $eq: tokenOutputSnapshot.tokenId,
+                        },
+                    })
+                    if (!token) {
+                        throw new TokenNotFoundException({
+                            id: tokenOutputSnapshot.tokenId,
+                        })
+                    }
+                    const balance = await this.balanceFetcherService.fetchBalance({
+                        bot,
+                        token,
+                    })
+                    return {
+                        tokenId: tokenOutputSnapshot.tokenId,
+                        amount: balance.balanceAmount,
+                    }
+                })
             )
+            const receivedTokens = afterTokenOutputSnapshots.map((afterTokenOutputSnapshot) => {
+                const tokenOutputSnapshot = tokenOutputs.find((tokenOutput) => tokenOutput.tokenId === afterTokenOutputSnapshot.tokenId)
+                if (!tokenOutputSnapshot) {
+                    throw new TokenNotFoundException({
+                        id: afterTokenOutputSnapshot.tokenId,
+                    })
+                }
+                const amountDiff = afterTokenOutputSnapshot.amount.sub(tokenOutputSnapshot.amount)
+                return {
+                    id: tokenOutputSnapshot.tokenId,
+                    amount: amountDiff.toString(),
+                }
+            })
+            const txHashes = job.tasks[taskIndex]
+                .steps
+                .map((step) => this.superJson.parse<ExecuteWithdrawTransactionResult>(step.executeResult ?? ""))
+                .map((executeResult) => executeResult?.txHash
+                )
+            await this.axiosInstance.post<
+                undefined,
+                AxiosResponse<undefined>,
+                ConfirmWithdrawalRequestDto>(
+                    buildInterfaceFullEndpointPath(
+                        {
+                            tags: interfaceRestConfig().callback().tags,
+                            api: interfaceRestConfig().callback().api().confirmWithdrawal.path,
+                        }
+                    ),
+                    {
+                        botId: bot.id,
+                        txHashes,
+                        receivedTokens,
+                    }
+                )
         } catch (error) {
             this.winstonService.log(
                 WinstonLog.ActionJobTaskConfirmedFailed,
@@ -178,7 +242,7 @@ export class WithdrawTaskConfirmService implements OnModuleInit {
                     metadata: job.metadata,
                 }
             )
-  
+
             throw error
         }
     }

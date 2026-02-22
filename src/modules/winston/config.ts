@@ -15,6 +15,8 @@ import {
     OpenPositionSkippedNoBalanceSnapshotMessage,
     OpenPositionSkippedNotEligibleMessage,
     RotationBotAssignmentsMessage,
+    SocketIoClientIdNotFoundMessage,
+    SocketIoClientNotFoundMessage,
     TransactionStimulatedMessage,
     TransactionExecutedMessage,
     WinstonLevel,
@@ -2474,4 +2476,20 @@ export const configMap = {
         messageType: {  
         } as ActionJobTaskConfirmedFailedMessage,
     },  
+    // Socket Io Client Id Not Found
+    [WinstonLog.SocketIoClientIdNotFound]: {
+        name: WinstonLog.SocketIoClientIdNotFound,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as SocketIoClientIdNotFoundMessage,
+    },
+    // Socket Io Client Not Found
+    [WinstonLog.SocketIoClientNotFound]: {
+        name: WinstonLog.SocketIoClientNotFound,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as SocketIoClientNotFoundMessage,
+    },
 }

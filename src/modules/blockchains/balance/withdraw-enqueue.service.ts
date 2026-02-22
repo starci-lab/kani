@@ -276,12 +276,14 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
         // Skip if a job already exists in the queue for this bot (Bull jobId = bot.id)
         const existingBullJob = await this.actionQueue.getJob(bot.id)
         if (existingBullJob) {
-            this.winstonService.log(WinstonLog.JobSkippedFoundInQueue,
+            this.winstonService.log(
+                WinstonLog.JobSkippedFoundInQueue,
                 {
                     botId: bot.id,
                     bullmqJobId: existingBullJob.id ?? "",
                     type: JobType.Withdraw,
-                })
+                }
+            )
             return false
         }
       
@@ -295,7 +297,8 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                 {
                     botId: bot.id,
                     type: JobType.Withdraw,
-                })
+                }
+            )
             return false
         }
       

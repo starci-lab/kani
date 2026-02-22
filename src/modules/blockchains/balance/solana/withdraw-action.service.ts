@@ -25,6 +25,7 @@ import {
     decompileTransactionMessageFetchingLookupTables,
     address,
     Instruction,
+    createNoopSigner,
 } from "@solana/kit"
 import {
     SolanaAggregatorSelectorService
@@ -53,12 +54,28 @@ import {
     InjectSuperJson
 } from "@modules/mixin"
 import {
-    ChainId
+    ChainId,
+    TokenType,
 } from "@modules/common"
 import {
     SuperJSON
 } from "superjson"
-
+import {
+    findAssociatedTokenPda,
+    getCreateAssociatedTokenIdempotentInstruction,
+    TOKEN_PROGRAM_ADDRESS
+} from "@solana-program/token"
+import {
+    TOKEN_2022_PROGRAM_ADDRESS
+} from "@solana-program/token-2022"
+import BN from "bn.js"
+import _ from "lodash"
+import {
+    SolanaBalanceFetcherService 
+} from "./fetcher.service"
+import {
+    AsyncService
+} from "@modules/mixin"
 /**
  * Service for handling withdraw transactions on Solana.
  * Supports withdrawing tokens directly or converting to USDC before withdrawal.
@@ -81,6 +98,8 @@ export class SolanaWithdrawActionService {
         private readonly solanaFetchService: SolanaFetchService,
         private readonly solanaStimulateService: SolanaStimulateService,
         private readonly solanaExecuteService: SolanaExecuteService,
+        private readonly solanaBalanceFetcherService: SolanaBalanceFetcherService,
+        private readonly asyncService: AsyncService,
     ) { }
 
     /**
@@ -103,7 +122,7 @@ export class SolanaWithdrawActionService {
         Promise<PrepareWithdrawTransactionResult> {
         const prepareTxs: Array<PrepareTx> = []
         const instructions: Array<Instruction> = []
-        const tokenOutputs: Array<WithdrawTokenOutput> = []
+        let tokenOutputs: Array<WithdrawTokenOutput> = []
         for (const tokenInput of tokenInputs) {
             if (toUsdc) {
                 // find USDC token
@@ -119,6 +138,21 @@ export class SolanaWithdrawActionService {
                 }
                 // swap to USDC if token is not already USDC
                 if (tokenInput.token.displayId !== TokenId.SolUsdc) {
+                    const swapInstructions: Array<Instruction> = []
+                    const [ata] = await findAssociatedTokenPda({
+                        mint: address(usdcToken.tokenAddress),
+                        owner: address(toAddress),
+                        tokenProgram: usdcToken.is2022Token ? TOKEN_2022_PROGRAM_ADDRESS : TOKEN_PROGRAM_ADDRESS,
+                    })
+                    // create idempotent token account for recipient address
+                    const createAssociatedTokenIdempotentInstruction = getCreateAssociatedTokenIdempotentInstruction({
+                        mint: address(usdcToken.tokenAddress),
+                        owner: address(toAddress),
+                        payer: createNoopSigner(address(bot.accountAddress)),
+                        ata,
+                        tokenProgram: usdcToken.is2022Token ? TOKEN_2022_PROGRAM_ADDRESS : TOKEN_PROGRAM_ADDRESS,
+                    })
+                    swapInstructions.push(createAssociatedTokenIdempotentInstruction)
                     const { response, aggregatorId } = await this.solanaAggregatorSelectorService.batchQuote({
                         tokenIn: tokenInput.token,
                         tokenOut: usdcToken,
@@ -131,7 +165,8 @@ export class SolanaWithdrawActionService {
                             payload: response.payload,
                             tokenIn: tokenInput.token,
                             tokenOut: usdcToken,
-                            accountAddress: bot.accountAddress,  
+                            accountAddress: bot.accountAddress,
+                            recipientAddress: ata,
                         },
                     })
                     // decode and decompile swap transaction
@@ -150,18 +185,27 @@ export class SolanaWithdrawActionService {
                         },
                     })
                     // add swap instructions
-                    const swapInstructions = swapTransactionMessage.instructions
+                    swapInstructions.push(...swapTransactionMessage.instructions)
+                    prepareTxs.push({
+                        chainId: ChainId.Solana,
+                        serializedTx: this.superJson.stringify(swapInstructions),
+                    })
+                    tokenOutputs.push({
+                        tokenId: usdcToken.id.toString(),
+                        amount: response.amountOut
+                    })
+                } else {
                     // create transfer instructions
                     const { instructions: transferInstructions } = await this.transferInstructionService.createTransferInstructions({
                         fromAddress: address(bot.accountAddress),
                         toAddress: address(toAddress),
-                        amount: response.amountOut,
+                        amount: tokenInput.amount,
                         token: usdcToken,
                     })
-                    const swapThenTransferInstructions = [...swapInstructions, ...transferInstructions]
+                    instructions.push(...transferInstructions)
                     tokenOutputs.push({
                         tokenId: usdcToken.id.toString(),
-                        amount: response.amountOut
+                        amount: tokenInput.amount
                     })
                 }
             } else {
@@ -178,6 +222,25 @@ export class SolanaWithdrawActionService {
                 }
                 // swap to target token if needed
                 if (tokenInput.token.displayId !== targetToken.displayId) {
+                    const swapInstructions: Array<Instruction> = []
+                    let destinationAddress = toAddress
+                    if (targetToken.type !== TokenType.Native) {
+                        // create associated token account for recipient address
+                        const [ata] = await findAssociatedTokenPda({
+                            mint: address(targetToken.tokenAddress),
+                            owner: address(toAddress),
+                            tokenProgram: targetToken.is2022Token ? TOKEN_2022_PROGRAM_ADDRESS : TOKEN_PROGRAM_ADDRESS,
+                        })
+                        const createAssociatedTokenIdempotentInstruction = getCreateAssociatedTokenIdempotentInstruction({
+                            mint: address(targetToken.tokenAddress),
+                            owner: address(toAddress),
+                            payer: createNoopSigner(address(bot.accountAddress)),
+                            ata,
+                            tokenProgram: targetToken.is2022Token ? TOKEN_2022_PROGRAM_ADDRESS : TOKEN_PROGRAM_ADDRESS,
+                        })
+                        swapInstructions.push(createAssociatedTokenIdempotentInstruction)
+                        destinationAddress = ata
+                    }
                     const { response, aggregatorId } = await this.solanaAggregatorSelectorService.batchQuote({
                         tokenIn: tokenInput.token,
                         tokenOut: targetToken,
@@ -190,7 +253,8 @@ export class SolanaWithdrawActionService {
                             payload: response.payload,
                             tokenIn: tokenInput.token,
                             tokenOut: targetToken,
-                            accountAddress: bot.accountAddress,  
+                            accountAddress: bot.accountAddress,
+                            recipientAddress: destinationAddress,
                         },
                     })
                     // decode and decompile swap transaction
@@ -209,32 +273,74 @@ export class SolanaWithdrawActionService {
                         },
                     })
                     // add swap instructions
-                    const swapInstructions = swapTransactionMessage.instructions
-                    instructions.push(...swapInstructions)
+                    swapInstructions.push(...swapTransactionMessage.instructions)
+                    prepareTxs.push({
+                        chainId: ChainId.Solana,
+                        serializedTx: this.superJson.stringify(swapInstructions),
+                    })
                     tokenOutputs.push({
                         tokenId: targetToken.id.toString(),
                         amount: response.amountOut
                     })
+                } else {
+                    // create transfer instructions
+                    const { instructions: transferInstructions } = await this.transferInstructionService.createTransferInstructions(
+                        {
+                            fromAddress: address(bot.accountAddress),
+                            toAddress: address(toAddress),
+                            amount: tokenInput.amount,
+                            token: tokenInput.token,
+                        }
+                    )
+                    instructions.push(...transferInstructions)
                 }
             }
-
-            // create transfer instructions
-            const { instructions: transferInstructions } = await this.transferInstructionService.createTransferInstructions({
-                fromAddress: address(bot.accountAddress),
-                toAddress: address(toAddress),
-                amount: tokenInput.amount,
-                token: tokenInput.token,
+        }
+        prepareTxs.push(
+            {
+                chainId: ChainId.Solana,
+                serializedTx: this.superJson.stringify(instructions),
+            }
+        )
+        tokenOutputs = Object.entries(
+            _.groupBy(tokenOutputs,
+                "tokenId")
+        ).map(
+            ([tokenId,
+                outputs]) => ({
+                tokenId,
+                amount: outputs.reduce(
+                    (sum, output) => sum.add(output.amount),
+                    new BN(0)
+                ),
             })
-            instructions.push(...transferInstructions)
-        }  
-        return {
-            prepareTxs: [
-                {
-                    chainId: ChainId.Solana,
-                    serializedTx: this.superJson.stringify(instructions),
+        )
+        const tokenOutputSnapshots = await this.asyncService.allMustDone(
+            tokenOutputs.map(async (tokenOutput) => {
+                const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+                    id: {
+                        $eq: tokenOutput.tokenId,
+                    },
+                })
+                if (!token) {
+                    throw new TokenNotFoundException({
+                        id: tokenOutput.tokenId,
+                    })
                 }
-            ],
+                const balance = await this.solanaBalanceFetcherService.fetchBalance({
+                    bot,
+                    token,
+                })
+                return {
+                    tokenId: tokenOutput.tokenId,
+                    amount: balance.balanceAmount,
+                }
+            })
+        )
+        return {
+            prepareTxs,
             tokenOutputs,
+            tokenOutputSnapshots,
         }
     }
 
@@ -251,7 +357,7 @@ export class SolanaWithdrawActionService {
         bot,
         prepareTx,
     }: SignWithdrawTransactionParams)
-    : Promise<SignWithdrawTransactionResult> {
+    : Promise < SignWithdrawTransactionResult > {
         return {
             signedTx: await this.solanaTxService.signTx(
                 {
@@ -272,11 +378,11 @@ export class SolanaWithdrawActionService {
      * @example
      * const txHash = await service.execute({ bot, signedTx })
      */
-    public async execute({ 
-        bot, 
-        signedTx, 
-        txCheck = false, 
-        stimulate = false 
+    public async execute({
+        bot,
+        signedTx,
+        txCheck = false,
+        stimulate = false
     }: ExecuteWithdrawTransactionParams): Promise<ExecuteWithdrawTransactionResult> {
         if (txCheck && !stimulate) {
             const transaction = await this.solanaFetchService.fetchTransaction({

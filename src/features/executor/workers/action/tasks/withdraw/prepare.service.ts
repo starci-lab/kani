@@ -8,9 +8,8 @@ import {
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
-    InjectSuperJson, AsyncService 
+    AsyncService 
 } from "@modules/mixin"
-import SuperJSON from "superjson"
 import {
     BalanceFetcherService,
     BalanceActionService,
@@ -57,8 +56,6 @@ export class WithdrawTaskPrepareService {
     private readonly asyncService: AsyncService,
     private readonly sendHeartbeatService: SendHeartbeatService,
     private readonly winstonService: WinstonService,
-    @InjectSuperJson()
-    private readonly superJson: SuperJSON,
     private readonly cacheService: CacheService,
     private readonly jobTaskService: JobTaskService,
     ) {}
@@ -68,12 +65,12 @@ export class WithdrawTaskPrepareService {
    */
     async process({ bot, job, taskIndex, bullmqJob }: WithdrawTaskPrepareParams) {
         try {
-            // 1) heartbeat
+            // heartbeat
             await this.sendHeartbeatService.process({
                 bot, job, bullmqJob 
             })
 
-            // 2) max-attempt guard
+            // max-attempt guard
             const retries = job.tasks?.[taskIndex]?.retries ?? 0
             const maxAttempts = envConfig().executor.workers.job.prepareMaxAttempts
             if (retries >= maxAttempts) {
@@ -89,7 +86,7 @@ export class WithdrawTaskPrepareService {
                 })
             }
 
-            // 3) cache result
+            // cache result
             const cacheResult = await this.cacheService.get({
                 key: CacheKey.Withdraw,
                 args: [bot.id],
@@ -102,7 +99,7 @@ export class WithdrawTaskPrepareService {
                     strategy: JobFailureStrategy.Fatal,
                 })
             }
-            // 4) withdrawal address
+            // withdrawal address
             if (!bot.withdrawalAddress) {
                 throw new JobFailureException({
                     originalError: new BotWithdrawalAddressNotSetException({
@@ -112,7 +109,7 @@ export class WithdrawTaskPrepareService {
                 })
             }
 
-            // 5) resolve tokens
+            // resolve tokens
             const tokenIds = cacheResult.tokenInputs.map(
                 (tokenInput) => tokenInput.tokenId,
             )
@@ -135,7 +132,7 @@ export class WithdrawTaskPrepareService {
                 })
             }
 
-            // 6) fetch balances for tokens
+            // fetch balances for tokens
             const tokenBalances = await this.asyncService.allMustDone(
                 tokens.map(async (token) => {
                     const tokenBalance = await this.balanceFetcherService.fetchBalance(
@@ -150,7 +147,7 @@ export class WithdrawTaskPrepareService {
             )
             const tokenBalancesMap = new Map<string, BN>(tokenBalances)
 
-            // 7) validate balance >= requested withdraw
+            // validate balance >= requested withdraw
             for (const tokenInput of cacheResult.tokenInputs) {
                 const tokenBalance = tokenBalancesMap.get(tokenInput.tokenId)
 
@@ -174,7 +171,7 @@ export class WithdrawTaskPrepareService {
                 }
             }
 
-            // 8) convert inputs -> BalanceWithdrawTokenInput
+            // convert inputs -> BalanceWithdrawTokenInput
             const withdrawTokenInputs: Array<BalanceWithdrawTokenInput> = (
                 cacheResult.tokenInputs
             ).map((tokenInput) => {
@@ -195,9 +192,11 @@ export class WithdrawTaskPrepareService {
                     tokenId: token.id.toString(),
                 }
             })
-            // 9) prepare withdraw transactions
-            const [prepareResult,
-                error] = await this.asyncService.resolveTuple(
+            // prepare withdraw transactions
+            const [
+                prepareResult,
+                error
+            ] = await this.asyncService.resolveTuple(
                 this.balanceActionService.prepareWithdrawTransaction({
                     bot,
                     tokenInputs: withdrawTokenInputs,
@@ -211,7 +210,6 @@ export class WithdrawTaskPrepareService {
                     strategy: JobFailureStrategy.Fatal,
                 })
             }
-
             if (!prepareResult) {
                 throw new JobFailureException({
                     originalError: new PrepareWithdrawTransactionResultNotFoundException({
@@ -222,15 +220,16 @@ export class WithdrawTaskPrepareService {
                 })
             }
 
-            // 10) upsert prepared task (same pattern as ReconcileBalance)
-            await this.jobTaskService.upsertPreparedTask({
-                jobId: job.id,
-                taskType: TaskType.Withdraw,
-                taskIndex,
-                prepareResult,
-            })
+            await this.jobTaskService.upsertPreparedTask(
+                {
+                    jobId: job.id,
+                    taskType: TaskType.Withdraw,
+                    taskIndex,
+                    prepareResult,
+                }
+            )
 
-            // 11) log prepared task
+            // log prepared task
             this.winstonService.log(WinstonLog.ActiveJobTaskPrepared,
                 {
                     botId: bot.id,
@@ -242,8 +241,6 @@ export class WithdrawTaskPrepareService {
                     taskType: TaskType.Withdraw,
                 })
         } catch (error) {
-            console.error("error",
-                error)
             this.winstonService.log(WinstonLog.ActiveJobTaskPreparedFailed,
                 {
                     botId: bot.id,

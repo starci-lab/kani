@@ -46,6 +46,7 @@ export interface SwapParams {
     accountAddress: string
     inputCoin?: TransactionObjectArgument
     txb?: Transaction
+    recipientAddress?: string
 }
 
 /** Result of executing a swap. */

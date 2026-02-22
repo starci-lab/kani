@@ -23,6 +23,7 @@ export interface PrepareWithdrawTransactionParams {
 export interface PrepareWithdrawTransactionResult {
     prepareTxs: Array<PrepareTx>
     tokenOutputs: Array<WithdrawTokenOutput>
+    tokenOutputSnapshots: Array<WithdrawTokenOutput>
 }
 
 /** Parameters for executing a withdraw transaction. */

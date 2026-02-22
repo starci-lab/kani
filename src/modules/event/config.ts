@@ -2,6 +2,7 @@ import {
     EventName,
 } from "./enums"
 import {
+    ConfirmWithdrawalEventPayload,
     KafkaTopicConfig,
     PingEventPayload,
 } from "./types"
@@ -206,5 +207,13 @@ export const configMap = {
         } as Partial<KafkaTopicConfig>,
         eventPayload: {
         } as TokenPriceUpdatedEventPayload
+    },
+    [EventName.ConfirmWithdrawal]: {
+        useKafka: false,
+        useLocal: true,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as ConfirmWithdrawalEventPayload
     },
 }
