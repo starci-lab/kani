@@ -98,16 +98,6 @@ export class ActionRequeueService implements OnApplicationBootstrap {
         // requeue each stale bot
         const promises = bots.map(
             async (bot) => {
-                const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
-                    id: {
-                        $eq: bot.activeJob?.liquidityPool.toString() ?? "",
-                    }
-                })
-                if (!liquidityPool) {
-                    throw new LiquidityPoolNotFoundException({
-                        id: bot.activeJob?.liquidityPool.toString() ?? "",
-                    })
-                }
                 const oldJob = await this.connection.model<JobSchema>(JobSchema.name).findById(bot.activeJob?.job.toString() ?? "")
                 if (!oldJob) {
                     throw new JobNotFoundException(
@@ -118,6 +108,16 @@ export class ActionRequeueService implements OnApplicationBootstrap {
                 }
                 switch (bot.activeJob?.jobType) {
                 case JobType.OpenPosition: {
+                    const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
+                        id: {
+                            $eq: bot.activeJob?.liquidityPool.toString() ?? "",
+                        }
+                    })
+                    if (!liquidityPool) {
+                        throw new LiquidityPoolNotFoundException({
+                            id: bot.activeJob?.liquidityPool.toString() ?? "",
+                        })
+                    }
                     await this.openPositionEnqueueService.enqueue(
                         {
                             liquidityPool,
@@ -129,6 +129,17 @@ export class ActionRequeueService implements OnApplicationBootstrap {
                     break
                 }
                 case JobType.ClosePosition: {
+                    const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
+                        id: {
+                            $eq: bot.activeJob?.liquidityPool.toString() ?? "",
+                        }
+                    })
+                    if (!liquidityPool) {
+                        throw new LiquidityPoolNotFoundException({
+                            id: bot.activeJob?.liquidityPool.toString() ?? "",
+                        })
+                    }
+
                     await this.closePositionEnqueueService.enqueue(
                         {
                             liquidityPool,

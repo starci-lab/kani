@@ -239,7 +239,6 @@ export class ReconcileBalanceTaskPrepareService {
                     break
                 }
             }
-
             // 6) Prepare transactions
             const [
                 prepareResult,
@@ -252,7 +251,6 @@ export class ReconcileBalanceTaskPrepareService {
                     }
                 ),
             )
-
             if (error) {
                 throw new JobFailureException({
                     originalError: error,
