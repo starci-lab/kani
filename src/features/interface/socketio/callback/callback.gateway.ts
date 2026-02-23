@@ -106,7 +106,7 @@ export class CallbackGateway implements OnGatewayInit {
                 client,
                 eventName: PublicationEvent.ConfirmWithdrawal,
             }
-        )
+        ) 
     }
 }
 
