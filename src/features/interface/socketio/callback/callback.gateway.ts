@@ -1,6 +1,5 @@
 import {
     OnGatewayInit,
-    OnGatewayDisconnect,
     SubscribeMessage,
     MessageBody,
     ConnectedSocket,
@@ -44,15 +43,7 @@ import {
 } from "@modules/winston"
 
 @CallbackWebSocketGateway()
-export class CallbackGateway implements OnGatewayInit, OnGatewayDisconnect {
-    /**
-     * Map of socket client id -> subscribed bot ids.
-     *
-     * We keep this in-memory because subscriptions are ephemeral and tied
-     * to the socket connection lifecycle.
-     */
-    private readonly botIdByClientId: Map<string, string> = new Map()
-
+export class CallbackGateway implements OnGatewayInit {
     constructor(
         private readonly winstonService: WinstonService,
         private readonly wsResponseService: WsResponseService,
@@ -75,19 +66,7 @@ export class CallbackGateway implements OnGatewayInit, OnGatewayDisconnect {
         @ConnectedSocket() client: TypedSocket,
         @MessageBody() data: SubscribeConfirmWithdrawalEventPayload
     ) {
-        this.botIdByClientId.set(
-            client.id, 
-            data.botId
-        )
-        console.log(this.botIdByClientId)
-    }
-
-    /**
-     * Handle disconnect.
-     */
-    handleDisconnect(client: TypedSocket) {
-        // Cleanup subscription state to avoid memory leaks.
-        this.botIdByClientId.delete(client.id)
+        client.data.botId = data.botId
     }
 
     /**
@@ -100,7 +79,7 @@ export class CallbackGateway implements OnGatewayInit, OnGatewayDisconnect {
     async publishConfirmWithdrawal(
         event: ConfirmWithdrawalEventPayload
     ) {
-        const clientId = [...this.botIdByClientId.entries()].find(([, botId]) => botId === event.botId)?.[0]
+        const clientId = [...this.server.sockets.values()].find((socket) => socket.data.botId === event.botId)?.id
         if (!clientId) {
             this.winstonService.log(
                 WinstonLog.SocketIoClientIdNotFound,

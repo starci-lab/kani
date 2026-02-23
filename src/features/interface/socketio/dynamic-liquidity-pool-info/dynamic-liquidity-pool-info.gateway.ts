@@ -1,6 +1,5 @@
 import {
     OnGatewayInit,
-    OnGatewayDisconnect,
     SubscribeMessage,
     MessageBody,
     ConnectedSocket,
@@ -54,15 +53,7 @@ import {
 } from "@nestjs/common"
 
 @DynamicLiquidityPoolInfoWebSocketGateway()
-export class DynamicLiquidityPoolInfoGateway implements OnGatewayInit, OnGatewayDisconnect {
-    /**
-     * Map of socket client id -> subscribed liquidity pool ids.
-     *
-     * We keep this in-memory because subscriptions are ephemeral and tied
-     * to the socket connection lifecycle.
-     */
-    private readonly liquidityPoolIdsByClientId: Map<string, Array<string>> = new Map()
-
+export class DynamicLiquidityPoolInfoGateway implements OnGatewayInit {
     constructor(
         private readonly asyncService: AsyncService,
         private readonly cacheService: CacheService,
@@ -101,17 +92,9 @@ export class DynamicLiquidityPoolInfoGateway implements OnGatewayInit, OnGateway
             )
         }
         // Store the latest subscription list for this client.
-        this.liquidityPoolIdsByClientId.set(
-            client.id,
-            data.ids
-        )
+        client.data.liquidityPoolIds = liquidityPools.map(liquidityPool => liquidityPool.id)
         // Publish immediately so the client doesn't have to wait for the next interval tick.
         await this.publishDynamicLiquidityPoolsInfoSingle(client.id)
-    }
-
-    handleDisconnect(client: TypedSocket) {
-        // Cleanup subscription state to avoid memory leaks.
-        this.liquidityPoolIdsByClientId.delete(client.id)
     }
 
     /**
@@ -123,8 +106,8 @@ export class DynamicLiquidityPoolInfoGateway implements OnGatewayInit, OnGateway
     @Interval(envConfig().socketIo.dynamic.liquidityPoolsInfo.interval)
     async publishDynamicLiquidityPoolsInfo() {
         const promises: Array<Promise<void>> = []
-        for (const clientId of this.liquidityPoolIdsByClientId.keys()) {
-            promises.push(this.publishDynamicLiquidityPoolsInfoSingle(clientId))
+        for (const socket of [...this.server.sockets.values()]) {
+            promises.push(this.publishDynamicLiquidityPoolsInfoSingle(socket.id))
         }
         await this.asyncService.allIgnoreError(promises)
     }
@@ -135,17 +118,17 @@ export class DynamicLiquidityPoolInfoGateway implements OnGatewayInit, OnGateway
     async publishDynamicLiquidityPoolsInfoSingle(
         clientId: string
     ) {
-        const client = this.server.sockets.get(clientId)
+        const client = this.server.sockets.get(clientId) as TypedSocket
         if (!client) {
             return
         }
-        const ids = this.liquidityPoolIdsByClientId.get(clientId) ?? []
-        if (ids.length === 0) {
+        const liquidityPoolIds = client.data.liquidityPoolIds
+        if (!liquidityPoolIds?.length) {
             return
         }
         const results: Record<string, PublicationDynamicLiquidityPoolInfo> = {
         }
-        const promises: Array<Promise<void>> = ids.map(
+        const promises: Array<Promise<void>> = liquidityPoolIds.map(
             async (liquidityPoolId) => {
                 const clmm = await this.cacheService.get({
                     key: CacheKey.DynamicClmmLiquidityPoolInfo,
