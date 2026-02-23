@@ -68,8 +68,6 @@ import {
     FilesystemModule 
 } from "@modules/filesystem"
 import {
-    IoRedisInstanceKey, 
-    IoRedisModule, 
     RedisInstanceKey, 
     RedisModule
 } from "@modules/native"
@@ -117,12 +115,6 @@ import {
         PrivyModule.register({
             isGlobal: true,
         }),
-        IoRedisModule.register({
-            isGlobal: true,
-            instanceKeys: [
-                IoRedisInstanceKey.Adapter,
-            ],
-        }),
         AxiosModule.register({
             isGlobal: true,
         }),
@@ -130,6 +122,7 @@ import {
             isGlobal: true,
             instanceKeys: [
                 RedisInstanceKey.Cache,
+                RedisInstanceKey.Adapter,
             ],
         }),
         StreamAsyncIteratorModule.register({

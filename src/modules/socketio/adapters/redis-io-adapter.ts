@@ -6,7 +6,7 @@ import {
     ServerOptions 
 } from "http"
 import {
-    RedisOrCluster 
+    RedisClient 
 } from "@modules/native"
 import {
     IoAdapter 
@@ -14,16 +14,16 @@ import {
 
 export class RedisIoAdapter extends IoAdapter {
     private adapterConstructor: ReturnType<typeof createAdapter>
-    private redisClientOrCluster: RedisOrCluster
+    private redisClient: RedisClient
 
-    public setClient(redisClientOrCluster: RedisOrCluster) {
-        this.redisClientOrCluster = redisClientOrCluster
+    public setClient(redisClient: RedisClient) {
+        this.redisClient = redisClient
     }
 
     public async connect(): Promise<void> {
         // if cluster is enabled,
-        const pubClient = this.redisClientOrCluster.duplicate()
-        const subClient = this.redisClientOrCluster.duplicate() 
+        const pubClient = this.redisClient.duplicate()
+        const subClient = this.redisClient.duplicate() 
         this.adapterConstructor = createAdapter(pubClient,
             subClient)
     }
@@ -32,7 +32,6 @@ export class RedisIoAdapter extends IoAdapter {
         const server = super.createIOServer(port,
             options)
         server.adapter(this.adapterConstructor)
-        
         return server
     }
 }

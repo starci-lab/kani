@@ -21,8 +21,9 @@ import {
     RedisIoAdapter 
 } from "@modules/socketio"
 import {
-    createIoRedisKey, 
-    IoRedisInstanceKey
+    createRedisKey, 
+    RedisClient,
+    RedisInstanceKey
 } from "@modules/native"
 import {
     ContextLoggerService 
@@ -53,8 +54,8 @@ for powering Kani's applications and integrations.",
         enableVersioning: true,
     })
     app.use(compression())
-    const redis = await app.get(
-        createIoRedisKey(IoRedisInstanceKey.Adapter), 
+    const redis = app.get<RedisClient>(
+        createRedisKey(RedisInstanceKey.Adapter), 
         {
             strict: false 
         }
