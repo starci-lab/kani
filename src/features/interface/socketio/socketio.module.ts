@@ -10,6 +10,9 @@ import {
 import {
     PriceModule 
 } from "./price"
+import {
+    CallbackModule 
+} from "./callback"
 
 @Module({
     imports: [
@@ -19,6 +22,11 @@ import {
             }
         ),
         PriceModule.register(
+            {
+                isGlobal: true,
+            }
+        ),
+        CallbackModule.register(
             {
                 isGlobal: true,
             }

@@ -79,6 +79,7 @@ export class CallbackGateway implements OnGatewayInit, OnGatewayDisconnect {
             client.id, 
             data.botId
         )
+        console.log(this.botIdByClientId)
     }
 
     /**
@@ -96,8 +97,10 @@ export class CallbackGateway implements OnGatewayInit, OnGatewayDisconnect {
      * Note: we resolve pool type implicitly by trying CLMM key first, then DLMM.
      */
     @OnEvent(EventName.ConfirmWithdrawal)
-    async publishConfirmWithdrawal(event: ConfirmWithdrawalEventPayload) {
-        const clientId = this.botIdByClientId.get(event.botId)
+    async publishConfirmWithdrawal(
+        event: ConfirmWithdrawalEventPayload
+    ) {
+        const clientId = [...this.botIdByClientId.entries()].find(([, botId]) => botId === event.botId)?.[0]
         if (!clientId) {
             this.winstonService.log(
                 WinstonLog.SocketIoClientIdNotFound,
