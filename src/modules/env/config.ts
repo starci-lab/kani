@@ -556,6 +556,18 @@ export const envConfig = () => ({
             },
         },
     },
+    /** Inspector: TWAP calculation interval. */
+    inspector: {
+        twap: {
+            interval: parseEnvMs({
+                key: "INSPECTOR_TWAP_INTERVAL", defaultValue: "1s" 
+            }),
+            retention: parseEnvMs({
+                key: "INSPECTOR_TWAP_RETENTION_INTERVAL",
+                defaultValue: "5m"
+            })
+        },
+    },
     /** Socket.IO broadcast intervals for price and dynamic liquidity pool info. */
     socketIo: {
         price: {
