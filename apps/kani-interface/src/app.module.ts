@@ -139,7 +139,7 @@ import {
             memoryStorage: {
                 manualLoad: envConfig().databases.mongoose.primary.manualLoad,
             },
-            associate: true,
+            associate: envConfig().databases.mongoose.primary.associate,
         }),
         ApolloServerModule.register({
             isGlobal: true,

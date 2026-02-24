@@ -35,20 +35,12 @@ export class CexesModule extends ConfigurableModuleClass {
      */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
-        
         // register all exchange modules
         const modules = [
-            BinanceModule.register({
-                isGlobal: options.isGlobal
-            }),
-            GateModule.register({
-                isGlobal: options.isGlobal
-            }),
-            BybitModule.register({
-                isGlobal: options.isGlobal
-            }),
+            BinanceModule.register(options),
+            GateModule.register(options),
+            BybitModule.register(options),
         ]
-        
         return {
             ...dynamicModule,
             imports: [

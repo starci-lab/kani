@@ -35,7 +35,6 @@ export class BinanceModule extends ConfigurableModuleClass {
      */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
-        
         // register all Binance services
         const providers = [
             BinanceLastPriceService,

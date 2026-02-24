@@ -2,9 +2,6 @@ import {
     Module 
 } from "@nestjs/common"
 import {
-    InspectorModule 
-} from "@modules/inspector"
-import {
     EventEmitterModule 
 } from "@nestjs/event-emitter"
 import {
@@ -35,6 +32,27 @@ import {
 import {
     ServiceName 
 } from "@modules/common"
+import {
+    RedisInstanceKey, RedisModule 
+} from "@modules/native"
+import {
+    StreamAsyncIteratorModule 
+} from "@modules/stream-async-iterator"
+import {
+    EventModule 
+} from "@modules/event"
+import {
+    DependencyName, TerminusModule 
+} from "@modules/terminus"
+import {
+    ScheduleModule 
+} from "@nestjs/schedule"
+import {
+    InspectorModule 
+} from "@features/inspector"
+import {
+    CexesModule 
+} from "@modules/blockchains"
 
 @Module({
     imports: [
@@ -42,17 +60,38 @@ import {
         FilesystemModule.register({
             isGlobal: true,
         }),
+        StreamAsyncIteratorModule.register(
+            {
+                isGlobal: true,
+            }
+        ),
         SentryModule.register({
             isGlobal: true,
         }),
-        WinstonModule.register({
-            isGlobal: true,
-            serviceName: ServiceName.KaniObserver,
-            level: envConfig().winston.level as WinstonLevel,
-        }),
+        ScheduleModule.forRoot(),
+        WinstonModule.register(
+            {
+                isGlobal: true,
+                serviceName: ServiceName.KaniInspector,
+                level: envConfig().winston.level as WinstonLevel,
+            }
+        ),
         EventEmitterModule.forRoot(),
+        EventModule.register({
+            isGlobal: true,
+            kafka: {
+                createTopicsIfNotExists: true,
+                groupId: ServiceName.KaniInspector,
+            },
+        }),
         MixinModule.register({
             isGlobal: true,
+        }),
+        RedisModule.register({
+            isGlobal: true,
+            instanceKeys: [
+                RedisInstanceKey.Cache,
+            ],
         }),
         CacheModule.register({
             isGlobal: true,
@@ -60,13 +99,28 @@ import {
         PrimaryMongoDbModule.register({
             isGlobal: true,
             memoryStorage: {
-                manualLoad: false,
+                manualLoad: envConfig().databases.mongoose.primary.manualLoad,
             },
             withSeeders: {
-                manualSeed: true,
+                manualSeed: envConfig().databases.mongoose.primary.manualSeed,
             },
-            associate: true,
+            associate: envConfig().databases.mongoose.primary.associate,
         }),
+        TerminusModule.register({
+            isGlobal: true,
+            dependencies: [
+                DependencyName.MongodbPrimary,
+                DependencyName.CacheRedis,
+            ],
+        }),
+        CexesModule.register(
+            {
+                isGlobal: true,
+                useKafka: false,
+                useLocal: true,
+                updateCache: false,
+            }
+        ),
         InspectorModule.register({
             isGlobal: true,
         }),

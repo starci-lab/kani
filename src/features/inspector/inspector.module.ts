@@ -4,6 +4,9 @@ import {
 import {
     ConfigurableModuleClass, OPTIONS_TYPE,
 } from "./inspector.module-definition"
+import {
+    TwapModule 
+} from "./twap"
 
 @Module({
 })
@@ -14,7 +17,11 @@ export class InspectorModule extends ConfigurableModuleClass {
         const dynamicModule = super.register(options)
         return {  
             ...dynamicModule,
-            imports: [],
+            imports: [
+                TwapModule.register({
+                    isGlobal: options.isGlobal,
+                }),
+            ],
         }
     }
 }   

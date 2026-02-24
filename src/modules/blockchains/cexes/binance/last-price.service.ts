@@ -1,41 +1,48 @@
 import {
+    Inject,
     Injectable,
     OnApplicationBootstrap,
 } from "@nestjs/common"
 import {
     BINANCE_LAST_PRICE_STREAM_NAME,
-    BINANCE_WS_URL 
+    BINANCE_WS_URL
 } from "./constants"
 import {
-    MarketListingId 
+    MarketListingId
 } from "@modules/databases"
 import {
-    AggregatedTokenPriceCacheService 
+    AggregatedTokenPriceCacheService
 } from "@modules/cache"
 import {
-    envConfig 
+    envConfig
 } from "@modules/env"
 import {
-    WinstonLog, WinstonService 
+    WinstonLog, WinstonService
 } from "@modules/winston"
 import {
-    BinanceTokenRegistryService 
+    BinanceTokenRegistryService
 } from "./token-registry.service"
 import _ from "lodash"
 import {
-    AsyncService, DayjsService, RetryService 
+    AsyncService, DayjsService, RetryService
 } from "@modules/mixin"
 import {
-    WebSocketStreamConnection, StreamAsyncIteratorService 
+    WebSocketStreamConnection, StreamAsyncIteratorService
 } from "@modules/stream-async-iterator"
 import {
-    EventEmitterService, EventName 
+    EventEmitterService, EventName
 } from "@modules/event"
 import Decimal from "decimal.js"
 import {
-    Dayjs 
+    Dayjs
 } from "dayjs"
+import {
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE
+} from "./binance.module-definition"
 
+/**
+ * Service for handling Binance last price data.
+ */
 @Injectable()
 export class BinanceLastPriceService implements OnApplicationBootstrap {
     constructor(
@@ -47,23 +54,21 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
         private readonly eventEmitterService: EventEmitterService,
+        @Inject(MODULE_OPTIONS_TOKEN)
+        private readonly options: typeof OPTIONS_TYPE,
     ) {
     }
 
     /**
-     * Initializes WebSocket subscriptions for Binance token prices on application bootstrap.
-     * Splits symbols into batches and creates retryable connections for each batch.
      */
     onApplicationBootstrap(): void {
         // get all Binance symbols
         const symbols = this.binanceTokenRegistryService.getBinanceSymbols()
-        
         // split symbols into batches based on configuration
         const batches = _.chunk(
             symbols,
             envConfig().cexes.binance.chunks.lastPrice
         )
-        
         // create WebSocket connection for each batch
         for (const batch of batches) {
             this.retryService.retry({
@@ -75,24 +80,24 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                     const connection = new WebSocketStreamConnection(
                         BINANCE_WS_URL
                     )
-                    
+
                     // create abort controller for connection management
                     const abortController = new AbortController()
-                    
+
                     // create timeout for connection idle detection
                     let timeout: NodeJS.Timeout | undefined = undefined
-                    
+
                     // reset timeout function to keep connection alive
                     const resetTimeout = () => {
                         if (timeout) {
                             clearTimeout(timeout)
                         }
                         timeout = setTimeout(
-                            () => abortController.abort(), 
+                            () => abortController.abort(),
                             envConfig().cexes.binance.interval.rest,
                         )
                     }
-                    
+
                     let startTime: Dayjs | null = null
                     // create WebSocket stream
                     const stream = await this.streamAsyncIteratorService.createStream({
@@ -108,7 +113,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                 }
                             )
                             startTime = this.dayjsService.now()
-                            
+
                             // subscribe to ticker stream
                             connection.ws.send(
                                 JSON.stringify({
@@ -146,7 +151,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                             )
                         }
                     })
-                    
+
                     // process incoming stream data
                     for await (const data of stream) {
                         try {
@@ -154,16 +159,16 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                             const parsed = JSON.parse(
                                 data.toString(),
                             ) as Ticker24hrStream | NullTicker24hrStream
-                            
+
                             // skip subscription acknowledgment
                             if ("result" in parsed && parsed.result === null) continue
-                            
+
                             // skip if data field is missing
                             if (!("data" in parsed)) continue
-                            
+
                             // extract symbol from stream name
                             const streamSymbol = parsed.stream.split("@")[0]
-                            
+
                             // get token prices from registry
                             const tokenPrices = this.binanceTokenRegistryService.getBinanceTokenPrices({
                                 tokenPriceDataArray: [
@@ -173,21 +178,27 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                     }
                                 ]
                             })
-                            
+
                             // reset timeout to keep connection alive
                             resetTimeout()
-                            
+
                             // update token prices in cache and emit events
                             await this.asyncService.allIgnoreError(
                                 tokenPrices.map(
                                     async (tokenPrice) => {
                                         await this.asyncService.allIgnoreError([
                                             // update cache
-                                            this.aggregatedTokenPriceCacheService.set({
-                                                id: tokenPrice.id,
-                                                price: tokenPrice.price,
-                                                marketListingId: MarketListingId.Binance,
-                                            }),
+                                            ...(
+                                                this.options.updateCache 
+                                                    ? [this.aggregatedTokenPriceCacheService.set(
+                                                        {
+                                                            id: tokenPrice.id,
+                                                            price: tokenPrice.price,
+                                                            marketListingId: MarketListingId.Binance,
+                                                        }
+                                                    )
+                                                    ] : []
+                                            ),
                                             // emit price update event
                                             this.eventEmitterService.emit({
                                                 event: EventName.TokenPriceUpdated,
@@ -196,6 +207,10 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                                     price: new Decimal(tokenPrice.price),
                                                     marketListingId: MarketListingId.Binance,
                                                 },
+                                                options: {
+                                                    useKafka: this.options.useKafka,
+                                                    useLocal: this.options.useLocal,
+                                                }
                                             }),
                                         ])
                                     }

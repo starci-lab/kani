@@ -7,6 +7,7 @@ export enum ServiceName {
     KaniCoordinator = "kani-coordinator",
     KaniCLI = "kani-cli",
     KaniInterface = "kani-interface",
+    KaniInspector = "kani-inspector",
     // unknown for fallback service name
     KaniUnknown = "kani-unknown",
 }

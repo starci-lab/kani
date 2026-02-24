@@ -153,7 +153,7 @@ import {
             memoryStorage: {
                 manualLoad: envConfig().databases.mongoose.primary.manualLoad,
             },
-            associate: true,
+            associate: envConfig().databases.mongoose.primary.associate,
         }),
         EventModule.register({
             isGlobal: true,
@@ -224,6 +224,9 @@ import {
         }),
         CexesModule.register({
             isGlobal: true,
+            useKafka: true,
+            useLocal: false,
+            updateCache: true,
         }), 
         ObserverModule.register({
             isGlobal: true,

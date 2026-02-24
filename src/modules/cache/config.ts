@@ -5,6 +5,7 @@ import {
     CacheKey 
 } from "./enums"
 import type {
+    AggregatedTokenPriceArrayCacheResult,
     AggregatedTokenPriceCacheResult,
     DynamicClmmLiquidityPoolInfoCacheResult,
     DynamicDlmmLiquidityPoolInfoCacheResult,
@@ -31,6 +32,11 @@ export const configMap = {
         ttl: envConfig().cache.ttl.aggregatedTokenPrice,
         cacheResult: {
         } as AggregatedTokenPriceCacheResult,
+    },
+    [CacheKey.AggregatedTokenPriceArray]: {
+        ttl: envConfig().cache.ttl.aggregatedTokenPriceArray,
+        cacheResult: {
+        } as AggregatedTokenPriceArrayCacheResult,
     },
     [CacheKey.DynamicClmmLiquidityPoolInfo]: {
         ttl: envConfig().cache.ttl.dynamicClmmLiquidityPoolInfo,

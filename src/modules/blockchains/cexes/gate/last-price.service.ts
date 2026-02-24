@@ -1,4 +1,5 @@
 import {
+    Inject,
     Injectable,
     OnApplicationBootstrap,
 } from "@nestjs/common"
@@ -35,6 +36,9 @@ import {
     Dayjs 
 } from "dayjs"
 import _ from "lodash"
+import {
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
+} from "./gate.module-definition"
 
 @Injectable()
 export class GateLastPriceService implements OnApplicationBootstrap {
@@ -47,6 +51,8 @@ export class GateLastPriceService implements OnApplicationBootstrap {
         private readonly asyncService: AsyncService,
         private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
         private readonly eventEmitterService: EventEmitterService,
+        @Inject(MODULE_OPTIONS_TOKEN)
+        private readonly options: typeof OPTIONS_TYPE,
     ) { }
 
     onApplicationBootstrap() {
@@ -147,11 +153,13 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                                             async (tokenPrice) => {
                                                 return this.asyncService.allIgnoreError(
                                                     [
-                                                        this.aggregatedTokenPriceCacheService.set({
-                                                            id: tokenPrice.id,
-                                                            price: tokenPrice.price,
-                                                            marketListingId: MarketListingId.Gate,
-                                                        }),
+                                                        ...(this.options.updateCache ? [
+                                                            this.aggregatedTokenPriceCacheService.set({
+                                                                id: tokenPrice.id,
+                                                                price: tokenPrice.price,
+                                                                marketListingId: MarketListingId.Gate,
+                                                            })
+                                                        ] : []),
                                                         this.eventEmitterService.emit(
                                                             {
                                                                 event: EventName.TokenPriceUpdated,
@@ -160,6 +168,10 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                                                                     price: new Decimal(tokenPrice.price),
                                                                     marketListingId: MarketListingId.Gate,
                                                                 },
+                                                                options: {
+                                                                    useKafka: this.options.useKafka,
+                                                                    useLocal: this.options.useLocal,
+                                                                }
                                                             }
                                                         ),
                                                     ]

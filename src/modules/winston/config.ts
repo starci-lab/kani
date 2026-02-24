@@ -671,7 +671,7 @@ export const configMap = {
     // Websocket Subscription Opened
     [WinstonLog.WebsocketSubscriptionOpened]: {
         name: WinstonLog.WebsocketSubscriptionOpened,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as WebsocketSubscriptionOpenedMessage,

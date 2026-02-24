@@ -1,4 +1,5 @@
 import {
+    Inject,
     Injectable,
     OnApplicationBootstrap,
 } from "@nestjs/common"
@@ -37,6 +38,9 @@ import Decimal from "decimal.js"
 import {
     Dayjs 
 } from "dayjs"
+import {
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
+} from "./bybit.module-definition"
   
 @Injectable()
 export class BybitLastPriceService implements OnApplicationBootstrap {
@@ -49,6 +53,8 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
       private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
       private readonly dayjsService: DayjsService,
       private readonly eventEmitterService: EventEmitterService,
+      @Inject(MODULE_OPTIONS_TOKEN)
+      private readonly options: typeof OPTIONS_TYPE,
     ) {}
   
     onApplicationBootstrap() {
@@ -155,11 +161,13 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                                     tokenPrices.map((tokenPrice) => 
                                         this.asyncService.allIgnoreError(
                                             [
-                                                this.aggregatedTokenPriceCacheService.set({
-                                                    id: tokenPrice.id,
-                                                    price: tokenPrice.price,
-                                                    marketListingId: MarketListingId.Bybit,
-                                                }),
+                                                ...(this.options.updateCache ? [
+                                                    this.aggregatedTokenPriceCacheService.set({
+                                                        id: tokenPrice.id,
+                                                        price: tokenPrice.price,
+                                                        marketListingId: MarketListingId.Bybit,
+                                                    })
+                                                ] : []),
                                                 this.eventEmitterService.emit(
                                                     {
                                                         event: EventName.TokenPriceUpdated,
@@ -168,6 +176,10 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                                                             price: new Decimal(tokenPrice.price),
                                                             marketListingId: MarketListingId.Bybit,
                                                         },
+                                                        options: {
+                                                            useKafka: this.options.useKafka,
+                                                            useLocal: this.options.useLocal,
+                                                        }
                                                     }
                                                 ),
                                             ]

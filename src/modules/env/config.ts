@@ -653,6 +653,10 @@ export const envConfig = () => ({
                 key: "CACHE_TTL_AGGREGATED_TOKEN_PRICE",
                 defaultValue: "100years"
             }),
+            aggregatedTokenPriceArray: parseEnvMs({
+                key: "CACHE_TTL_AGGREGATED_TOKEN_PRICE_ARRAY",
+                defaultValue: "100years"
+            }),
             dynamicClmmLiquidityPoolInfo: parseEnvMs({
                 key: "CACHE_TTL_DYNAMIC_CLMM_LIQUIDITY_POOL_INFO",
                 defaultValue: "100years"
@@ -877,6 +881,9 @@ export const envConfig = () => ({
                 }),
                 manualLoad: parseEnvBoolean({
                     key: "PRIMARY_MONGO_DB_MANUAL_LOAD", defaultValue: false 
+                }),
+                associate: parseEnvBoolean({
+                    key: "PRIMARY_MONGO_DB_ASSOCIATE", defaultValue: true 
                 }),
                 maxAwaitTimeMS: parseEnvMs({
                     key: "PRIMARY_MONGO_DB_MAX_AWAIT_TIME_MS", defaultValue: "30s" 
