@@ -69,7 +69,8 @@ export class AppService implements OnModuleInit {
                 "0x36dbef866a1d62bf7328989a10fb2f07d769f4ee587c0de4a0a256e57e0a58a8::deep::DEEP",
                 "0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7::DBUSDC::DBUSDC"
             ],
-            arguments: [tx.object(params.to), tx.pure.u64(params.amount)],
+            arguments: [tx.object(params.to),
+                tx.pure.u64(params.amount)],
         })
 
         // có thể cố tình set gasBudget nhỏ để test lỗi insufficient gas

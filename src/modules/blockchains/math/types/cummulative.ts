@@ -15,4 +15,8 @@ export interface ResolveCummulativePriceParams {
 export interface ResolveCummulativePriceResult {
     /** The price. */
     price: Decimal
+    /** Whether the price data is stale. */
+    isStale: boolean
+    /** Milliseconds since the price snapshot was taken. */
+    ageMs: number
 }

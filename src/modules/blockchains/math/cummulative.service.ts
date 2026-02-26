@@ -1,7 +1,6 @@
 import {
     Injectable 
 } from "@nestjs/common"
-import Decimal from "decimal.js"
 import {
     envConfig 
 } from "@modules/env"
@@ -10,179 +9,320 @@ import {
 } from "@modules/mixin"
 import {
     AggregatedTokenPriceNotFoundException,
+    PriceByMarketPriorityNotResolvedException,
+    TokenNotFoundException,
 } from "@modules/exceptions"
 import {
-    median 
-} from "simple-statistics"
-import {
-    AggregatedTokenPriceCummulativeCacheService 
+    AggregatedTokenPriceCacheResult,
+    AggregatedTokenPriceCummulativeCacheResult,
+    AggregatedTokenPriceCummulativeCacheService,
+    CreateInitialCacheResultParams,
+    SetAggregatedTokenPriceCummulativeParams,
+    TwapSnapshot,
+    UpsertLastPriceParams,
 } from "@modules/cache"
 import {
     ResolveCummulativePriceParams,
     ResolveCummulativePriceResult,
 } from "./types"
+import {
+    PriceSelectionService 
+} from "./price-selection.service"
+import {
+    PrimaryMemoryStorageService 
+} from "@modules/databases"
+import Decimal from "decimal.js"
 
 /**
- * Service responsible for resolving cummulative prices.
- * Handles price resolution with outlier detection, staleness checks, and relative price calculations.
- *
- * @example
- * const service = new CummulativeService(...)
- * const price = await service.resolveCummulativePrice({ token })
+ * Service responsible for resolving prices (spot + relative).
+ * TWAP window snapshots are persisted in cache service.
  */
 @Injectable()
 export class CummulativeService {
     constructor(
-        private readonly dayjsService: DayjsService,
-        private readonly aggregatedTokenPriceCummulativeCacheService: AggregatedTokenPriceCummulativeCacheService,
-        private readonly asyncService: AsyncService 
+    private readonly dayjsService: DayjsService,
+    private readonly aggregatedTokenPriceCummulativeCacheService: AggregatedTokenPriceCummulativeCacheService,
+    private readonly asyncService: AsyncService,
+    private readonly priceSelectionService: PriceSelectionService,
+    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     /**
-     * Resolves the best available price for a token.
+     * Updates TWAP snapshots and last aggregated price map.
      *
-     * Pricing policy:
-     * - Prices are evaluated in market priority order (lower priority value = higher priority).
-     * - Prices that deviate too far from the median are rejected as outliers.
-     * - Non-stale prices are preferred.
-     * - If all valid prices are stale, the best stale price is returned and marked as stale.
+     * Strategy:
+     * - Always upsert latest price into lastAggregatedTokenPrice.prices.
+     * - Every intervalMs, append one snapshot (current prices map) into snapshots.
+     * - Prune snapshots to last maxSnapshots (from env).
      *
-     * @param param - Parameters for resolving price
-     * @param param.token - Token schema to resolve price for
-     * @returns Resolved price with staleness information
+     * @param param - Id, price, marketListingId, intervalMs
+     * @returns Promise that resolves when cache is updated
      *
      * @example
-     * const result = await service.resolveCummulativePrice({ token })
+     * await this.cummulativeService.updateCummulativeSnapshot({ id, price, marketListingId, intervalMs })
      */
-    async resolveCummulativePrice({
-        token,
-        intervalMs
-    }: ResolveCummulativePriceParams): Promise<ResolveCummulativePriceResult> {
-        const aggregated =
-            await this.aggregatedTokenPriceCummulativeCacheService.get(token.id)
+    async updateCummulativeSnapshot({
+        id,
+        price,
+        marketListingId,
+        intervalMs,
+    }: SetAggregatedTokenPriceCummulativeParams): Promise<void> {
         const now = this.dayjsService.now()
-        const maxAgeMs = envConfig().cache.stale.priceMaxAgeMs
-        const maxDeviationRatio = envConfig().price.deviationMaxRatio
-
-        // Sort markets by priority
-        const marketListings = [...token.marketListings]
-            .sort(
-                (marketListingPrev, marketListingNext) => 
-                    marketListingPrev.priority - marketListingNext.priority
-            )
-        // Collect prices for median calculation
-        const observedPrices: Array<number> = marketListings
-            .map(
-                (marketListing) =>
-                    aggregated.lastAggregatedTokenPrice.prices[marketListing.id]?.price,
-            )
-            .filter(
-                (price): price is number =>
-                    typeof price === "number" && !isNaN(price),
-            )
-        if (observedPrices.length === 0) {
-            throw new AggregatedTokenPriceNotFoundException(
-                {
-                    id: token.id,
-                }
-            )
+    
+        const [cacheResult] = await this.asyncService.resolveTuple(
+            this.aggregatedTokenPriceCummulativeCacheService.get(id),
+        )
+    
+        // init
+        if (!cacheResult) {
+            const initialCacheResult = this.createInitialCacheResult({
+                now,
+                price,
+                marketListingId,
+            })
+            await this.aggregatedTokenPriceCummulativeCacheService.set({
+                id,
+                cacheResult: initialCacheResult,
+            })
+            return
         }
-
-        const medianPrice = median(observedPrices)
-
-        const isPriceOutlier = (price: number): boolean => {
-            return new Decimal(price)
-                .minus(medianPrice)
-                .abs()
-                .div(medianPrice)
-                .gt(maxDeviationRatio)
-        }
-
-        let bestStaleCandidate: {
-            price: Decimal
-            ageMs: number
-        } | null = null
-
-        for (const marketListing of marketListings) {
-            const priceEntry = aggregated.prices[marketListing.id]
-            if (!priceEntry) continue
-            if (isPriceOutlier(priceEntry.price)) continue
-
-            const ageMs = now.diff(
-                priceEntry.snapshotAt,
-                "millisecond",
-            )
-            const isStale = ageMs > maxAgeMs
-            if (!isStale) {
-                return {
-                    price: new Decimal(priceEntry.price),
-                    isStale: false,
-                    ageMs,
-                }
-            }
-            if (!bestStaleCandidate) {
-                bestStaleCandidate = {
-                    price: new Decimal(priceEntry.price),
-                    ageMs,
-                }
-            }
-        }
-        
-        if (bestStaleCandidate) {
-            return {
-                price: bestStaleCandidate.price,
-                isStale: true,
-                ageMs: bestStaleCandidate.ageMs,
-            }
-        }
-
-        throw new AggregatedTokenPriceNotFoundException(
+    
+        // always upsert latest tick
+        const lastAggregatedTokenPrice = cacheResult.lastAggregatedTokenPrice
+        this.upsertLastPrice(
+            lastAggregatedTokenPrice,
             {
-                id: token.id,
+                now,
+                price,
+                marketListingId,
+            }
+        )
+        // the only correct "previous time" for cumulative integration:
+        // last snapshot time (time of last appended cumulative snapshot)
+        const lastSnapshot = cacheResult.snapshots.at(-1)!
+        const lastSnapshotAt = lastSnapshot.snapshotAt
+        const dtMs = now.diff(lastSnapshotAt,
+            "milliseconds")
+    
+        // not time yet => just persist tick updates (no new snapshot)
+        if (dtMs < intervalMs) {
+            await this.aggregatedTokenPriceCummulativeCacheService.set({
+                id,
+                cacheResult,
+            })
+            return
+        }
+    
+        // resolve token
+        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id 
+        })
+        // throw error if the token is not found
+        if (!token) {
+            throw new TokenNotFoundException({
+                id 
+            })
+        }
+        // resolve spot price at snapshot time (market priority)
+        const resolvedPrice = this.priceSelectionService.resolveByMarketPriority({
+            token,
+            prices: lastAggregatedTokenPrice.prices,
+            now,
+            maxAgeMs: intervalMs,
+            maxDeviationRatio: envConfig().price.deviationMaxRatio,
+        })
+        if (!resolvedPrice) {
+            throw new PriceByMarketPriorityNotResolvedException({
+                id: token.id 
+            })
+        }
+        // integrate area under price curve: C(now) = C(prev) + price(now)*Δt
+        // (piecewise-constant assumption between snapshots)
+        const prevCumulative = lastSnapshot.cummulativePrice
+        const safeDtMs = Math.max(0,
+            dtMs)
+    
+        const newSnapshot: TwapSnapshot = {
+            cummulativePrice: prevCumulative.add(resolvedPrice.price.mul(safeDtMs)),
+            snapshotAt: now,
+        }
+    
+        const maxSnapshots = envConfig().inspector.twap.maxSnapshots
+        cacheResult.snapshots = [...cacheResult.snapshots,
+            newSnapshot].slice(-maxSnapshots)
+    
+        // optional: if you want a separate "lastSnapshotAt" marker
+        cacheResult.snapshotAt = now
+    
+        await this.aggregatedTokenPriceCummulativeCacheService.set(
+            {
+                id,
+                cacheResult,
             }
         )
     }
-
+    
     /**
-     * Resolves a price quote between two tokens (A / B).
+     * Resolves the cummulative price for a token.
      *
-     * - Quote price = priceA / priceB
-     * - isStale = true if either side is stale
-     * - ageMs = max(ageA, ageB)
-     *
-     * @param param - Parameters for resolving relative price
-     * @param param.tokenA - First token schema
-     * @param param.tokenB - Second token schema
-     * @returns Relative price result (tokenA / tokenB)
+     * @param param - token, intervalMs
+     * @returns The cummulative price.
      *
      * @example
-     * const result = await service.resolveRelativePrice({ tokenA, tokenB })
+     * const result = this.cummulativeService.resolveCummulativePrice({ token, intervalMs })
      */
-    async resolveRelativePrice({
-        tokenA,
-        tokenB
-    }: ResolveRelativePriceParams): Promise<ResolveRelativePriceResult> {
-        // resolve prices for both tokens in parallel
-        const [
-            priceA, 
-            priceB
-        ] = await this.asyncService.allMustDone([
-            this.resolvePrice({
-                token: tokenA 
-            }),
-            this.resolvePrice({
-                token: tokenB 
-            }),
-        ])
-        
-        // calculate relative price (tokenA / tokenB)
-        const relativePrice = priceA.price.div(priceB.price)
-        
+    async resolveCummulativePrice({
+        token,
+        intervalMs,
+    }: ResolveCummulativePriceParams): Promise<ResolveCummulativePriceResult> {
+        const aggregated = await this.aggregatedTokenPriceCummulativeCacheService.get(token.id)
+        const now = this.dayjsService.now()
+      
+        const maxDeviationRatio = envConfig().price.deviationMaxRatio
+        const maxAgeMs = envConfig().cache.stale.priceMaxAgeMs
+      
+        // 1) resolve spot price (market priority) for: extrapolate to now + stale/age
+        const resolved = this.priceSelectionService.resolveByMarketPriority({
+            token,
+            prices: aggregated.lastAggregatedTokenPrice.prices,
+            now,
+            maxAgeMs,
+            maxDeviationRatio,
+        })
+      
+        if (!resolved) {
+            throw new AggregatedTokenPriceNotFoundException({
+                id: token.id 
+            })
+        }
+      
+        const snapshots = (aggregated.snapshots ?? [])
+            .slice()
+            .sort((a, b) => a.snapshotAt.valueOf() - b.snapshotAt.valueOf())
+      
+        if (snapshots.length === 0) {
+            return resolved
+        }
+      
+        // 2) define TWAP window: [fromAt, now]
+        const windowMs = intervalMs ?? envConfig().inspector.twap.intervalMs
+        const startAt = snapshots[0].snapshotAt
+        const rawFromAt = now.subtract(windowMs,
+            "milliseconds")
+        const fromAt = rawFromAt.isBefore(startAt) ? startAt : rawFromAt
+      
+        // 3) helper: cumulative at any time t (linear interpolation between snapshots)
+        const cumulativeAt = (t: typeof now): Decimal => {
+            // before first snapshot -> clamp
+            if (t.isSameOrBefore(snapshots[0].snapshotAt)) {
+                return snapshots[0].cummulativePrice
+            }
+      
+            const last = snapshots[snapshots.length - 1]
+      
+            // after last snapshot -> extrapolate using current resolved spot price
+            if (t.isSameOrAfter(last.snapshotAt)) {
+                const dt = new Decimal(t.diff(last.snapshotAt,
+                    "milliseconds"))
+                return last.cummulativePrice.add(resolved.price.mul(dt))
+            }
+      
+            // inside -> find segment [a,b] where a.time <= t < b.time
+            let i = 0
+            while (i < snapshots.length - 1 && snapshots[i + 1].snapshotAt.isSameOrBefore(t)) {
+                i++
+            }
+            const a = snapshots[i]
+            const b = snapshots[i + 1]
+      
+            const totalDt = b.snapshotAt.diff(a.snapshotAt,
+                "milliseconds")
+            if (totalDt <= 0) return a.cummulativePrice
+      
+            const partDt = t.diff(a.snapshotAt,
+                "milliseconds")
+            const slope = b.cummulativePrice.sub(a.cummulativePrice).div(totalDt)
+      
+            return a.cummulativePrice.add(slope.mul(partDt))
+        }
+      
+        // 4) compute TWAP = (C(now)-C(from)) / (now-from)
+        const cTo = cumulativeAt(now)
+        const cFrom = cumulativeAt(fromAt)
+      
+        const dtMs = now.diff(fromAt,
+            "milliseconds")
+        if (dtMs <= 0) return resolved
+      
+        const twap = cTo.sub(cFrom).div(dtMs)
+      
         return {
-            price: relativePrice,
-            ageMs: Math.max(priceA.ageMs,
-                priceB.ageMs),
-            isStale: priceA.isStale || priceB.isStale,
+            ...resolved,      // keep ageMs/isStale from spot selection
+            price: twap,      // replace price with TWAP(window)
+        }
+    }
+
+    /**
+     * Creates the initial aggregated token price cummulative cache result.
+     *
+     * @param param - now, price, marketListingId
+     * @returns Initial aggregated token price cummulative cache result
+     *
+     * @example
+     * const result = this.cummulativeService.createInitialCacheResult({ now, price, marketListingId })
+     */
+    private createInitialCacheResult({
+        now,
+        price,
+        marketListingId,
+    }: CreateInitialCacheResultParams): AggregatedTokenPriceCummulativeCacheResult {
+        const lastAggregatedTokenPrice: AggregatedTokenPriceCacheResult = {
+            prices: {
+                [marketListingId]: {
+                    price,
+                    snapshotAt: now,
+                },
+            },
+            snapshotAt: now,
+        }
+        return {
+            snapshotAt: now,
+            snapshots: [
+                {
+                    // seed first cumulative snapshot = 0
+                    cummulativePrice: new Decimal(0),
+                    // snapshot at the start time
+                    snapshotAt: now,
+                }
+            ],
+            lastAggregatedTokenPrice,
+        }
+    }
+
+    /**
+     * Upserts the last price into the aggregated token price cache result.
+     *
+     * @param param - last, now, price, marketListingId
+     * @returns void
+     *
+     * @example
+     * this.cummulativeService.upsertLastPrice(last, { now, price, marketListingId })
+     */
+    private upsertLastPrice(
+        last: AggregatedTokenPriceCacheResult,
+        {
+            now,
+            price,
+            marketListingId,
+        }: UpsertLastPriceParams,
+    ) {
+        if (!last.prices) {
+            last.prices = {
+            }
+        }
+        last.prices[marketListingId] = {
+            price,
+            snapshotAt: now,
         }
     }
 }

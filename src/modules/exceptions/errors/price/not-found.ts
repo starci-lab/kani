@@ -58,3 +58,22 @@ export class AggregatedTokenPriceCummulativeNotFoundException extends AbstractEx
         )
     }
 }
+
+/** Thrown when price by market priority could not be resolved (no usable market price). */
+export interface PriceByMarketPriorityNotResolvedExceptionMetadata extends AbstractExceptionMetadata {
+    id: string
+}
+export class PriceByMarketPriorityNotResolvedException extends AbstractException {
+    constructor(
+        { id, originalError }: PriceByMarketPriorityNotResolvedExceptionMetadata
+    ) {
+        super(
+            "Price by market priority could not be resolved",
+            "PRICE_BY_MARKET_PRIORITY_NOT_RESOLVED_EXCEPTION",
+            {
+                id,
+                originalError,
+            }
+        )
+    }
+}

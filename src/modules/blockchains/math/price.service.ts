@@ -1,7 +1,6 @@
 import {
     Injectable 
 } from "@nestjs/common"
-import Decimal from "decimal.js"
 import {
     envConfig 
 } from "@modules/env"
@@ -9,11 +8,8 @@ import {
     AsyncService, DayjsService 
 } from "@modules/mixin"
 import {
-    AggregatedTokenPriceNotFoundException,
+    PriceByMarketPriorityNotResolvedException,
 } from "@modules/exceptions"
-import {
-    median 
-} from "simple-statistics"
 import {
     AggregatedTokenPriceCacheService 
 } from "@modules/cache"
@@ -23,6 +19,9 @@ import {
     ResolveRelativePriceParams,
     ResolveRelativePriceResult
 } from "./types"
+import {
+    PriceSelectionService 
+} from "./price-selection.service"
 
 /**
  * Service responsible for resolving token prices.
@@ -37,7 +36,8 @@ export class PriceService {
     constructor(
         private readonly dayjsService: DayjsService,
         private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
-        private readonly asyncService: AsyncService 
+        private readonly asyncService: AsyncService,
+        private readonly priceSelectionService: PriceSelectionService,
     ) {}
 
     /**
@@ -65,83 +65,21 @@ export class PriceService {
         const maxAgeMs = envConfig().cache.stale.priceMaxAgeMs
         const maxDeviationRatio = envConfig().price.deviationMaxRatio
 
-        // Sort markets by priority
-        const marketListings = [...token.marketListings]
-            .sort(
-                (marketListingPrev, marketListingNext) => 
-                    marketListingPrev.priority - marketListingNext.priority
-            )
-        // Collect prices for median calculation
-        const observedPrices: Array<number> = marketListings
-            .map(
-                (marketListing) =>
-                    aggregated.prices[marketListing.id]?.price,
-            )
-            .filter(
-                (price): price is number =>
-                    typeof price === "number" && !isNaN(price),
-            )
-        if (observedPrices.length === 0) {
-            throw new AggregatedTokenPriceNotFoundException(
-                {
-                    id: token.id,
-                }
-            )
-        }
+        const resolved = this.priceSelectionService.resolveByMarketPriority({
+            token,
+            prices: aggregated.prices,
+            now,
+            maxAgeMs,
+            maxDeviationRatio,  
+        })
 
-        const medianPrice = median(observedPrices)
-
-        const isPriceOutlier = (price: number): boolean => {
-            return new Decimal(price)
-                .minus(medianPrice)
-                .abs()
-                .div(medianPrice)
-                .gt(maxDeviationRatio)
-        }
-
-        let bestStaleCandidate: {
-            price: Decimal
-            ageMs: number
-        } | null = null
-
-        for (const marketListing of marketListings) {
-            const priceEntry = aggregated.prices[marketListing.id]
-            if (!priceEntry) continue
-            if (isPriceOutlier(priceEntry.price)) continue
-
-            const ageMs = now.diff(
-                priceEntry.snapshotAt,
-                "millisecond",
-            )
-            const isStale = ageMs > maxAgeMs
-            if (!isStale) {
-                return {
-                    price: new Decimal(priceEntry.price),
-                    isStale: false,
-                    ageMs,
-                }
-            }
-            if (!bestStaleCandidate) {
-                bestStaleCandidate = {
-                    price: new Decimal(priceEntry.price),
-                    ageMs,
-                }
-            }
-        }
-        
-        if (bestStaleCandidate) {
-            return {
-                price: bestStaleCandidate.price,
-                isStale: true,
-                ageMs: bestStaleCandidate.ageMs,
-            }
-        }
-
-        throw new AggregatedTokenPriceNotFoundException(
-            {
+        if (!resolved) {
+            throw new PriceByMarketPriorityNotResolvedException({
                 id: token.id,
-            }
-        )
+            })
+        }
+
+        return resolved
     }
 
     /**

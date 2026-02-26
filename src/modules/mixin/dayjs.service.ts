@@ -6,6 +6,7 @@ import ms from "ms"
 import utc from "dayjs/plugin/utc"
 import timezone from "dayjs/plugin/timezone"
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore"
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter"
 import Decimal from "decimal.js"
 import type {
     AlignTimeToIntervalUtcParams
@@ -14,6 +15,7 @@ import type {
 dayjs.extend(utc)
 dayjs.extend(timezone)
 dayjs.extend(isSameOrBefore)
+dayjs.extend(isSameOrAfter)
 
 /**
  * Service for working with dates and times.

@@ -51,6 +51,9 @@ import {
 import {
     InspectorModule 
 } from "@features/inspector"
+import {
+    FormulasModule, MathModule 
+} from "@modules/blockchains"
 
 @Module({
     imports: [
@@ -63,6 +66,12 @@ import {
                 isGlobal: true,
             }
         ),
+        FormulasModule.register({
+            isGlobal: true,
+        }),
+        MathModule.register({
+            isGlobal: true,
+        }),
         SentryModule.register({
             isGlobal: true,
         }),

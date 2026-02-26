@@ -1,6 +1,6 @@
 import {
-    AggregatedTokenPriceCummulativeCacheService 
-} from "@modules/cache"
+    CummulativeService 
+} from "@modules/blockchains"
 import {
     envConfig 
 } from "@modules/env"
@@ -14,6 +14,12 @@ import {
 import {
     OnEvent 
 } from "@nestjs/event-emitter"
+import {
+    PrimaryMemoryStorageService 
+} from "@modules/databases"
+import {
+    TokenNotFoundException 
+} from "@modules/exceptions"
 
 /**
  * Service for computing TWAP.
@@ -21,7 +27,8 @@ import {
 @Injectable()
 export class TwapCalculationService {
     constructor(
-        private readonly aggregatedTokenPriceCummulativeCacheService: AggregatedTokenPriceCummulativeCacheService,
+        private readonly cummulativeService: CummulativeService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {
     }
 
@@ -38,19 +45,27 @@ export class TwapCalculationService {
     ) {
         const { id, price, marketListingId } = payload
         // push to aggregated token price array cache
-        await this.aggregatedTokenPriceCummulativeCacheService.set({
+        await this.cummulativeService.updateCummulativeSnapshot({
             id,
             price: price.toNumber(),
             marketListingId,
             intervalMs: envConfig().inspector.twap.intervalMs,
         })
         // check length of the array
-        const cummulativeCacheResult = await this.aggregatedTokenPriceCummulativeCacheService.get(id)
-        console.log({
-            cummulativePrice: cummulativeCacheResult.cummulativePrice.toNumber(),
-            lastAggregatedTokenPrice: cummulativeCacheResult.lastAggregatedTokenPrice.prices?.[marketListingId]?.price,
-            startAt: cummulativeCacheResult.startAt.toISOString(),
-            snapshotAt: cummulativeCacheResult.snapshotAt.toISOString(),
+        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id,
         })
+        if (!token) {
+            throw new TokenNotFoundException({
+                id,
+            })
+        }
+        const cummulativePrice = await this.cummulativeService.resolveCummulativePrice(
+            {
+                token,
+                intervalMs: envConfig().inspector.twap.intervalMs,
+            }
+        )
+        console.log(cummulativePrice.price)
     }
 }

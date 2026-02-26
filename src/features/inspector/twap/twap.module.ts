@@ -7,6 +7,9 @@ import {
 import {
     TwapCalculationService 
 } from "./calculation.service"
+import {
+    MathModule 
+} from "@modules/blockchains/math"
 
 /**
  * TWAP module.
@@ -25,6 +28,9 @@ export class TwapModule extends ConfigurableModuleClass {
     ): DynamicModule {
         const dynamicModule = super.register(options)
         const modules: Array<DynamicModule> = [
+            MathModule.register({
+                isGlobal: options.isGlobal,
+            }),
         ]    
         return {  
             ...dynamicModule,

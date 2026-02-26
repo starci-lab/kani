@@ -25,6 +25,12 @@ import {
 import {
     PriceService 
 } from "./price.service"
+import {
+    CummulativeService 
+} from "./cummulative.service"
+import {
+    PriceSelectionService 
+} from "./price-selection.service"
 
 /**
  * Math module.
@@ -39,6 +45,8 @@ import {
         QuoteRatioService,
         PositionValueService,
         PriceService,
+        CummulativeService,
+        PriceSelectionService,
     ],
     exports: [
         TickMathService,
@@ -48,6 +56,8 @@ import {
         QuoteRatioService,
         PositionValueService,
         PriceService,
+        CummulativeService,
+        PriceSelectionService,
     ],
 })
 export class MathModule extends ConfigurableModuleClass {}

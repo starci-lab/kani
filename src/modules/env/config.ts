@@ -556,12 +556,16 @@ export const envConfig = () => ({
             },
         },
     },
-    /** Inspector: TWAP calculation interval. */
+    /** Inspector: TWAP calculation interval and snapshot cap. */
     inspector: {
         twap: {
             intervalMs: parseEnvMs({
                 key: "INSPECTOR_TWAP_INTERVAL_MS", defaultValue: "1s" 
-            })
+            }),
+            /** Max number of TWAP snapshots to keep per token (oldest dropped when exceeded). */
+            maxSnapshots: parseEnvInt({
+                key: "INSPECTOR_TWAP_MAX_SNAPSHOTS", defaultValue: 3600 
+            }),
         },
     },
     /** Socket.IO broadcast intervals for price and dynamic liquidity pool info. */
