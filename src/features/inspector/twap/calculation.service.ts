@@ -1,5 +1,11 @@
 import {
-    EventEmitterService, EventName, 
+    AggregatedTokenPriceCummulativeCacheService 
+} from "@modules/cache"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    EventName, 
     TokenPriceUpdatedEventPayload
 } from "@modules/event"
 import {
@@ -15,7 +21,7 @@ import {
 @Injectable()
 export class TwapCalculationService {
     constructor(
-        private readonly eventEmitterService: EventEmitterService,
+        private readonly aggregatedTokenPriceCummulativeCacheService: AggregatedTokenPriceCummulativeCacheService,
     ) {
     }
 
@@ -31,8 +37,20 @@ export class TwapCalculationService {
         payload: TokenPriceUpdatedEventPayload
     ) {
         const { id, price, marketListingId } = payload
-        console.log(id,
-            price,
-            marketListingId)
+        // push to aggregated token price array cache
+        await this.aggregatedTokenPriceCummulativeCacheService.set({
+            id,
+            price: price.toNumber(),
+            marketListingId,
+            intervalMs: envConfig().inspector.twap.intervalMs,
+        })
+        // check length of the array
+        const cummulativeCacheResult = await this.aggregatedTokenPriceCummulativeCacheService.get(id)
+        console.log({
+            cummulativePrice: cummulativeCacheResult.cummulativePrice.toNumber(),
+            lastAggregatedTokenPrice: cummulativeCacheResult.lastAggregatedTokenPrice.prices?.[marketListingId]?.price,
+            startAt: cummulativeCacheResult.startAt.toISOString(),
+            snapshotAt: cummulativeCacheResult.snapshotAt.toISOString(),
+        })
     }
 }

@@ -1,5 +1,6 @@
 export * from "./base"
 export * from "./aggregated-token-price"
+export * from "./aggregated-token-price-cummulative"
 export * from "./liquidity-pool"
 export * from "./session"
 export * from "./liquidity-pools-synced-diagnostic"

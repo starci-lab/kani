@@ -559,12 +559,8 @@ export const envConfig = () => ({
     /** Inspector: TWAP calculation interval. */
     inspector: {
         twap: {
-            interval: parseEnvMs({
-                key: "INSPECTOR_TWAP_INTERVAL", defaultValue: "1s" 
-            }),
-            retention: parseEnvMs({
-                key: "INSPECTOR_TWAP_RETENTION_INTERVAL",
-                defaultValue: "5m"
+            intervalMs: parseEnvMs({
+                key: "INSPECTOR_TWAP_INTERVAL_MS", defaultValue: "1s" 
             })
         },
     },
@@ -665,8 +661,8 @@ export const envConfig = () => ({
                 key: "CACHE_TTL_AGGREGATED_TOKEN_PRICE",
                 defaultValue: "100years"
             }),
-            aggregatedTokenPriceArray: parseEnvMs({
-                key: "CACHE_TTL_AGGREGATED_TOKEN_PRICE_ARRAY",
+            aggregatedTokenPriceCummulative: parseEnvMs({
+                key: "CACHE_TTL_AGGREGATED_TOKEN_PRICE_CUMMULATIVE",
                 defaultValue: "100years"
             }),
             dynamicClmmLiquidityPoolInfo: parseEnvMs({

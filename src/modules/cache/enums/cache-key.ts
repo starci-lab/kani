@@ -7,7 +7,7 @@ export enum CacheKey {
     Withdraw = "withdraw",
     SendOtpCode = "send.otp.code",
     AggregatedTokenPrice = "aggregated.token.price",
-    AggregatedTokenPriceArray = "aggregated.token.price.array",
+    AggregatedTokenPriceCummulative = "aggregated.token.price.cummulative",
     DynamicClmmLiquidityPoolInfo = "dynamic.clmm.liquidity.pool.info",
     DynamicDlmmLiquidityPoolInfo = "dynamic.dlmm.liquidity.pool.info",
     PoolAnalytics = "pool.analytics",

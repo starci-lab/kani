@@ -194,6 +194,7 @@ import {
     ErrorGettingCacheMessage,
     ErrorSettingCacheMessage,
     ErrorDeletingCacheMessage,
+    AggregatedTokenPriceArrayNotFoundMessage,
     CacheDebugOkRedisMessage,
     CacheDebugOkMemoryMessage,
     LockAuthorityReleaseFailedMessage,
@@ -1859,6 +1860,14 @@ export const configMap = {
         loki: true,
         messageType: {
         } as ErrorDeletingCacheMessage,
+    },
+    // Aggregated Token Price Array Not Found
+    [WinstonLog.AggregatedTokenPriceArrayNotFound]: {
+        name: WinstonLog.AggregatedTokenPriceArrayNotFound,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as AggregatedTokenPriceArrayNotFoundMessage,
     },
     // Cache Debug Ok Redis
     [WinstonLog.CacheDebugOkRedis]: {

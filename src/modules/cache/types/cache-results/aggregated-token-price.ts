@@ -14,8 +14,3 @@ export interface AggregatedTokenPriceCache extends SnapshotCacheResult {
 export interface AggregatedTokenPriceCacheResult extends SnapshotCacheResult {
     prices: Partial<Record<MarketListingId, AggregatedTokenPriceCache>>
 }
-
-/** Aggregated token price array cache result (prices by market listing). */
-export interface AggregatedTokenPriceArrayCacheResult extends SnapshotCacheResult {
-    array: Array<AggregatedTokenPriceCacheResult>
-}

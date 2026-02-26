@@ -39,7 +39,8 @@ import {
     StreamAsyncIteratorModule 
 } from "@modules/stream-async-iterator"
 import {
-    EventModule 
+    EventModule, 
+    EventName
 } from "@modules/event"
 import {
     DependencyName, TerminusModule 
@@ -50,9 +51,6 @@ import {
 import {
     InspectorModule 
 } from "@features/inspector"
-import {
-    CexesModule 
-} from "@modules/blockchains"
 
 @Module({
     imports: [
@@ -82,6 +80,9 @@ import {
             kafka: {
                 createTopicsIfNotExists: true,
                 groupId: ServiceName.KaniInspector,
+                topics: [
+                    EventName.TokenPriceUpdated,
+                ],
             },
         }),
         MixinModule.register({
@@ -113,14 +114,6 @@ import {
                 DependencyName.CacheRedis,
             ],
         }),
-        CexesModule.register(
-            {
-                isGlobal: true,
-                useKafka: false,
-                useLocal: true,
-                updateCache: false,
-            }
-        ),
         InspectorModule.register({
             isGlobal: true,
         }),

@@ -1,4 +1,5 @@
 export * from "./aggregated-token-price-cache.service"
+export * from "./aggregated-token-price-cummulative-cache.service"
 export * from "./cache.decorators"
 export * from "./cache.module"
 export * from "./cache.service"
