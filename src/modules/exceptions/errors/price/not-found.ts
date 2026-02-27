@@ -40,17 +40,17 @@ export class AggregatedTokenPriceArrayNotFoundException extends AbstractExceptio
         )
     }
 }
-/** Thrown when aggregated token price cummulative is not found */
-export interface AggregatedTokenPriceCummulativeNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+/** Thrown when aggregated token price TWAP cache is not found */
+export interface AggregatedTokenPriceTwapNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     id: string
 }
-export class AggregatedTokenPriceCummulativeNotFoundException extends AbstractException {
+export class AggregatedTokenPriceTwapNotFoundException extends AbstractException {
     constructor(
-        { id, originalError }: AggregatedTokenPriceCummulativeNotFoundExceptionMetadata
+        { id, originalError }: AggregatedTokenPriceTwapNotFoundExceptionMetadata
     ) {
         super(
-            "Aggregated token price cummulative not found",
-            "AGGREGATED_TOKEN_PRICE_CUMMULATIVE_NOT_FOUND_EXCEPTION",
+            "Aggregated token price TWAP not found",
+            "AGGREGATED_TOKEN_PRICE_TWAP_NOT_FOUND_EXCEPTION",
             {
                 id,
                 originalError,

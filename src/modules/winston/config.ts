@@ -231,6 +231,8 @@ import {
     WithdrawLockAuthorityReleasedMessage,
     ConsulRegisterFailedMessage,
     ConsulRegisterSuccessfullyMessage,
+    InfluxDBBootstrappedSuccessfullyMessage,
+    InfluxDBBootstrappedFailedMessage,
     JobEnqueuedMessage,
     JobEnqueueFailedMessage,
     TransactionSignedMessage,
@@ -1868,6 +1870,22 @@ export const configMap = {
         loki: true,
         messageType: {
         } as AggregatedTokenPriceArrayNotFoundMessage,
+    },
+    // InfluxDB Bootstrapped Successfully
+    [WinstonLog.InfluxDBBootstrappedSuccessfully]: {
+        name: WinstonLog.InfluxDBBootstrappedSuccessfully,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as InfluxDBBootstrappedSuccessfullyMessage,
+    },
+    // InfluxDB Bootstrapped Failed
+    [WinstonLog.InfluxDBBootstrappedFailed]: {
+        name: WinstonLog.InfluxDBBootstrappedFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as InfluxDBBootstrappedFailedMessage,
     },
     // Cache Debug Ok Redis
     [WinstonLog.CacheDebugOkRedis]: {

@@ -1,10 +1,4 @@
 import {
-    CummulativeService 
-} from "@modules/blockchains"
-import {
-    envConfig 
-} from "@modules/env"
-import {
     EventName, 
     TokenPriceUpdatedEventPayload
 } from "@modules/event"
@@ -15,11 +9,8 @@ import {
     OnEvent 
 } from "@nestjs/event-emitter"
 import {
-    PrimaryMemoryStorageService 
+    PrimaryInfluxdbPriceBucketService
 } from "@modules/databases"
-import {
-    TokenNotFoundException 
-} from "@modules/exceptions"
 
 /**
  * Service for computing TWAP.
@@ -27,8 +18,7 @@ import {
 @Injectable()
 export class TwapCalculationService {
     constructor(
-        private readonly cummulativeService: CummulativeService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly primaryInfluxdbPriceBucketService: PrimaryInfluxdbPriceBucketService,
     ) {
     }
 
@@ -44,28 +34,12 @@ export class TwapCalculationService {
         payload: TokenPriceUpdatedEventPayload
     ) {
         const { id, price, marketListingId } = payload
-        // push to aggregated token price array cache
-        await this.cummulativeService.updateCummulativeSnapshot({
-            id,
-            price: price.toNumber(),
-            marketListingId,
-            intervalMs: envConfig().inspector.twap.intervalMs,
-        })
-        // check length of the array
-        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id,
-        })
-        if (!token) {
-            throw new TokenNotFoundException({
-                id,
-            })
-        }
-        const cummulativePrice = await this.cummulativeService.resolveCummulativePrice(
+        await this.primaryInfluxdbPriceBucketService.write(
             {
-                token,
-                intervalMs: envConfig().inspector.twap.intervalMs,
+                id,
+                price,
+                marketListingId,
             }
         )
-        console.log(cummulativePrice.price)
     }
 }

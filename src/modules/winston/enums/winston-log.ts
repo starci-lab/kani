@@ -279,4 +279,6 @@ export enum WinstonLog {
     SocketIoClientIdNotFound = "Socket.Io.Client.Id.NotFound",
     SocketIoClientNotFound = "Socket.Io.Client.NotFound",
     AggregatedTokenPriceArrayNotFound = "Aggregated.Token.Price.Array.Not.Found",
+    InfluxDBBootstrappedSuccessfully = "InfluxDB.Bootstrapped.Successfully",
+    InfluxDBBootstrappedFailed = "InfluxDB.Bootstrapped.Failed",
 }

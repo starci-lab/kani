@@ -665,8 +665,8 @@ export const envConfig = () => ({
                 key: "CACHE_TTL_AGGREGATED_TOKEN_PRICE",
                 defaultValue: "100years"
             }),
-            aggregatedTokenPriceCummulative: parseEnvMs({
-                key: "CACHE_TTL_AGGREGATED_TOKEN_PRICE_CUMMULATIVE",
+            aggregatedTokenPriceTwap: parseEnvMs({
+                key: "CACHE_TTL_AGGREGATED_TOKEN_PRICE_TWAP",
                 defaultValue: "100years"
             }),
             dynamicClmmLiquidityPoolInfo: parseEnvMs({
@@ -871,6 +871,27 @@ export const envConfig = () => ({
     },
     /** Databases: primary MongoDB (host, port, username, password, dbName). */
     databases: {
+        influxdb: {
+            primary: {
+                database: parseEnvString({
+                    key: "PRIMARY_INFLUXDB_DATABASE", defaultValue: "kani" 
+                }),
+                url: parseEnvString({
+                    key: "PRIMARY_INFLUXDB_URL", defaultValue: "http://localhost:8181" 
+                }),
+                token: parseEnvString({
+                    key: "PRIMARY_INFLUXDB_TOKEN", defaultValue: "apiv3_rlUR0TJxuHIckRcSWi3LDwdemZZTAwWFoyqdfUIV1gfICe60GDTPf_k7nOdAXqvoMZPeRjgriMK4RqU-2cuhtA" 
+                }),
+                retentionPeriod: parseEnvString({
+                    key: "PRIMARY_INFLUXDB_RETENTION_PERIOD", defaultValue: "1d" 
+                }),
+                buckets: {
+                    price: parseEnvString({
+                        key: "PRIMARY_INFLUXDB_BUCKET_PRICE", defaultValue: "kani-price" 
+                    }),
+                }
+            },
+        },
         mongoose: {
             primary: {
                 host: parseEnvString({

@@ -7,20 +7,23 @@ import {
 import type {
     SnapshotCacheResult,
 } from "./base"
-import Decimal from "decimal.js"
+import type Decimal from "decimal.js"
 
-/** Single TWAP snapshot: prices by market listing at a point in time. */
+/** Single TWAP snapshot: price at a point in time (no cumulative). */
 export interface TwapSnapshot {
-    /** Cummulative price of the token at the snapshot time. */
-    cummulativePrice: Decimal
+    /** Price at the snapshot time. */
+    price: Decimal
     /** Time of the snapshot. */
     snapshotAt: Dayjs
 }
 
-/** Aggregated token price cummulative cache result. */
-export interface AggregatedTokenPriceCummulativeCacheResult extends SnapshotCacheResult {
+/** Aggregated token price TWAP cache result. */
+export interface AggregatedTokenPriceTwapCacheResult extends SnapshotCacheResult {
     /** Rolling TWAP snapshots (pruned by maxSnapshots). */
     snapshots: Array<TwapSnapshot>
     /** Last aggregated token price (always up to date). */
     lastAggregatedTokenPrice: AggregatedTokenPriceCacheResult
 }
+
+/** @deprecated Use AggregatedTokenPriceTwapCacheResult */
+export type AggregatedTokenPriceCummulativeCacheResult = AggregatedTokenPriceTwapCacheResult

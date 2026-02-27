@@ -20,8 +20,8 @@ import {
     LiquidityPoolsSyncedDiagnosticReadinessCacheService 
 } from "./liquidity-pools-synced-diagnostic-readiness-cache.service"
 import {
-    AggregatedTokenPriceCummulativeCacheService 
-} from "./aggregated-token-price-cummulative-cache.service"
+    AggregatedTokenPriceTwapCacheService 
+} from "./aggregated-token-price-twap-cache.service"
 @Module({
 })
 export class CacheModule extends ConfigurableModuleClass {
@@ -39,13 +39,13 @@ export class CacheModule extends ConfigurableModuleClass {
                 ...providers,
                 CacheService,
                 AggregatedTokenPriceCacheService,
-                AggregatedTokenPriceCummulativeCacheService,
+                AggregatedTokenPriceTwapCacheService,
                 LiquidityPoolsSyncedDiagnosticReadinessCacheService,
             ],
             exports: [
                 CacheService,
                 AggregatedTokenPriceCacheService,
-                AggregatedTokenPriceCummulativeCacheService,
+                AggregatedTokenPriceTwapCacheService,
                 LiquidityPoolsSyncedDiagnosticReadinessCacheService,
             ],
         }

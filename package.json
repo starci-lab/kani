@@ -35,6 +35,8 @@
     "@google-cloud/secret-manager": "^6.1.0",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
+    "@influxdata/influxdb-client": "^1.35.0",
+    "@influxdata/influxdb3-client": "^2.1.0",
     "@jup-ag/api": "^6.0.46",
     "@keyv/redis": "^5.1.1",
     "@keyv/valkey": "^1.0.11",

@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  influxdb:
+    user: "0:0"
+    image: influxdb:3.8.3-core
+    container_name: influxdb
+    restart: unless-stopped
+
+    ports:
+      - "8181:8181"
+
+    command:
+      - influxdb3
+      - serve
+      - --node-id=node0
+      - --object-store=file
+      - --data-dir=/var/lib/influxdb3/data
+      - --plugin-dir=/var/lib/influxdb3/plugins
+
+    volumes:
+      - influxdb_data:/var/lib/influxdb3/data
+      - influxdb_plugins:/var/lib/influxdb3/plugins
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8181/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  influx-explorer:
+    image: influxdata/influxdb3-ui
+    container_name: influx-explorer
+    restart: unless-stopped
+
+    ports:
+      - "8888:80"
+
+    environment:
+      - INFLUX_URL=http://host.docker.internal:8181
+
+    depends_on:
+      - influxdb
+
+volumes:
+  influxdb_data:
+  influxdb_plugins:

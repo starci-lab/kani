@@ -24,7 +24,8 @@ import {
     SentryModule 
 } from "@modules/sentry"
 import {
-    PrimaryMongoDbModule 
+    PrimaryMongoDbModule, 
+    PrimaryInfluxdbModule 
 } from "@modules/databases"
 import {
     CacheModule 
@@ -54,6 +55,9 @@ import {
 import {
     FormulasModule, MathModule 
 } from "@modules/blockchains"
+import {
+    AxiosModule 
+} from "@modules/axios"
 
 @Module({
     imports: [
@@ -83,6 +87,9 @@ import {
                 level: envConfig().winston.level as WinstonLevel,
             }
         ),
+        AxiosModule.register({
+            isGlobal: true,
+        }),
         EventEmitterModule.forRoot(),
         EventModule.register({
             isGlobal: true,
@@ -115,6 +122,9 @@ import {
                 manualSeed: envConfig().databases.mongoose.primary.manualSeed,
             },
             associate: envConfig().databases.mongoose.primary.associate,
+        }),
+        PrimaryInfluxdbModule.register({
+            isGlobal: true,
         }),
         TerminusModule.register({
             isGlobal: true,
