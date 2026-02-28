@@ -12,5 +12,5 @@ export class ContextLoggerService extends ConsoleLogger {
     }
     fatal() {
         return false
-    } 
+    }  
 }
