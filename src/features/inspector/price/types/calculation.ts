@@ -35,15 +35,3 @@ export interface TroughToNowMetrics {
     velFromTroughPctPerMin: number
     troughTime: number
 }
-
-/**
- * Momentum state configuration.
- */
-export interface ClassifyMomentumStateParams {
-    /** The slope of the trend. */
-    slope: number
-    /** The R^2 value of the trend. */
-    r2: number
-    /** The efficiency ratio of the trend. */
-    efficiencyRatio: number
-}

@@ -9,7 +9,6 @@ import {
 } from "@modules/env"
 import {
     AnalyzePriceWindowParams,
-    ClassifyMomentumStateParams,
     PeakToNowMetrics,
     TroughToNowMetrics,
 } from "./types"
@@ -223,9 +222,10 @@ export class PriceCalculationService {
         }
 
         const twap = ss.mean(xs)
-        const momentumState = this.classifyMomentumState({
-            slope: lr.m, r2, efficiencyRatio 
-        })
+        const momentumState = this.classifyMomentumStateFromExtremes(
+            peakNow,
+            troughNow
+        )
         return {
             // core
             twap,
@@ -276,30 +276,39 @@ export class PriceCalculationService {
             endTime: sorted[sorted.length - 1].time,
         }
     }
-
     /**
-   * Classify the momentum state (Up/Down/Sideways).
-   *
-   * IMPORTANT:
-   * - Assumes priceWindow.slope is "% per bar" (from normalized regression above).
-   * - Uses minSlope/minR2/minEfficiency gates to avoid noise classification.
-   */
-    classifyMomentumState(
-        { 
-            slope, 
-            r2, 
-            efficiencyRatio 
-        }: ClassifyMomentumStateParams
+ * Classify momentum state (Up/Down/Sideways) using:
+ * - Peak -> now for dump (Down)
+ * - Trough -> now for pump (Up)
+ * - Otherwise Sideways
+ *
+ * Priority:
+ * - If both pump and dump trigger (rare / choppy), prefer Sideways (or choose one by stronger magnitude).
+ */
+    private classifyMomentumStateFromExtremes(
+        peakNow: PeakToNowMetrics,
+        troughNow: TroughToNowMetrics,
     ): MomentumState {
-        const config = envConfig().inspector.priceWindow.momentum
-
-        // If trend is not clear enough -> Sideways
-        const isTrend =
-      Math.abs(slope) >= config.minSlope &&
-      r2 >= config.minR2 &&
-      efficiencyRatio >= config.minEfficiency
-
-        if (!isTrend) return MomentumState.Sideways
-        return slope > 0 ? MomentumState.Up : MomentumState.Down
+        const cfg = envConfig().inspector.priceWindow.momentum
+        // Dump from peak (negative)
+        const dumpRecent = peakNow.barsSincePeak <= cfg.maxBarsSincePeak
+        const dumpMagnitude = peakNow.dropFromPeakPct <= cfg.dumpFromPeakPct
+        const dumpVelocity = peakNow.velFromPeakPctPerMin <= cfg.dumpVelPctPerMin
+        const isDump = dumpRecent && (dumpMagnitude || dumpVelocity)
+        // Pump from trough (positive)
+        const pumpRecent = troughNow.barsSinceTrough <= cfg.maxBarsSinceTrough
+        const pumpMagnitude = troughNow.riseFromTroughPct >= cfg.pumpFromTroughPct
+        const pumpVelocity = troughNow.velFromTroughPctPerMin >= cfg.pumpVelPctPerMin
+        const isPump = pumpRecent && (pumpMagnitude || pumpVelocity)
+  
+        // Conflict case: both signals in same window => choppy/whipsaw
+        if (isDump && isPump) {
+            return MomentumState.Sideways
+        }
+  
+        if (isDump) return MomentumState.Down
+        if (isPump) return MomentumState.Up
+  
+        return MomentumState.Sideways
     }
 }

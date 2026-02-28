@@ -1,0 +1,66 @@
+name: build-and-push-kani-inspector
+
+on:
+  push:
+    branches: [main, build]
+    paths:
+      - "src/modules/**"
+      - "apps/kani-inspector/**"
+      - "src/features/inspector/**"
+      - ".github/workflows/kani-inspector.yaml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-kani-inspector
+  cancel-in-progress: true
+  
+env:
+  IMAGE_NAME: kani-inspector
+  DOCKERFILE_PATH: apps/kani-inspector/Dockerfile
+  BUILD_CONTEXT: .
+  IMAGE_TAG: latest
+
+jobs:
+  build-and-push:
+    runs-on: self-hosted
+    environment: kani
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # Login Docker registry
+      - name: Docker login
+        run: |
+          echo "${DOCKER_PASSWORD}" | docker login \
+            ${DOCKER_REGISTRY:-docker.io} \
+            -u "${DOCKER_USERNAME}" \
+            --password-stdin
+        env:
+          DOCKER_REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Setup buildx (Required with self-hosted)
+      - name: Setup Docker buildx
+        run: |
+          docker buildx create --use --name kani-builder || docker buildx use kani-builder
+          docker buildx inspect --bootstrap
+
+      # Build & Push image
+      - name: Build and push Docker image
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            -f ${DOCKERFILE_PATH} \
+            -t ${DOCKER_REGISTRY:-docker.io}/${DOCKER_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG} \
+            --push \
+            ${BUILD_CONTEXT}
+        env:
+          DOCKER_REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+
+      # # Trigger Jenkins rollout
+      # - name: Call Jenkins API to rollout the image
+      #   run: |
+      #     curl -X POST \
+      #       "${{ secrets.JENKINS_URL }}/generic-webhook-trigger/invoke?token=${{ secrets.KANI_OBSERVER_DEPLOYMENT_ROLLOUT_WEBHOOK_TOKEN }}"
