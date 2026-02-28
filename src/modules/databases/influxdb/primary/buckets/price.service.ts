@@ -151,4 +151,30 @@ export class PrimaryInfluxdbPriceBucketService {
         // convert the async iterator to an array
         return await lastValueFrom(from(asyncIterator).pipe(toArray()))
     }
+
+    /**
+     * Check if the price points have a large gap.
+     * @param sorted - The sorted price points.
+     * @param maxGapMs - The maximum gap in milliseconds.
+     * @returns True if the price points have a large gap, false otherwise.
+     */
+    public hasLargeGap(sorted: Array<PricePoint>): boolean {
+        if (sorted.length < envConfig().inspector.priceWindow.minSamples) {
+            return true
+        }
+        for (let i = 1; i < sorted.length; i++) {
+            const prev = typeof sorted[i - 1].time === "number"
+                ? sorted[i - 1].time
+                : new Date(sorted[i - 1].time).getTime()
+      
+            const curr = typeof sorted[i].time === "number"
+                ? sorted[i].time
+                : new Date(sorted[i].time).getTime()
+      
+            if (curr - prev > envConfig().inspector.priceWindow.maxGapMs) {
+                return true
+            }
+        }
+        return false
+    }
 }

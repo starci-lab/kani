@@ -559,11 +559,25 @@ export const envConfig = () => ({
     /** Inspector: TWAP calculation interval and snapshot cap. */
     inspector: {
         priceWindow: {
+            /**
+             * Interval in milliseconds for analyzing a price window.
+             */
             intervalMs: parseEnvMs({
                 key: "INSPECTOR_PRICE_WINDOW_INTERVAL_MS", defaultValue: "5m" 
             }),
+            /**
+             * Minimum number of samples required to analyze a price window.
+             */
+            minSamples: parseEnvInt({
+                key: "INSPECTOR_PRICE_WINDOW_MIN_SAMPLES", defaultValue: 100 
+            }),
+            /**
+             * Maximum gap in milliseconds allowed between two price points.
+             */
+            maxGapMs: parseEnvMs({
+                key: "INSPECTOR_PRICE_WINDOW_MAX_GAP_MS", defaultValue: "5s" 
+            }),
             metrics: {
-
                 /**
                  * Dump detection configuration (based on peak → current price).
                  * 
@@ -599,7 +613,6 @@ export const envConfig = () => ({
                         key: "INSPECTOR_DUMP_MAX_BARS",
                         defaultValue: 120,
                     }),
-          
                     /**
                    * Maximum minutes allowed since peak.
                    * Ensures drop is considered "fast".
@@ -608,7 +621,6 @@ export const envConfig = () => ({
                         key: "INSPECTOR_DUMP_MAX_MINUTES",
                         defaultValue: 3,
                     }),
-          
                     /**
                    * Minimum drop velocity in % per minute.
                    * Example: 1 means price must drop at least -1% per minute.
@@ -618,7 +630,6 @@ export const envConfig = () => ({
                         defaultValue: 1,
                     }),
                 },
-          
                 /**
                  * Volatility-based anomaly detection.
                  * 
@@ -631,7 +642,6 @@ export const envConfig = () => ({
                         defaultValue: 3,
                     }),
                 },
-          
                 /**
                  * Market shape classification thresholds.
                  * 

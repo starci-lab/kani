@@ -74,6 +74,17 @@ export interface PriceWindowResult {
     slopeFromPeakPctPerBar: number
     velFromPeakPctPerMin: number
     peakTime: number
+
+    /**
+     * Trough -> now metrics
+     */
+    troughPrice: number
+    troughIndex: number
+    barsSinceTrough: number
+    riseFromTroughPct: number
+    slopeFromTroughPctPerBar: number
+    velFromTroughPctPerMin: number
+    troughTime: number
 }
 
 /**
@@ -87,4 +98,17 @@ export interface PeakToNowMetrics {
     slopeFromPeakPctPerBar: number
     velFromPeakPctPerMin: number
     peakTime: number
+}
+
+/**
+ * Trough -> now metrics.
+ */
+export interface TroughToNowMetrics {
+    troughPrice: number
+    troughIndex: number
+    barsSinceTrough: number
+    riseFromTroughPct: number
+    slopeFromTroughPctPerBar: number
+    velFromTroughPctPerMin: number
+    troughTime: number
 }

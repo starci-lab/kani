@@ -10,7 +10,8 @@ import {
 import type {
     AnalyzePriceWindowParams, 
     PeakToNowMetrics, 
-    PriceWindowResult 
+    PriceWindowResult, 
+    TroughToNowMetrics
 } from "./types"
 import {
     PriceWindowShape 
@@ -98,6 +99,45 @@ export class PriceCalculationService {
     }
 
     /**
+     * Compute trough->now metrics (for dump/reversal detection).
+     */
+    private troughToNowMetrics(sorted: Array<PricePoint>): TroughToNowMetrics {
+        const xs = sorted.map((p) => p.price)
+        const ts = sorted.map((p) => new Date(p.time).getTime())
+    
+        const troughPrice = ss.min(xs)
+        const troughIndex = xs.indexOf(troughPrice)
+    
+        const lastIndex = xs.length - 1
+        const lastPrice = xs[lastIndex]
+    
+        const riseFromTroughPct =
+          troughPrice === 0 ? 0 : ((lastPrice - troughPrice) / troughPrice) * 100 // positive when above trough
+    
+        const barsSinceTrough = lastIndex - troughIndex
+        const dtMs = ts[lastIndex] - ts[troughIndex]
+        const dtMin = dtMs / 60000
+    
+        const slopeFromTroughPctPerBar = barsSinceTrough > 0 ? riseFromTroughPct / barsSinceTrough : 0
+        const velFromTroughPctPerMin = dtMin > 0 ? riseFromTroughPct / dtMin : 0
+    
+        return {
+            troughPrice,
+            troughIndex,
+            barsSinceTrough,
+            riseFromTroughPct,
+            slopeFromTroughPctPerBar,
+            velFromTroughPctPerMin,
+            troughTime: sorted[troughIndex]?.time,
+        }
+    }
+    
+
+    /**
+   * Compute TWAP + window math stats.
+   * NOTE: TWAP here is simple mean of samples.
+   */
+    /**
    * Compute TWAP + window math stats.
    * NOTE: TWAP here is simple mean of samples.
    */
@@ -110,28 +150,27 @@ export class PriceCalculationService {
             marketListingId,
         })
 
-        if (prices.length === 0) return null
+        if (this.primaryInfluxdbPriceBucketService.hasLargeGap(prices)) {
+            return null
+        }
 
         // Ensure time ordering so "last" is meaningful
         const sorted = [...prices].sort(
             (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
         )
-        // get the prices
+
         const xs = sorted.map((p) => p.price)
         const firstPrice = xs[0]
         const lastPrice = xs[xs.length - 1]
 
-        // get the max and min prices
         const maxPrice = ss.max(xs)
         const minPrice = ss.min(xs)
         const diffPrice = maxPrice - minPrice
 
         // % stats
-        // get the range percentage
         const rangePct = minPrice === 0 ? 0 : ((maxPrice - minPrice) / minPrice) * 100
         const fromLowToLastPct = minPrice === 0 ? 0 : ((lastPrice - minPrice) / minPrice) * 100
-        const fromHighToLastPct = maxPrice === 0 ? 0 : ((lastPrice - maxPrice) / maxPrice) * 100 // usually negative if below high
-        // get the drawdown percentage
+        const fromHighToLastPct = maxPrice === 0 ? 0 : ((lastPrice - maxPrice) / maxPrice) * 100 // negative if below high
         const drawdownPct = this.maxDrawdownPct(xs)
 
         // Volatility on returns
@@ -153,24 +192,20 @@ export class PriceCalculationService {
             predict)
         const efficiencyRatio = this.efficiencyRatio(xs)
 
-        // Peak -> now metrics (dump/reversal focused)
+        // Peak -> now (dump) + Trough -> now (pump)
         const peakNow = this.peakToNowMetrics(sorted)
+        const troughNow = this.troughToNowMetrics(sorted)
 
-        // Shape label using BOTH window context and peak->now drop
+        // Shape label
         const shapeMetrics = envConfig().inspector.priceWindow.metrics.shape
-        
         let shape: PriceWindowShape = PriceWindowShape.Choppy
 
-        // Strong straight trend
         if (r2 >= shapeMetrics.straightR2 && efficiencyRatio >= shapeMetrics.straightEfficiency) {
             shape = PriceWindowShape.Straight
         } else if (r2 >= shapeMetrics.noisyR2 || efficiencyRatio >= shapeMetrics.noisyEfficiency) {
             shape = PriceWindowShape.TrendNoisy
         }
 
-        // Optional: if price is dumping hard from peak, force choppy (or add a new enum like Dumping)
-        // Example: drop >= 5% quickly after peak
-        // if (peakNow.dropFromPeakPct <= -5 && peakNow.barsSincePeak <= 30) shape = PriceWindowShape.Choppy
         const twap = ss.mean(xs)
 
         return {
@@ -195,7 +230,7 @@ export class PriceCalculationService {
             volatility,
             shape,
 
-            // peak -> now (NEW)
+            // peak -> now (dump)
             peakPrice: peakNow.peakPrice,
             peakTime: peakNow.peakTime,
             peakIndex: peakNow.peakIndex,
@@ -203,6 +238,15 @@ export class PriceCalculationService {
             dropFromPeakPct: peakNow.dropFromPeakPct,
             slopeFromPeakPctPerBar: peakNow.slopeFromPeakPctPerBar,
             velFromPeakPctPerMin: peakNow.velFromPeakPctPerMin,
+
+            // trough -> now (pump) (NEW)
+            troughPrice: troughNow.troughPrice,
+            troughTime: troughNow.troughTime,
+            troughIndex: troughNow.troughIndex,
+            barsSinceTrough: troughNow.barsSinceTrough,
+            riseFromTroughPct: troughNow.riseFromTroughPct,
+            slopeFromTroughPctPerBar: troughNow.slopeFromTroughPctPerBar,
+            velFromTroughPctPerMin: troughNow.velFromTroughPctPerMin,
 
             // meta
             firstPrice,
