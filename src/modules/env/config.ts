@@ -564,6 +564,16 @@ export const envConfig = () => ({
                     key: "INSPECTOR_PRICE_WINDOW_STORAGE_QUERY_INTERVAL_MS", defaultValue: "250ms" 
                 }),
             },
+            builder: {
+                intervalMs: parseEnvMs({
+                    key: "INSPECTOR_PRICE_WINDOW_BUILDER_INTERVAL_MS", defaultValue: "1m" 
+                }),
+            },
+            proccess: {
+                intervalMs: parseEnvMs({
+                    key: "INSPECTOR_PRICE_WINDOW_PROCCES_INTERVAL_MS", defaultValue: "250ms" 
+                }),
+            },
             /**
              * Interval in milliseconds for analyzing a price window.
              */

@@ -73,8 +73,10 @@ export class PrimaryInfluxdbWindowResultBucketService {
         param: WritePriceWindowResultParams
     ): Promise<void> {
         const {
-            id,
-            marketListingId,
+            token0Id,
+            token1Id,
+            marketListing0Id,
+            marketListing1Id,
             priceWindowResult,
         } = param
 
@@ -87,10 +89,14 @@ export class PrimaryInfluxdbWindowResultBucketService {
 
         // create the point with tags and fields
         const point = Point.measurement("price_window_result")
-            .setTag("id",
-                id)
-            .setTag("market_listing_id",
-                marketListingId)
+            .setTag("token_0_id",
+                token0Id)
+            .setTag("token_1_id",
+                token1Id)
+            .setTag("market_listing_0_id",
+                marketListing0Id)
+            .setTag("market_listing_1_id",
+                marketListing1Id)
             .setTag("momentum_state",
                 priceWindowResult.momentumState)
             .setTag("shape",
@@ -192,14 +198,6 @@ export class PrimaryInfluxdbWindowResultBucketService {
                 database: envConfig().databases.influxdb.primary.database,
             })
         }
-
-        // calculate from time based on interval
-        const fromTime = this.dayjsService
-            .now()
-            .subtract(intervalMs,
-                "millisecond")
-            .toISOString()
-
         // build SQL query for price window results
         const sql = `
         SELECT 
@@ -237,19 +235,18 @@ export class PrimaryInfluxdbWindowResultBucketService {
             time
         FROM price_window_result
         WHERE id = $id
-          AND market_listing_id = $marketListingId
-          AND time >= $fromTime
+        AND market_listing_id = $marketListingId
+        AND time >= now() - interval '${intervalMs} ms'
         ORDER BY time DESC
       `
-
         // execute query and return async iterator
-        return this.influxdbClient.query(sql,
+        return this.influxdbClient.query(
+            sql,
             envConfig().databases.influxdb.primary.database,
             {
                 params: {
                     id,
-                    marketListingId,
-                    fromTime,
+                    marketListingId
                 },
             }
         ) as AsyncIterableIterator<PriceWindowResultPoint>

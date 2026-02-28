@@ -6,7 +6,6 @@ import {
 } from "@modules/axios"
 import {
     MarketListingId,
-    PrimaryInfluxdbPriceBucketService
 } from "@modules/databases"
 import {
     AsyncService, 
@@ -64,7 +63,6 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
         private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
         private readonly mountStorageService: MountStorageService,
         private readonly eventEmitterService: EventEmitterService,
-        private readonly primaryInfluxdbPriceBucketService: PrimaryInfluxdbPriceBucketService,
     ) {}
 
     /**
@@ -183,14 +181,6 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
                                             price: new Decimal(data.price),
                                             marketListingId: MarketListingId.CoinMarketCap,
                                         },
-                                    }
-                                ),
-                                // Update influxdb with new price
-                                this.primaryInfluxdbPriceBucketService.write(
-                                    {
-                                        id: data.id,
-                                        price: new Decimal(data.price),
-                                        marketListingId: MarketListingId.CoinMarketCap,
                                     }
                                 ),
                             ]

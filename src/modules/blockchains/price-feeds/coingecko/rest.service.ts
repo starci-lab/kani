@@ -6,7 +6,6 @@ import {
 } from "@modules/axios"
 import {
     MarketListingId,
-    PrimaryInfluxdbPriceBucketService
 } from "@modules/databases"
 import {
     AsyncService, 
@@ -58,7 +57,6 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
         private readonly winstonService: WinstonService,
         private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
         private readonly eventEmitterService: EventEmitterService,
-        private readonly primaryInfluxdbPriceBucketService: PrimaryInfluxdbPriceBucketService,
     ) {
         // Create Axios instance for Coingecko API
         const key = "coingecko"
@@ -160,14 +158,6 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
                                             price: new Decimal(data.price),
                                             marketListingId: MarketListingId.Coingecko,
                                         },
-                                    }
-                                ),
-                                // Update influxdb with new price
-                                this.primaryInfluxdbPriceBucketService.write(
-                                    {
-                                        id: data.id,
-                                        price: new Decimal(data.price),
-                                        marketListingId: MarketListingId.Coingecko,
                                     }
                                 ),
                             ]

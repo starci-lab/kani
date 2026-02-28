@@ -2,7 +2,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    PrimaryInfluxdbPriceBucketService 
+    PrimaryInfluxdbWindowResultBucketService 
 } from "@modules/databases"
 import {
     envConfig 
@@ -30,7 +30,7 @@ import type {
 @Injectable()
 export class PriceCalculationService {
     constructor(
-    private readonly primaryInfluxdbPriceBucketService: PrimaryInfluxdbPriceBucketService,
+    private readonly primaryInfluxdbWindowResultBucketService: PrimaryInfluxdbWindowResultBucketService,
     ) {}
 
     /**
@@ -154,31 +154,18 @@ export class PriceCalculationService {
     }
 
     /**
-   * Compute TWAP + window math stats.
-   * NOTE: TWAP here is simple mean of samples.
-   *
-   * IMPORTANT CHANGE:
-   * - Trend regression is computed on NORMALIZED price (% from firstPrice)
-   *   so slope is in "% per bar", portable across tokens.
-   */
+     * Analyze the price window.
+     * @param params - The parameters for analyzing the price window.
+     * @param params.pricePoints - The price points.
+     * @returns The price window result.
+     */
     async analyzePriceWindow(
-        { id, intervalMs, marketListingId }: AnalyzePriceWindowParams,
+        { pricePoints }: AnalyzePriceWindowParams,
     ): Promise<PriceWindowResult | null> {
-        const prices = await this.primaryInfluxdbPriceBucketService.queryPromise(
-            {
-                id,
-                intervalMs,
-                marketListingId,
-            }
-        )
         // Ensure time ordering so "last" is meaningful
-        const sorted = [...prices].sort(
+        const sorted = [...pricePoints].sort(
             (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
         )
-
-        if (this.primaryInfluxdbPriceBucketService.hasLargeGap(sorted)) {
-            return null
-        }
 
         const xs = sorted.map((p) => p.price)
         if (xs.length === 0) return null
@@ -239,7 +226,7 @@ export class PriceCalculationService {
         const momentumState = this.classifyMomentumState({
             slope: lr.m, r2, efficiencyRatio 
         })
-        const priceWindowResult: PriceWindowResult = {
+        return {
             // core
             twap,
             momentumState,
@@ -288,15 +275,6 @@ export class PriceCalculationService {
             startTime: sorted[0].time,
             endTime: sorted[sorted.length - 1].time,
         }
-        // if non-production, we push the result to influxdb
-        if (!envConfig().isProduction) {
-            await this.primaryInfluxdbPriceBucketService.writePriceWindowResult({
-                id,
-                marketListingId,
-                priceWindowResult,
-            })
-        }
-        return priceWindowResult
     }
 
     /**

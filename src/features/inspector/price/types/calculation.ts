@@ -1,17 +1,13 @@
 import {
-    MarketListingId
+    PricePoint
 } from "@modules/databases"
 
 /**
  * Parameters for computing TWAP.
  */
 export interface AnalyzePriceWindowParams {
-    /** The token ID. */
-    id: string
-    /** The interval in milliseconds. */
-    intervalMs: number
-    /** Market listing ID. */
-    marketListingId: MarketListingId
+    /** Price points. */
+    pricePoints: Array<PricePoint>
 }
 
 /**

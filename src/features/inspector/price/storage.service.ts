@@ -46,12 +46,15 @@ export class PricePointStorageService implements OnModuleInit {
      * Initialize the price points collection.
      */
     async onModuleInit(): Promise<void> {
+        // create the price points collection
         this.pricePointsCollection = await this.lokiJSService.createCollection<PricePoint>({
             name: "price-points-storage",
             options: {
-                indices: ["id",
+                indices: [
+                    "id",
                     "market_listing_id",
-                    "time"],
+                    "time"
+                ],
             },
         })
     }
@@ -62,31 +65,33 @@ export class PricePointStorageService implements OnModuleInit {
      */
     @Interval(envConfig().inspector.priceWindow.storage.queryIntervalMs)
     async handleQueryAndStoreInterval(): Promise<void> {
-        // Clear existing price points
+        // clear existing price points
         this.pricePointsCollection.clear()
-
+        // get all tokens
         const tokens = this.primaryMemoryStorageService.tokenCollection.find()
-
         // Loop through all tokens
         const promises: Array<Promise<void>> = []
         for (const token of tokens) {
             // Loop through all market listings for each token
             for (const marketListing of token.marketListings) {
-                // Query price points from InfluxDB
-                promises.push(
-                    this.retryService.retry(
-                        {
-                            action: async () => {
-                                await this.queryAndStore({
-                                    id: token.id,
-                                    intervalMs: envConfig().inspector.priceWindow.intervalMs,
-                                    marketListingId: marketListing.id,  
-                                })
-                            },
-                        }
+                if (marketListing.isSignal) {
+                    // Query price points from InfluxDB
+                    promises.push(
+                        this.retryService.retry(
+                            {
+                                action: async () => {
+                                    await this.queryAndStore(
+                                        {
+                                            id: token.id,
+                                            intervalMs: envConfig().inspector.priceWindow.intervalMs,
+                                            marketListingId: marketListing.id,  
+                                        }
+                                    )
+                                },
+                            }
+                        )
                     )
-                )
-                
+                }
             }
         }
         await this.asyncService.allIgnoreError(promises)
@@ -94,6 +99,9 @@ export class PricePointStorageService implements OnModuleInit {
 
     /**
      * Query and store the price points for a specific token and market listing in memory.
+     * @param id - The ID of the token.
+     * @param intervalMs - The interval in milliseconds.
+     * @param marketListingId - The ID of the market listing.
      */
     async queryAndStore(
         {
@@ -102,30 +110,34 @@ export class PricePointStorageService implements OnModuleInit {
             marketListingId,
         }: QueryAndStoreParams,
     ): Promise<void> {
-        const pricePoints = await this.primaryInfluxdbPriceBucketService.queryPromise({
-            id,
-            intervalMs,
-            marketListingId,
-        })
-
-        if (pricePoints.length > 0) {
-            // Remove existing price points for this token and market listing
-            this.pricePointsCollection.findAndRemove({
+        // query the price points from the primary influxdb price bucket
+        const pricePoints = await this.primaryInfluxdbPriceBucketService.queryPromise(
+            {
+                id,
+                intervalMs,
+                marketListingId,
+            }
+        )
+        // remove existing price points for this token and market listing
+        this.pricePointsCollection.findAndRemove(
+            {
                 id: {
                     $eq: id 
                 },
                 market_listing_id: {
                     $eq: marketListingId 
                 },
-            })
-
-            // Insert new price points
-            this.pricePointsCollection.insert(pricePoints)
-        }
+            }
+        )
+        // insert new price points
+        this.pricePointsCollection.insert(pricePoints)
     }
 
     /**
      * Get price points from memory for a specific token and market listing.
+     * @param id - The ID of the token.
+     * @param marketListingId - The ID of the market listing.
+     * @returns The price points.
      */
     getPricePoints(
         id: string, 
