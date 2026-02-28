@@ -27,7 +27,7 @@ import {
     CryptoModule 
 } from "@modules/crypto"
 import {
-    DexId, PrimaryMongoDbModule 
+    DexId, PrimaryInfluxdbModule, PrimaryMongoDbModule 
 } from "@modules/databases"
 import {
     PriceFeedsModule 
@@ -189,6 +189,9 @@ import {
         ClientsModule.register({
             isGlobal: true,
         }),
+        PrimaryInfluxdbModule.register({
+            isGlobal: true,
+        }),
         PriceFeedsModule.register({
             isGlobal: true,
         }),
@@ -226,7 +229,6 @@ import {
             isGlobal: true,
             useKafka: true,
             useLocal: false,
-            updateCache: true,
         }), 
         ObserverModule.register({
             isGlobal: true,

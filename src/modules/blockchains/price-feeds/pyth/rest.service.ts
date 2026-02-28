@@ -9,6 +9,7 @@ import {
 } from "./pyth.decorators"
 import {
     MarketListingId,
+    PrimaryInfluxdbPriceBucketService
 } from "@modules/databases"
 import BN from "bn.js"
 import {
@@ -61,6 +62,7 @@ export class PythRestService implements OnApplicationBootstrap {
         private readonly winstonService: WinstonService,
         private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
         private readonly eventEmitterService: EventEmitterService,
+        private readonly primaryInfluxdbPriceBucketService: PrimaryInfluxdbPriceBucketService,
     ) {}
 
     /**
@@ -151,6 +153,14 @@ export class PythRestService implements OnApplicationBootstrap {
                                         price: new Decimal(data.price),
                                         marketListingId: MarketListingId.Pyth,
                                     },
+                                }
+                            ),
+                            // Update influxdb with new price
+                            this.primaryInfluxdbPriceBucketService.write(
+                                {
+                                    id: data.id,
+                                    price: new Decimal(data.price),
+                                    marketListingId: MarketListingId.Pyth,
                                 }
                             ),
                         ])

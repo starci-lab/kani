@@ -8,7 +8,8 @@ import {
     BINANCE_WS_URL
 } from "./constants"
 import {
-    MarketListingId
+    MarketListingId,
+    PrimaryInfluxdbPriceBucketService
 } from "@modules/databases"
 import {
     AggregatedTokenPriceCacheService
@@ -39,7 +40,6 @@ import {
 import {
     MODULE_OPTIONS_TOKEN, OPTIONS_TYPE
 } from "./binance.module-definition"
-
 /**
  * Service for handling Binance last price data.
  */
@@ -54,6 +54,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
         private readonly eventEmitterService: EventEmitterService,
+        private readonly primaryInfluxdbPriceBucketService: PrimaryInfluxdbPriceBucketService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
     ) {
@@ -188,17 +189,11 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                     async (tokenPrice) => {
                                         await this.asyncService.allIgnoreError([
                                             // update cache
-                                            ...(
-                                                this.options.updateCache 
-                                                    ? [this.aggregatedTokenPriceCacheService.set(
-                                                        {
-                                                            id: tokenPrice.id,
-                                                            price: tokenPrice.price,
-                                                            marketListingId: MarketListingId.Binance,
-                                                        }
-                                                    )
-                                                    ] : []
-                                            ),
+                                            this.aggregatedTokenPriceCacheService.set({
+                                                id: tokenPrice.id,
+                                                price: tokenPrice.price,
+                                                marketListingId: MarketListingId.Binance,
+                                            }),
                                             // emit price update event
                                             this.eventEmitterService.emit({
                                                 event: EventName.TokenPriceUpdated,
@@ -212,6 +207,14 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                                     useLocal: this.options.useLocal,
                                                 }
                                             }),
+                                            // update influxdb
+                                            this.primaryInfluxdbPriceBucketService.write(
+                                                {
+                                                    id: tokenPrice.id,
+                                                    price: new Decimal(tokenPrice.price),
+                                                    marketListingId: MarketListingId.Binance,
+                                                }
+                                            )
                                         ])
                                     }
                                 )

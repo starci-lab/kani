@@ -10,8 +10,4 @@ export interface CexesModuleOptions {
      * Whether to use Kafka.
      */
     useKafka?: boolean
-    /**
-     * Whether to update the cache.
-     */
-    updateCache?: boolean
 }

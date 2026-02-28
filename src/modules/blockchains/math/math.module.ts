@@ -26,9 +26,6 @@ import {
     PriceService 
 } from "./price.service"
 import {
-    TwapService 
-} from "./twap.service"
-import {
     PriceSelectionService 
 } from "./price-selection.service"
 
@@ -45,7 +42,6 @@ import {
         QuoteRatioService,
         PositionValueService,
         PriceService,
-        TwapService,
         PriceSelectionService,
     ],
     exports: [
@@ -56,7 +52,6 @@ import {
         QuoteRatioService,
         PositionValueService,
         PriceService,
-        TwapService,
         PriceSelectionService,
     ],
 })

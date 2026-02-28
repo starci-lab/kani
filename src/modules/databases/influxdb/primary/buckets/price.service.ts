@@ -12,7 +12,10 @@ import {
     InjectPrimaryInfluxdb 
 } from "../influxdb.decorators"
 import {
-    WriteInfluxdbPriceBucket 
+    PricePoint,
+    QueryInfluxdbPriceBucketAsyncIteratorParams,
+    QueryInfluxdbPriceBucketPromiseParams,
+    WriteInfluxdbPriceBucketParams,
 } from "../types"
 import {
     DayjsService 
@@ -26,6 +29,9 @@ import {
 import {
     PrimaryInfluxdbLifecycleService 
 } from "../influxdb-lifecycle.service"
+import {
+    from, lastValueFrom, toArray 
+} from "rxjs"
 
 /**
  * Service for the primary InfluxDB price bucket.
@@ -52,7 +58,7 @@ export class PrimaryInfluxdbPriceBucketService {
             id,
             price,
             marketListingId,
-        }: WriteInfluxdbPriceBucket
+        }: WriteInfluxdbPriceBucketParams
     ) 
     {
         if (!this.influxdbLifecycleService.initialized) {
@@ -78,5 +84,71 @@ export class PrimaryInfluxdbPriceBucketService {
             line ?? "",
             envConfig().databases.influxdb.primary.database,
         )
+    }
+
+    /**
+     * Get a price from the primary InfluxDB price bucket.
+     * @param params - The parameters for the price.
+     */
+    queryAsyncIterator(
+        {
+            id,
+            intervalMs,
+            marketListingId,
+        }: QueryInfluxdbPriceBucketAsyncIteratorParams
+    ): AsyncIterableIterator<PricePoint> {
+        if (!this.influxdbLifecycleService.initialized) {
+            throw new InfluxDBNotInitializedException({
+                database: envConfig().databases.influxdb.primary.database,
+            })
+        }
+        const fromTime = this.dayjsService
+            .now()
+            .subtract(intervalMs,
+                "millisecond")
+            .toISOString()
+    
+        // Prefer: select only needed columns + order by time
+        const sql = `
+        SELECT id, market_listing_id, price, time
+        FROM price
+        WHERE id = $id
+          AND market_listing_id = $marketListingId
+          AND time >= $fromTime
+        ORDER BY time DESC
+      `
+        // InfluxDB 3 client supports params in recent versions; if yours doesn't,
+        // you'll need the fallback below.
+        return this.influxdbClient.query(sql,
+            envConfig().databases.influxdb.primary.database,
+            {
+                params: {
+                    id,
+                    marketListingId,
+                    fromTime,
+                },
+            }
+        ) as AsyncIterableIterator<PricePoint>
+    }
+
+    /**
+     * Query a price from the primary InfluxDB price bucket.
+     * @param params - The parameters for the price.
+     */
+    async queryPromise(
+        {
+            id,
+            intervalMs,
+            marketListingId,
+        }: QueryInfluxdbPriceBucketPromiseParams
+    ): Promise<Array<PricePoint>> {
+        // query the price points
+        const asyncIterator = this.queryAsyncIterator({
+            id,
+            intervalMs,
+            marketListingId,
+        })
+        // convert the async iterator to an array
+        return await lastValueFrom(from(asyncIterator).pipe(toArray()))
     }
 }

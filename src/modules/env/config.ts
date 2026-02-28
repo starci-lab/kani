@@ -558,14 +558,125 @@ export const envConfig = () => ({
     },
     /** Inspector: TWAP calculation interval and snapshot cap. */
     inspector: {
-        twap: {
+        priceWindow: {
             intervalMs: parseEnvMs({
-                key: "INSPECTOR_TWAP_INTERVAL_MS", defaultValue: "1s" 
+                key: "INSPECTOR_PRICE_WINDOW_INTERVAL_MS", defaultValue: "5m" 
             }),
-            /** Max number of TWAP snapshots to keep per token (oldest dropped when exceeded). */
-            maxSnapshots: parseEnvInt({
-                key: "INSPECTOR_TWAP_MAX_SNAPSHOTS", defaultValue: 3600 
-            }),
+            metrics: {
+
+                /**
+                 * Dump detection configuration (based on peak → current price).
+                 * 
+                 * dropFromPeakPct = (last - peak) / peak * 100
+                 * 
+                 * These thresholds define how much % drop is considered:
+                 * - mild move
+                 * - confirmed dump
+                 * - crash-level move
+                 */
+                dump: {
+                    /** % drop from peak considered mild weakness (e.g., -1%) */
+                    mildPct: parseEnvFloat({
+                        key: "INSPECTOR_DUMP_MILD_PCT",
+                        defaultValue: 1,
+                    }),
+                    /** % drop from peak considered dump (e.g., -3%) */
+                    dumpPct: parseEnvFloat({
+                        key: "INSPECTOR_DUMP_PCT",
+                        defaultValue: 3,
+                    }),
+          
+                    /** % drop from peak considered crash (e.g., -5%) */
+                    crashPct: parseEnvFloat({
+                        key: "INSPECTOR_DUMP_CRASH_PCT",
+                        defaultValue: 5,
+                    }),
+                    /**
+                   * Maximum number of bars allowed since peak.
+                   * Prevents classifying slow drifts as dumps.
+                   */
+                    maxBarsSincePeak: parseEnvInt({
+                        key: "INSPECTOR_DUMP_MAX_BARS",
+                        defaultValue: 120,
+                    }),
+          
+                    /**
+                   * Maximum minutes allowed since peak.
+                   * Ensures drop is considered "fast".
+                   */
+                    maxMinutesSincePeak: parseEnvInt({
+                        key: "INSPECTOR_DUMP_MAX_MINUTES",
+                        defaultValue: 3,
+                    }),
+          
+                    /**
+                   * Minimum drop velocity in % per minute.
+                   * Example: 1 means price must drop at least -1% per minute.
+                   */
+                    minVelocityPctPerMin: parseEnvFloat({
+                        key: "INSPECTOR_DUMP_MIN_VELOCITY_PCT_PER_MIN",
+                        defaultValue: 1,
+                    }),
+                },
+          
+                /**
+                 * Volatility-based anomaly detection.
+                 * 
+                 * Used to filter noise:
+                 * If drop > stdMultiplier × volatility → abnormal move.
+                 */
+                volatility: {
+                    stdMultiplier: parseEnvFloat({
+                        key: "INSPECTOR_VOL_STD_MULTIPLIER",
+                        defaultValue: 3,
+                    }),
+                },
+          
+                /**
+                 * Market shape classification thresholds.
+                 * 
+                 * Based on:
+                 * - r2 (linear regression fit quality)
+                 * - efficiency ratio (straightness vs chop)
+                 */
+                shape: {
+          
+                    /** Threshold for classifying clean straight trend */
+                    straightR2: parseEnvFloat({
+                        key: "INSPECTOR_SHAPE_STRAIGHT_R2",
+                        defaultValue: 0.8,
+                    }),
+          
+                    straightEfficiency: parseEnvFloat({
+                        key: "INSPECTOR_SHAPE_STRAIGHT_EFFICIENCY",
+                        defaultValue: 0.7,
+                    }),
+          
+                    /** Threshold for classifying noisy trend */
+                    noisyR2: parseEnvFloat({
+                        key: "INSPECTOR_SHAPE_NOISY_R2",
+                        defaultValue: 0.4,
+                    }),
+          
+                    noisyEfficiency: parseEnvFloat({
+                        key: "INSPECTOR_SHAPE_NOISY_EFFICIENCY",
+                        defaultValue: 0.4,
+                    }),
+                },
+          
+                /**
+                 * Range alert configuration.
+                 * 
+                 * If total window range % exceeds this value,
+                 * market is considered highly volatile.
+                 */
+                range: {
+                    alertPct: parseEnvFloat({
+                        key: "INSPECTOR_RANGE_ALERT_PCT",
+                        defaultValue: 4,
+                    }),
+                },
+            },
         },
     },
     /** Socket.IO broadcast intervals for price and dynamic liquidity pool info. */

@@ -3,13 +3,16 @@ import {
 } from "@nestjs/common"
 import {
     ConfigurableModuleClass, OPTIONS_TYPE,
-} from "./twap.module-definition"
+} from "./price.module-definition"
 import {
-    TwapCalculationService 
+    PriceCalculationService 
 } from "./calculation.service"
 import {
     MathModule 
-} from "@modules/blockchains/math"
+} from "@modules/blockchains"
+import {
+    PriceProccessService 
+} from "./proccess.service"
 
 /**
  * TWAP module.
@@ -17,7 +20,7 @@ import {
  */
 @Module({
 })
-export class TwapModule extends ConfigurableModuleClass {
+export class PriceModule extends ConfigurableModuleClass {
     /**
      * Registers the TWAP module.
      * @param options - The options for the TWAP module.
@@ -36,7 +39,8 @@ export class TwapModule extends ConfigurableModuleClass {
             ...dynamicModule,
             imports: [...modules],
             providers: [
-                TwapCalculationService,
+                PriceCalculationService,
+                PriceProccessService,
             ],
         }
     }

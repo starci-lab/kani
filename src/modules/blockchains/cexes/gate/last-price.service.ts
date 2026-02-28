@@ -8,7 +8,8 @@ import {
     GATE_WS_URL 
 } from "./constants"
 import {
-    MarketListingId 
+    MarketListingId,
+    PrimaryInfluxdbPriceBucketService
 } from "@modules/databases"
 import {
     AggregatedTokenPriceCacheService 
@@ -51,6 +52,7 @@ export class GateLastPriceService implements OnApplicationBootstrap {
         private readonly asyncService: AsyncService,
         private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
         private readonly eventEmitterService: EventEmitterService,
+        private readonly primaryInfluxdbPriceBucketService: PrimaryInfluxdbPriceBucketService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
     ) { }
@@ -153,13 +155,18 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                                             async (tokenPrice) => {
                                                 return this.asyncService.allIgnoreError(
                                                     [
-                                                        ...(this.options.updateCache ? [
-                                                            this.aggregatedTokenPriceCacheService.set({
+                                                        this.aggregatedTokenPriceCacheService.set({
+                                                            id: tokenPrice.id,
+                                                            price: tokenPrice.price,
+                                                            marketListingId: MarketListingId.Gate,
+                                                        }),
+                                                        this.primaryInfluxdbPriceBucketService.write(
+                                                            {
                                                                 id: tokenPrice.id,
-                                                                price: tokenPrice.price,
+                                                                price: new Decimal(tokenPrice.price),
                                                                 marketListingId: MarketListingId.Gate,
-                                                            })
-                                                        ] : []),
+                                                            }
+                                                        ),
                                                         this.eventEmitterService.emit(
                                                             {
                                                                 event: EventName.TokenPriceUpdated,

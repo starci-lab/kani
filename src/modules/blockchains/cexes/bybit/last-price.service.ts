@@ -4,7 +4,8 @@ import {
     OnApplicationBootstrap,
 } from "@nestjs/common"
 import {
-    MarketListingId 
+    MarketListingId,
+    PrimaryInfluxdbPriceBucketService
 } from "@modules/databases"
 import {
     AggregatedTokenPriceCacheService 
@@ -39,7 +40,7 @@ import {
     Dayjs 
 } from "dayjs"
 import {
-    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE
 } from "./bybit.module-definition"
   
 @Injectable()
@@ -53,6 +54,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
       private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
       private readonly dayjsService: DayjsService,
       private readonly eventEmitterService: EventEmitterService,
+      private readonly primaryInfluxdbPriceBucketService: PrimaryInfluxdbPriceBucketService,
       @Inject(MODULE_OPTIONS_TOKEN)
       private readonly options: typeof OPTIONS_TYPE,
     ) {}
@@ -161,13 +163,16 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                                     tokenPrices.map((tokenPrice) => 
                                         this.asyncService.allIgnoreError(
                                             [
-                                                ...(this.options.updateCache ? [
-                                                    this.aggregatedTokenPriceCacheService.set({
-                                                        id: tokenPrice.id,
-                                                        price: tokenPrice.price,
-                                                        marketListingId: MarketListingId.Bybit,
-                                                    })
-                                                ] : []),
+                                                this.aggregatedTokenPriceCacheService.set({
+                                                    id: tokenPrice.id,
+                                                    price: tokenPrice.price,
+                                                    marketListingId: MarketListingId.Bybit,
+                                                }),
+                                                this.primaryInfluxdbPriceBucketService.write({
+                                                    id: tokenPrice.id,
+                                                    price: new Decimal(tokenPrice.price),
+                                                    marketListingId: MarketListingId.Bybit,
+                                                }),
                                                 this.eventEmitterService.emit(
                                                     {
                                                         event: EventName.TokenPriceUpdated,
