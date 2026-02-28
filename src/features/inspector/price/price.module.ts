@@ -13,6 +13,9 @@ import {
 import {
     PriceProccessService 
 } from "./proccess.service"
+import {
+    PricePointStorageService 
+} from "./storage.service"
 
 /**
  * TWAP module.
@@ -41,6 +44,7 @@ export class PriceModule extends ConfigurableModuleClass {
             providers: [
                 PriceCalculationService,
                 PriceProccessService,
+                PricePointStorageService,
             ],
         }
     }

@@ -7,23 +7,25 @@ import {
 import {
     envConfig 
 } from "@modules/env"
-import type {
-    AnalyzePriceWindowParams, 
-    PeakToNowMetrics, 
-    PriceWindowResult, 
-    TroughToNowMetrics
+import {
+    AnalyzePriceWindowParams,
+    ClassifyMomentumStateParams,
+    PeakToNowMetrics,
+    TroughToNowMetrics,
 } from "./types"
 import {
-    PriceWindowShape 
-} from "./types"
+    PriceWindowShape,
+    MomentumState,
+    PriceWindowResult,
+} from "@modules/databases"
 import ss from "simple-statistics"
-import {
+import type {
     PricePoint 
 } from "@modules/databases"
 
 /**
  * Service for computing price window stats (min/max/range/drawdown/trend)
- * + peak->now dump/reversal metrics.
+ * + peak->now dump metrics + trough->now pump metrics.
  */
 @Injectable()
 export class PriceCalculationService {
@@ -62,20 +64,35 @@ export class PriceCalculationService {
     }
 
     /**
+   * Find the LAST occurrence index of a value.
+   * Helps avoid "first peak" issue with repeated max/min values.
+   */
+    private lastIndexOfValue(xs: Array<number>, value: number): number {
+        for (let i = xs.length - 1; i >= 0; i--) {
+            if (xs[i] === value) return i
+        }
+        return -1
+    }
+
+    /**
    * Compute peak->now metrics (for dump/reversal detection).
+   * Uses LAST peak occurrence for more accurate "recentness".
    */
     private peakToNowMetrics(sorted: Array<PricePoint>): PeakToNowMetrics {
         const xs = sorted.map((p) => p.price)
         const ts = sorted.map((p) => new Date(p.time).getTime())
 
         const peakPrice = ss.max(xs)
-        const peakIndex = xs.indexOf(peakPrice)
+        const peakIndex = Math.max(0,
+            this.lastIndexOfValue(xs,
+                peakPrice))
 
         const lastIndex = xs.length - 1
         const lastPrice = xs[lastIndex]
 
+        // negative when below peak
         const dropFromPeakPct =
-      peakPrice === 0 ? 0 : ((lastPrice - peakPrice) / peakPrice) * 100 // negative when below peak
+      peakPrice === 0 ? 0 : ((lastPrice - peakPrice) / peakPrice) * 100
 
         const barsSincePeak = lastIndex - peakIndex
         const dtMs = ts[lastIndex] - ts[peakIndex]
@@ -84,8 +101,7 @@ export class PriceCalculationService {
         const slopeFromPeakPctPerBar =
       barsSincePeak > 0 ? dropFromPeakPct / barsSincePeak : 0
 
-        const velFromPeakPctPerMin =
-      dtMin > 0 ? dropFromPeakPct / dtMin : 0
+        const velFromPeakPctPerMin = dtMin > 0 ? dropFromPeakPct / dtMin : 0
 
         return {
             peakPrice,
@@ -99,28 +115,33 @@ export class PriceCalculationService {
     }
 
     /**
-     * Compute trough->now metrics (for dump/reversal detection).
-     */
+   * Compute trough->now metrics (for pump/recovery detection).
+   * Uses LAST trough occurrence for more accurate "recentness".
+   */
     private troughToNowMetrics(sorted: Array<PricePoint>): TroughToNowMetrics {
         const xs = sorted.map((p) => p.price)
         const ts = sorted.map((p) => new Date(p.time).getTime())
-    
+
         const troughPrice = ss.min(xs)
-        const troughIndex = xs.indexOf(troughPrice)
-    
+        const troughIndex = Math.max(0,
+            this.lastIndexOfValue(xs,
+                troughPrice))
+
         const lastIndex = xs.length - 1
         const lastPrice = xs[lastIndex]
-    
+
+        // positive when above trough
         const riseFromTroughPct =
-          troughPrice === 0 ? 0 : ((lastPrice - troughPrice) / troughPrice) * 100 // positive when above trough
-    
+      troughPrice === 0 ? 0 : ((lastPrice - troughPrice) / troughPrice) * 100
+
         const barsSinceTrough = lastIndex - troughIndex
         const dtMs = ts[lastIndex] - ts[troughIndex]
         const dtMin = dtMs / 60000
-    
-        const slopeFromTroughPctPerBar = barsSinceTrough > 0 ? riseFromTroughPct / barsSinceTrough : 0
+
+        const slopeFromTroughPctPerBar =
+      barsSinceTrough > 0 ? riseFromTroughPct / barsSinceTrough : 0
         const velFromTroughPctPerMin = dtMin > 0 ? riseFromTroughPct / dtMin : 0
-    
+
         return {
             troughPrice,
             troughIndex,
@@ -131,38 +152,41 @@ export class PriceCalculationService {
             troughTime: sorted[troughIndex]?.time,
         }
     }
-    
 
     /**
    * Compute TWAP + window math stats.
    * NOTE: TWAP here is simple mean of samples.
-   */
-    /**
-   * Compute TWAP + window math stats.
-   * NOTE: TWAP here is simple mean of samples.
+   *
+   * IMPORTANT CHANGE:
+   * - Trend regression is computed on NORMALIZED price (% from firstPrice)
+   *   so slope is in "% per bar", portable across tokens.
    */
     async analyzePriceWindow(
         { id, intervalMs, marketListingId }: AnalyzePriceWindowParams,
     ): Promise<PriceWindowResult | null> {
-        const prices = await this.primaryInfluxdbPriceBucketService.queryPromise({
-            id,
-            intervalMs,
-            marketListingId,
-        })
-
-        if (this.primaryInfluxdbPriceBucketService.hasLargeGap(prices)) {
-            return null
-        }
-
+        const prices = await this.primaryInfluxdbPriceBucketService.queryPromise(
+            {
+                id,
+                intervalMs,
+                marketListingId,
+            }
+        )
         // Ensure time ordering so "last" is meaningful
         const sorted = [...prices].sort(
             (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
         )
 
+        if (this.primaryInfluxdbPriceBucketService.hasLargeGap(sorted)) {
+            return null
+        }
+
         const xs = sorted.map((p) => p.price)
+        if (xs.length === 0) return null
+
         const firstPrice = xs[0]
         const lastPrice = xs[xs.length - 1]
 
+        // prices
         const maxPrice = ss.max(xs)
         const minPrice = ss.min(xs)
         const diffPrice = maxPrice - minPrice
@@ -170,10 +194,10 @@ export class PriceCalculationService {
         // % stats
         const rangePct = minPrice === 0 ? 0 : ((maxPrice - minPrice) / minPrice) * 100
         const fromLowToLastPct = minPrice === 0 ? 0 : ((lastPrice - minPrice) / minPrice) * 100
-        const fromHighToLastPct = maxPrice === 0 ? 0 : ((lastPrice - maxPrice) / maxPrice) * 100 // negative if below high
+        const fromHighToLastPct = maxPrice === 0 ? 0 : ((lastPrice - maxPrice) / maxPrice) * 100
         const drawdownPct = this.maxDrawdownPct(xs)
 
-        // Volatility on returns
+        // Volatility on returns (fraction, not percent)
         const returns =
       xs.length <= 1
           ? []
@@ -183,20 +207,25 @@ export class PriceCalculationService {
           })
         const volatility = returns.length ? ss.standardDeviation(returns) : 0
 
-        // Trend straightness: regression slope + r2 (window-level)
-        const points = xs.map((price, i) => [i,
-            price] as [number, number])
-        const lr = ss.linearRegression(points)
+        // Efficiency (raw price path)
+        const efficiencyRatio = this.efficiencyRatio(xs)
+
+        // Trend regression on NORMALIZED price (% from first)
+        const ysPct = xs.map((p) =>
+            firstPrice === 0 ? 0 : ((p - firstPrice) / firstPrice) * 100,
+        )
+        const points = ysPct.map((v, i) => [i,
+            v] as [number, number])
+        const lr = ss.linearRegression(points) // slope is % per bar
         const predict = ss.linearRegressionLine(lr)
         const r2 = ss.rSquared(points,
             predict)
-        const efficiencyRatio = this.efficiencyRatio(xs)
 
         // Peak -> now (dump) + Trough -> now (pump)
         const peakNow = this.peakToNowMetrics(sorted)
         const troughNow = this.troughToNowMetrics(sorted)
 
-        // Shape label
+        // Shape label (still works with r2 + efficiencyRatio)
         const shapeMetrics = envConfig().inspector.priceWindow.metrics.shape
         let shape: PriceWindowShape = PriceWindowShape.Choppy
 
@@ -207,10 +236,13 @@ export class PriceCalculationService {
         }
 
         const twap = ss.mean(xs)
-
-        return {
+        const momentumState = this.classifyMomentumState({
+            slope: lr.m, r2, efficiencyRatio 
+        })
+        const priceWindowResult: PriceWindowResult = {
             // core
             twap,
+            momentumState,
 
             // prices
             maxPrice,
@@ -224,6 +256,7 @@ export class PriceCalculationService {
             drawdownPct,
 
             // window trend/shape
+            // IMPORTANT: slope now means "% per bar" (normalized regression)
             slope: lr.m,
             r2,
             efficiencyRatio,
@@ -239,7 +272,7 @@ export class PriceCalculationService {
             slopeFromPeakPctPerBar: peakNow.slopeFromPeakPctPerBar,
             velFromPeakPctPerMin: peakNow.velFromPeakPctPerMin,
 
-            // trough -> now (pump) (NEW)
+            // trough -> now (pump)
             troughPrice: troughNow.troughPrice,
             troughTime: troughNow.troughTime,
             troughIndex: troughNow.troughIndex,
@@ -255,5 +288,40 @@ export class PriceCalculationService {
             startTime: sorted[0].time,
             endTime: sorted[sorted.length - 1].time,
         }
+        // if non-production, we push the result to influxdb
+        if (!envConfig().isProduction) {
+            await this.primaryInfluxdbPriceBucketService.writePriceWindowResult({
+                id,
+                marketListingId,
+                priceWindowResult,
+            })
+        }
+        return priceWindowResult
+    }
+
+    /**
+   * Classify the momentum state (Up/Down/Sideways).
+   *
+   * IMPORTANT:
+   * - Assumes priceWindow.slope is "% per bar" (from normalized regression above).
+   * - Uses minSlope/minR2/minEfficiency gates to avoid noise classification.
+   */
+    classifyMomentumState(
+        { 
+            slope, 
+            r2, 
+            efficiencyRatio 
+        }: ClassifyMomentumStateParams
+    ): MomentumState {
+        const config = envConfig().inspector.priceWindow.momentum
+
+        // If trend is not clear enough -> Sideways
+        const isTrend =
+      Math.abs(slope) >= config.minSlope &&
+      r2 >= config.minR2 &&
+      efficiencyRatio >= config.minEfficiency
+
+        if (!isTrend) return MomentumState.Sideways
+        return slope > 0 ? MomentumState.Up : MomentumState.Down
     }
 }

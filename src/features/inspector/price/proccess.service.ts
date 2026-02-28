@@ -5,9 +5,7 @@ import {
     PriceCalculationService 
 } from "./calculation.service"
 import {
-    MarketListingId,
     PrimaryMemoryStorageService, 
-    TokenId
 } from "@modules/databases"
 import {
     ProccessPriceWindowParams 
@@ -21,9 +19,6 @@ import {
 import {
     AsyncService 
 } from "@modules/mixin"
-import {
-    createObjectId 
-} from "@modules/common"
 
 /**
  * Service for proccessing price window.
@@ -42,7 +37,7 @@ export class PriceProccessService {
     /**
      * Handle the price window interval.
      */
-    @Interval(500)
+    @Interval(200)
     async handlePriceWindowInterval() {
         const promises: Array<Promise<void>> = []
         const tokens = this.primaryMemoryStorageService.tokenCollection.find()
@@ -75,10 +70,6 @@ export class PriceProccessService {
         )
         if (!result) {
             throw new Error("Failed to analyze price window")
-        }
-        if (id === createObjectId(TokenId.SuiIka).toString() && marketListingId === MarketListingId.Pyth) {
-            console.log("Sui IKA: ",
-                result)
         }
     }
 }       

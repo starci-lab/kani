@@ -559,6 +559,11 @@ export const envConfig = () => ({
     /** Inspector: TWAP calculation interval and snapshot cap. */
     inspector: {
         priceWindow: {
+            storage: {
+                queryIntervalMs: parseEnvMs({
+                    key: "INSPECTOR_PRICE_WINDOW_STORAGE_QUERY_INTERVAL_MS", defaultValue: "250ms" 
+                }),
+            },
             /**
              * Interval in milliseconds for analyzing a price window.
              */
@@ -569,14 +574,25 @@ export const envConfig = () => ({
              * Minimum number of samples required to analyze a price window.
              */
             minSamples: parseEnvInt({
-                key: "INSPECTOR_PRICE_WINDOW_MIN_SAMPLES", defaultValue: 100 
+                key: "INSPECTOR_PRICE_WINDOW_MIN_SAMPLES", defaultValue: 50 
             }),
             /**
              * Maximum gap in milliseconds allowed between two price points.
              */
             maxGapMs: parseEnvMs({
-                key: "INSPECTOR_PRICE_WINDOW_MAX_GAP_MS", defaultValue: "5s" 
+                key: "INSPECTOR_PRICE_WINDOW_MAX_GAP_MS", defaultValue: "30s" 
             }),
+            momentum: {
+                minSlope: parseEnvFloat({
+                    key: "INSPECTOR_MOMENTUM_MIN_SLOPE", defaultValue: 0.001
+                }),
+                minR2: parseEnvFloat({
+                    key: "INSPECTOR_MOMENTUM_MIN_R2", defaultValue: 0.8 
+                }),
+                minEfficiency: parseEnvFloat({
+                    key: "INSPECTOR_MOMENTUM_MIN_EFFICIENCY", defaultValue: 0.7 
+                }),
+            },
             metrics: {
                 /**
                  * Dump detection configuration (based on peak → current price).
@@ -627,6 +643,42 @@ export const envConfig = () => ({
                    */
                     minVelocityPctPerMin: parseEnvFloat({
                         key: "INSPECTOR_DUMP_MIN_VELOCITY_PCT_PER_MIN",
+                        defaultValue: 1,
+                    }),
+                },
+                pump: {
+                    /** % rise from trough considered mild strength (e.g., +1%) */
+                    mildPct: parseEnvFloat({
+                        key: "INSPECTOR_PUMP_MILD_PCT",
+                        defaultValue: 1,
+                    }),
+                    /** % rise from trough considered pump (e.g., +3%) */
+                    pumpPct: parseEnvFloat({
+                        key: "INSPECTOR_PUMP_PCT",
+                        defaultValue: 3,
+                    }),
+                    /** % rise from trough considered spike (e.g., +5%) */
+                    spikePct: parseEnvFloat({
+                        key: "INSPECTOR_PUMP_SPIKE_PCT",
+                        defaultValue: 5,
+                    }),
+                  
+                    /** Prevent classifying slow drifts as pumps */
+                    maxBarsSinceTrough: parseEnvInt({
+                        key: "INSPECTOR_PUMP_MAX_BARS",
+                        defaultValue: 120,
+                    }),
+                    /** Ensures rise is considered "fast" */
+                    maxMinutesSinceTrough: parseEnvInt({
+                        key: "INSPECTOR_PUMP_MAX_MINUTES",
+                        defaultValue: 3,
+                    }),
+                    /**
+                     * Minimum rise velocity in % per minute.
+                     * Example: 1 means price must rise at least +1% per minute.
+                     */
+                    minVelocityPctPerMin: parseEnvFloat({
+                        key: "INSPECTOR_PUMP_MIN_VELOCITY_PCT_PER_MIN",
                         defaultValue: 1,
                     }),
                 },
