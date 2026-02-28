@@ -7,7 +7,6 @@ import {
 import {
     PricePoint,
     PrimaryInfluxdbPriceBucketService,
-    TokenId,
 } from "@modules/databases"
 import {
     ProccessPriceWindowParams
@@ -30,9 +29,6 @@ import {
 import {
     PrimaryInfluxdbWindowResultBucketService
 } from "@modules/databases"
-import {
-    createObjectId
-} from "@modules/common"
 /**
  * Service for proccessing price window.
  */
@@ -83,10 +79,6 @@ export class PriceProccessService {
     ) {
         /** Get the token and market listing IDs. */
         const { token0Id, token1Id, marketListing0Id, marketListing1Id } = scope
-        if (!(token0Id === createObjectId(TokenId.SuiNative).toString() &&
-            token1Id === createObjectId(TokenId.SuiIka).toString())) {
-            return
-        }
         /** Get the price points. */
         const pricePoints0 = this.pricePointStorageService.getPricePoints(
             token0Id,
