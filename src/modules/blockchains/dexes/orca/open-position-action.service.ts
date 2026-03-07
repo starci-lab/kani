@@ -249,8 +249,6 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             mintKeyPair,
             ataAddress,
             instructions: openPositionInstructions,
-            feeAmountA,
-            feeAmountB,
             personalPosition,
         } = await this.openPositionInstructionService.createOpenPositionInstructions({
             bot,
@@ -275,8 +273,6 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                     bs58.encode(mintKeyPair.secretKey),
                 ],
             }],
-            feeAmountA,
-            feeAmountB,
             amountA,
             amountB,
             positionId: personalPosition.toString(),

@@ -347,6 +347,20 @@ export class PositionSchema extends AbstractSchema {
         required: false,
     })
         rentAmount?: string
+
+    /**
+     * Whether the fees should be transferred to the fee address after the position is closed.
+     */
+    @Field(() => String,
+        {
+            description: "Whether the fees should be transferred to the fee address after the position is closed",
+            nullable: true,
+        })
+    @Prop({
+        type: Boolean,
+        required: false,
+    })
+        shouldTransferFees?: boolean
 }
     
 

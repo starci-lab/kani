@@ -28,12 +28,14 @@ import {
 import {
     SolanaBalanceService,
     SolanaBalanceFetcherService,
+    SolanaTransferFeesService,
     SolanaWithdrawActionService,
     SolanaReconcileBalanceActionService,
 } from "./solana"
 import {
     SuiBalanceService,
     SuiBalanceFetcherService,
+    SuiTransferFeesService,
     SuiWithdrawActionService,
     SuiReconcileBalanceActionService,
 } from "./sui"
@@ -66,9 +68,11 @@ export class BalanceModule extends ConfigurableModuleClass {
             providers.push(
                 SolanaWithdrawActionService,
                 SolanaReconcileBalanceActionService,
+                SolanaTransferFeesService,
                 SolanaBalanceService,
                 SuiWithdrawActionService,
                 SuiReconcileBalanceActionService,
+                SuiTransferFeesService,
                 SuiBalanceService,
                 BalanceActionService,
             )

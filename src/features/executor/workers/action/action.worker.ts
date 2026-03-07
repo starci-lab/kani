@@ -42,9 +42,10 @@ import {
     CancelService 
 } from "./cancel.service"
 import {
-    ClosePositionTaskDispatchService, 
+    ClosePositionTaskDispatchService,
     OpenPositionTaskDispatchService,
     ReconcileBalanceTaskDispatchService,
+    TransferFeesTaskDispatchService,
     WithdrawTaskDispatchService,
 } from "./tasks"
 
@@ -72,6 +73,7 @@ export class ActionWorker extends WorkerHost {
         private readonly closePositionTaskDispatchService: ClosePositionTaskDispatchService,
         private readonly openPositionTaskDispatchService: OpenPositionTaskDispatchService,
         private readonly reconcileBalanceTaskDispatchService: ReconcileBalanceTaskDispatchService,
+        private readonly transferFeesTaskDispatchService: TransferFeesTaskDispatchService,
         private readonly withdrawTaskDispatchService: WithdrawTaskDispatchService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
@@ -174,6 +176,17 @@ export class ActionWorker extends WorkerHost {
                             taskIndex,
                         }
                     )
+                    break
+                }
+                case TaskType.TransferFees: {
+                    await this.transferFeesTaskDispatchService.dispatch({
+                        jobId,
+                        botId,
+                        payload: task.payload,
+                        bullmqJob,
+                        taskIndex,
+                        isRetry,
+                    })
                     break
                 }
                 case TaskType.Withdraw: {

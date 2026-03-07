@@ -268,8 +268,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         const amountBMax = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount
 
         // Stage: tx building (unsigned)
-        const { txb, feeAmountA, feeAmountB } =
-            await this.openPositionTxbService.createOpenPositionTxb({
+        const { txb } = await this.openPositionTxbService.createOpenPositionTxb({
                 bot,
                 amountA: amountAMax,
                 amountB: amountBMax,
@@ -287,8 +286,6 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                     serializedTx: await txb.toJSON(),
                 },
             ],
-            feeAmountA,
-            feeAmountB,
             tickLower,
             tickUpper,
         }

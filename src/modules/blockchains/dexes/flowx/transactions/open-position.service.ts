@@ -1,7 +1,6 @@
-import { 
-    FeeToAddressNotFoundException, 
-    InvalidPoolTokensException, 
-    TargetOperationalGasAmountNotFoundException
+import {
+    InvalidPoolTokensException,
+    TargetOperationalGasAmountNotFoundException,
 } from "@modules/exceptions"
 import { 
     FlowXLiquidityPoolMetadata, 
@@ -31,9 +30,6 @@ import {
     ChainId 
 } from "@modules/common"
 import {
-    FeeService 
-} from "../../../math"
-import {
     MountStorageService 
 } from "@modules/filesystem"
 import {
@@ -58,7 +54,6 @@ export class OpenPositionTxbService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly selectCoinsService: SelectCoinsService,
         private readonly dayjsService: DayjsService,
-        private readonly feeService: FeeService,
         private readonly mountStorageService: MountStorageService,
     ) {}
 
@@ -92,10 +87,10 @@ export class OpenPositionTxbService {
                 liquidityPoolId: liquidityPool.displayId,
             })
         }
-        const targetOperationalAmount = this.primaryMemoryStorageService.
-            gasConfig.
-            gasAmountRequired[ChainId.Sui]?.
-            targetOperationalAmount
+        const targetOperationalAmount = 
+            this.mountStorageService.appConfig.gas.
+                gasAmountRequired[ChainId.Sui]?.
+                targetOperationalAmount
         if (!targetOperationalAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
                 {
@@ -103,26 +98,8 @@ export class OpenPositionTxbService {
                 }
             )
         }
-        const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.sui.feeToAddress
-        if (!feeToAddress) {
-            throw new FeeToAddressNotFoundException({
-                feeToAddress,
-            })
-        }
-        const {
-            feeAmount: feeAmountA,
-            remainingAmount: remainingAmountA,
-        } = this.feeService.splitAmount({
-            amount: amountA,
-            chainId: bot.chainId,
-        })
-        const {
-            feeAmount: feeAmountB,
-            remainingAmount: remainingAmountB,
-        } = this.feeService.splitAmount({
-            amount: amountB,
-            chainId: bot.chainId,
-        })
+        const remainingAmountA = new BN(amountA)
+        const remainingAmountB = new BN(amountB)
         const slippage = new Decimal(envConfig().dexes.flowx.openPosition.slippage)
         // we check balances of tokenA and tokenB
         const { 
@@ -145,21 +122,6 @@ export class OpenPositionTxbService {
                 requiredAmount: amountB,
                 suiGasAmount: new BN(targetOperationalAmount),
             })
-        const { spendCoin: feeCoinA } = this.selectCoinsService.splitCoin({
-            txb,
-            sourceCoin: sourceCoinA,
-            requiredAmount: feeAmountA,
-        })
-        const { spendCoin: feeCoinB } = this.selectCoinsService.splitCoin({
-            txb,
-            sourceCoin: sourceCoinB,
-            requiredAmount: feeAmountB,
-        })
-        txb.transferObjects([
-            feeCoinA.coinArg, 
-            feeCoinB.coinArg
-        ],
-        feeToAddress)
         const [
             tickLowerI32, 
             tickUpperI32
@@ -227,8 +189,6 @@ export class OpenPositionTxbService {
             txb.pure.address(bot.accountAddress))
         return {
             txb,
-            feeAmountA,
-            feeAmountB,
         }
     }
 }

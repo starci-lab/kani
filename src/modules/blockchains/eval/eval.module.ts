@@ -13,6 +13,9 @@ import {
 import {
     EvalSnapshotService 
 } from "./snapshots.service"
+import {
+    FilesystemModule 
+} from "@modules/filesystem"
 
 /**
  * Eval module.
@@ -40,6 +43,10 @@ export class EvalModule extends ConfigurableModuleClass {
         ]
         return {
             ...dynamicModule,
+            imports: [
+                ...(dynamicModule.imports || []),
+                FilesystemModule,
+            ],
             providers: [
                 ...dynamicModule.providers || [],
                 ...providers,

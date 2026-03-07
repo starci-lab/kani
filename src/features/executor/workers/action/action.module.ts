@@ -44,6 +44,11 @@ import {
     OpenPositionTaskExecuteService,
     OpenPositionTaskConfirmService,
     OpenPositionTaskDispatchService,
+    TransferFeesTaskPrepareService,
+    TransferFeesTaskSignService,
+    TransferFeesTaskExecuteService,
+    TransferFeesTaskConfirmService,
+    TransferFeesTaskDispatchService,
 } from "./tasks"
 import {
     ActionRequeueService 
@@ -84,6 +89,11 @@ import {
             OpenPositionTaskExecuteService,
             OpenPositionTaskConfirmService,
             OpenPositionTaskDispatchService,
+            TransferFeesTaskPrepareService,
+            TransferFeesTaskSignService,
+            TransferFeesTaskExecuteService,
+            TransferFeesTaskConfirmService,
+            TransferFeesTaskDispatchService,
             ActionRequeueService,
             JobTaskService,
             JobStepService,

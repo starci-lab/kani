@@ -50,10 +50,6 @@ export interface CreateOpenPositionInstructionsResult {
     personalPosition: Address
     /** ATA address. */
     ataAddress: Address
-    /** Fee amount for token A. */
-    feeAmountA: BN
-    /** Fee amount for token B. */
-    feeAmountB: BN
 }
 
 /**

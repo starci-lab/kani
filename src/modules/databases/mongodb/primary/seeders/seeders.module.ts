@@ -16,9 +16,6 @@ import {
 import {
     LiquidityPoolsService 
 } from "./liquidity-pools.service"
-import {
-    ConfigService 
-} from "./config.service"
 
 /**
  * The module for the Seeders.
@@ -28,7 +25,6 @@ import {
         TokensService,
         DexesService,
         LiquidityPoolsService,
-        ConfigService,
         SeedersService
     ],
     exports: [

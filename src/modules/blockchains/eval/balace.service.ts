@@ -5,9 +5,12 @@ import {
     TokenNotFoundException 
 } from "@modules/exceptions"
 import {
-    PrimaryMemoryStorageService, 
-    QuoteRatioStatus
+    PrimaryMemoryStorageService,
+    QuoteRatioStatus,
 } from "@modules/databases"
+import {
+    MountStorageService,
+} from "@modules/filesystem"
 import {
     TokenType,
     toDecimalAmount 
@@ -41,6 +44,7 @@ import {
 export class EvalBalanceService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly mountStorageService: MountStorageService,
         private readonly priceService: PriceService,
         private readonly quoteRatioService: QuoteRatioService,
     ) {}
@@ -59,7 +63,7 @@ export class EvalBalanceService {
      */
     async eval({ bot }: EvalBalanceParams): Promise<EvalBalanceResult> {
         // Stage: config validation (minimum funding requirement must be configured)
-        const minRequiredAmountInUsd = this.primaryMemoryStorageService.balanceConfig
+        const minRequiredAmountInUsd = this.mountStorageService.appConfig.balance
             .balanceRequired?.[bot.chainId]?.minRequiredAmountInUsd
         if (!minRequiredAmountInUsd) {
             throw new BalanceConfigNotFoundException({
@@ -70,7 +74,7 @@ export class EvalBalanceService {
         // Stage: config validation (gas thresholds must be configured)
         // Gas thresholds are configured in human units (e.g. SUI, SOL),
         // so we compare them against the decimal-converted gas balance.
-        const minOperationalGasAmount = this.primaryMemoryStorageService.gasConfig
+        const minOperationalGasAmount = this.mountStorageService.appConfig.gas
             .gasAmountRequired?.[bot.chainId]?.minOperationalAmount
         if (!minOperationalGasAmount) {
             throw new MinOperationalGasAmountNotFoundException({
@@ -78,7 +82,7 @@ export class EvalBalanceService {
             })
         }
 
-        const targetOperationalGasAmount = this.primaryMemoryStorageService.gasConfig
+        const targetOperationalGasAmount = this.mountStorageService.appConfig.gas
             .gasAmountRequired?.[bot.chainId]?.targetOperationalAmount
         if (!targetOperationalGasAmount) {
             throw new TargetOperationalGasAmountNotFoundException({

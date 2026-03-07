@@ -185,8 +185,6 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             instructions: openPositionInstructions,
             positionKeyPair: mintKeyPair,
             ataAddress,
-            feeAmountA,
-            feeAmountB,
             personalPosition,
         } = await this.openPositionInstructionService.createOpenPositionInstructions({
             bot,
@@ -213,8 +211,6 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                     ],
                 }
             ],
-            feeAmountA,
-            feeAmountB,
             tickLower,
             tickUpper,
             amountA,

@@ -263,11 +263,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         const amountAMax = targetIsA ? snapshotTargetBalanceAmount : snapshotQuoteBalanceAmount
         const amountBMax = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount
         // create open position transaction builder
-        const { 
-            txb: openPositionTxb, 
-            feeAmountA, 
-            feeAmountB 
-        } = await this.openPositionTxbService.createOpenPositionTxb({
+        const { txb: openPositionTxb } = await this.openPositionTxbService.createOpenPositionTxb({
             bot,
             amountAMax,
             amountBMax,
@@ -284,8 +280,6 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     serializedTx: await openPositionTxb.toJSON(),
                 }
             ],
-            feeAmountA,
-            feeAmountB,
             tickLower,
             tickUpper,
         }

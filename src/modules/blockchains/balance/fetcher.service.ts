@@ -42,6 +42,9 @@ import {
     toRawAmount 
 } from "@modules/common"
 import Decimal from "decimal.js"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
 
 /**
  * Service responsible for fetching balance information from blockchain.
@@ -58,6 +61,7 @@ export class BalanceFetcherService implements IBalanceFetcherService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly suiBalanceFetcherService: SuiBalanceFetcherService,
         private readonly gasStatusService: GasStatusService,
+        private readonly mountStorageService: MountStorageService,
     ) {
     }
 
@@ -131,23 +135,24 @@ export class BalanceFetcherService implements IBalanceFetcherService {
             targetTokenId: targetToken.displayId,
             quoteTokenId: quoteToken.displayId,
         })
-        
         // get gas configuration for chain
-        const { gasConfig: { gasAmountRequired } } = this.primaryMemoryStorageService
-        const { targetOperationalAmount: targetOperationalGasAmount, minOperationalAmount: minOperationalGasAmount } = gasAmountRequired?.[bot.chainId] || {
-        }
-        
-        if (!targetOperationalGasAmount) {
-            throw new TargetOperationalGasAmountNotFoundException({
-                chainId: bot.chainId,
-            })
-        }
+        const minOperationalGasAmount = this.mountStorageService.appConfig.gas.gasAmountRequired?.[bot.chainId]?.minOperationalAmount
         if (!minOperationalGasAmount) {
-            throw new MinOperationalGasAmountNotFoundException({
-                chainId: bot.chainId,
-            })
+            throw new MinOperationalGasAmountNotFoundException(
+                {
+                    chainId: bot.chainId,
+                }
+            )
         }
-        
+        const targetOperationalGasAmount = this.mountStorageService.appConfig.gas.
+            gasAmountRequired[bot.chainId]?.targetOperationalAmount
+        if (!targetOperationalGasAmount) {
+            throw new TargetOperationalGasAmountNotFoundException(
+                {
+                    chainId: bot.chainId,
+                }
+            )
+        }
         // find native gas token for chain
         const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
             type: {

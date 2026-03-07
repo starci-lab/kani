@@ -11,7 +11,7 @@ import {
     AuthenticationConfigResolver 
 } from "./authentication-config.resolver"
 
-@Module({
+@Module({       
     providers: [
         AuthenticationConfigService,
         AuthenticationConfigResolver,

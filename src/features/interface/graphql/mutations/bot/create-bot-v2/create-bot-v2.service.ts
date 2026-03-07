@@ -1,14 +1,17 @@
 import {
     Injectable 
 } from "@nestjs/common"
-import { 
-    InjectPrimaryMongoose, 
+import {
+    InjectPrimaryMongoose,
     BotSchema,
-    UserSchema, 
+    UserSchema,
     PrimaryMemoryStorageService,
     AppVersion,
     ExecutorSchema,
 } from "@modules/databases"
+import {
+    MountStorageService,
+} from "@modules/filesystem"
 import {
     Connection 
 } from "mongoose"
@@ -54,6 +57,7 @@ export class CreateBotV2Service {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly mountStorageService: MountStorageService,
         private readonly privyCoreService: PrivyCoreService,
         private readonly derivedAesKeyService: DerivedAesKeyService,
         private readonly googleDriveService: GoogleDriveService,
@@ -118,7 +122,7 @@ export class CreateBotV2Service {
                 .map((liquidityPool) => liquidityPool.id)
                 .value()
         }
-        const maxBotsPerAccount = this.primaryMemoryStorageService.accountLimits.maxBotsPerAccount
+        const maxBotsPerAccount = this.mountStorageService.appConfig.accountLimits.maxBotsPerAccount
         // we try to find the user in the database
         const user = await this.connection.model<UserSchema>(UserSchema.name)
             .findOne({
@@ -179,9 +183,9 @@ export class CreateBotV2Service {
                                     signerPublicKey: keyPair.publicKey,
                                     walletPublicKey: wallet.public_key  
                                 },
-                                avatarUrl: this.primaryMemoryStorageService.avatarsConfig.avatarUrls[
+                                avatarUrl: this.mountStorageService.appConfig.avatars.avatarUrls[
                                     Math.floor(
-                                        Math.random() * this.primaryMemoryStorageService.avatarsConfig.avatarUrls.length)
+                                        Math.random() * this.mountStorageService.appConfig.avatars.avatarUrls.length)
                                 ],
                                 version: AppVersion.V2,
                                 isExitToUsdc,

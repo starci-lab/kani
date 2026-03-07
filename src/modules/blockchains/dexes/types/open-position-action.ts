@@ -26,8 +26,6 @@ export interface PrepareOpenPositionParams {
  */
 export interface PrepareOpenPositionResult {
     prepareTxs: Array<PrepareTx>
-    feeAmountA: BN
-    feeAmountB: BN
     tickLower?: BN
     tickUpper?: BN
     amountA?: BN
@@ -81,10 +79,6 @@ export interface IOpenActionService {
  */
 export interface CreateExecuteResult {
     metadata?: unknown
-    // fee amount in target token
-    feeAmountTarget: BN
-    // fee amount in quote token
-    feeAmountQuote: BN
     // position id
     positionId: string
     // liquidity

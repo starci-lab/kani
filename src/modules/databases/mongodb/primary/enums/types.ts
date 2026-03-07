@@ -348,6 +348,7 @@ export enum TaskType {
     OpenPosition = "openPosition",
     ClosePosition = "closePosition",
     ReconcileBalance = "reconcileBalance",
+    TransferFees = "transferFees",
     Withdraw = "withdraw",
     ExitUsdc = "exitUsdc",
 }
@@ -368,6 +369,9 @@ registerEnumType(
             },
             [TaskType.ReconcileBalance]: {
                 description: "The reconcile balance task"
+            },
+            [TaskType.TransferFees]: {
+                description: "The transfer fees task"
             },
             [TaskType.Withdraw]: {
                 description: "The withdraw task"

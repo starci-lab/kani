@@ -1,6 +1,9 @@
 import {
-    PrimaryMemoryStorageService 
+    PrimaryMemoryStorageService,
 } from "@modules/databases"
+import {
+    MountStorageService,
+} from "@modules/filesystem"
 import {
     Injectable 
 } from "@nestjs/common"
@@ -41,6 +44,7 @@ import {
 export class EvalSnapshotService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly mountStorageService: MountStorageService,
         private readonly priceService: PriceService,
         private readonly asyncService: AsyncService,
         private readonly winstonService: WinstonService,
@@ -159,7 +163,7 @@ export class EvalSnapshotService {
             .add(gasBalanceAmountInUsd)
 
         // Fetch minimum required amount from config
-        const minRequiredAmountInUsd = this.primaryMemoryStorageService.balanceConfig
+        const minRequiredAmountInUsd = this.mountStorageService.appConfig.balance
             .balanceRequired?.[bot.chainId]?.minRequiredAmountInUsd
 
         // Stage: config validation (minimum required amount must be configured)

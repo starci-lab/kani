@@ -188,11 +188,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         const amountA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
         const amountB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
         // Create open position transaction block
-        const {
-            txb: openPositionTxb,
-            feeAmountA,
-            feeAmountB,
-        } = await this.openPositionTxbService.createOpenPositionTxb({
+        const { txb: openPositionTxb } = await this.openPositionTxbService.createOpenPositionTxb({
             bot,
             liquidityPool,
             tickLower,
@@ -210,8 +206,6 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                     serializedTx: await openPositionTxb.toJSON(),
                 }
             ],
-            feeAmountA,
-            feeAmountB,
             tickLower,
             tickUpper,
             amountA,

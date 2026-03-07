@@ -40,10 +40,6 @@ export interface CreateOpenPositionTxbParams {
 export interface CreateOpenPositionTxbResult {
     /** Transaction builder. */
     txb: Transaction
-    /** Fee amount for token A. */
-    feeAmountA: BN
-    /** Fee amount for token B. */
-    feeAmountB: BN
 }
 
 /**

@@ -71,6 +71,8 @@ export interface PrivyConfig {
 
 /** Fees config per chain (open position, swap referral). */
 export interface FeesConfig {
+    /** ROI fee rate (0..1) applied to target token balance for transfer fees. */
+    feeRate?: number
     openPosition: {
         solana: OpenPositionFeeConfig
         sui: OpenPositionFeeConfig
@@ -81,7 +83,55 @@ export interface FeesConfig {
     }
 }
 
-/** Root app config (API keys, GCP, drive, privy, smtp, fees). */
+/** Gas amount requirements per chain. */
+export interface GasAmountRequired {
+    minOperationalAmount: number
+    targetOperationalAmount: number
+    swapAmount: number
+}
+
+/** Gas config per chain. */
+export interface GasConfig {
+    gasAmountRequired: Partial<Record<ChainId, GasAmountRequired>>
+}
+
+/** Balance requirements per chain. */
+export interface BalanceRequired {
+    minRequiredAmountInUsd: number
+}
+
+/** Balance config per chain. */
+export interface BalanceConfig {
+    balanceRequired: Partial<Record<ChainId, BalanceRequired>>
+}
+
+/** Account limits config. */
+export interface AccountLimitsConfig {
+    maxBotsPerAccount: number
+}
+
+/** Avatars config. */
+export interface AvatarsConfig {
+    avatarUrls: Array<string>
+}
+
+/** Authentication config. */
+export interface AuthenticationConfig {
+    authenticationFactors: Array<string>
+}
+
+/** Range tier entry. */
+export interface RangeTierEntry {
+    tier: string
+    ticks: number
+}
+
+/** Range tiers config. */
+export interface RangeTiersConfig {
+    rangeTiers: Array<RangeTierEntry>
+}
+
+/** Root app config (API keys, GCP, drive, privy, smtp, fees, static config). */
 export interface AppConfig {
     jupiter: string
     sentryDsn: string
@@ -91,4 +141,10 @@ export interface AppConfig {
     privy: PrivyConfig
     smtp: SmtpConfig
     fees: FeesConfig
+    gas: GasConfig
+    balance: BalanceConfig
+    accountLimits: AccountLimitsConfig
+    avatars: AvatarsConfig
+    authentication: AuthenticationConfig
+    rangeTiers: RangeTiersConfig
 }

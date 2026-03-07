@@ -17,10 +17,15 @@ import {
     PrepareWithdrawTransactionResult,
     ExecuteWithdrawTransactionParams,
     ExecuteWithdrawTransactionResult,
+    PrepareTransferFeesTransactionParams,
+    PrepareTransferFeesTransactionResult,
 } from "../types"
 import {
     SuiReconcileBalanceActionService
 } from "./reconcile-balance-action.service"
+import {
+    SuiTransferFeesService
+} from "./transfer-fees.service"
 import {
     SuiWithdrawActionService
 } from "./withdraw-action.service"
@@ -38,6 +43,7 @@ export class SuiBalanceService implements IBalanceActionService {
     constructor(
         private readonly suiReconcileBalanceActionService: SuiReconcileBalanceActionService,
         private readonly suiWithdrawActionService: SuiWithdrawActionService,
+        private readonly suiTransferFeesService: SuiTransferFeesService,
     ) {}
 
     /**
@@ -124,6 +130,13 @@ export class SuiBalanceService implements IBalanceActionService {
      */
     public async signWithdrawTransaction(param: SignWithdrawTransactionParams): Promise<SignWithdrawTransactionResult> {
         return await this.suiWithdrawActionService.sign(param)
+    }
+
+    /**
+     * Prepares a transfer fees transaction for Sui (ROI of target token to feeToAddress).
+     */
+    public async prepareTransferFeesTransaction(param: PrepareTransferFeesTransactionParams): Promise<PrepareTransferFeesTransactionResult> {
+        return await this.suiTransferFeesService.prepare(param)
     }
 }
    

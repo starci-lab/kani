@@ -192,11 +192,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         const amountA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
         const amountB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
         // stage: transaction building (build unsigned transaction)
-        const {
-            txb: openPositionTxb,
-            feeAmountA,
-            feeAmountB,
-        } = await this.openPositionTxbService.createOpenPositionTxb({
+        const { txb: openPositionTxb } = await this.openPositionTxbService.createOpenPositionTxb({
             txb,
             bot,
             amountA,
@@ -214,8 +210,6 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                     serializedTx: await openPositionTxb.toJSON(),
                 }
             ],
-            feeAmountA,
-            feeAmountB,
             tickLower,
             tickUpper,
             amountA,
