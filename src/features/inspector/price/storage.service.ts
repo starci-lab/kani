@@ -46,16 +46,19 @@ export class PricePointStorageService implements OnModuleInit {
      * Initialize the price points collection.
      */
     async onModuleInit(): Promise<void> {
-        this.pricePointsCollection = await this.lokiJSService.createCollection<PricePoint>({
-            name: "price-points-storage",
-            options: {
-                indices: ["id",
-                    "market_listing_id",
-                    "time"],
-            },
-        })
+        this.pricePointsCollection = await this.lokiJSService.createCollection<PricePoint>(
+            {
+                name: "price-points-storage",
+                options: {
+                    indices: [
+                        "id",
+                        "market_listing_id",
+                        "time"
+                    ],
+                },
+            }
+        )
     }
-
 
     /**
      * Store all price points for all tokens and market listings in memory.
@@ -64,9 +67,8 @@ export class PricePointStorageService implements OnModuleInit {
     async handleQueryAndStoreInterval(): Promise<void> {
         // Clear existing price points
         this.pricePointsCollection.clear()
-
+        // Get all tokens and market listings
         const tokens = this.primaryMemoryStorageService.tokenCollection.find()
-
         // Loop through all tokens
         const promises: Array<Promise<void>> = []
         for (const token of tokens) {
@@ -77,11 +79,13 @@ export class PricePointStorageService implements OnModuleInit {
                     this.retryService.retry(
                         {
                             action: async () => {
-                                await this.queryAndStore({
-                                    id: token.id,
-                                    intervalMs: envConfig().inspector.priceWindow.intervalMs,
-                                    marketListingId: marketListing.id,  
-                                })
+                                await this.queryAndStore(
+                                    {
+                                        id: token.id,
+                                        intervalMs: envConfig().inspector.priceWindow.intervalMs,
+                                        marketListingId: marketListing.id,  
+                                    }
+                                )
                             },
                         }
                     )
@@ -107,18 +111,18 @@ export class PricePointStorageService implements OnModuleInit {
             intervalMs,
             marketListingId,
         })
-
         if (pricePoints.length > 0) {
             // Remove existing price points for this token and market listing
-            this.pricePointsCollection.findAndRemove({
-                id: {
-                    $eq: id 
-                },
-                market_listing_id: {
-                    $eq: marketListingId 
-                },
-            })
-
+            this.pricePointsCollection.findAndRemove(
+                {
+                    id: {
+                        $eq: id 
+                    },
+                    market_listing_id: {
+                        $eq: marketListingId 
+                    },
+                }
+            )
             // Insert new price points
             this.pricePointsCollection.insert(pricePoints)
         }
@@ -131,13 +135,15 @@ export class PricePointStorageService implements OnModuleInit {
         id: string, 
         marketListingId: MarketListingId
     ): Array<PricePoint> {
-        return this.pricePointsCollection.find({
-            id: {
-                $eq: id 
-            },
-            market_listing_id: {
-                $eq: marketListingId 
-            },
-        })
+        return this.pricePointsCollection.find(
+            {
+                id: {
+                    $eq: id 
+                },
+                market_listing_id: {
+                    $eq: marketListingId 
+                },
+            }
+        )
     }
 }

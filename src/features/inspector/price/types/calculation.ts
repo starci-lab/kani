@@ -1,5 +1,6 @@
 import {
-    MarketListingId
+    MarketListingId,
+    PricePoint
 } from "@modules/databases"
 
 /**
@@ -51,3 +52,35 @@ export interface ClassifyMomentumStateParams {
     /** The efficiency ratio of the trend. */
     efficiencyRatio: number
 }
+
+/**
+ * Parameters for calculating percentage change.
+ */
+export interface CalculatePctChangeParams {
+    /** The price points. */
+    pricePoints: Array<PricePoint>
+    /** The threshold to calculate the percentage change. */
+    threshold: number
+}
+
+/**
+ * Result of percentage change calculation.
+ */
+export interface CalculateResult {
+    /** Whether to exit the position. */
+    shouldExit: boolean
+}
+/**
+ * Parameters for calculating regression slope.
+ */
+export interface CalculateRegressionSlopeParams {
+    /** The price points. */
+    pricePoints: Array<PricePoint>
+    /** The threshold to calculate the regression slope. */
+    threshold: number
+}
+
+/**
+ * Result of regression slope calculation.
+ */
+export type CalculateRegressionSlopeResult = number
