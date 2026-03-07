@@ -26,7 +26,7 @@ export interface FundingSnapshot {
  */
 export interface EvalBalanceResult {
     /** Funding snapshot in target token units. */
-    fundingSnapsot: FundingSnapshot
+    fundingSnapshot: FundingSnapshot
     /** Funding snapshot in USD. */
     fundingSnapshotInUsd: FundingSnapshot
     /** Balance evaluation status. */

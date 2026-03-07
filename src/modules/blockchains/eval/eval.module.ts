@@ -1,21 +1,16 @@
 import {
-    DynamicModule, Module 
+    DynamicModule, Module,
+    Provider 
 } from "@nestjs/common"
 import {
     ConfigurableModuleClass, OPTIONS_TYPE 
-} from "./eval.module-definition"   
+} from "./eval.module-definition"
 import {
     EvalBalanceService 
 } from "./balace.service"
 import {
-    Provider 
-} from "@nestjs/common"
-import {
     EvalSnapshotService 
 } from "./snapshots.service"
-import {
-    FilesystemModule 
-} from "@modules/filesystem"
 
 /**
  * Eval module.
@@ -43,10 +38,6 @@ export class EvalModule extends ConfigurableModuleClass {
         ]
         return {
             ...dynamicModule,
-            imports: [
-                ...(dynamicModule.imports || []),
-                FilesystemModule,
-            ],
             providers: [
                 ...dynamicModule.providers || [],
                 ...providers,

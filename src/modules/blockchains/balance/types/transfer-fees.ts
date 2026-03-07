@@ -10,13 +10,18 @@ import {
 export interface PrepareTransferFeesTransactionParams {
     /** Bot. */
     bot: BotSchema
-    /** Current target token balance amount (raw). */
-    currentTargetBalanceAmount: BN
+    /** Fee amount transferred (target token, raw). */
+    feeAmountTarget: BN
+    /** Fee amount transferred (quote token, raw). */
+    feeAmountQuote: BN
 }
 
 /** Result of preparing a transfer fees transaction. */
 export interface PrepareTransferFeesTransactionResult {
+    /** Transactions to prepare. */
     prepareTxs: Array<PrepareTx>
     /** Fee amount transferred (target token, raw). */
-    feeAmount: BN
+    feeAmountTarget: BN
+    /** Fee amount transferred (quote token, raw). */
+    feeAmountQuote: BN
 }

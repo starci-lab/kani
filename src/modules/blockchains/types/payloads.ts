@@ -70,7 +70,10 @@ export interface WithdrawActionTask {
 }
 
 /** Payload for transfer fees action tasks. */
-export type TransferFeesActionTaskPayload = Record<string, never>
+export interface TransferFeesActionTaskPayload {
+  /** Whether to perform the balance reconciliation. */
+  reconcile?: boolean
+}
 
 /** Task for an action. */
 export interface TransferFeesActionTask {

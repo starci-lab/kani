@@ -11,10 +11,13 @@ import {
     WithdrawEnqueueService 
 } from "./withdraw-enqueue.service"
 import {
-    BalanceActionService 
+    BalanceActionService
 } from "./action.service"
 import {
-    BalanceFetcherService 
+    BalanceConvertService
+} from "./balance-convert.service"
+import {
+    BalanceFetcherService
 } from "./fetcher.service"
 import {
     SwapMathService 
@@ -52,6 +55,7 @@ export class BalanceModule extends ConfigurableModuleClass {
             SwapMathService,
             GasStatusService,
             QuoteRatioService,
+            BalanceConvertService,
         )
         
         // Add fetcher services if enabled

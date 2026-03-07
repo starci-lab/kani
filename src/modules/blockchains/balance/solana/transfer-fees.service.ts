@@ -6,7 +6,10 @@ import {
     PrepareTransferFeesTransactionResult,
 } from "../types"
 import {
+    FeeToAddressNotFoundException,
+    FeeRateNotValidException,
     TokenNotFoundException,
+    FeeRateNotSetException,
 } from "@modules/exceptions"
 import {
     PrimaryMemoryStorageService,
@@ -25,21 +28,18 @@ import {
 } from "@modules/mixin"
 import {
     address,
+    Instruction,
 } from "@solana/kit"
 import {
     SuperJSON,
-} from "superjson"
-import BN from "bn.js"
-import {
-    Decimal,
-} from "decimal.js"
+} from "superjson"  
 
 /**
  * Service for preparing transfer fees transactions on Solana.
  * Computes fee as ROI (feeRate) of current target token balance and transfers to feeToAddress.
  *
  * @example
- * const result = await service.prepare({ bot, currentTargetBalanceAmount })
+ * const result = await service.prepare({ bot, feeAmountTarget, feeAmountQuote })
  */
 @Injectable()
 export class SolanaTransferFeesService {
@@ -59,41 +59,67 @@ export class SolanaTransferFeesService {
      */
     public async prepare({
         bot,
-        currentTargetBalanceAmount,
+        feeAmountTarget,
+        feeAmountQuote,
     }: PrepareTransferFeesTransactionParams): Promise<PrepareTransferFeesTransactionResult> {
-        const feeRate = this.mountStorageService.appConfig.fees?.feeRate ?? 0
+        const feeRate = this.mountStorageService.appConfig.fees?.feeRate
+        if (!feeRate) {
+            throw new FeeRateNotSetException({
+                chainId: ChainId.Solana,
+            })
+        }
         if (feeRate <= 0) {
-            return { prepareTxs: [], feeAmount: new BN(0) }
+            throw new FeeRateNotValidException({
+                chainId: ChainId.Solana,
+            })
         }
-
-        const feeAmountDecimal = new Decimal(currentTargetBalanceAmount.toString()).mul(feeRate).floor()
-        let feeAmount = new BN(feeAmountDecimal.toFixed(0))
-        if (feeAmount.gt(currentTargetBalanceAmount)) {
-            feeAmount = currentTargetBalanceAmount
-        }
-        if (feeAmount.lte(new BN(0))) {
-            return { prepareTxs: [], feeAmount: new BN(0) }
-        }
-
-        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: { $eq: bot.targetToken.toString() },
-        })
+        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne(
+            {
+                id: {
+                    $eq: bot.targetToken.toString() 
+                },
+            }
+        )
         if (!targetToken) {
-            throw new TokenNotFoundException({ id: bot.targetToken.toString() })
+            throw new TokenNotFoundException({
+                id: bot.targetToken.toString() 
+            })
         }
-
+        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne(
+            {
+                id: {
+                    $eq: bot.quoteToken.toString() 
+                },
+            }
+        )
+        if (!quoteToken) {
+            throw new TokenNotFoundException({
+                id: bot.quoteToken.toString() 
+            })
+        }
         const feeToAddress = this.mountStorageService.appConfig.fees?.openPosition?.solana?.feeToAddress
         if (!feeToAddress) {
-            return { prepareTxs: [], feeAmount: new BN(0) }
+            throw new FeeToAddressNotFoundException(
+                {
+                    chainId: ChainId.Solana,
+                }
+            )
         }
-
-        const { instructions } = await this.transferInstructionService.createTransferInstructions({
+        const instructions: Array<Instruction> = []
+        const { instructions: transferTargetFeesInstructions } = await this.transferInstructionService.createTransferInstructions({
             fromAddress: address(bot.accountAddress),
             toAddress: address(feeToAddress),
-            amount: feeAmount,
+            amount: feeAmountQuote,
             token: targetToken,
         })
-
+        instructions.push(...transferTargetFeesInstructions)
+        const { instructions: transferQuoteFeesInstructions } = await this.transferInstructionService.createTransferInstructions({
+            fromAddress: address(bot.accountAddress),
+            toAddress: address(feeToAddress),
+            amount: feeAmountQuote,
+            token: quoteToken,
+        })
+        instructions.push(...transferQuoteFeesInstructions)
         return {
             prepareTxs: [
                 {
@@ -101,7 +127,8 @@ export class SolanaTransferFeesService {
                     serializedTx: this.superJson.stringify(instructions),
                 },
             ],
-            feeAmount,
+            feeAmountTarget,
+            feeAmountQuote,
         }
     }
 }

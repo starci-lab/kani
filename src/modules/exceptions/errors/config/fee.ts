@@ -4,21 +4,24 @@ import type {
 import {
     AbstractException 
 } from "../abstract"
+import {
+    ChainId,
+} from "@modules/common"
 
 /** Metadata when fee to address or rate is not found. */
 export interface FeeToAddressNotFoundExceptionMetadata extends AbstractExceptionMetadata {
-    feeToAddress: string
+    chainId: ChainId
 }
 
 /** Thrown when fee to address is not found. */
 export class FeeToAddressNotFoundException extends AbstractException {
     constructor(
-        { feeToAddress, originalError }: FeeToAddressNotFoundExceptionMetadata
+        { chainId, originalError }: FeeToAddressNotFoundExceptionMetadata
     ) {
         super("Fee to address not found",
             "FEE_TO_ADDRESS_NOT_FOUND_EXCEPTION",
             {
-                feeToAddress,
+                chainId,
                 originalError,
             })
     }
@@ -41,16 +44,39 @@ export class FeeRateNotFoundException extends AbstractException {
 }
 
 /** Metadata when fee rate is not set. */
-export type FeeRateNotSetExceptionMetadata = AbstractExceptionMetadata
+export interface FeeRateNotSetExceptionMetadata extends AbstractExceptionMetadata {
+    chainId: ChainId
+}
 
 /** Thrown when fee rate is not set. */
 export class FeeRateNotSetException extends AbstractException {
     constructor(
-        { originalError }: FeeRateNotSetExceptionMetadata
+        { chainId, originalError }: FeeRateNotSetExceptionMetadata
     ) {
         super("Fee rate not set",
             "FEE_RATE_NOT_SET_EXCEPTION",
             {
+                chainId,
+                originalError,
+            })
+    }
+}
+
+
+/** Metadata when fee rate is not valid. */
+export interface FeeRateNotValidExceptionMetadata extends AbstractExceptionMetadata {
+    chainId: ChainId
+}
+
+/** Thrown when fee rate is not valid. */
+export class FeeRateNotValidException extends AbstractException {
+    constructor(
+        { chainId, originalError }: FeeRateNotValidExceptionMetadata
+    ) {
+        super("Fee rate not valid",
+            "FEE_RATE_NOT_VALID_EXCEPTION",
+            {
+                chainId,
                 originalError,
             })
     }

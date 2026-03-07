@@ -7,6 +7,9 @@ import {
 } from "../types"
 import {
     TokenNotFoundException,
+    FeeRateNotSetException,
+    FeeRateNotValidException,
+    FeeToAddressNotFoundException,
 } from "@modules/exceptions"
 import {
     PrimaryMemoryStorageService,
@@ -25,9 +28,6 @@ import {
     isSuiCoin,
 } from "@modules/common"
 import BN from "bn.js"
-import {
-    Decimal,
-} from "decimal.js"
 
 /**
  * Service for preparing transfer fees transactions on Sui.
@@ -52,32 +52,48 @@ export class SuiTransferFeesService {
      */
     public async prepare({
         bot,
-        currentTargetBalanceAmount,
+        feeAmountTarget,
+        feeAmountQuote,
     }: PrepareTransferFeesTransactionParams): Promise<PrepareTransferFeesTransactionResult> {
-        const feeRate = this.mountStorageService.appConfig.fees?.feeRate ?? 0
+        const feeRate = this.mountStorageService.appConfig.fees?.feeRate
+        if (!feeRate) {
+            throw new FeeRateNotSetException({
+                chainId: ChainId.Sui,
+            })
+        }
         if (feeRate <= 0) {
-            return { prepareTxs: [], feeAmount: new BN(0) }
-        }
-
-        const feeAmountDecimal = new Decimal(currentTargetBalanceAmount.toString()).mul(feeRate).floor()
-        let feeAmount = new BN(feeAmountDecimal.toFixed(0))
-        if (feeAmount.gt(currentTargetBalanceAmount)) {
-            feeAmount = currentTargetBalanceAmount
-        }
-        if (feeAmount.lte(new BN(0))) {
-            return { prepareTxs: [], feeAmount: new BN(0) }
+            throw new FeeRateNotValidException({
+                chainId: ChainId.Sui,
+            })
         }
 
         const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: { $eq: bot.targetToken.toString() },
+            id: {
+                $eq: bot.targetToken.toString() 
+            },
         })
         if (!targetToken) {
-            throw new TokenNotFoundException({ id: bot.targetToken.toString() })
+            throw new TokenNotFoundException({
+                id: bot.targetToken.toString() 
+            })
+        }
+        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: bot.quoteToken.toString() 
+            },
+        })
+
+        if (!quoteToken) {
+            throw new TokenNotFoundException({
+                id: bot.quoteToken.toString() 
+            })
         }
 
         const feeToAddress = this.mountStorageService.appConfig.fees?.openPosition?.sui?.feeToAddress
         if (!feeToAddress) {
-            return { prepareTxs: [], feeAmount: new BN(0) }
+            throw new FeeToAddressNotFoundException({
+                chainId: ChainId.Sui,
+            })
         }
 
         const txb = new Transaction()
@@ -89,16 +105,28 @@ export class SuiTransferFeesService {
             )
             : undefined
 
-        const { sourceCoin } = await this.selectCoinsService.fetchAndMergeCoins({
+        const { sourceCoin: sourceCoinTarget } = await this.selectCoinsService.fetchAndMergeCoins({
             txb,
             owner: bot.accountAddress,
             coinType: targetToken.tokenAddress,
-            requiredAmount: feeAmount,
+            requiredAmount: feeAmountTarget,
+            suiGasAmount,
+        })
+        const { sourceCoin: sourceCoinQuote } = await this.selectCoinsService.fetchAndMergeCoins({
+            txb,
+            owner: bot.accountAddress,
+            coinType: quoteToken.tokenAddress,
+            requiredAmount: feeAmountQuote,
             suiGasAmount,
         })
 
-        txb.transferObjects([sourceCoin.coinArg], feeToAddress)
-
+        txb.transferObjects(
+            [
+                sourceCoinTarget.coinArg, 
+                sourceCoinQuote.coinArg
+            ],
+            feeToAddress
+        )
         return {
             prepareTxs: [
                 {
@@ -106,7 +134,8 @@ export class SuiTransferFeesService {
                     serializedTx: await txb.toJSON(),
                 },
             ],
-            feeAmount,
+            feeAmountTarget,
+            feeAmountQuote,
         }
     }
 }

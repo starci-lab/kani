@@ -20,7 +20,13 @@ import {
 } from "@nestjs/common"
 import BN from "bn.js"
 import Decimal from "decimal.js"
-import { 
+import {
+    BalanceConvertService,
+} from "@modules/blockchains"
+import {
+    AsyncService,
+} from "@modules/mixin"
+import {
     PriceService,
     QuoteRatioService 
 } from "../math"
@@ -45,8 +51,10 @@ export class EvalBalanceService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly mountStorageService: MountStorageService,
+        private readonly balanceConvertService: BalanceConvertService,
         private readonly priceService: PriceService,
         private readonly quoteRatioService: QuoteRatioService,
+        private readonly asyncService: AsyncService,
     ) {}
 
     /**
@@ -61,7 +69,9 @@ export class EvalBalanceService {
      * @throws {TargetOperationalGasAmountNotFoundException} If target operational gas amount is not configured
      * @throws {TokenNotFoundException} If target, quote, or gas token metadata is not found
      */
-    async eval({ bot }: EvalBalanceParams): Promise<EvalBalanceResult> {
+    async eval(
+        { bot }: EvalBalanceParams
+    ): Promise<EvalBalanceResult> {
         // Stage: config validation (minimum funding requirement must be configured)
         const minRequiredAmountInUsd = this.mountStorageService.appConfig.balance
             .balanceRequired?.[bot.chainId]?.minRequiredAmountInUsd
@@ -130,48 +140,35 @@ export class EvalBalanceService {
             })
         }
 
-        // Resolve token prices
+        const targetBalanceAmountRaw = new BN(bot.balanceSnapshots?.targetBalanceAmount ?? "0")
+        const quoteBalanceAmountRaw = new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? "0")
+        const gasBalanceAmountRaw = new BN(bot.balanceSnapshots?.gasBalanceAmount ?? "0")
+
+        // Convert all balances to target token via BalanceConvertService
+        const {
+            targetAmountInTarget,
+            quoteAmountInTarget,
+            gasAmountInTarget,
+        } = await this.balanceConvertService.convertToTarget({
+            bot,
+        })
+
+        // Funding snapshots in target token
+        const fundingSnapshotExcludingGas = targetAmountInTarget.add(quoteAmountInTarget)
+        const fundingSnapshotIncludingGas = fundingSnapshotExcludingGas.add(gasAmountInTarget)
+
+        // USD snapshots: total in target × target price
         const { price: targetPrice } = await this.priceService.resolvePrice({
             token: targetToken,
         })
+        const fundingSnapshotInUsdExcludingGas = fundingSnapshotExcludingGas.mul(targetPrice)
+        const fundingSnapshotInUsdIncludingGas = fundingSnapshotIncludingGas.mul(targetPrice)
 
-        const { price: quotePrice } = await this.priceService.resolvePrice({
-            token: quoteToken,
-        })
-
-        const { price: gasPrice } = await this.priceService.resolvePrice({
-            token: gasToken,
-        })
-
-        // Convert raw balances to decimal amounts using token decimals
-        const targetBalanceAmountRaw = new BN(bot.balanceSnapshots?.targetBalanceAmount ?? "0")
-        const targetBalanceAmount = toDecimalAmount({
-            amount: targetBalanceAmountRaw,
-            decimals: new Decimal(targetToken.decimals),
-        })
-        const targetBalanceAmountInUsd = targetBalanceAmount.mul(targetPrice)
-
-        const quoteBalanceAmountRaw = new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? "0")
-        const quoteBalanceAmount = toDecimalAmount({
-            amount: quoteBalanceAmountRaw,
-            decimals: new Decimal(quoteToken.decimals),
-        })
-        const quoteBalanceAmountInTarget = quoteBalanceAmount.div(quotePrice).mul(targetPrice)
-        const quoteBalanceAmountInUsd = quoteBalanceAmount.mul(quotePrice)
-
-        const gasBalanceAmountRaw = new BN(bot.balanceSnapshots?.gasBalanceAmount ?? "0")
+        // Gas balance in own units (for min operational threshold check)
         const gasBalanceAmount = toDecimalAmount({
             amount: gasBalanceAmountRaw,
             decimals: new Decimal(gasToken.decimals),
         })
-        const gasBalanceAmountInTarget = gasBalanceAmount.div(gasPrice).mul(targetPrice)
-        const gasBalanceAmountInUsd = gasBalanceAmount.mul(gasPrice)
-
-        // Calculate funding snapshots
-        const fundingSnapshotExcludingGas = targetBalanceAmount.add(quoteBalanceAmountInTarget)
-        const fundingSnapshotIncludingGas = fundingSnapshotExcludingGas.add(gasBalanceAmountInTarget)
-        const fundingSnapshotInUsdExcludingGas = targetBalanceAmountInUsd.add(quoteBalanceAmountInUsd)
-        const fundingSnapshotInUsdIncludingGas = fundingSnapshotInUsdExcludingGas.add(gasBalanceAmountInUsd)
 
         // Determine status based on priority checks
         let status = BalanceEvalStatus.Ok
@@ -204,7 +201,7 @@ export class EvalBalanceService {
         }
 
         return {
-            fundingSnapsot: {
+            fundingSnapshot: {
                 excludingGas: fundingSnapshotExcludingGas,
                 includingGas: fundingSnapshotIncludingGas,
             },
