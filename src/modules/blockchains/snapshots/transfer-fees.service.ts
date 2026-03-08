@@ -16,6 +16,7 @@ import {
 import {
     strict as assert,
 } from "node:assert"
+import BN from "bn.js"
 
 /**
  * Service responsible for updating position fees and clearing bot activePosition
@@ -49,9 +50,11 @@ export class TransferFeesSnapshotService {
         }: UpdateTransferFeesRecordParams
     ): Promise<UpdateTransferFeesRecordResult> {
         if (
-            feeTargetAmount.isZero() 
-            && feeQuoteAmount.isZero() 
-            && feeTransferTxHashes.length === 0
+            feeTransferTxHashes.length > 0
+            && (
+                feeTargetAmount.gt(new BN(0)) 
+                || feeQuoteAmount.gt(new BN(0)) 
+            )
         ) {
             const positionUpdate = await this.connection
                 .model<PositionSchema>(PositionSchema.name)
