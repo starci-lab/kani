@@ -218,6 +218,7 @@ import {
     ReconcileBalanceLockAuthorityReleasedMessage,
     ReconcileBalanceSkippedActiveJobFoundInQueueMessage,
     ReconcileBalanceSkippedBotAlreadyHasActiveJobMessage,
+    ReconcileBalanceSkippedBotAlreadyHasActivePositionMessage,
     ReconcileBalanceSkippedBotNotRunningMessage,
     OpenPositionLockAuthorityNotAcquiredMessage,
     OpenPositionLockAuthorityReleasedMessage,
@@ -1967,6 +1968,14 @@ export const configMap = {
         loki: true,
         messageType: {
         } as ReconcileBalanceSkippedBotNotRunningMessage,
+    },
+    // Reconcile Balance Skipped Bot Already Has Active Position
+    [WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActivePosition]: {
+        name: WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActivePosition,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceSkippedBotAlreadyHasActivePositionMessage,
     },
     // Reconcile Balance Skipped Bot Already Has Active Job
     [WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActiveJob]: {

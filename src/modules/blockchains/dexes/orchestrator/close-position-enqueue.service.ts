@@ -279,7 +279,7 @@ export class ClosePositionEnqueueService {
             )
             return false
         }
-        // Skip if bot position is not closed
+        // Skip if bot position is closed
         if (bot.activePosition?.positionClosed && !isRetry) {
             this.winstonService.log(
                 WinstonLog.JobSkippedBotPositionClosed,

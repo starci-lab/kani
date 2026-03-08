@@ -131,7 +131,9 @@ export interface RangeTierEntry {
 }
 
 /** Range tiers config. */
-export type RangeTiersConfig = Array<RangeTierEntry>
+export interface RangeTiersConfig {
+    tiers: Array<RangeTierEntry>
+}
 
 /** Root app config (API keys, GCP, drive, privy, smtp, fees, static config). */
 export interface AppConfig {

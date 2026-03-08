@@ -112,7 +112,7 @@ export class OpenPositionInstructionService {
                 liquidityPoolId: liquidityPool.displayId,
             })
         }
-        const tier = this.mountStorageService.appConfig.rangeTiers.find((tier) => tier.tier === bot.rangeTier)
+        const tier = this.mountStorageService.appConfig.rangeTiers.tiers.find((tier) => tier.tier === bot.rangeTier)
         if (!tier) {
             throw new RangeTierNotConfiguredException(
                 {

@@ -245,7 +245,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
 
         // Compute optimal tick range
         // get range tier
-        const tier = this.mountStorageService.appConfig.rangeTiers.find((tier) => tier.tier === bot.rangeTier)
+        const tier = this.mountStorageService.appConfig.rangeTiers.tiers.find((tier) => tier.tier === bot.rangeTier)
         if (!tier) {
             throw new RangeTierNotConfiguredException({
                 rangeTier: bot.rangeTier,

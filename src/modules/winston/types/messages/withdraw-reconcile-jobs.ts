@@ -107,6 +107,10 @@ export interface ReconcileBalanceSkippedActiveJobFoundInQueueMessage {
     botId: string
 }
 
+export interface ReconcileBalanceSkippedBotAlreadyHasActivePositionMessage {
+    botId: string
+}
+
 export interface ReconcileBalanceJobAlreadyEnqueuedMessage {
     botId: string
     jobId: string

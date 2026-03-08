@@ -238,7 +238,7 @@ export class TransferFeesEnqueueService implements ITransferFeesEnqueueService {
             return false
         }
         // Skip if bot position is not closed
-        if (!bot.activePosition || !bot.activePosition.positionClosed && !isRetry) {
+        if (!bot.activePosition?.positionClosed && !isRetry) {
             this.winstonService.log(
                 WinstonLog.JobSkippedBotPositionNotClosed,
                 {
