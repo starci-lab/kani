@@ -796,10 +796,10 @@ export const envConfig = () => ({
              */
             safe: {
                 above: parseEnvFloat({
-                    key: "QUOTE_RATIO_SAFE_ABOVE", defaultValue: 0.85 
+                    key: "QUOTE_RATIO_SAFE_ABOVE", defaultValue: 0.9 
                 }),
                 below: parseEnvFloat({
-                    key: "QUOTE_RATIO_SAFE_BELOW", defaultValue: 0.15 
+                    key: "QUOTE_RATIO_SAFE_BELOW", defaultValue: 0.8
                 }),
             },
             /**
@@ -812,7 +812,7 @@ export const envConfig = () => ({
                     key: "QUOTE_RATIO_EXPECTED_ABOVE", defaultValue: 0.8 
                 }),
                 below: parseEnvFloat({
-                    key: "QUOTE_RATIO_EXPECTED_BELOW", defaultValue: 0.2 
+                    key: "QUOTE_RATIO_EXPECTED_BELOW", defaultValue: 0.6 
                 }),
             },
         },

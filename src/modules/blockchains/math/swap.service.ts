@@ -181,7 +181,7 @@ export class SwapMathService {
      * @param params - Extended parameters including tokens, balances, and quote ratio result
      * @returns Swap steps to execute in order (no gas swaps needed)
      */
-    private async computeSwapAmountsWhenTargetIsQuote(
+    private async computeSwapAmountsWhenQuoteIsGas(
         {
             targetToken,
             quoteToken,
@@ -632,7 +632,7 @@ export class SwapMathService {
             })
         }
         case GasStatus.IsQuote: {
-            return this.computeSwapAmountsWhenTargetIsQuote({
+            return this.computeSwapAmountsWhenQuoteIsGas({
                 targetToken,
                 quoteToken,
                 gasToken,
