@@ -27,6 +27,13 @@ import {
     SendHeartbeatService
 } from "../../send-heartbeat.service"
 import {
+    TransferFeesSnapshotService
+} from "@modules/blockchains"
+import {
+    InjectSuperJson
+} from "@modules/mixin"
+import SuperJSON from "superjson"
+import {
     strict as assert
 } from "node:assert"
 
@@ -40,6 +47,9 @@ export class TransferFeesTaskConfirmService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly sendHeartbeatService: SendHeartbeatService,
+        private readonly transferFeesSnapshotService: TransferFeesSnapshotService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
     ) {}
 
     /**
@@ -66,20 +76,21 @@ export class TransferFeesTaskConfirmService {
                         .model<JobSchema>(JobSchema.name)
                         .updateOne(
                             {
-                                _id: job.id 
+                                _id: job.id
                             },
                             {
                                 $set: {
-                                    "tasks.$[task].confirmed": true 
+                                    "tasks.$[task].confirmed": true,
                                 },
                                 $inc: {
-                                    taskIndex: 1 
+                                    taskIndex: 1,
                                 },
                             },
                             {
                                 arrayFilters: [
                                     {
-                                        "task.index": taskIndex, "task.type": TaskType.TransferFees 
+                                        "task.index": taskIndex,
+                                        "task.type": TaskType.TransferFees,
                                     },
                                 ],
                                 session: clientSession,
@@ -87,6 +98,33 @@ export class TransferFeesTaskConfirmService {
                         )
 
                     assert(updateJobResult.matchedCount > 0)
+
+                    const task = job.tasks[taskIndex]
+                    const positionId = bot.activePosition?.position?.toString?.()
+                    if (positionId && task?.prepareResult && task?.steps?.length) {
+                        const prepareResult = this.superJson.parse<{ feeAmount: { toString: () => string } }>(
+                            task.prepareResult,
+                        )
+                        const feeTargetAmount = prepareResult?.feeAmount?.toString?.() ?? "0"
+                        const feeTransferTxHashes = task.steps
+                            .map((step) => {
+                                const exec = step?.executeResult
+                                    ? this.superJson.parse<{ txHash?: string }>(step.executeResult)
+                                    : null
+                                return exec?.txHash
+                            })
+                            .filter((h): h is string => Boolean(h))
+                        if (feeTransferTxHashes.length > 0) {
+                            await this.transferFeesSnapshotService.updateTransferFeesRecord({
+                                botId: bot.id,
+                                positionId,
+                                feeTargetAmount,
+                                feeQuoteAmount: "0",
+                                feeTransferTxHashes,
+                                session: clientSession,
+                            })
+                        }
+                    }
 
                     if (envConfig().executor.runtime.operation?.withdraw?.stimulate) {
                         throw new ActionJobStimulateMongoSessionException({

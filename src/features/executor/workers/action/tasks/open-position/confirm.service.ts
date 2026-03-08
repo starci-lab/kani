@@ -187,8 +187,6 @@ export class OpenPositionTaskConfirmService {
                                 },
                                 rentAmount: confirmResult?.rentAmount ?? new BN(0),
                                 liquidityPool,
-                                feeTargetAmount: new BN(0),
-                                feeQuoteAmount: new BN(0),
                                 targetToken,
                                 quoteToken,
                                 gasToken,

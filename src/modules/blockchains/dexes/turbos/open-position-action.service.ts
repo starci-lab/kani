@@ -36,6 +36,7 @@ import {
     TransactionEventNotFoundException,
     TransactionType,
     LiquidityPoolClmmStateNotFoundException,
+    RangeTierNotConfiguredException,
 } from "@modules/exceptions"
 import Decimal from "decimal.js"
 import {
@@ -61,6 +62,9 @@ import {
 import {
     envConfig
 } from "@modules/env"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
         
 @Injectable()
 export class TurbosOpenPositionActionService implements IOpenActionService {
@@ -72,6 +76,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         private readonly suiStimulateService: SuiStimulateService,
         private readonly suiExecuteService: SuiExecuteService,
         private readonly suiTxService: SuiTxService,
+        private readonly mountStorageService: MountStorageService,
     ) {}
     
     /**
@@ -173,13 +178,22 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         // Determine if target token is token A
         const targetIsA = bot.targetToken.toString() === tokenA.id
         // Find optimal tick range based on balance amounts
+        // get range tier
+        const tier = this.mountStorageService.appConfig.rangeTiers.find((tier) => tier.tier === bot.rangeTier)
+        if (!tier) {
+            throw new RangeTierNotConfiguredException({
+                rangeTier: bot.rangeTier,
+            })
+        }
+        // calculate tick multiplier based on range tier and tick spacing
+        const tickMultiplier = new Decimal(tier.ticks).div(new Decimal(liquidityPool.clmmState.tickSpacing)).ceil()
         const {
             tickLower,
             tickUpper
         } = await this.tickMathService.findOptimalTickRange({
             tickCurrent: _state.tickCurrent,
             tickSpacing: new Decimal(liquidityPool.clmmState.tickSpacing),
-            tickMultiplier: new Decimal(liquidityPool.clmmState.tickMultiplier),
+            tickMultiplier,
             targetBalanceAmount: snapshotTargetBalanceAmountBN,
             quoteBalanceAmount: snapshotQuoteBalanceAmountBN,
             targetIsA,

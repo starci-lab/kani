@@ -1,3 +1,4 @@
+
 import {
     Injectable 
 } from "@nestjs/common"
@@ -9,9 +10,9 @@ import {
 import {
     SYSTEM_PROGRAM_ADDRESS 
 } from "@solana-program/system"
-import {
-    TOKEN_2022_PROGRAM_ADDRESS,
-    ASSOCIATED_TOKEN_PROGRAM_ADDRESS,
+import { 
+    TOKEN_2022_PROGRAM_ADDRESS, 
+    ASSOCIATED_TOKEN_PROGRAM_ADDRESS, 
 } from "@solana-program/token-2022" 
 import {
     AnchorUtilsService, AtaInstructionService, WSOL_MINT_ADDRESS 
@@ -33,7 +34,7 @@ import {
     SYSVAR_RENT_ADDRESS     
 } from "@solana/sysvars"
 import {
-    TOKEN_PROGRAM_ADDRESS,
+    TOKEN_PROGRAM_ADDRESS
 } from "@solana-program/token"
 import BN from "bn.js"
 import {
@@ -102,8 +103,6 @@ export class OpenPositionInstructionService {
                 liquidityPoolId: liquidityPool.displayId,
             })
         }
-        const remainingAmountA = amountAMax
-        const remainingAmountB = amountBMax
         const {
             programAddress,
             tokenVault0,
@@ -121,18 +120,38 @@ export class OpenPositionInstructionService {
             tickSpacing: new BN(liquidityPool.clmmState.tickSpacing),
             programAddress: address(programAddress),
         })
-        const { ataAddress: ataAAddress } = await this.ataInstructionService.getOrCreateAtaInstructions({
+        const {
+            instructions: createAtaAInstructions,
+            endInstructions: closeAtaAInstructions,
+            ataAddress: ataAAddress,
+        } = await this.ataInstructionService.getOrCreateAtaInstructions({
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            pdaOnly: true,
+            amount: amountAMax,
         })
-        const { ataAddress: ataBAddress } = await this.ataInstructionService.getOrCreateAtaInstructions({
+        if (createAtaAInstructions?.length) {
+            instructions.push(...createAtaAInstructions)
+        }
+        if (closeAtaAInstructions?.length) {
+            endInstructions.push(...closeAtaAInstructions)
+        }
+        const {
+            instructions: createAtaBInstructions,
+            endInstructions: closeAtaBInstructions,
+            ataAddress: ataBAddress,
+        } = await this.ataInstructionService.getOrCreateAtaInstructions({
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            pdaOnly: true,
+            amount: amountBMax,
         })
+        if (createAtaBInstructions?.length) {
+            instructions.push(...createAtaBInstructions)
+        }
+        if (closeAtaBInstructions?.length) {
+            endInstructions.push(...closeAtaBInstructions)
+        }
         const {
             ataAddress,
         } = await this.ataInstructionService.getOrCreateAtaInstructions({
@@ -159,8 +178,8 @@ export class OpenPositionInstructionService {
             openPositionArgs
         ] = OpenPositionArgs.serialize({
             liquidity,
-            amount0Max: remainingAmountA.toString(),
-            amount1Max: remainingAmountB.toString(),
+            amount0Max: amountAMax.toString(),
+            amount1Max: amountBMax.toString(),
             optionBaseFlag: 0,
             tickArrayLowerStartIndex: tickArrayLowerStartIndex,
             tickArrayUpperStartIndex: tickArrayUpperStartIndex,

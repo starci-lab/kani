@@ -16,6 +16,9 @@ import {
 import {
     ClosePositionSnapshotService 
 } from "./close-position.service"
+import {
+    TransferFeesSnapshotService 
+} from "./transfer-fees.service"
 
 /**
  * Module responsible for managing snapshot services and configuration.
@@ -34,6 +37,7 @@ export class SnapshotsModule extends ConfigurableModuleClass {
             OpenPositionSnapshotService,
             TransactionSnapshotService,
             ClosePositionSnapshotService,
+            TransferFeesSnapshotService,
         ]
         return {
             ...dynamicModule,

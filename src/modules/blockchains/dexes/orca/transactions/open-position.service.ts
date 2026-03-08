@@ -99,8 +99,6 @@ export class OpenPositionInstructionService {
                 liquidityPoolId: liquidityPool.displayId,
             })
         }
-        const remainingAmountA = amountA
-        const remainingAmountB = amountB
         const { programAddress, tokenVault0, tokenVault1 } = liquidityPool.metadata as OrcaLiquidityPoolMetadata
         const { pda: tickArrayLowerPda } = await this.tickArrayService.getPda({
             poolStateAddress: address(liquidityPool.poolAddress),
@@ -116,18 +114,38 @@ export class OpenPositionInstructionService {
             programAddress: address(programAddress),
             bot,
         })
-        const { ataAddress: ataAAddress } = await this.ataInstructionService.getOrCreateAtaInstructions({
+        const {
+            instructions: createAtaAInstructions,
+            endInstructions: closeAtaAInstructions,
+            ataAddress: ataAAddress,
+        } = await this.ataInstructionService.getOrCreateAtaInstructions({
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            pdaOnly: true,
+            amount: amountA,
         })
-        const { ataAddress: ataBAddress } = await this.ataInstructionService.getOrCreateAtaInstructions({
+        if (createAtaAInstructions?.length) {
+            instructions.push(...createAtaAInstructions)
+        }
+        if (closeAtaAInstructions?.length) {
+            endInstructions.push(...closeAtaAInstructions)
+        }
+        const {
+            instructions: createAtaBInstructions,
+            endInstructions: closeAtaBInstructions,
+            ataAddress: ataBAddress,
+        } = await this.ataInstructionService.getOrCreateAtaInstructions({
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            pdaOnly: true,
+            amount: amountB,
         })
+        if (createAtaBInstructions?.length) {
+            instructions.push(...createAtaBInstructions)
+        }
+        if (closeAtaBInstructions?.length) {
+            endInstructions.push(...closeAtaBInstructions)
+        }
         const { ataAddress } =
       await this.ataInstructionService.getOrCreateAtaInstructions({
           tokenMint: address(mintKeyPair.publicKey.toBase58()),
@@ -210,8 +228,8 @@ export class OpenPositionInstructionService {
         instructions.push(openPositionInstruction)
         const [increaseLiquidityArgs] = IncreaseLiquidityArgs.serialize({
             liquidityAmount: liquidity.toString(),
-            tokenMaxA: remainingAmountA.toString(),
-            tokenMaxB: remainingAmountB.toString(),
+            tokenMaxA: amountA.toString(),
+            tokenMaxB: amountB.toString(),
         })
         const increaseLiquidityInstruction: Instruction = {
             programAddress: address(programAddress),

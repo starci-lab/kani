@@ -7,7 +7,6 @@ import {
 import {
     BotSchema,
     InjectPrimaryMongoose,
-    PositionFeesSchema,
     PositionSchema,
     PositionSnapshotsSchema
 } from "@modules/databases"
@@ -61,8 +60,6 @@ export class OpenPositionSnapshotService {
             openTxHashes,
             metadata,
             session,
-            feeTargetAmount,
-            feeQuoteAmount,
             targetToken,
             quoteToken,
             gasToken,
@@ -116,11 +113,6 @@ export class OpenPositionSnapshotService {
             snapshotAt: now,
         }
 
-        // build fees object (required by schema)
-        const fees: Partial<PositionFeesSchema> = {
-            targetAmount: feeTargetAmount.toString(),
-            quoteAmount: feeQuoteAmount.toString(),
-        }
         // create position document with open snapshot and protocol state
         const [positionRaw] = await this.connection.model<PositionSchema>(
             PositionSchema.name
@@ -137,7 +129,6 @@ export class OpenPositionSnapshotService {
                     clmmState,
                     dlmmState,
                     openSnapshot,
-                    fees,
                     rentAmount: rentAmount?.toString(),
                 }
             ],

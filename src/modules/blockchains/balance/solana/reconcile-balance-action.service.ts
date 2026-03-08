@@ -25,13 +25,12 @@ import {
     decompileTransactionMessageFetchingLookupTables, 
 } from "@solana/kit"
 import {
-    SolanaAggregatorSelectorService,
     SolanaTxService,
     SolanaFetchService,
     RpcExecutorService,
     SolanaStimulateService,
     SolanaExecuteService,
-} from "@modules/blockchains"
+} from "../../clients"
 import {
     ChainId 
 } from "@modules/common"
@@ -41,6 +40,9 @@ import {
 import {
     SuperJSON 
 } from "superjson"
+import {
+    SolanaAggregatorSelectorService,
+} from "../../aggregators"
 
 /**
  * Service for handling balance reconciliation on Solana.

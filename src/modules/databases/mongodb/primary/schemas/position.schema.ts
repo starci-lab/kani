@@ -292,15 +292,20 @@ export class PositionSchema extends AbstractSchema {
      * Accumulated fees earned by this position,
      * expressed from target/quote asset perspective.
      */
-    @Field(() => PositionFeesSchema,
+    @Field(
+        () => PositionFeesSchema,
         {
             description: "Fee amounts for this position (target/quote perspective)",
-        })
-    @Prop({
-        type: PositionFeesSchemaClass,
-        required: true,
-    })
-        fees: PositionFeesSchema
+            nullable: true,
+        }
+    )
+    @Prop(
+        {
+            type: PositionFeesSchemaClass,
+            required: false,
+        }
+    )
+        fees?: PositionFeesSchema
 
     /**
      * Settlement information after the position is closed.

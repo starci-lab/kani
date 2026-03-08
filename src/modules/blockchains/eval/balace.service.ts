@@ -22,10 +22,7 @@ import BN from "bn.js"
 import Decimal from "decimal.js"
 import {
     BalanceConvertService,
-} from "@modules/blockchains"
-import {
-    AsyncService,
-} from "@modules/mixin"
+} from "../balance"
 import {
     PriceService,
     QuoteRatioService 
@@ -54,7 +51,6 @@ export class EvalBalanceService {
         private readonly balanceConvertService: BalanceConvertService,
         private readonly priceService: PriceService,
         private readonly quoteRatioService: QuoteRatioService,
-        private readonly asyncService: AsyncService,
     ) {}
 
     /**
