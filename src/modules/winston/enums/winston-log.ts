@@ -187,6 +187,8 @@ export enum WinstonLog {
     MigrationUserTotpFailed = "Migration.User.Totp.Failed",
     MigrationBotExecutorCompleted = "Migration.Bot.Executor.Completed",
     MigrationBotExecutorFailed = "Migration.Bot.Executor.Failed",
+    MigrationIndicatorsCompleted = "Migration.Indicators.Completed",
+    MigrationIndicatorsFailed = "Migration.Indicators.Failed",
     KeyGeneratedSuccess = "Key.Generated.Success",
     KeyGenerationFailed = "Key.Generation.Failed",
     KeyEncryptedSuccess = "Key.Encrypted.Success",

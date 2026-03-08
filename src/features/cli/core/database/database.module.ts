@@ -13,6 +13,7 @@ import {
     MigrateAvatarsCommand, 
     MigrateUserTotpCommand, 
     MigrateBotExecutorCommand,
+    MigrateIndicatorsCommand,
     SetBotsRangeTierMidCommand,
 } from "./subs"
 import {
@@ -27,6 +28,7 @@ import {
         MigrateAvatarsCommand,
         MigrateUserTotpCommand,
         MigrateBotExecutorCommand,
+        MigrateIndicatorsCommand,
         DatabaseCommand,
         SetBotsRangeTierMidCommand,
     ],

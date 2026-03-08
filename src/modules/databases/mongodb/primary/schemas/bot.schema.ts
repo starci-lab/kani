@@ -59,11 +59,18 @@ import {
 import {
     GraphQLTypeRangeTier, RangeTier 
 } from "../enums"
+import {
+    BotViolateIndicatorSchema,
+    BotViolateIndicatorSchemaClass,
+} from "./bot-violate-indicator.schema"
 
 @ObjectType({
     description: "Represents a bot",
 })
 export class BotPerformance24H {
+    /**
+     * The return on investment (ROI) percentage of the bot in the last 24 hours.
+     */
     @Field(() => Float,
         {
             description: "The return on investment (ROI) percentage of the bot in the last 24 hours",
@@ -74,16 +81,30 @@ export class BotPerformance24H {
             description: "The profit and loss (PnL) in token units of the bot in the last 24 hours",
         })
         pnl: number
+    /**
+     * The return on investment (ROI) percentage in USD of the bot in the last 24 hours.
+     */
     @Field(() => Float,
         {
             description: "The return on investment (ROI) percentage in USD of the bot in the last 24 hours",
         })
         roiInUsd: number
+    /**
+     * The profit and loss (PnL) in USD of the bot in the last 24 hours.
+     */
     @Field(() => Float,
         {
             description: "The profit and loss (PnL) in USD of the bot in the last 24 hours",
         })
         pnlInUsd: number
+    /**
+     * The list of bot violate indicators.
+     */
+    @Field(() => [BotViolateIndicatorSchema],
+        {
+            description: "The list of bot violate indicators",
+        })
+        violateIndicators: Array<BotViolateIndicatorSchema>
 }
 
 /**
@@ -432,19 +453,16 @@ export class BotSchema extends AbstractSchema {
         executor: ExecutorSchema | Types.ObjectId
 
     /**
-     * Whether the bot is preparing to open a position.
+     * The list of violate indicators of the bot.
      */
-    @Field(
-        () => Boolean,
+    @Field(() => [BotViolateIndicatorSchema],
         {
-            description: "Whether the bot is preparing to open a position",
-            nullable: true,
-        }
-    )
+            description: "The list of violate indicators of the bot",
+        })
     @Prop({
-        type: Boolean, required: false
+        type: [BotViolateIndicatorSchemaClass], required: false
     })
-        preparingToOpenPosition?: boolean
+        violateIndicators?: Array<BotViolateIndicatorSchema>
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

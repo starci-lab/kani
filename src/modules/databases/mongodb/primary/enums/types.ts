@@ -439,3 +439,32 @@ registerEnumType(GraphQLTypeRangeTier,
         }
     }
 )
+
+/**
+ * The type of the bot violate indicator
+ */
+export enum BotViolateIndicatorType {
+    PricePct = "pricePct",
+    PriceRegression = "priceRegression",
+    VolumeSpike = "volumeSpike"
+}
+
+export const GraphQLTypeBotViolateIndicatorType = createEnumType(BotViolateIndicatorType)
+
+registerEnumType(GraphQLTypeBotViolateIndicatorType,
+    {
+        name: "BotViolateIndicatorType",
+        description: "The type of the bot violate indicator",
+        valuesMap: {
+            [BotViolateIndicatorType.PricePct]: {
+                description: "The price percentage of the bot violate indicator"
+            },
+            [BotViolateIndicatorType.PriceRegression]: {
+                description: "The price regression of the bot violate indicator"
+            },
+            [BotViolateIndicatorType.VolumeSpike]: {
+                description: "The volume spike of the bot violate indicator"
+            },
+        }
+    }
+)

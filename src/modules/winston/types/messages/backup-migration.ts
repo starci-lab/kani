@@ -87,6 +87,14 @@ export interface MigrationBotExecutorFailedMessage {
     error: string
 }
 
+export interface MigrationIndicatorsCompletedMessage {
+    updatedCount: number
+}
+
+export interface MigrationIndicatorsFailedMessage {
+    error: string
+}
+
 export interface KeyGenerationFailedMessage {
     error: string
 }
