@@ -83,7 +83,6 @@ export class BalanceConvertService {
             tokenA: targetToken,
             tokenB: fromToken,
         })
-
         const amountInTarget = amountDecimal.div(relativePrice)
         const amountInTargetRaw = toRawAmount({
             amount: amountInTarget,
@@ -116,6 +115,13 @@ export class BalanceConvertService {
             targetToken,
         }: ConvertSingleAmountDecimalToTargetParams
     ): Promise<ConvertSingleAmountToTargetResult> {
+        console.log("amount",
+            toRawAmount(
+                {
+                    amount,
+                    decimals: new Decimal(fromToken.decimals),
+                }
+            ).toString())
         // we convert the amount to raw amount
         return this.convertSingleAmountToTarget(
             {

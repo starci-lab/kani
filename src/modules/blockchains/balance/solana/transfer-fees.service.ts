@@ -33,6 +33,7 @@ import {
 import {
     SuperJSON,
 } from "superjson"  
+import BN from "bn.js"
 
 /**
  * Service for preparing transfer fees transactions on Solana.
@@ -104,6 +105,14 @@ export class SolanaTransferFeesService {
                     chainId: ChainId.Solana,
                 }
             )
+        }
+        // if fee amount is less than 0, return empty
+        if (feeAmountTarget.lt(new BN(0)) || feeAmountQuote.lt(new BN(0))) {
+            return {
+                prepareTxs: [],
+                feeAmountTarget: new BN(0),
+                feeAmountQuote: new BN(0),
+            }
         }
         const instructions: Array<Instruction> = []
         const { instructions: transferTargetFeesInstructions } = await this.transferInstructionService.createTransferInstructions({

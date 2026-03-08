@@ -138,7 +138,6 @@ export class ClosePositionSnapshotService {
                 isActive: false,
                 closeSnapshot,
                 performance,
-                shouldTransferFees: performance.pnl > 0,
             },
         }, 
         {

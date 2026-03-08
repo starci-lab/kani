@@ -73,52 +73,51 @@ export class TransferFeesTaskConfirmService {
 
             try {
                 const session = await this.connection.startSession()
-
-                await session.withTransaction(async (clientSession) => {
-                    const updateJobResult = await this.connection
-                        .model<JobSchema>(JobSchema.name)
-                        .updateOne(
-                            {
-                                _id: job.id
-                            },
-                            {
-                                $set: {
-                                    "tasks.$[task].confirmed": true,
+                await session.withTransaction(
+                    async (clientSession) => {
+                        const updateJobResult = await this.connection
+                            .model<JobSchema>(JobSchema.name)
+                            .updateOne(
+                                {
+                                    _id: job.id
                                 },
-                                $inc: {
-                                    taskIndex: 1,
-                                },
-                            },
-                            {
-                                arrayFilters: [
-                                    {
-                                        "task.index": taskIndex,
-                                        "task.type": TaskType.TransferFees,
+                                {
+                                    $set: {
+                                        "tasks.$[task].confirmed": true,
                                     },
-                                ],
-                                session: clientSession,
-                            },
-                        )
+                                    $inc: {
+                                        taskIndex: 1,
+                                    },
+                                },
+                                {
+                                    arrayFilters: [
+                                        {
+                                            "task.index": taskIndex,
+                                            "task.type": TaskType.TransferFees,
+                                        },
+                                    ],
+                                    session: clientSession,
+                                },
+                            )
 
-                    assert(updateJobResult.matchedCount > 0)
+                        assert(updateJobResult.matchedCount > 0)
 
-                    const task = job.tasks[taskIndex]
-                    const positionId = bot.activePosition?.position?.toString?.()
-                    if (positionId && task?.prepareResult && task?.steps?.length) {
-                        const prepareResult = this.superJson.parse<PrepareTransferFeesTransactionResult>(
-                            task.prepareResult,
-                        )
-                        const feeTargetAmount = prepareResult?.feeAmountTarget ?? new BN(0)
-                        const feeQuoteAmount = prepareResult?.feeAmountQuote ?? new BN(0)
-                        const feeTransferTxHashes = task.steps
-                            .map((step) => {
-                                const exec = step?.executeResult
-                                    ? this.superJson.parse<ExecuteWithdrawTransactionResult>(step.executeResult)
-                                    : null
-                                return exec?.txHash
-                            })
-                            .filter((txHash): txHash is string => Boolean(txHash))
-                        if (feeTransferTxHashes.length > 0) {
+                        const task = job.tasks[taskIndex]
+                        const positionId = bot.activePosition?.position?.toString?.()
+                        if (positionId && task?.prepareResult && task?.steps?.length) {
+                            const prepareResult = this.superJson.parse<PrepareTransferFeesTransactionResult>(
+                                task.prepareResult,
+                            )
+                            const feeTargetAmount = prepareResult?.feeAmountTarget ?? new BN(0)
+                            const feeQuoteAmount = prepareResult?.feeAmountQuote ?? new BN(0)
+                            const feeTransferTxHashes = task.steps
+                                .map((step) => {
+                                    const exec = step?.executeResult
+                                        ? this.superJson.parse<ExecuteWithdrawTransactionResult>(step.executeResult)
+                                        : null
+                                    return exec?.txHash
+                                })
+                                .filter((txHash): txHash is string => Boolean(txHash))
                             await this.transferFeesSnapshotService.updateTransferFeesRecord({
                                 botId: bot.id,
                                 positionId,
@@ -128,16 +127,14 @@ export class TransferFeesTaskConfirmService {
                                 session: clientSession,
                             })
                         }
-                    }
-
-                    if (envConfig().executor.runtime.operation?.transferFees?.stimulate) {
-                        throw new ActionJobStimulateMongoSessionException({
-                            botId: bot.id,
-                            jobId: job.id,
-                            taskIndex,
-                        })
-                    }
-                })
+                        if (envConfig().executor.runtime.operation?.transferFees?.stimulate) {
+                            throw new ActionJobStimulateMongoSessionException({
+                                botId: bot.id,
+                                jobId: job.id,
+                                taskIndex,
+                            })
+                        }
+                    })
             } catch (error) {
                 if (!(error instanceof ActionJobStimulateMongoSessionException)) {
                     throw error

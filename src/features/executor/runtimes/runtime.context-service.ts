@@ -36,6 +36,7 @@ import {
     HandleDlmmPositionCloseRequestedEventService,
     HandleWithdrawService,
     HandleNotSyncedService,
+    HandleTransferFeesService,
 } from "./handlers"
 import {
     BotNotFoundException 
@@ -63,6 +64,7 @@ export class RuntimeContextService {
         private readonly handleDlmmPositionCloseRequestedEventService: HandleDlmmPositionCloseRequestedEventService,
         private readonly handleWithdrawService: HandleWithdrawService,
         private readonly handleNotSyncedService: HandleNotSyncedService,
+        private readonly handleTransferFeesService: HandleTransferFeesService,
     ) { }
 
     /**
@@ -197,7 +199,7 @@ export class RuntimeContextService {
                             )
                         },
                     )
-                    // invoke and schedule the reconcile balance service
+                    // invoke and schedule the transfer fees service
                     this.invokeAndSchedule(
                         envConfig().executor.runtime.operation.reconcileBalance.interval.poll,
                         async () => {
@@ -205,6 +207,7 @@ export class RuntimeContextService {
                             if (!bot) {
                                 return
                             }
+                            // handle reconcile balance
                             await this.handleReconcileBalanceService.process(
                                 bot
                             )
@@ -219,6 +222,19 @@ export class RuntimeContextService {
                                 return
                             }
                             await this.handleWithdrawService.process(
+                                bot
+                            )
+                        },
+                    )
+                    // invoke and schedule the transfer fees service
+                    this.invokeAndSchedule(
+                        envConfig().executor.runtime.operation.transferFees.interval.poll,
+                        async () => {
+                            const bot = await this.findBot()
+                            if (!bot) {
+                                return
+                            }
+                            await this.handleTransferFeesService.process(
                                 bot
                             )
                         },

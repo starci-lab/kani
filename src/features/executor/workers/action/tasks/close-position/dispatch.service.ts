@@ -14,13 +14,9 @@ import {
     ClosePositionTaskDispatcherParams 
 } from "../types"
 import {
-    InjectPrimaryMongoose, 
     JobSchema,
     StepType
 } from "@modules/databases"
-import {
-    Connection 
-} from "mongoose"
 import {
     ClosePositionTaskPrepareService 
 } from "./prepare.service"
@@ -47,8 +43,6 @@ export class ClosePositionTaskDispatchService {
         private readonly closePositionTaskConfirmService: ClosePositionTaskConfirmService,
         private readonly asyncService: AsyncService,
         private readonly jobContextService: JobContextService,
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
     ) { }
 
     /**

@@ -153,7 +153,7 @@ export class TransferFeesEnqueueService implements ITransferFeesEnqueueService {
                         type: TaskType.TransferFees,
                         payload: {
                             /** Payload for transfer fees task */
-                            reconcile: false,
+                            reconcile: true,
                         },
                     },
                 ],

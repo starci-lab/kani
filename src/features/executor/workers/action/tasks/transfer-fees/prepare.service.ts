@@ -38,6 +38,9 @@ import {
 } from "@modules/env"
 import BN from "bn.js"
 import Decimal from "decimal.js"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
 
 @Injectable()
 export class TransferFeesTaskPrepareService {
@@ -50,6 +53,7 @@ export class TransferFeesTaskPrepareService {
         private readonly jobTaskService: JobTaskService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly balanceConvertService: BalanceConvertService,
+        private readonly mountStorageService: MountStorageService,
     ) { }
 
     async process({
@@ -163,8 +167,10 @@ export class TransferFeesTaskPrepareService {
             const targetRatio = targetAmountInTarget.div(targetAmountInTarget.add(quoteAmountInTarget))
             const quoteRatio = quoteAmountInTarget.div(targetAmountInTarget.add(quoteAmountInTarget))
             // compute the fees amount in target token
-            const feeAmountTarget = pnl.mul(targetRatio)
-            const feeAmountQuoteInTarget = pnl.mul(quoteRatio)
+            const feeRate = this.mountStorageService.appConfig.fees.openPosition[bot.chainId].feeRate
+            const pnlFee = pnl.mul(feeRate)
+            const feeAmountTarget = pnlFee.mul(targetRatio)
+            const feeAmountQuoteInTarget = pnlFee.mul(quoteRatio)
             const { 
                 amountInTargetRaw: feeAmountQuote 
             } = await this.balanceConvertService.convertSingleAmountDecimalToTarget(
@@ -179,20 +185,24 @@ export class TransferFeesTaskPrepareService {
                 await this.balanceActionService.prepareTransferFeesTransaction(
                     {
                         bot,
-                        feeAmountTarget: toRawAmount({
-                            amount: feeAmountTarget,
-                            decimals: new Decimal(targetToken.decimals),
-                        }),
+                        feeAmountTarget: toRawAmount(
+                            {
+                                amount: feeAmountTarget,
+                                decimals: new Decimal(targetToken.decimals),
+                            }
+                        ),
                         feeAmountQuote,
                     }
                 )
             // we convert the fee amount to quote token
-            await this.jobTaskService.upsertPreparedTask({
-                jobId: job.id,
-                taskType: TaskType.TransferFees,
-                taskIndex,
-                prepareResult,
-            })
+            await this.jobTaskService.upsertPreparedTask(
+                {
+                    jobId: job.id,
+                    taskType: TaskType.TransferFees,
+                    taskIndex,
+                    prepareResult,
+                }
+            )
             // we log the prepared task
             this.winstonService.log(
                 WinstonLog.ActiveJobTaskPrepared,

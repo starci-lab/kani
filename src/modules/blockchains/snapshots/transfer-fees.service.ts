@@ -33,7 +33,7 @@ export class TransferFeesSnapshotService {
 
     /**
      * Updates the position with fees (target/quote amounts and fee transfer tx hashes),
-     * sets shouldTransferFees to false, and unsets bot.activePosition.
+     * and unsets bot.activePosition.
      *
      * @param param - Params (botId, positionId, fee amounts, feeTransferTxHashes, optional session)
      * @returns Resolves when position and bot are updated
@@ -48,26 +48,33 @@ export class TransferFeesSnapshotService {
             session,
         }: UpdateTransferFeesRecordParams
     ): Promise<UpdateTransferFeesRecordResult> {
-        const positionUpdate = await this.connection
-            .model<PositionSchema>(PositionSchema.name)
-            .updateOne(
-                {
-                    _id: positionId 
-                },
-                {
-                    $set: {
-                        fees: {
-                            targetAmount: feeTargetAmount.toString(),
-                            quoteAmount: feeQuoteAmount.toString(),
-                            feeTransferTxHashes,
+        if (
+            feeTargetAmount.isZero() 
+            && feeQuoteAmount.isZero() 
+            && feeTransferTxHashes.length === 0
+        ) {
+            const positionUpdate = await this.connection
+                .model<PositionSchema>(PositionSchema.name)
+                .updateOne(
+                    {
+                        _id: positionId 
+                    },
+                    {
+                        $set: {
+                            fees: {
+                                targetAmount: feeTargetAmount.toString(),
+                                quoteAmount: feeQuoteAmount.toString(),
+                                feeTransferTxHashes,
+                            },
                         },
                     },
-                },
-                {
-                    session 
-                },
-            )
-        assert(positionUpdate.matchedCount > 0)
+                    {
+                        session 
+                    },
+                )
+            assert(positionUpdate.matchedCount > 0)
+            return
+        }
         const botUpdate = await this.connection
             .model<BotSchema>(BotSchema.name)
             .updateOne(

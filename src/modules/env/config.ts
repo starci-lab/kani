@@ -482,6 +482,11 @@ export const envConfig = () => ({
                         key: "EXECUTOR_OPERATION_CLOSE_POSITION_STIMULATE_CONFIRM", defaultValue: false
                     }),
                 },
+                interval: {
+                    poll: parseEnvMs({
+                        key: "EXECUTOR_OPERATION_INTERVAL_POLL", defaultValue: "10s" 
+                    }),
+                },
                 reconcileBalance: {
                     interval: {
                         poll: parseEnvMs({
