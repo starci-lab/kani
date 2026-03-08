@@ -359,7 +359,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Dlmm,
         dlmmState: {
             binStep: 4,
-            binOffset: 10,
             basisPointMax: 10_000,
         },
         metadata: {

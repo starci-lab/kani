@@ -25,6 +25,7 @@ import {
 } from "@modules/common"
 import {
     RpcAccessType,
+    MountStorageService,
 } from "@modules/filesystem"
 import Decimal from "decimal.js"
 import {
@@ -72,6 +73,7 @@ export class FlowXReservesWithFeesService implements IReservesWithFeesService {
         private readonly clmmRewardsFormulaService: ClmmRewardsFormulaService,
         private readonly clmmReservesFormulaService: ClmmReservesFormulaService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly mountStorageService: MountStorageService,
     ) { }
 
     /**
@@ -125,17 +127,11 @@ export class FlowXReservesWithFeesService implements IReservesWithFeesService {
             i32Type,
             ticksId
         } = liquidityPool.metadata as FlowXLiquidityPoolMetadata
-
         // Serialize tick indices for dynamic field names
         const tickLowerName = serializeSuiI32(new BN(tickLower.toString()),
             i32Type)
         const tickUpperName = serializeSuiI32(new BN(tickUpper.toString()),
             i32Type)
-        console.log({
-            tickLowerName,
-            tickUpperName,
-            ticksId,
-        })
         // Stage: on-chain fetch (tick lower dynamic field)
         const { data: tickLowerDataRaw } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,

@@ -3,7 +3,14 @@ import {
     Command, CommandRunner 
 } from "nest-commander"
 import {
-    BackupCommand, RestoreCommand, SeedCommand, MigratePositionBalanceValuesCommand, MigrateAvatarsCommand, MigrateUserTotpCommand, MigrateBotExecutorCommand,
+    BackupCommand,
+    RestoreCommand,
+    SeedCommand,
+    MigratePositionBalanceValuesCommand,
+    MigrateAvatarsCommand,
+    MigrateUserTotpCommand,
+    MigrateBotExecutorCommand,
+    SetBotsRangeTierMidCommand,
 } from "./subs"
 import {
     WinstonLog, WinstonService 
@@ -12,7 +19,7 @@ import {
 @Command({
     name: "db",
     description: "manage db actions",
-    subCommands: [ 
+    subCommands: [
         BackupCommand,
         RestoreCommand,
         SeedCommand,
@@ -20,7 +27,8 @@ import {
         MigrateAvatarsCommand,
         MigrateUserTotpCommand,
         MigrateBotExecutorCommand,
-    ]
+        SetBotsRangeTierMidCommand,
+    ],
 })
 export class DatabaseCommand extends CommandRunner {
     constructor(

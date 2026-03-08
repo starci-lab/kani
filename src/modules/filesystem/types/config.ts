@@ -1,6 +1,9 @@
 import {
     ChainId
 } from "@modules/common"
+import {
+    RangeTier 
+} from "@modules/databases"
 
 /** How the RPC can be accessed (http, ws, write). */
 export enum RpcAccessType {
@@ -122,14 +125,13 @@ export interface AuthenticationConfig {
 
 /** Range tier entry. */
 export interface RangeTierEntry {
-    tier: string
+    tier: RangeTier
     ticks: number
+    binStep: number
 }
 
 /** Range tiers config. */
-export interface RangeTiersConfig {
-    rangeTiers: Array<RangeTierEntry>
-}
+export type RangeTiersConfig = Array<RangeTierEntry>
 
 /** Root app config (API keys, GCP, drive, privy, smtp, fees, static config). */
 export interface AppConfig {

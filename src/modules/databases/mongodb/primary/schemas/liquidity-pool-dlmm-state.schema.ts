@@ -33,16 +33,6 @@ export class LiquidityPoolDlmmStateSchema {
 
     @Field(() => Number,
         {
-            description: "The bin offset of the pool",
-            nullable: true,
-        })
-    @Prop({
-        type: Number, nullable: true
-    })
-        binOffset: number
-
-    @Field(() => Number,
-        {
             description: "The basis point max of the pool",
             nullable: true,
         })

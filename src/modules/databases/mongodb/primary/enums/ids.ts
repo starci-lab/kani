@@ -307,34 +307,3 @@ registerEnumType(GraphQLTypeMarketListingId,
         },
     }
 )
-
-/**
- * The tier of the range
- */
-export enum RangeTier {
-    Low = "lowRange",
-    Mid = "midRange",
-    Wide = "wideRange"
-}
-
-/**
- * The graphql type of the range tier
- */
-export const GraphQLTypeRangeTier = createEnumType(RangeTier)
-registerEnumType(GraphQLTypeRangeTier,
-    {
-        name: "RangeTier",
-        description: "The tier of the range",
-        valuesMap: {
-            [RangeTier.Low]: {
-                description: "The low range"
-            },
-            [RangeTier.Mid]: {
-                description: "The mid range"
-            },
-            [RangeTier.Wide]: {
-                description: "The wide range"
-            },
-        }
-    }
-)

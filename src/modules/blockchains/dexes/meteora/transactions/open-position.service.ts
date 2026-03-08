@@ -27,9 +27,10 @@ import {
 import Decimal from "decimal.js"
 import BN from "bn.js"
 import {
-    InvalidPoolTokensException, 
-    LiquidityPoolDlmmStateNotFoundException, 
-    MeteoraMultipleDlmmPositionsNotSupportedException 
+    InvalidPoolTokensException,
+    LiquidityPoolDlmmStateNotFoundException,
+    MeteoraMultipleDlmmPositionsNotSupportedException,
+    RangeTierNotConfiguredException,
 } from "@modules/exceptions"
 import {
     SYSTEM_PROGRAM_ADDRESS 
@@ -50,6 +51,9 @@ import {
     CreateOpenPositionInstructionsParams,
     CreateOpenPositionInstructionsResult
 } from "../types"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
 
 /**
  * Service responsible for creating open position instructions for Meteora.
@@ -68,6 +72,7 @@ export class OpenPositionInstructionService {
         private readonly solanaKeypairService: SolanaKeypairService,
         private readonly anchorUtilsService: AnchorUtilsService,
         private readonly meteoraSdkService: MeteoraSdkService,
+        private readonly mountStorageService: MountStorageService,
     ) { }
     /**
      * Creates open position instructions for Meteora.
@@ -107,10 +112,18 @@ export class OpenPositionInstructionService {
                 liquidityPoolId: liquidityPool.displayId,
             })
         }
+        const tier = this.mountStorageService.appConfig.rangeTiers.find((tier) => tier.tier === bot.rangeTier)
+        if (!tier) {
+            throw new RangeTierNotConfiguredException(
+                {
+                    rangeTier: bot.rangeTier,
+                }
+            )
+        }
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
-        const minBinId = state.activeId.sub(new BN(liquidityPool.dlmmState.binOffset))
-        const maxBinId = state.activeId.add(new BN(liquidityPool.dlmmState.binOffset))
+        const minBinId = state.activeId.sub(new BN(tier.binStep))
+        const maxBinId = state.activeId.add(new BN(tier.binStep))
         const binCount = getBinCount(minBinId.toNumber(),
             maxBinId.toNumber())
         const positionCount = getPositionCountByBinCount(binCount)

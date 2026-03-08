@@ -56,6 +56,9 @@ import {
 import {
     ChainId, GraphQLTypeChainId
 } from "@modules/common"
+import {
+    GraphQLTypeRangeTier, RangeTier 
+} from "../enums"
 
 @ObjectType({
     description: "Represents a bot",
@@ -389,6 +392,9 @@ export class BotSchema extends AbstractSchema {
     )
         incentiveTokens?: Array<TokenSchema | Types.ObjectId>
 
+    /**
+     * The withdrawal address of the bot.
+     */
     @Field(() => String,
         {
             description: "The withdrawal address of the bot",
@@ -398,6 +404,22 @@ export class BotSchema extends AbstractSchema {
         type: String, required: false
     })
         withdrawalAddress?: string
+
+    /**
+     * The range tier of the bot.
+     */
+    @Field(
+        () => GraphQLTypeRangeTier,
+        {
+            description: "The range tier of the bot",
+        }
+    )
+    @Prop(
+        {
+            type: String, enum: RangeTier, required: true
+        }
+    )
+        rangeTier: RangeTier
 
     @Field(() => ID,
         {
