@@ -17,9 +17,6 @@ import {
     MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
 } from "./seeders.module-definition"
 import {
-    ConfigService 
-} from "./config.service"
-import {
     InjectPrimaryMongoose 
 } from "../mongodb.decorators"
 import {
@@ -39,7 +36,6 @@ export class SeedersService implements OnModuleInit {
         private readonly tokenService: TokensService,
         private readonly dexService: DexesService,
         private readonly liquidityPoolService: LiquidityPoolsService,
-        private readonly configService: ConfigService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) { }
 
@@ -62,9 +58,6 @@ export class SeedersService implements OnModuleInit {
                 // drop and seed in order
                 await this.liquidityPoolService.drop(session)
                 await this.liquidityPoolService.seed(session)
-                // drop and seed in order
-                await this.configService.drop(session)
-                await this.configService.seed(session)
             }
         )
         

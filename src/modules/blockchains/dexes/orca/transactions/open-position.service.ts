@@ -11,7 +11,6 @@ import {
 import {
     AccountRole,
     address,
-    createNoopSigner,
     Instruction,
 } from "@solana/kit"
 import {
@@ -29,7 +28,6 @@ import {
     TOKEN_PROGRAM_ADDRESS,
 } from "@solana-program/token"
 import {
-    getTransferSolInstruction,
     SYSTEM_PROGRAM_ADDRESS,
 } from "@solana-program/system"
 import {
@@ -40,24 +38,11 @@ import {
     u64,
 } from "@metaplex-foundation/beet"
 import {
-    getTransferInstruction as getTransferInstruction2022,
     TOKEN_2022_PROGRAM_ADDRESS,
 } from "@solana-program/token-2022"
 import {
-    getTransferInstruction 
-} from "@solana-program/token"
-import {
-    TokenType 
-} from "@modules/common"
-import {
-    FeeService 
-} from "../../../math"
-import {
     METADATA_UPDATE_AUTH_ADDRESS 
 } from "./constants"
-import {
-    MountStorageService 
-} from "@modules/filesystem"
 import BN from "bn.js"
 import {
     CreateOpenPositionInstructionsParams,
@@ -83,8 +68,6 @@ export class OpenPositionInstructionService {
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly tickArrayService: TickArrayService,
     private readonly positionService: PositionService,
-    private readonly mountStorageService: MountStorageService,
-    private readonly feeService: FeeService,
     private readonly solanaKeypairService: SolanaKeypairService,
     ) {}
 
@@ -116,38 +99,6 @@ export class OpenPositionInstructionService {
                 liquidityPoolId: liquidityPool.displayId,
             })
         }
-        const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.solana.feeToAddress
-        const { feeAmount: feeAmountA, remainingAmount: remainingAmountA } =
-      this.feeService.splitAmount({
-          amount: amountA,
-          chainId: bot.chainId,
-      })
-        const { 
-            feeAmount: feeAmountB, 
-            remainingAmount: remainingAmountB 
-        } =
-      this.feeService.splitAmount({
-          amount: amountB,
-          chainId: bot.chainId,
-      })
-        if (tokenA.type === TokenType.Native) {
-            instructions.push(
-                getTransferSolInstruction({
-                    source: createNoopSigner(address(bot.accountAddress)),
-                    destination: address(feeToAddress),
-                    amount: BigInt(feeAmountA.toString()),
-                }),
-            )
-        }
-        if (tokenB.type === TokenType.Native) {
-            instructions.push(
-                getTransferSolInstruction({
-                    source: createNoopSigner(address(bot.accountAddress)),
-                    destination: address(feeToAddress),
-                    amount: BigInt(feeAmountB.toString()),
-                }),
-            )
-        }
         const { programAddress, tokenVault0, tokenVault1 } = liquidityPool.metadata as OrcaLiquidityPoolMetadata
         const { pda: tickArrayLowerPda } = await this.tickArrayService.getPda({
             poolStateAddress: address(liquidityPool.poolAddress),
@@ -171,7 +122,7 @@ export class OpenPositionInstructionService {
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            amount: remainingAmountA,
+            amount: amountA,
         })
         if (createAtaAInstructions?.length) {
             instructions.push(...createAtaAInstructions)
@@ -187,67 +138,13 @@ export class OpenPositionInstructionService {
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            amount: remainingAmountB,
+            amount: amountB,
         })
         if (createAtaBInstructions?.length) {
             instructions.push(...createAtaBInstructions)
         }
         if (closeAtaBInstructions?.length) {
             endInstructions.push(...closeAtaBInstructions)
-        }
-        const getTransferAInstruction = tokenA.is2022Token
-            ? getTransferInstruction2022
-            : getTransferInstruction
-        const getTransferBInstruction = tokenB.is2022Token
-            ? getTransferInstruction2022
-            : getTransferInstruction
-        if (tokenA.type !== TokenType.Native) {
-            const {
-                instructions: createAtaAInstructions,
-                ataAddress: feeToAAtaAddress,
-            } = await this.ataInstructionService.getOrCreateAtaInstructions({
-                ownerAddress: address(feeToAddress),
-                tokenMint: tokenA.tokenAddress
-                    ? address(tokenA.tokenAddress)
-                    : undefined,
-                is2022Token: tokenA.is2022Token,
-                amount: feeAmountA,
-            })
-            if (createAtaAInstructions?.length) {
-                instructions.push(...createAtaAInstructions)
-            }
-            instructions.push(
-                getTransferAInstruction({
-                    source: ataAAddress,
-                    destination: feeToAAtaAddress,
-                    amount: BigInt(feeAmountA.toString()),
-                    authority: address(bot.accountAddress),
-                }),
-            )
-        }
-        if (tokenB.type !== TokenType.Native) {
-            const {
-                instructions: createAtaBInstructions,
-                ataAddress: feeToBAtaAddress,
-            } = await this.ataInstructionService.getOrCreateAtaInstructions({
-                ownerAddress: address(feeToAddress),
-                tokenMint: tokenB.tokenAddress
-                    ? address(tokenB.tokenAddress)
-                    : undefined,
-                is2022Token: tokenB.is2022Token,
-                amount: feeAmountB,
-            })
-            if (createAtaBInstructions?.length) {
-                instructions.push(...createAtaBInstructions)
-            }
-            instructions.push(
-                getTransferBInstruction({
-                    source: ataBAddress,
-                    destination: feeToBAtaAddress,
-                    amount: BigInt(feeAmountB.toString()),
-                    authority: address(bot.accountAddress),
-                }),
-            )
         }
         const { ataAddress } =
       await this.ataInstructionService.getOrCreateAtaInstructions({
@@ -396,8 +293,6 @@ export class OpenPositionInstructionService {
             ataAddress,
             personalPosition: positionPda,
             instructions,
-            feeAmountA,
-            feeAmountB,
         }
     }
 }

@@ -3,10 +3,12 @@ import {
     MinOperationalGasAmountNotFoundException,
     SwapAmountGasNotFoundException,
 } from "@modules/exceptions"
-import { 
-    PrimaryMemoryStorageService, 
+import {
     QuoteRatioStatus,
 } from "@modules/databases"
+import {
+    MountStorageService,
+} from "@modules/filesystem"
 import {
     Injectable 
 } from "@nestjs/common"
@@ -59,7 +61,7 @@ import {
 @Injectable()
 export class SwapMathService {
     constructor(
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly mountStorageService: MountStorageService,
         private readonly quoteRatioService: QuoteRatioService,
         private readonly priceService: PriceService,
     ) {}
@@ -179,7 +181,7 @@ export class SwapMathService {
      * @param params - Extended parameters including tokens, balances, and quote ratio result
      * @returns Swap steps to execute in order (no gas swaps needed)
      */
-    private async computeSwapAmountsWhenTargetIsQuote(
+    private async computeSwapAmountsWhenQuoteIsGas(
         {
             targetToken,
             quoteToken,
@@ -305,7 +307,7 @@ export class SwapMathService {
             minOperationalAmount: minOperationalGasAmount,
             targetOperationalAmount: targetOperationalGasAmount,
             swapAmount: swapGasAmount,
-        } = this.primaryMemoryStorageService.gasConfig.gasAmountRequired?.[gasToken.chainId] ?? {
+        } = this.mountStorageService.appConfig.gas.gasAmountRequired?.[gasToken.chainId] ?? {
         }
 
         // Step 3: Validate that all required gas config values are present
@@ -630,7 +632,7 @@ export class SwapMathService {
             })
         }
         case GasStatus.IsQuote: {
-            return this.computeSwapAmountsWhenTargetIsQuote({
+            return this.computeSwapAmountsWhenQuoteIsGas({
                 targetToken,
                 quoteToken,
                 gasToken,

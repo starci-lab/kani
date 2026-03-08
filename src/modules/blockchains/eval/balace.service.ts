@@ -5,9 +5,12 @@ import {
     TokenNotFoundException 
 } from "@modules/exceptions"
 import {
-    PrimaryMemoryStorageService, 
-    QuoteRatioStatus
+    PrimaryMemoryStorageService,
+    QuoteRatioStatus,
 } from "@modules/databases"
+import {
+    MountStorageService,
+} from "@modules/filesystem"
 import {
     TokenType,
     toDecimalAmount 
@@ -17,7 +20,10 @@ import {
 } from "@nestjs/common"
 import BN from "bn.js"
 import Decimal from "decimal.js"
-import { 
+import {
+    BalanceConvertService,
+} from "../balance"
+import {
     PriceService,
     QuoteRatioService 
 } from "../math"
@@ -41,6 +47,8 @@ import {
 export class EvalBalanceService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly mountStorageService: MountStorageService,
+        private readonly balanceConvertService: BalanceConvertService,
         private readonly priceService: PriceService,
         private readonly quoteRatioService: QuoteRatioService,
     ) {}
@@ -57,9 +65,11 @@ export class EvalBalanceService {
      * @throws {TargetOperationalGasAmountNotFoundException} If target operational gas amount is not configured
      * @throws {TokenNotFoundException} If target, quote, or gas token metadata is not found
      */
-    async eval({ bot }: EvalBalanceParams): Promise<EvalBalanceResult> {
+    async eval(
+        { bot }: EvalBalanceParams
+    ): Promise<EvalBalanceResult> {
         // Stage: config validation (minimum funding requirement must be configured)
-        const minRequiredAmountInUsd = this.primaryMemoryStorageService.balanceConfig
+        const minRequiredAmountInUsd = this.mountStorageService.appConfig.balance
             .balanceRequired?.[bot.chainId]?.minRequiredAmountInUsd
         if (!minRequiredAmountInUsd) {
             throw new BalanceConfigNotFoundException({
@@ -70,7 +80,7 @@ export class EvalBalanceService {
         // Stage: config validation (gas thresholds must be configured)
         // Gas thresholds are configured in human units (e.g. SUI, SOL),
         // so we compare them against the decimal-converted gas balance.
-        const minOperationalGasAmount = this.primaryMemoryStorageService.gasConfig
+        const minOperationalGasAmount = this.mountStorageService.appConfig.gas
             .gasAmountRequired?.[bot.chainId]?.minOperationalAmount
         if (!minOperationalGasAmount) {
             throw new MinOperationalGasAmountNotFoundException({
@@ -78,7 +88,7 @@ export class EvalBalanceService {
             })
         }
 
-        const targetOperationalGasAmount = this.primaryMemoryStorageService.gasConfig
+        const targetOperationalGasAmount = this.mountStorageService.appConfig.gas
             .gasAmountRequired?.[bot.chainId]?.targetOperationalAmount
         if (!targetOperationalGasAmount) {
             throw new TargetOperationalGasAmountNotFoundException({
@@ -126,48 +136,35 @@ export class EvalBalanceService {
             })
         }
 
-        // Resolve token prices
+        const targetBalanceAmountRaw = new BN(bot.balanceSnapshots?.targetBalanceAmount ?? "0")
+        const quoteBalanceAmountRaw = new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? "0")
+        const gasBalanceAmountRaw = new BN(bot.balanceSnapshots?.gasBalanceAmount ?? "0")
+
+        // Convert all balances to target token via BalanceConvertService
+        const {
+            targetAmountInTarget,
+            quoteAmountInTarget,
+            gasAmountInTarget,
+        } = await this.balanceConvertService.convertToTarget({
+            bot,
+        })
+
+        // Funding snapshots in target token
+        const fundingSnapshotExcludingGas = targetAmountInTarget.add(quoteAmountInTarget)
+        const fundingSnapshotIncludingGas = fundingSnapshotExcludingGas.add(gasAmountInTarget)
+
+        // USD snapshots: total in target × target price
         const { price: targetPrice } = await this.priceService.resolvePrice({
             token: targetToken,
         })
+        const fundingSnapshotInUsdExcludingGas = fundingSnapshotExcludingGas.mul(targetPrice)
+        const fundingSnapshotInUsdIncludingGas = fundingSnapshotIncludingGas.mul(targetPrice)
 
-        const { price: quotePrice } = await this.priceService.resolvePrice({
-            token: quoteToken,
-        })
-
-        const { price: gasPrice } = await this.priceService.resolvePrice({
-            token: gasToken,
-        })
-
-        // Convert raw balances to decimal amounts using token decimals
-        const targetBalanceAmountRaw = new BN(bot.balanceSnapshots?.targetBalanceAmount ?? "0")
-        const targetBalanceAmount = toDecimalAmount({
-            amount: targetBalanceAmountRaw,
-            decimals: new Decimal(targetToken.decimals),
-        })
-        const targetBalanceAmountInUsd = targetBalanceAmount.mul(targetPrice)
-
-        const quoteBalanceAmountRaw = new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? "0")
-        const quoteBalanceAmount = toDecimalAmount({
-            amount: quoteBalanceAmountRaw,
-            decimals: new Decimal(quoteToken.decimals),
-        })
-        const quoteBalanceAmountInTarget = quoteBalanceAmount.div(quotePrice).mul(targetPrice)
-        const quoteBalanceAmountInUsd = quoteBalanceAmount.mul(quotePrice)
-
-        const gasBalanceAmountRaw = new BN(bot.balanceSnapshots?.gasBalanceAmount ?? "0")
+        // Gas balance in own units (for min operational threshold check)
         const gasBalanceAmount = toDecimalAmount({
             amount: gasBalanceAmountRaw,
             decimals: new Decimal(gasToken.decimals),
         })
-        const gasBalanceAmountInTarget = gasBalanceAmount.div(gasPrice).mul(targetPrice)
-        const gasBalanceAmountInUsd = gasBalanceAmount.mul(gasPrice)
-
-        // Calculate funding snapshots
-        const fundingSnapshotExcludingGas = targetBalanceAmount.add(quoteBalanceAmountInTarget)
-        const fundingSnapshotIncludingGas = fundingSnapshotExcludingGas.add(gasBalanceAmountInTarget)
-        const fundingSnapshotInUsdExcludingGas = targetBalanceAmountInUsd.add(quoteBalanceAmountInUsd)
-        const fundingSnapshotInUsdIncludingGas = fundingSnapshotInUsdExcludingGas.add(gasBalanceAmountInUsd)
 
         // Determine status based on priority checks
         let status = BalanceEvalStatus.Ok
@@ -200,7 +197,7 @@ export class EvalBalanceService {
         }
 
         return {
-            fundingSnapsot: {
+            fundingSnapshot: {
                 excludingGas: fundingSnapshotExcludingGas,
                 includingGas: fundingSnapshotIncludingGas,
             },

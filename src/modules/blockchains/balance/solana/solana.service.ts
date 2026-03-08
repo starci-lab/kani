@@ -17,10 +17,15 @@ import {
     PrepareWithdrawTransactionResult,
     ExecuteWithdrawTransactionParams,
     ExecuteWithdrawTransactionResult,
+    PrepareTransferFeesTransactionParams,
+    PrepareTransferFeesTransactionResult,
 } from "../types"
 import {
     SolanaReconcileBalanceActionService
 } from "./reconcile-balance-action.service"
+import {
+    SolanaTransferFeesService
+} from "./transfer-fees.service"
 import {
     SolanaWithdrawActionService
 } from "./withdraw-action.service"
@@ -38,6 +43,7 @@ export class SolanaBalanceService implements IBalanceActionService {
     constructor(
         private readonly solanaReconcileBalanceActionService: SolanaReconcileBalanceActionService,
         private readonly solanaWithdrawActionService: SolanaWithdrawActionService,
+        private readonly solanaTransferFeesService: SolanaTransferFeesService,
     ) { }
 
     /**
@@ -116,5 +122,12 @@ export class SolanaBalanceService implements IBalanceActionService {
      */
     public async signWithdrawTransaction(param: SignWithdrawTransactionParams): Promise<SignWithdrawTransactionResult> {
         return await this.solanaWithdrawActionService.sign(param)
+    }
+
+    /**
+     * Prepares a transfer fees transaction for Solana (ROI of target token to feeToAddress).
+     */
+    public async prepareTransferFeesTransaction(param: PrepareTransferFeesTransactionParams): Promise<PrepareTransferFeesTransactionResult> {
+        return await this.solanaTransferFeesService.prepare(param)
     }
 }   

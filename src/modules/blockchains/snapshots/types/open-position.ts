@@ -35,8 +35,6 @@ export interface AddOpenPositionRecordParams {
     positionId: string
     openTxHashes: Array<string>
     metadata?: unknown
-    feeTargetAmount: BN
-    feeQuoteAmount: BN
     session?: ClientSession
     targetToken: TokenSchema
     quoteToken: TokenSchema

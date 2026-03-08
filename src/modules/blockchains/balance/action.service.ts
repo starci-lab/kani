@@ -10,6 +10,8 @@ import {
     PrepareWithdrawTransactionResult,
     ExecuteWithdrawTransactionParams,
     ExecuteWithdrawTransactionResult,
+    PrepareTransferFeesTransactionParams,
+    PrepareTransferFeesTransactionResult,
     DetermineReconcileBalancePlanParams,
     DetermineReconcileBalancePlanResult,
     SignReconcileBalanceTransactionParams,
@@ -169,6 +171,26 @@ export class BalanceActionService implements IBalanceActionService {
             return this.solanaBalanceService.executeWithdrawTransaction(param)
         case ChainId.Sui:
             return this.suiBalanceService.executeWithdrawTransaction(param)
+        default:
+            throw new Error(`Unsupported chain id: ${bot.chainId}`)
+        }
+    }
+
+    /**
+     * Prepares a transfer fees transaction (ROI of target token to feeToAddress).
+     *
+     * @param param - Parameters for preparing transfer fees transaction
+     * @returns Prepared transactions and fee amount
+     */
+    async prepareTransferFeesTransaction(
+        param: PrepareTransferFeesTransactionParams
+    ): Promise<PrepareTransferFeesTransactionResult> {
+        const { bot } = param
+        switch (bot.chainId) {
+        case ChainId.Solana:
+            return this.solanaBalanceService.prepareTransferFeesTransaction(param)
+        case ChainId.Sui:
+            return this.suiBalanceService.prepareTransferFeesTransaction(param)
         default:
             throw new Error(`Unsupported chain id: ${bot.chainId}`)
         }

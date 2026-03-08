@@ -1,15 +1,13 @@
 import {
-    DynamicModule, Module 
+    DynamicModule, Module,
+    Provider 
 } from "@nestjs/common"
 import {
     ConfigurableModuleClass, OPTIONS_TYPE 
-} from "./eval.module-definition"   
+} from "./eval.module-definition"
 import {
     EvalBalanceService 
 } from "./balace.service"
-import {
-    Provider 
-} from "@nestjs/common"
 import {
     EvalSnapshotService 
 } from "./snapshots.service"

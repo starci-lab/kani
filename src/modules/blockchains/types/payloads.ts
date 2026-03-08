@@ -69,12 +69,25 @@ export interface WithdrawActionTask {
   payload: WithdrawActionTaskPayload
 }
 
+/** Payload for transfer fees action tasks. */
+export interface TransferFeesActionTaskPayload {
+  /** Whether to perform the balance reconciliation. */
+  reconcile?: boolean
+}
+
+/** Task for an action. */
+export interface TransferFeesActionTask {
+  type: TaskType.TransferFees
+  payload: TransferFeesActionTaskPayload
+}
+
 /** Union of all supported action tasks. */
 export type ActionTask =
   | OpenPositionActionTask
   | ClosePositionActionTask
   | ReconcileBalanceActionTask
   | WithdrawActionTask
+  | TransferFeesActionTask
 
 /** Action job payload. */
 export interface ActionPayload extends BasePayload {

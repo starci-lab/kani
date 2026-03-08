@@ -2,14 +2,13 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    PrimaryInfluxdbPriceBucketService 
+    PrimaryInfluxdbWindowResultBucketService 
 } from "@modules/databases"
 import {
     envConfig 
 } from "@modules/env"
 import {
     AnalyzePriceWindowParams,
-    ClassifyMomentumStateParams,
     PeakToNowMetrics,
     TroughToNowMetrics,
 } from "./types"
@@ -30,7 +29,7 @@ import type {
 @Injectable()
 export class PriceCalculationService {
     constructor(
-    private readonly primaryInfluxdbPriceBucketService: PrimaryInfluxdbPriceBucketService,
+    private readonly primaryInfluxdbWindowResultBucketService: PrimaryInfluxdbWindowResultBucketService,
     ) {}
 
     /**
@@ -154,31 +153,18 @@ export class PriceCalculationService {
     }
 
     /**
-   * Compute TWAP + window math stats.
-   * NOTE: TWAP here is simple mean of samples.
-   *
-   * IMPORTANT CHANGE:
-   * - Trend regression is computed on NORMALIZED price (% from firstPrice)
-   *   so slope is in "% per bar", portable across tokens.
-   */
+     * Analyze the price window.
+     * @param params - The parameters for analyzing the price window.
+     * @param params.pricePoints - The price points.
+     * @returns The price window result.
+     */
     async analyzePriceWindow(
-        { id, intervalMs, marketListingId }: AnalyzePriceWindowParams,
+        { pricePoints }: AnalyzePriceWindowParams,
     ): Promise<PriceWindowResult | null> {
-        const prices = await this.primaryInfluxdbPriceBucketService.queryPromise(
-            {
-                id,
-                intervalMs,
-                marketListingId,
-            }
-        )
         // Ensure time ordering so "last" is meaningful
-        const sorted = [...prices].sort(
+        const sorted = [...pricePoints].sort(
             (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
         )
-
-        if (this.primaryInfluxdbPriceBucketService.hasLargeGap(sorted)) {
-            return null
-        }
 
         const xs = sorted.map((p) => p.price)
         if (xs.length === 0) return null
@@ -236,10 +222,11 @@ export class PriceCalculationService {
         }
 
         const twap = ss.mean(xs)
-        const momentumState = this.classifyMomentumState({
-            slope: lr.m, r2, efficiencyRatio 
-        })
-        const priceWindowResult: PriceWindowResult = {
+        const momentumState = this.classifyMomentumStateFromExtremes(
+            peakNow,
+            troughNow
+        )
+        return {
             // core
             twap,
             momentumState,
@@ -288,40 +275,40 @@ export class PriceCalculationService {
             startTime: sorted[0].time,
             endTime: sorted[sorted.length - 1].time,
         }
-        // if non-production, we push the result to influxdb
-        if (!envConfig().isProduction) {
-            await this.primaryInfluxdbPriceBucketService.writePriceWindowResult({
-                id,
-                marketListingId,
-                priceWindowResult,
-            })
-        }
-        return priceWindowResult
     }
-
     /**
-   * Classify the momentum state (Up/Down/Sideways).
-   *
-   * IMPORTANT:
-   * - Assumes priceWindow.slope is "% per bar" (from normalized regression above).
-   * - Uses minSlope/minR2/minEfficiency gates to avoid noise classification.
-   */
-    classifyMomentumState(
-        { 
-            slope, 
-            r2, 
-            efficiencyRatio 
-        }: ClassifyMomentumStateParams
+ * Classify momentum state (Up/Down/Sideways) using:
+ * - Peak -> now for dump (Down)
+ * - Trough -> now for pump (Up)
+ * - Otherwise Sideways
+ *
+ * Priority:
+ * - If both pump and dump trigger (rare / choppy), prefer Sideways (or choose one by stronger magnitude).
+ */
+    private classifyMomentumStateFromExtremes(
+        peakNow: PeakToNowMetrics,
+        troughNow: TroughToNowMetrics,
     ): MomentumState {
-        const config = envConfig().inspector.priceWindow.momentum
-
-        // If trend is not clear enough -> Sideways
-        const isTrend =
-      Math.abs(slope) >= config.minSlope &&
-      r2 >= config.minR2 &&
-      efficiencyRatio >= config.minEfficiency
-
-        if (!isTrend) return MomentumState.Sideways
-        return slope > 0 ? MomentumState.Up : MomentumState.Down
+        const cfg = envConfig().inspector.priceWindow.momentum
+        // Dump from peak (negative)
+        const dumpRecent = peakNow.barsSincePeak <= cfg.maxBarsSincePeak
+        const dumpMagnitude = peakNow.dropFromPeakPct <= cfg.dumpFromPeakPct
+        const dumpVelocity = peakNow.velFromPeakPctPerMin <= cfg.dumpVelPctPerMin
+        const isDump = dumpRecent && (dumpMagnitude || dumpVelocity)
+        // Pump from trough (positive)
+        const pumpRecent = troughNow.barsSinceTrough <= cfg.maxBarsSinceTrough
+        const pumpMagnitude = troughNow.riseFromTroughPct >= cfg.pumpFromTroughPct
+        const pumpVelocity = troughNow.velFromTroughPctPerMin >= cfg.pumpVelPctPerMin
+        const isPump = pumpRecent && (pumpMagnitude || pumpVelocity)
+  
+        // Conflict case: both signals in same window => choppy/whipsaw
+        if (isDump && isPump) {
+            return MomentumState.Sideways
+        }
+  
+        if (isDump) return MomentumState.Down
+        if (isPump) return MomentumState.Up
+  
+        return MomentumState.Sideways
     }
 }

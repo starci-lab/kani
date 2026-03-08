@@ -6,7 +6,14 @@ import {
     ConfigurableModuleClass,
 } from "./database.module-definition"
 import {
-    BackupCommand, RestoreCommand, SeedCommand, MigratePositionBalanceValuesCommand, MigrateAvatarsCommand, MigrateUserTotpCommand, MigrateBotExecutorCommand,
+    BackupCommand, 
+    RestoreCommand, 
+    SeedCommand, 
+    MigratePositionBalanceValuesCommand, 
+    MigrateAvatarsCommand, 
+    MigrateUserTotpCommand, 
+    MigrateBotExecutorCommand,
+    SetBotsRangeTierMidCommand,
 } from "./subs"
 import {
     DatabaseCommand 
@@ -21,6 +28,7 @@ import {
         MigrateUserTotpCommand,
         MigrateBotExecutorCommand,
         DatabaseCommand,
+        SetBotsRangeTierMidCommand,
     ],
 })
 export class DatabaseModule extends ConfigurableModuleClass {}

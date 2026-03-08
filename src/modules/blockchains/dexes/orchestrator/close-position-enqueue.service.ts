@@ -173,14 +173,22 @@ export class ClosePositionEnqueueService {
                         },
                     },
                     {
-                    /** Reconcile balance task */
+                        /** Reconcile balance task */
                         type: TaskType.ReconcileBalance,
                         payload: {
                         /** Payload for reconcile balance task */
                             swap: true,
                             reconcile: false,
                         },
-                    }
+                    },
+                    {
+                        /** Transfer fees task */
+                        type: TaskType.TransferFees,
+                        payload: {
+                            /** Payload for transfer fees task */
+                            reconcile: false,
+                        },
+                    },
                 ],
             }
             await this.actionQueue.add(

@@ -41,10 +41,6 @@ export interface CreateOpenPositionInstructionsResult {
     minBinId: BN
     /** Maximum bin ID. */
     maxBinId: BN
-    /** Fee amount for token A. */
-    feeAmountA: BN
-    /** Fee amount for token B. */
-    feeAmountB: BN
 }
 
 /**

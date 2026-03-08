@@ -4,6 +4,7 @@
  */
 export * from "./types"
 export * from "./balance.module"
+export * from "./balance-convert.service"
 export * from "./gas-status.service"
 export * from "./fetcher.service"
 export * from "./action.service"

@@ -84,7 +84,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         clmmState: {
             tickSpacing: 1000,
-            tickMultiplier: 1,
         },
         url: "https://app.cetus.zone/clmm?poolAddress=0xc23e7e8a74f0b18af4dfb7c3280e2a56916ec4d41e14416f85184a8aab6b7789",
         staleMs: ms("20s")
@@ -101,7 +100,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         clmmState: {
             tickSpacing: 10,
-            tickMultiplier: 300,
         },
         metadata: {
             intergratePackageId: "0xfbb32ac0fa89a3cb0c56c745b688c6d2a53ac8e43447119ad822763997ffb9c3",
@@ -126,7 +124,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         clmmState: {
             tickSpacing: 10,
-            tickMultiplier: 100,
         },
         metadata: {
             packageId: "0xa5a0c25c79e428eba04fb98b3fb2a34db45ab26d4c8faf0d7e39d66a63891e64",
@@ -150,7 +147,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         clmmState: {
             tickSpacing: 30,
-            tickMultiplier: 33,
         },
         url: "https://app.turbos.finance/pool/0xdaa881332a4f57fe3776e2d3003701b53f83a34dc0dd9192c42ba1557c9a95a8",
         staleMs: ms("20s"),
@@ -174,7 +170,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         clmmState: {
             tickSpacing: 1000,
-            tickMultiplier: 1,
         },
         url: "https://app.turbos.finance/pool/0x198af6ff81028c6577e94465d534c4e2cfcbbab06a95724ece7011c55a9d1f5a",
         staleMs: ms("20s"),
@@ -198,7 +193,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         clmmState: {
             tickSpacing: 60,
-            tickMultiplier: 30,
         },
         metadata: {
             packageId: "0xde2c47eb0da8c74e4d0f6a220c41619681221b9c2590518095f0f0c2d3f3c772",
@@ -227,7 +221,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         clmmState: {
             tickSpacing: 1000,
-            tickMultiplier: 1,
         },
         url: "https://app.cetus.zone/clmm?poolAddress=0x9e59de50d9e5979fc03ac5bcacdb581c823dbd27d63a036131e17b391f2fac88",
         staleMs: ms("20s")
@@ -249,7 +242,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         clmmState: {
             tickSpacing: 1000,
-            tickMultiplier: 1,
         },
         url: "https://app.mmt.finance/liquidity/0x919a34b9df1d7a56fa078ae6ddc6bd203e284974704d85721062d38ee3a6701a",
         staleMs: ms("20s")
@@ -266,7 +258,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         clmmState: {
             tickSpacing: 40,
-            tickMultiplier: 30,
         },
         metadata: { 
             ticksId: "0x43d75dd45a86f40c9f0704757aed155960a6b5cf98a679ceb42e5a261982e077",
@@ -289,7 +280,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         clmmState: {
             tickSpacing: 1,
-            tickMultiplier: 200,
         },
         metadata: {
             programAddress: "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
@@ -318,7 +308,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         chainId: ChainId.Solana,
         clmmState: {
             tickSpacing: 1,
-            tickMultiplier: 200,
         },
         url: "https://raydium.io/clmm/create-position/?pool_id=3nMFwZXwY1s1M5s8vYAHqd4wGs4iSxXE4LRoUMMYqEgF",
         wsIdleTimeoutMs: ms("1m"),
@@ -336,7 +325,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         chainId: ChainId.Solana,
         clmmState: {
             tickSpacing: 4,
-            tickMultiplier: 50,
         },
         metadata: {
             programAddress: "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
@@ -359,7 +347,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Dlmm,
         dlmmState: {
             binStep: 4,
-            binOffset: 10,
             basisPointMax: 10_000,
         },
         metadata: {

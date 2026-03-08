@@ -48,10 +48,14 @@ export interface PricePoint {
  * Params for writing price window result.
  */
 export interface WritePriceWindowResultParams {
-    /** The token ID. */
-    id: string
-    /** Market listing ID. */
-    marketListingId: MarketListingId
+    /** The token 0 ID. */
+    token0Id: string
+    /** The token 1 ID. */
+    token1Id: string
+    /** Market listing 0 ID. */
+    marketListing0Id: MarketListingId
+    /** Market listing 1 ID. */
+    marketListing1Id: MarketListingId
     /** The price window result. */
     priceWindowResult: PriceWindowResult
 }

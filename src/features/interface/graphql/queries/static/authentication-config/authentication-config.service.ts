@@ -1,20 +1,21 @@
 import {
     Injectable 
 } from "@nestjs/common"
-import { 
-    AuthenticationConfig,
-    PrimaryMemoryStorageService
+import {
+    AuthenticationConfig 
 } from "@modules/databases"
-
+import {
+    MountStorageService 
+} from "@modules/filesystem"
 
 /**
  * Service that provides static reference data
- * such as authentication config from the in-memory database.
+ * such as authentication config from app config (.mount/config/app.json).
  */
 @Injectable()
 export class AuthenticationConfigService {
     constructor(
-        private readonly memoryStorageService: PrimaryMemoryStorageService,
+        private readonly mountStorageService: MountStorageService,
     ) {}
 
     /**
@@ -22,6 +23,6 @@ export class AuthenticationConfigService {
      * Contains the list of supported authentication factors.
      */
     authenticationConfig(): AuthenticationConfig {
-        return this.memoryStorageService.authenticationConfig
+        return this.mountStorageService.appConfig.authentication as AuthenticationConfig
     }
 }

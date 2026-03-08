@@ -24,6 +24,7 @@ import {
     MissingPositionIdParamException,
     TransactionType,
     LiquidityPoolClmmStateNotFoundException,
+    RangeTierNotConfiguredException,
 } from "@modules/exceptions"
 import {
     TickMathService
@@ -55,6 +56,9 @@ import {
 } from "@modules/mixin"
 import SuperJSON from "superjson"
 import bs58 from "bs58"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
 
 /**
  * Service responsible for opening positions on Raydium DEX.
@@ -84,6 +88,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         private readonly solanaTxService: SolanaTxService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
+        private readonly mountStorageService: MountStorageService,
     ) { }
 
     /**
@@ -155,6 +160,16 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             })
         }
 
+        // get range tier
+        const tier = this.mountStorageService.appConfig.rangeTiers.find((tier) => tier.tier === bot.rangeTier)
+        if (!tier) {
+            throw new RangeTierNotConfiguredException({
+                rangeTier: bot.rangeTier,
+            })
+        }
+        // calculate tick multiplier based on range tier and tick spacing
+        const tickMultiplier = new Decimal(tier.ticks).div(new Decimal(liquidityPool.clmmState.tickSpacing)).ceil()
+
         // Find optimal tick range based on balance amounts
         const {
             tickLower,
@@ -163,7 +178,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         } = await this.tickMathService.findOptimalTickRange({
             tickCurrent: _state.tickCurrent,
             tickSpacing: new Decimal(liquidityPool.clmmState.tickSpacing),
-            tickMultiplier: new Decimal(liquidityPool.clmmState.tickMultiplier),
+            tickMultiplier: tickMultiplier,
             targetBalanceAmount: snapshotTargetBalanceAmountBN,
             quoteBalanceAmount: snapshotQuoteBalanceAmountBN,
             targetIsA,
@@ -185,8 +200,6 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             instructions: openPositionInstructions,
             positionKeyPair: mintKeyPair,
             ataAddress,
-            feeAmountA,
-            feeAmountB,
             personalPosition,
         } = await this.openPositionInstructionService.createOpenPositionInstructions({
             bot,
@@ -213,8 +226,6 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                     ],
                 }
             ],
-            feeAmountA,
-            feeAmountB,
             tickLower,
             tickUpper,
             amountA,

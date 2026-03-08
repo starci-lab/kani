@@ -24,6 +24,10 @@ import {
 import {
     EnqueueWithdrawParams
 } from "./withdraw"
+import {
+    PrepareTransferFeesTransactionParams,
+    PrepareTransferFeesTransactionResult,
+} from "./transfer-fees"
 
 /**
  * Core interface for balance action operations.
@@ -33,6 +37,7 @@ export interface IBalanceActionService {
     executeReconcileBalanceTransaction(params: ExecuteReconcileBalanceTransactionParams): Promise<ExecuteReconcileBalanceTransactionResult>
     prepareWithdrawTransaction(params: PrepareWithdrawTransactionParams): Promise<PrepareWithdrawTransactionResult>
     executeWithdrawTransaction(params: ExecuteWithdrawTransactionParams): Promise<ExecuteWithdrawTransactionResult>
+    prepareTransferFeesTransaction(params: PrepareTransferFeesTransactionParams): Promise<PrepareTransferFeesTransactionResult>
 }
 
 /**

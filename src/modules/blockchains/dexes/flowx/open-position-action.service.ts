@@ -32,6 +32,7 @@ import {
     TransactionType,
     LiquidityPoolClmmStateNotFoundException,
     SlippageToleranceExceededException,
+    RangeTierNotConfiguredException,
 } from "@modules/exceptions"
 import Decimal from "decimal.js"
 import {
@@ -56,9 +57,8 @@ import {
     ChainId 
 } from "@modules/common"
 import {
-    InjectSuperJson 
-} from "@modules/mixin"
-import SuperJSON from "superjson"
+    MountStorageService 
+} from "@modules/filesystem"
 
 /**
  * Service responsible for opening liquidity positions on FlowX DEX.
@@ -88,8 +88,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         private readonly suiTxService: SuiTxService,
         private readonly suiExecuteService: SuiExecuteService,
         private readonly suiStimulateService: SuiStimulateService,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
+        private readonly mountStorageService: MountStorageService,
     ) {}
 
     /**
@@ -245,11 +244,21 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         const targetIsA = bot.targetToken.toString() === liquidityPool.tokenA.toString()
 
         // Compute optimal tick range
+        // get range tier
+        const tier = this.mountStorageService.appConfig.rangeTiers.find((tier) => tier.tier === bot.rangeTier)
+        if (!tier) {
+            throw new RangeTierNotConfiguredException({
+                rangeTier: bot.rangeTier,
+            })
+        }
+        // calculate tick multiplier based on range tier and tick spacing
+        const tickMultiplier = new Decimal(tier.ticks).div(new Decimal(liquidityPool.clmmState.tickSpacing)).ceil()
+        // find optimal tick range
         const { tickLower, tickUpper, utilizationPercentage } =
             await this.tickMathService.findOptimalTickRange({
                 tickCurrent: _state.tickCurrent,
                 tickSpacing: new Decimal(liquidityPool.clmmState.tickSpacing),
-                tickMultiplier: new Decimal(liquidityPool.clmmState.tickMultiplier),
+                tickMultiplier: tickMultiplier,
                 targetBalanceAmount: snapshotTargetBalanceAmount,
                 quoteBalanceAmount: snapshotQuoteBalanceAmount,
                 targetIsA,
@@ -268,17 +277,16 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         const amountBMax = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount
 
         // Stage: tx building (unsigned)
-        const { txb, feeAmountA, feeAmountB } =
-            await this.openPositionTxbService.createOpenPositionTxb({
-                bot,
-                amountA: amountAMax,
-                amountB: amountBMax,
-                liquidity: new BN(0),
-                tickLower,
-                state: _state,
-                liquidityPool,
-                tickUpper,
-            })
+        const { txb } = await this.openPositionTxbService.createOpenPositionTxb({
+            bot,
+            amountA: amountAMax,
+            amountB: amountBMax,
+            liquidity: new BN(0),
+            tickLower,
+            state: _state,
+            liquidityPool,
+            tickUpper,
+        })
 
         return {
             prepareTxs: [
@@ -287,8 +295,6 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                     serializedTx: await txb.toJSON(),
                 },
             ],
-            feeAmountA,
-            feeAmountB,
             tickLower,
             tickUpper,
         }

@@ -48,6 +48,19 @@ export class PositionFeesSchema {
         required: true,
     })
         quoteAmount: string
+
+    /**
+     * The transaction hashes that transferred the fees to the fee address after the position is closed.
+     */
+    @Field(() => [String],
+        {
+            description: "The transaction hashes that transferred the fees to the fee address after the position is closed",
+        })
+    @Prop({
+        type: [String],
+        required: false,
+    })
+        feeTransferTxHashes?: Array<string>
 }
 
 export const PositionFeesSchemaClass = SchemaFactory.createForClass(PositionFeesSchema)

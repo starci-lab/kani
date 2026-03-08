@@ -129,6 +129,7 @@ export class SolanaClientService {
     
                             // handle Solana-specific errors
                             if (isSolanaError(error)) {
+                                console.log(error.cause)
                                 //console.log(error.cause)
                                 const errorType = this.solanaGetErrorTypesService.getErrorType({
                                     error 

@@ -153,7 +153,6 @@ export class OpenPositionTaskConfirmService {
                     }
                 )
             }
-            const targetIsA = liquidityPool.tokenA.toString() === targetToken.id
             const openPositionStepIndex = job.tasks[taskIndex].openPositionStepIndex ?? 0
             const executeResult = this.superJson.parse<ExecuteOpenPositionResult>(job.tasks[taskIndex].steps?.[openPositionStepIndex].executeResult ?? "")
             const prepareResult = this.superJson.parse<PrepareOpenPositionResult>(job.tasks[taskIndex].prepareResult ?? "")
@@ -188,8 +187,6 @@ export class OpenPositionTaskConfirmService {
                                 },
                                 rentAmount: confirmResult?.rentAmount ?? new BN(0),
                                 liquidityPool,
-                                feeTargetAmount: targetIsA ? prepareResult?.feeAmountA ?? new BN(0) : prepareResult?.feeAmountB ?? new BN(0),
-                                feeQuoteAmount: targetIsA ? prepareResult?.feeAmountB ?? new BN(0) : prepareResult?.feeAmountA ?? new BN(0),
                                 targetToken,
                                 quoteToken,
                                 gasToken,

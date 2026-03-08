@@ -13,7 +13,6 @@ export enum PrimaryMongoDbCollectionRef {
     LiquidityPool = "LiquidityPoolSchema",
     Position = "PositionSchema",
     PositionSettlement = "PositionSettlementSchema",
-    Config = "ConfigSchema",
     Transaction = "TransactionSchema",
     State = "StateSchema",
     Job = "JobSchema",

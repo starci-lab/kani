@@ -30,12 +30,16 @@ import {
 import {
     CreateClosePositionTxbParams, CreateClosePositionTxbResult 
 } from "../types"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
 
 @Injectable()
 export class ClosePositionTxbService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly dayjsService: DayjsService,
+        private readonly mountStorageService: MountStorageService,
     ) {}
 
     async createClosePositionTxb(
@@ -74,10 +78,10 @@ export class ClosePositionTxbService {
                 liquidityPoolId: liquidityPool.displayId,
             })
         }
-        const targetOperationalAmount = this.primaryMemoryStorageService.
-            gasConfig.
-            gasAmountRequired[ChainId.Sui]?.
-            targetOperationalAmount
+        const targetOperationalAmount = 
+            this.mountStorageService.appConfig.gas.
+                gasAmountRequired[ChainId.Sui]?.
+                targetOperationalAmount
         if (!targetOperationalAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
                 {

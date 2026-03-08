@@ -11,10 +11,13 @@ import {
     WithdrawEnqueueService 
 } from "./withdraw-enqueue.service"
 import {
-    BalanceActionService 
+    BalanceActionService
 } from "./action.service"
 import {
-    BalanceFetcherService 
+    BalanceConvertService
+} from "./balance-convert.service"
+import {
+    BalanceFetcherService
 } from "./fetcher.service"
 import {
     SwapMathService 
@@ -28,12 +31,14 @@ import {
 import {
     SolanaBalanceService,
     SolanaBalanceFetcherService,
+    SolanaTransferFeesService,
     SolanaWithdrawActionService,
     SolanaReconcileBalanceActionService,
 } from "./solana"
 import {
     SuiBalanceService,
     SuiBalanceFetcherService,
+    SuiTransferFeesService,
     SuiWithdrawActionService,
     SuiReconcileBalanceActionService,
 } from "./sui"
@@ -50,6 +55,7 @@ export class BalanceModule extends ConfigurableModuleClass {
             SwapMathService,
             GasStatusService,
             QuoteRatioService,
+            BalanceConvertService,
         )
         
         // Add fetcher services if enabled
@@ -66,9 +72,11 @@ export class BalanceModule extends ConfigurableModuleClass {
             providers.push(
                 SolanaWithdrawActionService,
                 SolanaReconcileBalanceActionService,
+                SolanaTransferFeesService,
                 SolanaBalanceService,
                 SuiWithdrawActionService,
                 SuiReconcileBalanceActionService,
+                SuiTransferFeesService,
                 SuiBalanceService,
                 BalanceActionService,
             )

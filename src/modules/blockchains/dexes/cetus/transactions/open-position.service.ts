@@ -18,15 +18,11 @@ import {
     TargetOperationalGasAmountNotFoundException 
 } from "@modules/exceptions"
 import {
-    FeeService 
-} from "../../../math"
-import {
     SelectCoinsService 
 } from "../../../tx-builder"
 import BN from "bn.js"
 import {
-    adjustSlippage,
-    ChainId 
+    adjustSlippage 
 } from "@modules/common"
 import {
     CreateOpenPositionTxbParams,
@@ -50,7 +46,6 @@ import Decimal from "decimal.js"
 export class OpenPositionTxbService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly feeService: FeeService,
         private readonly selectCoinsService: SelectCoinsService,
         private readonly mountStorageService: MountStorageService,
         private readonly clmmLiquidityFormulaService: ClmmLiquidityFormulaService,
@@ -92,21 +87,6 @@ export class OpenPositionTxbService {
                 }
             )
         }
-        const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.sui.feeToAddress
-        const {
-            feeAmount: feeAmountA,
-            remainingAmount: remainingAmountA,
-        } = this.feeService.splitAmount({
-            amount: amountAMax,
-            chainId: bot.chainId,
-        })
-        const {
-            feeAmount: feeAmountB,
-            remainingAmount: remainingAmountB,
-        } = this.feeService.splitAmount({
-            amount: amountBMax,
-            chainId: bot.chainId,
-        })
         if (!liquidityPool.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException(
                 {
@@ -121,11 +101,13 @@ export class OpenPositionTxbService {
             tickUpper: new BN(tickUpper),
             tickCurrent: new BN(state.tickCurrent),
         })
+        const remainingAmountA = new BN(amountAMax)
+        const remainingAmountB = new BN(amountBMax)
         // we check balances of tokenA and tokenB
-        const targetOperationalAmount = this.primaryMemoryStorageService.
-            gasConfig.
-            gasAmountRequired[ChainId.Sui]?.
-            targetOperationalAmount
+        const targetOperationalAmount = 
+            this.mountStorageService.appConfig.gas.
+                gasAmountRequired[bot.chainId]?.
+                targetOperationalAmount
         if (!targetOperationalAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
                 {
@@ -153,30 +135,6 @@ export class OpenPositionTxbService {
                 requiredAmount: amountBMax,
                 suiGasAmount: new BN(targetOperationalAmount),
             })
-        const {
-            spendCoin: feeCoinA
-        } = this.selectCoinsService.splitCoin(
-            {
-                txb,
-                sourceCoin: sourceCoinA,
-                requiredAmount: feeAmountA,
-            }
-        )
-        const {
-            spendCoin: feeCoinB
-        } = this.selectCoinsService.splitCoin(
-            {
-                txb,
-                sourceCoin: sourceCoinB,
-                requiredAmount: feeAmountB,
-            }
-        )
-        txb.transferObjects(
-            [
-                feeCoinA.coinArg,
-                feeCoinB.coinArg
-            ],
-            feeToAddress)
         const {
             intergratePackageId,
             globalConfigObject,
@@ -206,8 +164,6 @@ export class OpenPositionTxbService {
         })
         return {
             txb,
-            feeAmountA,
-            feeAmountB,
         }
     }
 }

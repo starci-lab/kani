@@ -1,6 +1,5 @@
 import {
     Field,
-    Int,
     ObjectType,
 } from "@nestjs/graphql"
 import {
@@ -31,16 +30,6 @@ export class LiquidityPoolClmmStateSchema {
         type: Number, nullable: true
     })
         tickSpacing: number
-
-    @Field(() => Int,
-        {
-            description: "The tick spacing multiplier of the pool"
-        })
-    @Prop({
-        type: Number, default: 1
-    })
-        tickMultiplier: number
-
 }
 
 export const LiquidityPoolClmmStateSchemaClass = SchemaFactory.createForClass(LiquidityPoolClmmStateSchema)

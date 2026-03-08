@@ -5,10 +5,6 @@ import {
 import {
     InjectPrimaryMongoose,
     BotSchema,
-    ConfigSchema,
-    AvatarsConfig,
-    ConfigRecord,
-    ConfigId,
 } from "@modules/databases"
 import {
     Connection,
@@ -18,8 +14,8 @@ import {
     WinstonService,
 } from "@modules/winston"
 import {
-    createObjectId,
-} from "@modules/common"
+    getAppConfig,
+} from "@modules/filesystem"
 import {
     AvatarsConfigNotFoundException 
 } from "@modules/exceptions"
@@ -43,15 +39,13 @@ export class MigrateAvatarsCommand extends CommandRunner {
                 {
                 })
         
-            const avatarsConfig = await this.connection.model<ConfigSchema>(ConfigSchema.name).findById<ConfigRecord<AvatarsConfig>>(
-                createObjectId(ConfigId.Avatars)
-            )
-            if (!avatarsConfig || !avatarsConfig.value.avatarUrls || avatarsConfig.value.avatarUrls.length === 0) {
+            const avatarsConfig = getAppConfig().avatars
+            if (!avatarsConfig?.avatarUrls?.length) {
                 throw new AvatarsConfigNotFoundException({
                 })
             }
 
-            const avatarUrls = avatarsConfig.value.avatarUrls
+            const avatarUrls = avatarsConfig.avatarUrls
             // Find all bots that don't have an avatarUrl
             const botsWithoutAvatar = await this.connection.model<BotSchema>(
                 BotSchema.name

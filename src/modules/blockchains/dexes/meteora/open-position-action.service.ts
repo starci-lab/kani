@@ -167,8 +167,6 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
             positionKeyPair,
             minBinId,
             maxBinId,
-            feeAmountA,
-            feeAmountB,
         } = await this.openPositionInstructionService.createOpenPositionInstructions({
             bot,
             state: _state,
@@ -187,8 +185,6 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                     ],
                 }
             ],
-            feeAmountA,
-            feeAmountB,
             amountA,
             amountB,
             minBinId,

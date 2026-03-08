@@ -34,6 +34,7 @@ import {
     TransactionEventNotFoundException,
     TransactionType,
     LiquidityPoolClmmStateNotFoundException,
+    RangeTierNotConfiguredException,
 } from "@modules/exceptions"
 import {
     SuiExecuteService,
@@ -56,6 +57,9 @@ import {
 import {
     ChainId 
 } from "@modules/common"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
 
 /**
  * Service responsible for opening positions on Momentum DEX.
@@ -84,6 +88,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         private readonly suiStimulateService: SuiStimulateService,
         private readonly suiExecuteService: SuiExecuteService,
         private readonly suiTxService: SuiTxService,
+        private readonly mountStorageService: MountStorageService,
     ) {}
     
     /**
@@ -155,6 +160,15 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                 liquidityPoolId: liquidityPool.displayId,
             })
         }
+        // get range tier
+        const tier = this.mountStorageService.appConfig.rangeTiers.find((tier) => tier.tier === bot.rangeTier)
+        if (!tier) {
+            throw new RangeTierNotConfiguredException({
+                rangeTier: bot.rangeTier,
+            })
+        }
+        // calculate tick multiplier based on range tier and tick spacing
+        const tickMultiplier = new Decimal(tier.ticks).div(new Decimal(liquidityPool.clmmState.tickSpacing)).ceil()
         // stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: liquidityPool.tokenA.toString(),
@@ -183,7 +197,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         } = await this.tickMathService.findOptimalTickRange({
             tickCurrent: _state.tickCurrent,
             tickSpacing: new Decimal(liquidityPool.clmmState.tickSpacing),
-            tickMultiplier: new Decimal(liquidityPool.clmmState.tickMultiplier),
+            tickMultiplier,
             targetBalanceAmount: snapshotTargetBalanceAmountBN,
             quoteBalanceAmount: snapshotQuoteBalanceAmountBN,
             targetIsA,
@@ -192,11 +206,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         const amountA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
         const amountB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
         // stage: transaction building (build unsigned transaction)
-        const {
-            txb: openPositionTxb,
-            feeAmountA,
-            feeAmountB,
-        } = await this.openPositionTxbService.createOpenPositionTxb({
+        const { txb: openPositionTxb } = await this.openPositionTxbService.createOpenPositionTxb({
             txb,
             bot,
             amountA,
@@ -214,8 +224,6 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                     serializedTx: await openPositionTxb.toJSON(),
                 }
             ],
-            feeAmountA,
-            feeAmountB,
             tickLower,
             tickUpper,
             amountA,

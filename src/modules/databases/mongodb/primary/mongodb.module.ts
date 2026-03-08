@@ -14,8 +14,6 @@ import {
     SessionSchemaClass,
     BotSchema,
     BotSchemaClass,
-    ConfigSchema,
-    ConfigSchemaClass,
     StateSchema,
     StateSchemaClass,
     TransactionSchema,
@@ -225,10 +223,6 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     {
                         name: PositionSettlementSchema.name,
                         useFactory: () => PositionSettlementSchemaClass,
-                    },
-                    {
-                        name: ConfigSchema.name,
-                        useFactory: () => ConfigSchemaClass,
                     },
                     {
                         name: TransactionSchema.name,

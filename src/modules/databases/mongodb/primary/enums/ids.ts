@@ -228,6 +228,7 @@ export enum ConfigId {
     AccountLimits = "accountLimits",
     Avatars = "avatars",
     Authentication = "authentication",
+    RangeTiers = "rangeTiers",
 }
 
 export enum StateId {
@@ -304,4 +305,5 @@ registerEnumType(GraphQLTypeMarketListingId,
                 description: "The coinmarketcap market",
             },
         },
-    })
+    }
+)

@@ -16,7 +16,9 @@ import {
 import {
     PricePointStorageService 
 } from "./storage.service"
-
+import {
+    LiquidityPoolExecutionScopeBuilderService 
+} from "./builder.service"
 /**
  * TWAP module.
  * Provides services for TWAP computation.
@@ -45,6 +47,7 @@ export class PriceModule extends ConfigurableModuleClass {
                 PriceCalculationService,
                 PriceProccessService,
                 PricePointStorageService,
+                LiquidityPoolExecutionScopeBuilderService,
             ],
         }
     }

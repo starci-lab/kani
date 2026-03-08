@@ -1,19 +1,21 @@
 import {
     Injectable 
 } from "@nestjs/common"
-import { 
-    AccountLimitsConfig,
-    PrimaryMemoryStorageService
+import {
+    AccountLimitsConfig 
 } from "@modules/databases"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
 
 /**
  * Service that provides static reference data
- * such as account limits from the in-memory database.
+ * such as account limits from app config (.mount/config/app.json).
  */
 @Injectable()
 export class AccountLimitsService {
     constructor(
-        private readonly memoryStorageService: PrimaryMemoryStorageService,
+        private readonly mountStorageService: MountStorageService,
     ) {}
 
     /**
@@ -22,7 +24,7 @@ export class AccountLimitsService {
      * used for routing and liquidity aggregation.
      */
     accountLimits(): AccountLimitsConfig {
-        return this.memoryStorageService.accountLimits
+        return this.mountStorageService.appConfig.accountLimits
     }
 }
 

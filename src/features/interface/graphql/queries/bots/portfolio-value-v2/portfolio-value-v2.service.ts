@@ -124,8 +124,8 @@ export class PortfolioValueV2Service {
         }
 
         const portfolioValue: PortfolioValueV2Snapshot = {
-            excludingGas: evalResult.fundingSnapsot.excludingGas.toNumber(),
-            includingGas: evalResult.fundingSnapsot.includingGas.toNumber(),
+            excludingGas: evalResult.fundingSnapshot.excludingGas.toNumber(),
+            includingGas: evalResult.fundingSnapshot.includingGas.toNumber(),
         }
         const portfolioValueInUsd: PortfolioValueV2Snapshot = {
             excludingGas: evalResult.fundingSnapshotInUsd.excludingGas.toNumber(),

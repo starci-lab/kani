@@ -1,5 +1,8 @@
 import {
+<<<<<<< HEAD
     MarketListingId,
+=======
+>>>>>>> ba6b7fd68a6ce62640260fcb799528f2e848ab4a
     PricePoint
 } from "@modules/databases"
 
@@ -7,12 +10,8 @@ import {
  * Parameters for computing TWAP.
  */
 export interface AnalyzePriceWindowParams {
-    /** The token ID. */
-    id: string
-    /** The interval in milliseconds. */
-    intervalMs: number
-    /** Market listing ID. */
-    marketListingId: MarketListingId
+    /** Price points. */
+    pricePoints: Array<PricePoint>
 }
 
 /**
@@ -39,6 +38,7 @@ export interface TroughToNowMetrics {
     slopeFromTroughPctPerBar: number
     velFromTroughPctPerMin: number
     troughTime: number
+<<<<<<< HEAD
 }
 
 /**
@@ -84,3 +84,6 @@ export interface CalculateRegressionSlopeParams {
  * Result of regression slope calculation.
  */
 export type CalculateRegressionSlopeResult = number
+=======
+}
+>>>>>>> ba6b7fd68a6ce62640260fcb799528f2e848ab4a

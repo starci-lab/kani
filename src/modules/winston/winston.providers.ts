@@ -18,6 +18,9 @@ import {
     buildAppName,
 } from "./utils"
 
+/**
+ * Create a console transport.
+ */
 export const createConsoleTransport = (
     options: typeof OPTIONS_TYPE
 ) => {
@@ -40,6 +43,9 @@ export const createConsoleTransport = (
     })
 }
 
+/**
+ * Create a Loki transport.
+ */
 export const createLokiTransport = (
     options: typeof OPTIONS_TYPE
 ) => {

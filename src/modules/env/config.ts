@@ -564,6 +564,16 @@ export const envConfig = () => ({
                     key: "INSPECTOR_PRICE_WINDOW_STORAGE_QUERY_INTERVAL_MS", defaultValue: "250ms" 
                 }),
             },
+            builder: {
+                intervalMs: parseEnvMs({
+                    key: "INSPECTOR_PRICE_WINDOW_BUILDER_INTERVAL_MS", defaultValue: "1m" 
+                }),
+            },
+            proccess: {
+                intervalMs: parseEnvMs({
+                    key: "INSPECTOR_PRICE_WINDOW_PROCCES_INTERVAL_MS", defaultValue: "250ms" 
+                }),
+            },
             /**
              * Interval in milliseconds for analyzing a price window.
              */
@@ -583,14 +593,32 @@ export const envConfig = () => ({
                 key: "INSPECTOR_PRICE_WINDOW_MAX_GAP_MS", defaultValue: "30s" 
             }),
             momentum: {
-                minSlope: parseEnvFloat({
-                    key: "INSPECTOR_MOMENTUM_MIN_SLOPE", defaultValue: 0.001
+                dumpFromPeakPct: parseEnvFloat({
+                    key: "INSPECTOR_MOMENTUM_DUMP_FROM_PEAK_PCT", defaultValue: 3
                 }),
-                minR2: parseEnvFloat({
-                    key: "INSPECTOR_MOMENTUM_MIN_R2", defaultValue: 0.8 
+                dumpVelPctPerMin: parseEnvFloat({
+                    key: "INSPECTOR_MOMENTUM_DUMP_VEL_PCT_PER_MIN", defaultValue: 1
                 }),
-                minEfficiency: parseEnvFloat({
-                    key: "INSPECTOR_MOMENTUM_MIN_EFFICIENCY", defaultValue: 0.7 
+                maxBarsSincePeak: parseEnvInt({
+                    key: "INSPECTOR_MOMENTUM_MAX_BARS_SINCE_PEAK", defaultValue: 120
+                }),
+                maxMinutesSincePeak: parseEnvInt({
+                    key: "INSPECTOR_MOMENTUM_MAX_MINUTES_SINCE_PEAK", defaultValue: 3
+                }),
+                minVelocityPctPerMin: parseEnvFloat({
+                    key: "INSPECTOR_MOMENTUM_MIN_VELOCITY_PCT_PER_MIN", defaultValue: 1
+                }),
+                pumpFromTroughPct: parseEnvFloat({
+                    key: "INSPECTOR_MOMENTUM_PUMP_FROM_TROUGH_PCT", defaultValue: 3
+                }),
+                pumpVelPctPerMin: parseEnvFloat({
+                    key: "INSPECTOR_MOMENTUM_PUMP_VEL_PCT_PER_MIN", defaultValue: 1
+                }),
+                maxBarsSinceTrough: parseEnvInt({
+                    key: "INSPECTOR_MOMENTUM_MAX_BARS_SINCE_TROUGH", defaultValue: 120
+                }),
+                maxMinutesSinceTrough: parseEnvInt({
+                    key: "INSPECTOR_MOMENTUM_MAX_MINUTES_SINCE_TROUGH", defaultValue: 3
                 }),
             },
             metrics: {
@@ -768,10 +796,10 @@ export const envConfig = () => ({
              */
             safe: {
                 above: parseEnvFloat({
-                    key: "QUOTE_RATIO_SAFE_ABOVE", defaultValue: 0.85 
+                    key: "QUOTE_RATIO_SAFE_ABOVE", defaultValue: 0.9 
                 }),
                 below: parseEnvFloat({
-                    key: "QUOTE_RATIO_SAFE_BELOW", defaultValue: 0.15 
+                    key: "QUOTE_RATIO_SAFE_BELOW", defaultValue: 0.8
                 }),
             },
             /**
@@ -784,7 +812,7 @@ export const envConfig = () => ({
                     key: "QUOTE_RATIO_EXPECTED_ABOVE", defaultValue: 0.8 
                 }),
                 below: parseEnvFloat({
-                    key: "QUOTE_RATIO_EXPECTED_BELOW", defaultValue: 0.2 
+                    key: "QUOTE_RATIO_EXPECTED_BELOW", defaultValue: 0.6 
                 }),
             },
         },
