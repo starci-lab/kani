@@ -27,6 +27,8 @@ import {
     SendHeartbeatService
 } from "../../send-heartbeat.service"
 import {
+    ExecuteWithdrawTransactionResult,
+    PrepareTransferFeesTransactionResult,
     TransferFeesSnapshotService
 } from "@modules/blockchains"
 import {
@@ -36,6 +38,7 @@ import SuperJSON from "superjson"
 import {
     strict as assert
 } from "node:assert"
+import BN from "bn.js"
 
 /**
  * Service for the Transfer Fees Task CONFIRM step.
@@ -102,31 +105,32 @@ export class TransferFeesTaskConfirmService {
                     const task = job.tasks[taskIndex]
                     const positionId = bot.activePosition?.position?.toString?.()
                     if (positionId && task?.prepareResult && task?.steps?.length) {
-                        const prepareResult = this.superJson.parse<{ feeAmount: { toString: () => string } }>(
+                        const prepareResult = this.superJson.parse<PrepareTransferFeesTransactionResult>(
                             task.prepareResult,
                         )
-                        const feeTargetAmount = prepareResult?.feeAmount?.toString?.() ?? "0"
+                        const feeTargetAmount = prepareResult?.feeAmountTarget ?? new BN(0)
+                        const feeQuoteAmount = prepareResult?.feeAmountQuote ?? new BN(0)
                         const feeTransferTxHashes = task.steps
                             .map((step) => {
                                 const exec = step?.executeResult
-                                    ? this.superJson.parse<{ txHash?: string }>(step.executeResult)
+                                    ? this.superJson.parse<ExecuteWithdrawTransactionResult>(step.executeResult)
                                     : null
                                 return exec?.txHash
                             })
-                            .filter((h): h is string => Boolean(h))
+                            .filter((txHash): txHash is string => Boolean(txHash))
                         if (feeTransferTxHashes.length > 0) {
                             await this.transferFeesSnapshotService.updateTransferFeesRecord({
                                 botId: bot.id,
                                 positionId,
                                 feeTargetAmount,
-                                feeQuoteAmount: "0",
+                                feeQuoteAmount,
                                 feeTransferTxHashes,
                                 session: clientSession,
                             })
                         }
                     }
 
-                    if (envConfig().executor.runtime.operation?.withdraw?.stimulate) {
+                    if (envConfig().executor.runtime.operation?.transferFees?.stimulate) {
                         throw new ActionJobStimulateMongoSessionException({
                             botId: bot.id,
                             jobId: job.id,
@@ -145,7 +149,7 @@ export class TransferFeesTaskConfirmService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: job.type ?? JobType.OpenPosition,
+                    type: job.type ?? JobType.TransferFees,
                     metadata: job.metadata,
                     taskIndex,
                     taskType: TaskType.TransferFees,
@@ -157,7 +161,7 @@ export class TransferFeesTaskConfirmService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: job.type ?? JobType.OpenPosition,
+                    type: job.type ?? JobType.TransferFees,
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.TransferFees,

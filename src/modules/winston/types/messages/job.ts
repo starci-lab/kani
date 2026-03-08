@@ -250,6 +250,32 @@ export interface JobSkippedBotNotHasActivePositionMessage {
 }
 
 /**
+ * Job skipped bot position not closed message.
+ */
+export interface JobSkippedBotPositionNotClosedMessage {
+    /** Bot ID. */
+    botId: string
+    /** Job ID. */
+    jobId?: string
+    /** Job type. */
+    type: JobType
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
+}
+
+/**
+ * Job skipped bot position closed message.
+ */
+export interface JobSkippedBotPositionClosedMessage {
+    /** Bot ID. */
+    botId: string
+    /** Job type. */
+    type: JobType
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
+}
+
+/**
  * Job skipped bot not running message.
  */
 export interface JobSkippedBotNotRunningMessage {
@@ -291,6 +317,19 @@ export interface JobSkippedBotBalanceSnapshotWithinCooldownMessage {
     liquidityPoolId?: LiquidityPoolId
 }
 
+/**
+ * Job skipped balance snapshot not within cooldown message.
+ */
+export interface JobSkippedBotBalanceSnapshotNotWithinCooldownMessage {
+    /** Job ID. */
+    jobId?: string
+    /** Bot ID. */
+    botId: string
+    /** Job type. */
+    type: JobType
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
+}
 /**
  * Job skipped cannot settle position message.
  */

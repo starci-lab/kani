@@ -11,6 +11,9 @@ import {
     WithdrawEnqueueService 
 } from "./withdraw-enqueue.service"
 import {
+    TransferFeesEnqueueService 
+} from "./transfer-fees-enqueue.service"
+import {
     BalanceActionService
 } from "./action.service"
 import {
@@ -21,7 +24,7 @@ import {
 } from "./fetcher.service"
 import {
     SwapMathService 
-} from "../math/swap.service"
+} from "../math"
 import {
     GasStatusService 
 } from "./gas-status.service"
@@ -87,6 +90,7 @@ export class BalanceModule extends ConfigurableModuleClass {
             providers.push(
                 ReconcileBalanceEnqueueService,
                 WithdrawEnqueueService,
+                TransferFeesEnqueueService,
             )
         }
         

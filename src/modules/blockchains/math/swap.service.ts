@@ -60,6 +60,7 @@ import {
  */
 @Injectable()
 export class SwapMathService {
+
     constructor(
         private readonly mountStorageService: MountStorageService,
         private readonly quoteRatioService: QuoteRatioService,
@@ -117,7 +118,7 @@ export class SwapMathService {
                 {
                     amount: targetBalanceAmount,
                     currentRatio: quoteRatioResult.quoteRatio,
-                    targetRatio: new Decimal(envConfig().quote.ratio.expected.above),
+                    targetRatio: new Decimal(envConfig().quote.ratio.expected),
                     targetToken,
                     quoteToken,
                     direction: RebalanceDirection.TargetToQuote,
@@ -145,7 +146,7 @@ export class SwapMathService {
                 {
                     amount: quoteBalanceAmount,
                     currentRatio: quoteRatioResult.quoteRatio,
-                    targetRatio: new Decimal(envConfig().quote.ratio.expected.below),
+                    targetRatio: new Decimal(envConfig().quote.ratio.expected),
                     targetToken,
                     quoteToken,
                     direction: RebalanceDirection.QuoteToTarget,
@@ -207,7 +208,6 @@ export class SwapMathService {
                 quoteRatioResult,
             }
         }
-
         case QuoteRatioStatus.TargetOverweighted: {
             // Case: Target is overweighted (too much target, too little quote/gas)
             // Strategy: Swap target to quote to reduce target exposure
@@ -218,7 +218,7 @@ export class SwapMathService {
                 {
                     amount: targetBalanceAmount,
                     currentRatio: quoteRatioResult.quoteRatio,
-                    targetRatio: new Decimal(envConfig().quote.ratio.expected.below),
+                    targetRatio: new Decimal(envConfig().quote.ratio.expected),
                     targetToken,
                     quoteToken,
                     direction: RebalanceDirection.TargetToQuote,
@@ -247,7 +247,7 @@ export class SwapMathService {
                 {
                     amount: quoteBalanceAmount,
                     currentRatio: quoteRatioResult.quoteRatio,
-                    targetRatio: new Decimal(envConfig().quote.ratio.expected.below),
+                    targetRatio: new Decimal(envConfig().quote.ratio.expected),
                     targetToken,
                     quoteToken,
                     direction: RebalanceDirection.QuoteToTarget,
@@ -479,7 +479,7 @@ export class SwapMathService {
                 {
                     amount: remainingQuoteAmount,
                     currentRatio: quoteRatioResult.quoteRatio,
-                    targetRatio: new Decimal(envConfig().quote.ratio.expected.below),
+                    targetRatio: new Decimal(envConfig().quote.ratio.expected),
                     targetToken,
                     quoteToken,
                     direction: RebalanceDirection.QuoteToTarget,
@@ -541,7 +541,7 @@ export class SwapMathService {
                 {
                     amount: remainingTargetAmount,
                     currentRatio: quoteRatioResult.quoteRatio,
-                    targetRatio: new Decimal(envConfig().quote.ratio.expected.above),
+                    targetRatio: new Decimal(envConfig().quote.ratio.expected),
                     targetToken,
                     quoteToken,
                     direction: RebalanceDirection.TargetToQuote,

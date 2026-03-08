@@ -27,6 +27,7 @@ import {
 import {
     PrepareTransferFeesTransactionParams,
     PrepareTransferFeesTransactionResult,
+    EnqueueTransferFeesParams,
 } from "./transfer-fees"
 
 /**
@@ -61,4 +62,11 @@ export interface IReconcileBalanceEnqueueService {
  */
 export interface IWithdrawEnqueueService {
     enqueue(params: EnqueueWithdrawParams): Promise<void>
+}
+
+/**
+ * Core interface for transfer-fees enqueue operations.
+ */
+export interface ITransferFeesEnqueueService {
+    enqueue(params: EnqueueTransferFeesParams): Promise<void>
 }

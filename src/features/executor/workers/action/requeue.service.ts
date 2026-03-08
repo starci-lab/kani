@@ -25,7 +25,8 @@ import {
     ClosePositionEnqueueService,
     OpenPositionEnqueueService,
     ReconcileBalanceEnqueueService,
-    WithdrawEnqueueService
+    WithdrawEnqueueService,
+    TransferFeesEnqueueService,
 } from "@modules/blockchains"
 import {
     InjectPrimaryMongoose
@@ -55,6 +56,7 @@ export class ActionRequeueService implements OnApplicationBootstrap {
         private readonly closePositionEnqueueService: ClosePositionEnqueueService,
         private readonly withdrawEnqueueService: WithdrawEnqueueService,
         private readonly reconcileBalanceEnqueueService: ReconcileBalanceEnqueueService,
+        private readonly transferFeesEnqueueService: TransferFeesEnqueueService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
     ) {
@@ -162,6 +164,16 @@ export class ActionRequeueService implements OnApplicationBootstrap {
                 }
                 case JobType.ReconcileBalance: {
                     await this.reconcileBalanceEnqueueService.enqueue(
+                        {
+                            bot,
+                            oldJob,
+                            isRetry: true,
+                        }
+                    )
+                    break
+                }
+                case JobType.TransferFees: {
+                    await this.transferFeesEnqueueService.enqueue(
                         {
                             bot,
                             oldJob,

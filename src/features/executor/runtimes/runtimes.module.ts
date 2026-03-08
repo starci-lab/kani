@@ -18,6 +18,7 @@ import {
     HandleDlmmPositionCloseRequestedEventService,
     HandleClosePositionService,
     HandleReconcileBalanceService,
+    HandleTransferFeesService,
     HandleWithdrawService,
     HandleNotSyncedService,
 } from "./handlers"
@@ -51,6 +52,7 @@ export class RuntimesModule extends ConfigurableModuleClass {
                 HandleClmmPositionOpenRequestedEventService,
                 HandleDlmmPositionOpenRequestedEventService,
                 HandleReconcileBalanceService,
+                HandleTransferFeesService,
                 HandleOpenPositionService,
                 HandleClosePositionService,
                 HandleClmmPositionCloseRequestedEventService,

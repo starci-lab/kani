@@ -9,6 +9,7 @@ import {
     InjectPrimaryMongoose,
     PositionSnapshotsSchema,
     PositionPerformanceSchema,
+    BotSchema,
 } from "@modules/databases"
 import {
     DayjsService
@@ -64,6 +65,7 @@ export class ClosePositionSnapshotService {
             quoteToken,
             gasToken,
             session,
+            bot,
         }: UpdateClosePositionRecordParams
     ): Promise<UpdateClosePositionRecordResult> {
         const now = this.dayjsService.now().toDate()
@@ -143,5 +145,20 @@ export class ClosePositionSnapshotService {
             session,
         })
         assert(updatePositionResult.matchedCount > 0)
+        // update bot active position
+        const updateBotResult = await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+            {
+                _id: bot.id,
+            },
+            {
+                $set: {
+                    "activePosition.positionClosed": true,
+                },
+            },
+            {
+                session,
+            }
+        )
+        assert(updateBotResult.matchedCount > 0)
     }
 }   

@@ -23,6 +23,9 @@ export class ComputeSwapAmountsService implements OnApplicationBootstrap {
         this.computeSuiSwapAmountsWhenNeitherTargetNorQuoteIsGas()
     }
 
+    /**
+     * Compute swap amounts when neither target nor quote is gas token.
+     */
     private async computeSuiSwapAmountsWhenNeitherTargetNorQuoteIsGas() {
         // target and quote tokens are not gas tokens
         const targetTokenId = TokenId.SuiIka

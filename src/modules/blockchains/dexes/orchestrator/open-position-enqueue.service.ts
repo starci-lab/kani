@@ -353,7 +353,7 @@ export class OpenPositionEnqueueService {
             )
             if (diffMs > envConfig().executor.runtime.operation.reconcileBalance.cooldown.rescan) {
                 this.winstonService.log(
-                    WinstonLog.JobSkippedBotBalanceSnapshotWithinCooldown,
+                    WinstonLog.JobSkippedBotBalanceSnapshotNotWithinCooldown,
                     {
                         botId: bot.id,
                         type: JobType.OpenPosition,

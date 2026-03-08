@@ -121,6 +121,22 @@ export class BotActivePositionSchema extends AbstractSchema {
             nullable: true,
         })
             forceClose?: boolean
+
+        /**
+         * The created at timestamp of the active position.
+         */
+        @Field(
+            () => Boolean,
+            {
+                description: "Whether the active position is closed",
+                nullable: true,
+            },
+        )
+        @Prop({
+            type: Boolean,
+            nullable: true,
+        })
+            positionClosed?: boolean
 }
 
 /**

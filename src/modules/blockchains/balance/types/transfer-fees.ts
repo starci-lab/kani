@@ -1,5 +1,6 @@
 import {
     BotSchema,
+    JobSchema,
 } from "@modules/databases"
 import BN from "bn.js"
 import {
@@ -24,4 +25,11 @@ export interface PrepareTransferFeesTransactionResult {
     feeAmountTarget: BN
     /** Fee amount transferred (quote token, raw). */
     feeAmountQuote: BN
+}
+
+/** Parameters for enqueuing a transfer fees job. */
+export interface EnqueueTransferFeesParams {
+    bot: BotSchema
+    oldJob?: JobSchema
+    isRetry?: boolean
 }

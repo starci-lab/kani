@@ -518,6 +518,21 @@ export const envConfig = () => ({
                         key: "EXECUTOR_OPERATION_WITHDRAW_STIMULATE", defaultValue: false 
                     }),
                 },
+                transferFees: {
+                    interval: {
+                        poll: parseEnvMs({
+                            key: "EXECUTOR_OPERATION_TRANSFER_FEES_INTERVAL_POLL", defaultValue: "10s" 
+                        }),
+                    },
+                    requeue: {
+                        interval: parseEnvMs({
+                            key: "EXECUTOR_OPERATION_TRANSFER_FEES_REQUEUE_INTERVAL", defaultValue: "10s" 
+                        }),
+                    },
+                    stimulate: parseEnvBoolean({
+                        key: "EXECUTOR_OPERATION_TRANSFER_FEES_STIMULATE", defaultValue: false 
+                    }),
+                },
             },
         },
         lockAuthority: {
@@ -802,19 +817,9 @@ export const envConfig = () => ({
                     key: "QUOTE_RATIO_SAFE_BELOW", defaultValue: 0.8
                 }),
             },
-            /**
-             * Target quote ratio after a swap.
-             * This is the range we try to push the position into after swapping,
-             * so the system avoids slippage and doesn't keep re-swapping immediately.
-             */
-            expected: {
-                above: parseEnvFloat({
-                    key: "QUOTE_RATIO_EXPECTED_ABOVE", defaultValue: 0.8 
-                }),
-                below: parseEnvFloat({
-                    key: "QUOTE_RATIO_EXPECTED_BELOW", defaultValue: 0.6 
-                }),
-            },
+            expected: parseEnvFloat({
+                key: "QUOTE_RATIO_EXPECTED", defaultValue: 0.85 // 0.85% target, 0.15% quote
+            }),
         },
     },
     /** Winston log level. */

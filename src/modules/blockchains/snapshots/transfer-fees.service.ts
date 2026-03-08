@@ -57,8 +57,8 @@ export class TransferFeesSnapshotService {
                 {
                     $set: {
                         fees: {
-                            targetAmount: feeTargetAmount,
-                            quoteAmount: feeQuoteAmount,
+                            targetAmount: feeTargetAmount.toString(),
+                            quoteAmount: feeQuoteAmount.toString(),
                             feeTransferTxHashes,
                         },
                     },

@@ -217,9 +217,7 @@ import {
     ReconcileBalanceLockAuthorityNotAcquiredMessage,
     ReconcileBalanceLockAuthorityReleasedMessage,
     ReconcileBalanceSkippedActiveJobFoundInQueueMessage,
-    ReconcileBalanceSkippedBalanceSnapshotWithinCooldownMessage,
     ReconcileBalanceSkippedBotAlreadyHasActiveJobMessage,
-    ReconcileBalanceSkippedBotAlreadyHasActivePositionMessage,
     ReconcileBalanceSkippedBotNotRunningMessage,
     OpenPositionLockAuthorityNotAcquiredMessage,
     OpenPositionLockAuthorityReleasedMessage,
@@ -247,6 +245,8 @@ import {
     JobSkippedContextLoadFailedMessage,
     JobSkippedBotAlreadyHasActivePositionMessage,
     JobSkippedBotNotHasActivePositionMessage,
+    JobSkippedBotPositionNotClosedMessage,
+    JobSkippedBotPositionClosedMessage,
     JobSkippedBotNotRunningMessage,
     JobSkippedLiquidityPoolContextLoadFailedMessage,
     JobSkippedBotBalanceSnapshotWithinCooldownMessage,
@@ -267,6 +267,7 @@ import {
     ActionJobTaskConfirmedFailedMessage,
     ActionJobTaskStepSignedFailedMessage,
     ActionJobTaskStepExecutedFailedMessage,
+    JobSkippedBotBalanceSnapshotNotWithinCooldownMessage,
 } from "./types"
 
 /** Map of Winston log names to level, Loki flag, and message type. */
@@ -1967,22 +1968,6 @@ export const configMap = {
         messageType: {
         } as ReconcileBalanceSkippedBotNotRunningMessage,
     },
-    // Reconcile Balance Skipped Bot Already Has Active Position
-    [WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActivePosition]: {
-        name: WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActivePosition,
-        level: WinstonLevel.Debug,
-        loki: true,
-        messageType: {
-        } as ReconcileBalanceSkippedBotAlreadyHasActivePositionMessage,
-    },
-    // Reconcile Balance Skipped Balance Snapshot Within Cooldown
-    [WinstonLog.ReconcileBalanceSkippedBalanceSnapshotWithinCooldown]: {
-        name: WinstonLog.ReconcileBalanceSkippedBalanceSnapshotWithinCooldown,
-        level: WinstonLevel.Debug,
-        loki: true,
-        messageType: {
-        } as ReconcileBalanceSkippedBalanceSnapshotWithinCooldownMessage,
-    },
     // Reconcile Balance Skipped Bot Already Has Active Job
     [WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActiveJob]: {
         name: WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActiveJob,
@@ -2343,6 +2328,22 @@ export const configMap = {
         messageType: {
         } as JobSkippedBotNotHasActivePositionMessage,
     },
+    // Job Skipped Bot Position Not Closed
+    [WinstonLog.JobSkippedBotPositionNotClosed]: {
+        name: WinstonLog.JobSkippedBotPositionNotClosed,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedBotPositionNotClosedMessage,
+    },
+    // Job Skipped Bot Position Closed
+    [WinstonLog.JobSkippedBotPositionClosed]: {
+        name: WinstonLog.JobSkippedBotPositionClosed,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedBotPositionClosedMessage,
+    },
     // Job Skipped Bot Not Running
     [WinstonLog.JobSkippedBotNotRunning]: {
         name: WinstonLog.JobSkippedBotNotRunning,
@@ -2366,6 +2367,13 @@ export const configMap = {
         loki: true,
         messageType: {
         } as JobSkippedBotBalanceSnapshotWithinCooldownMessage,
+    },
+    [WinstonLog.JobSkippedBotBalanceSnapshotNotWithinCooldown]: {
+        name: WinstonLog.JobSkippedBotBalanceSnapshotNotWithinCooldown,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as JobSkippedBotBalanceSnapshotNotWithinCooldownMessage,
     },
     // Job Skipped Cannot Settle Position
     [WinstonLog.JobSkippedCannotSettlePosition]: {

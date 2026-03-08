@@ -2,7 +2,7 @@ import {
     Injectable
 } from "@nestjs/common"
 import {
-    EnqueueReconcileBalanceParams,
+    EnqueueTransferFeesParams,
 } from "./types"
 import {
     JobType,
@@ -38,7 +38,7 @@ import {
     DayjsService
 } from "@modules/mixin"
 import {
-    IReconcileBalanceEnqueueService
+    ITransferFeesEnqueueService
 } from "./types"
 import {
     WinstonLog,
@@ -52,15 +52,15 @@ import {
 } from "mongoose"
 
 /**
- * Service responsible for enqueuing reconcile balance jobs.
- * Handles job creation and queue management for reconcile balance operations.
+ * Service responsible for enqueuing transfer fees jobs.
+ * Handles job creation and queue management for transfer fees operations.
  *
  * @example
- * const service = new ReconcileBalanceEnqueueService(...)
- * const job = await service.enqueue({ bot, jobId })
+ * const service = new TransferFeesEnqueueService(...)
+ * const job = await service.enqueue({ bot })
  */
 @Injectable()
-export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueService {
+export class TransferFeesEnqueueService implements ITransferFeesEnqueueService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
@@ -75,16 +75,16 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
     }
 
     /**
-     * Enqueues a reconcile balance job.
+     * Enqueues a transfer fees job.
      *
-     * @param param - Parameters for enqueuing reconcile balance job
+     * @param param - Parameters for enqueuing transfer fees job
      * @returns BullMQ job instance
      *
      * @example
-     * const job = await service.enqueue({ bot, jobId })
+     * const job = await service.enqueue({ bot })
      */
     async enqueue(
-        params: EnqueueReconcileBalanceParams
+        params: EnqueueTransferFeesParams
     ) {
         const { bot, oldJob, isRetry } = params
         if (!await this.validate(params)) {
@@ -98,7 +98,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                 const session = await this.connection.startSession()
                 await session.withTransaction(
                     async () => {
-                    // persist job record in database
+                        // persist job record in database
                         const [jobRaw] = await this.connection.model<JobSchema>(
                             JobSchema.name
                         ).create(
@@ -106,7 +106,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                                 {
                                     _id: jobId,
                                     bot: bot.id,
-                                    type: JobType.ReconcileBalance,
+                                    type: JobType.TransferFees,
                                     status: JobStatus.Running,
                                     executor: envConfig().executor.id,
                                     startedAt: this.dayjsService.now().toDate(),
@@ -129,7 +129,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                                         activeJob: {
                                             job: job.id,
                                             queuedAt: this.dayjsService.now().toDate(),
-                                            jobType: JobType.ReconcileBalance,
+                                            jobType: JobType.TransferFees,
                                         },
                                     }
                                 },
@@ -143,18 +143,17 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
         
             // build payload and enqueue job
             const payload: ActionPayload = {
-                type: JobType.ReconcileBalance,
+                type: JobType.TransferFees,
                 jobId: jobId ?? "",
                 botId: bot.id,
                 isRetry,
                 tasks: [
                     {
-                    /** Reconcile balance task */
-                        type: TaskType.ReconcileBalance,
+                        /** Transfer fees task */
+                        type: TaskType.TransferFees,
                         payload: {
-                            /** Payload for reconcile balance task */
-                            swap: true,
-                            reconcile: true,
+                            /** Payload for transfer fees task */
+                            reconcile: false,
                         },
                     },
                 ],
@@ -172,7 +171,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                     {
                         botId: bot.id,
                         jobId: jobId ?? "",
-                        type: JobType.ReconcileBalance,
+                        type: JobType.TransferFees,
                     }
                 )
             } else {
@@ -181,7 +180,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                     {
                         botId: bot.id,
                         jobId: jobId ?? "",
-                        type: JobType.ReconcileBalance,
+                        type: JobType.TransferFees,
                     }
                 )
             }
@@ -191,7 +190,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                     WinstonLog.JobEnqueueFailed,
                     {
                         botId: bot.id,
-                        type: JobType.ReconcileBalance,
+                        type: JobType.TransferFees,
                         error: error.message,
                     }
                 )
@@ -201,7 +200,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                     {
                         botId: bot.id,
                         jobId: oldJob?.id ?? "",
-                        type: JobType.ReconcileBalance,
+                        type: JobType.TransferFees,
                         error: error.message,
                     }
                 )
@@ -215,51 +214,36 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
     }
 
     /**
-     * Validate the reconcile-balance job.
+     * Validate the transfer-fees job.
      * 
-     * @param bot - The bot.
-     * @param oldJob - The old job.
+     * @param params - The parameters for validation
      * @returns True if the job is valid, false otherwise.
      */
     private async validate(
         {
             bot,
             oldJob,
-            isRetry
-        }: EnqueueReconcileBalanceParams
+            isRetry = false
+        }: EnqueueTransferFeesParams
     ): Promise<boolean> {
-        // Skip if bot is not running
-        if (!bot.running && !isRetry) {
+        // Skip if bot do not have an active position
+        if (!bot.activePosition && !isRetry) {
             this.winstonService.log(
-                WinstonLog.JobSkippedBotNotRunning,
+                WinstonLog.JobSkippedBotNotHasActivePosition,
                 {
                     botId: bot.id,
-                    type: JobType.ReconcileBalance,
-                    jobId: oldJob?.id,
+                    type: JobType.TransferFees,
                 }
             )
             return false
         }
-        // Skip if bot has an active position
-        if (bot.activePosition && !bot.activePosition.positionClosed && !isRetry) {
+        // Skip if bot position is not closed
+        if (!bot.activePosition || !bot.activePosition.positionClosed && !isRetry) {
             this.winstonService.log(
-                WinstonLog.JobSkippedBotAlreadyHasActivePosition,
+                WinstonLog.JobSkippedBotPositionNotClosed,
                 {
                     botId: bot.id,
-                    type: JobType.ReconcileBalance,
-                    jobId: oldJob?.id,
-                }
-            )
-            return false
-        }
-        // Skip if bot has an active job
-        if (bot.activeJob && !isRetry) {
-            this.winstonService.log(
-                WinstonLog.JobSkippedBotAlreadyHasActiveJob,
-                {
-                    botId: bot.id,
-                    jobId: bot.activeJob.job.toString(),
-                    type: JobType.ReconcileBalance,
+                    type: JobType.TransferFees,
                 }
             )
             return false
@@ -270,17 +254,30 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                 this.dayjsService.from(bot.balanceSnapshots.snapshotAt),
                 "millisecond"
             )
-            if (diffMs <= envConfig().executor.runtime.operation.reconcileBalance.cooldown.rescan) {
+            if (diffMs > envConfig().executor.runtime.operation.reconcileBalance.cooldown.rescan) {
                 this.winstonService.log(
-                    WinstonLog.JobSkippedBotBalanceSnapshotWithinCooldown,
+                    WinstonLog.JobSkippedBotBalanceSnapshotNotWithinCooldown,
                     {
                         botId: bot.id,
-                        type: JobType.ReconcileBalance,
+                        type: JobType.TransferFees,
                         jobId: oldJob?.id,
                     }
                 )
                 return false
             }
+        }
+
+        // Skip if bot has an active job
+        if (bot.activeJob && !isRetry) {
+            this.winstonService.log(
+                WinstonLog.JobSkippedBotAlreadyHasActiveJob,
+                {
+                    botId: bot.id,
+                    jobId: bot.activeJob.job.toString(),
+                    type: JobType.TransferFees,
+                }
+            )
+            return false
         }
         // Wait to ensure no job for this bot is already in the queue
         const bullmqJob = await this.actionQueue.getJob(bot.id)
@@ -289,7 +286,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                 WinstonLog.JobSkippedFoundInQueue,
                 {
                     botId: bot.id,
-                    type: JobType.ReconcileBalance,
+                    type: JobType.TransferFees,
                     bullmqJobId: bullmqJob.id ?? "",
                     jobId: oldJob?.id,
                 }
@@ -307,7 +304,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                 WinstonLog.JobSkippedBotAuthorityNotAcquired,
                 {
                     botId: bot.id,
-                    type: JobType.ReconcileBalance,
+                    type: JobType.TransferFees,
                     jobId: oldJob?.id,
                 }
             )

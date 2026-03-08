@@ -99,14 +99,6 @@ export interface ReconcileBalanceSkippedBotNotRunningMessage {
     botId: string
 }
 
-export interface ReconcileBalanceSkippedBotAlreadyHasActivePositionMessage {
-    botId: string
-}
-
-export interface ReconcileBalanceSkippedBalanceSnapshotWithinCooldownMessage {
-    botId: string
-}
-
 export interface ReconcileBalanceSkippedBotAlreadyHasActiveJobMessage {
     botId: string
 }

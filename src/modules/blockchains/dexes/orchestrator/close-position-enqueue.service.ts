@@ -279,6 +279,18 @@ export class ClosePositionEnqueueService {
             )
             return false
         }
+        // Skip if bot position is not closed
+        if (bot.activePosition?.positionClosed && !isRetry) {
+            this.winstonService.log(
+                WinstonLog.JobSkippedBotPositionClosed,
+                {
+                    botId: bot.id,
+                    type: JobType.ClosePosition,
+                    liquidityPoolId: liquidityPool.displayId,
+                }
+            )
+            return false
+        }
         // Skip if bot has an active job
         if (bot.activeJob && !isRetry) {
             this.winstonService.log(
