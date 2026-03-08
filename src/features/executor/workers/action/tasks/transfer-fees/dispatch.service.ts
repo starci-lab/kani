@@ -59,11 +59,15 @@ export class TransferFeesTaskDispatchService {
         let context: LoadJobContextResult | null = null
 
         do {
-            const [_context,
-                error] = await this.asyncService.resolveTuple(
-                this.jobContextService.load({
-                    jobId, botId 
-                }),
+            const [
+                _context,
+                error
+            ] = await this.asyncService.resolveTuple(
+                this.jobContextService.load(
+                    {
+                        jobId, botId 
+                    }
+                ),
             )
             context = _context
             if (error) {
