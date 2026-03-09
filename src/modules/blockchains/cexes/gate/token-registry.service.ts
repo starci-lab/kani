@@ -6,9 +6,9 @@ import {
     MarketListingSchema,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
-import {
+import type {
     GateTokenPrice,
-    GateTokenPriceData,
+    ResolveTokenPricesParams,
 } from "./types"
 
 /**
@@ -71,7 +71,7 @@ export class GateTokenRegistryService {
      * @example
      * const prices = service.resolveTokenPrices({ tokenPriceDataArray: gateData })
      */
-    resolveTokenPrices({ tokenPriceDataArray }: { tokenPriceDataArray: Array<GateTokenPriceData> }): Array<GateTokenPrice> {
+    resolveTokenPrices({ tokenPriceDataArray }: ResolveTokenPricesParams): Array<GateTokenPrice> {
         // find all tokens with Gate.io market listings
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             marketListings: {

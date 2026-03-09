@@ -4,8 +4,8 @@
  */
 export * from "./gate.module"
 export * from "./last-price.service"
-export * from "./order-book.service"
 export * from "./token-registry.service"
+export * from "./trade-volume.service"
 export * from "./types"
 
 

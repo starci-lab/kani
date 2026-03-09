@@ -4,9 +4,10 @@ import {
 import {
     MarketListingId, PrimaryMemoryStorageService 
 } from "@modules/databases"
-import {
-    BinanceTokenPrice, BinanceTokenPriceData 
-} from "./types/token-price"
+import type {
+    BinanceTokenPrice,
+    GetBinanceTokenPricesParams,
+} from "./types"
 
 /**
  * Service responsible for managing Binance token registry and symbol mappings.
@@ -15,7 +16,7 @@ import {
  * @example
  * const service = new BinanceTokenRegistryService(...)
  * const symbols = service.getBinanceSymbols()
- * const prices = service.getBinanceTokenPrices(tokenPriceDataArray)
+ * const prices = service.getBinanceTokenPrices({ tokenPriceDataArray: binanceData })
  */
 @Injectable()
 export class BinanceTokenRegistryService {
@@ -66,7 +67,9 @@ export class BinanceTokenRegistryService {
      * @example
      * const prices = service.getBinanceTokenPrices({ tokenPriceDataArray: binanceData })
      */
-    getBinanceTokenPrices({ tokenPriceDataArray }: { tokenPriceDataArray: Array<BinanceTokenPriceData> }): Array<BinanceTokenPrice> {
+    getBinanceTokenPrices({
+        tokenPriceDataArray,
+    }: GetBinanceTokenPricesParams): Array<BinanceTokenPrice> {
         // find all tokens with Binance market listings
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             marketListings: {

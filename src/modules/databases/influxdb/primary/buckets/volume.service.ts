@@ -12,10 +12,10 @@ import {
     InjectPrimaryInfluxdb 
 } from "../influxdb.decorators"
 import {
-    PricePoint,
-    QueryInfluxdbPriceBucketAsyncIteratorParams,
-    QueryInfluxdbPriceBucketPromiseParams,
-    WriteInfluxdbPriceBucketParams,
+    QueryInfluxdbVolumeBucketAsyncIteratorParams,
+    QueryInfluxdbVolumeBucketPromiseParams,
+    VolumePoint,
+    WriteInfluxdbVolumeBucketParams,
 } from "../types"
 import {
     DayjsService 
@@ -34,12 +34,12 @@ import {
 } from "rxjs"
 
 /**
- * Service for the primary InfluxDB price bucket.
+ * Service for the primary InfluxDB volume bucket.
  */
 @Injectable()
-export class PrimaryInfluxdbPriceBucketService {
+export class PrimaryInfluxdbVolumeBucketService {
     /**
-     * Constructor for the PrimaryInfluxdbPriceBucketService.
+     * Constructor for the PrimaryInfluxdbVolumeBucketService.
      * @param influx - The InfluxDB instance.
      */
     constructor(
@@ -50,15 +50,15 @@ export class PrimaryInfluxdbPriceBucketService {
     ) {
     }
     /**
-     * Write a price to the primary InfluxDB price bucket.
-     * @param params - The parameters for the price.
+     * Write a volume to the primary InfluxDB volume bucket.
+     * @param params - The parameters for the volume.
      */
     async write(
         {
             id,
-            price,
+            volume,
             cexId,
-        }: WriteInfluxdbPriceBucketParams
+        }: WriteInfluxdbVolumeBucketParams
     ) 
     {
         if (!this.influxdbLifecycleService.initialized) {
@@ -67,7 +67,7 @@ export class PrimaryInfluxdbPriceBucketService {
             })
         }
         // create the point
-        const point = Point.measurement("price")
+        const point = Point.measurement("volume")
             .setTag(
                 "id",
                 id)
@@ -76,8 +76,8 @@ export class PrimaryInfluxdbPriceBucketService {
                 cexId
             )
             .setField(
-                "price",
-                price.toNumber()
+                "volume",
+                volume.toNumber()
             )
             .setTimestamp(
                 this.dayjsService.now().toDate()
@@ -92,16 +92,16 @@ export class PrimaryInfluxdbPriceBucketService {
     }
 
     /**
-     * Get a price from the primary InfluxDB price bucket.
-     * @param params - The parameters for the price.
+     * Get a volume from the primary InfluxDB volume bucket.
+     * @param params - The parameters for the volume.
      */
     queryAsyncIterator(
         {
             id,
             intervalMs,
             cexId,
-        }: QueryInfluxdbPriceBucketAsyncIteratorParams
-    ): AsyncIterableIterator<PricePoint> {
+        }: QueryInfluxdbVolumeBucketAsyncIteratorParams
+    ): AsyncIterableIterator<VolumePoint> {
         if (!this.influxdbLifecycleService.initialized) {
             throw new InfluxDBNotInitializedException({
                 database: envConfig().databases.influxdb.primary.database,
@@ -109,15 +109,13 @@ export class PrimaryInfluxdbPriceBucketService {
         }
         // build the SQL query
         const sql = `
-        SELECT id, cex_id, price, time
-        FROM price
+        SELECT id, cex_id, volume, time
+        FROM volume
         WHERE id = $id
         AND cex_id = $cexId
         AND time >= now() - interval '${intervalMs} ms'
         ORDER BY time ASC
       `
-        // InfluxDB 3 client supports params in recent versions; if yours doesn't,
-        // you'll need the fallback below.
         return this.influxdbClient.query(
             sql,
             envConfig().databases.influxdb.primary.database,
@@ -127,21 +125,20 @@ export class PrimaryInfluxdbPriceBucketService {
                     cexId
                 },
             }
-        ) as AsyncIterableIterator<PricePoint>
+        ) as AsyncIterableIterator<VolumePoint>
     }
 
     /**
-     * Query a price from the primary InfluxDB price bucket.
-     * @param params - The parameters for the price.
+     * Query a volume from the primary InfluxDB volume bucket.
+     * @param params - The parameters for the volume.
      */
     async queryPromise(
         {
             id,
             intervalMs,
             cexId,
-        }: QueryInfluxdbPriceBucketPromiseParams
-    ): Promise<Array<PricePoint>> {
-        // query the price points
+        }: QueryInfluxdbVolumeBucketPromiseParams
+    ): Promise<Array<VolumePoint>> {
         const asyncIterator = this.queryAsyncIterator(
             {
                 id,
@@ -149,35 +146,6 @@ export class PrimaryInfluxdbPriceBucketService {
                 cexId,
             }
         )
-        // convert the async iterator to an array of price points
         return await lastValueFrom(from(asyncIterator).pipe(toArray()))
-    }
-
-    /**
-     * Check if the price window is continuous.
-     * @param pricePoints - The price points.
-     * @param maxGapMs - The maximum gap in milliseconds.
-     * @returns True if the price window is continuous, false otherwise.
-     */
-    public isPriceWindowContinuous(
-        pricePoints: Array<PricePoint>
-    ): boolean {
-        if (pricePoints.length < envConfig().inspector.priceWindow.minSamples) {
-            return true
-        }
-        for (let i = 1; i < pricePoints.length; i++) {
-            const prev = typeof pricePoints[i - 1].time === "number"
-                ? pricePoints[i - 1].time
-                : new Date(pricePoints[i - 1].time).getTime()
-      
-            const curr = typeof pricePoints[i].time === "number"
-                ? pricePoints[i].time
-                : new Date(pricePoints[i].time).getTime()
-      
-            if (curr - prev > envConfig().inspector.priceWindow.maxGapMs) {
-                return true
-            }
-        }
-        return false
     }
 }

@@ -12,7 +12,6 @@ import {
 } from "./pyth.decorators"
 import {
     MarketListingId,
-    PrimaryInfluxdbPriceBucketService
 } from "@modules/databases"
 import BN from "bn.js"
 import {
@@ -67,7 +66,6 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
         private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
         private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
         private readonly dayjsService: DayjsService,
-        private readonly primaryInfluxdbPriceBucketService: PrimaryInfluxdbPriceBucketService,
     ) { }
 
     /**
@@ -180,14 +178,6 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                                             {
                                                 id: data.id,
                                                 price: data.price,
-                                                marketListingId: MarketListingId.Pyth,
-                                            }
-                                        )
-                                        // Update influxdb with new price
-                                        this.primaryInfluxdbPriceBucketService.write(
-                                            {
-                                                id: data.id,
-                                                price: new Decimal(data.price),
                                                 marketListingId: MarketListingId.Pyth,
                                             }
                                         )

@@ -7,9 +7,10 @@ import {
     PrimaryMemoryStorageService,
     TokenId,
 } from "@modules/databases"
-import {
+import type {
     BybitTokenPrice,
-    BybitTokenPriceData,
+    GetTokenIdBySymbolParams,
+    ResolveTokenPricesParams,
 } from "./types"
 
 /**
@@ -72,7 +73,7 @@ export class BybitTokenRegistryService {
      * @example
      * const prices = service.resolveTokenPrices({ tokenPriceDataArray: bybitData })
      */
-    resolveTokenPrices({ tokenPriceDataArray }: { tokenPriceDataArray: Array<BybitTokenPriceData> }): Array<BybitTokenPrice> {
+    resolveTokenPrices({ tokenPriceDataArray }: ResolveTokenPricesParams): Array<BybitTokenPrice> {
         // find all tokens with Bybit market listings
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             marketListings: {
@@ -115,7 +116,7 @@ export class BybitTokenRegistryService {
      * @example
      * const tokenId = service.getTokenIdBySymbol({ symbol: "BTCUSDT" })
      */
-    getTokenIdBySymbol({ symbol }: { symbol: string }): TokenId | undefined {
+    getTokenIdBySymbol({ symbol }: GetTokenIdBySymbolParams): TokenId | undefined {
         // find token by Bybit symbol
         const token = this.primaryMemoryStorageService.tokenCollection.findOne({
             marketListings: {

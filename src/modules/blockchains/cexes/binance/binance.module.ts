@@ -8,11 +8,11 @@ import {
     BinanceLastPriceService 
 } from "./last-price.service"
 import {
-    BinanceOrderBookService 
-} from "./order-book.service"
-import {
     BinanceTokenRegistryService 
 } from "./token-registry.service"
+import {
+    BinanceTradeVolumeService 
+} from "./trade-volume.service"
 
 /**
  * Module for Binance exchange integration.
@@ -38,8 +38,8 @@ export class BinanceModule extends ConfigurableModuleClass {
         // register all Binance services
         const providers = [
             BinanceLastPriceService,
-            BinanceOrderBookService,
             BinanceTokenRegistryService,
+            BinanceTradeVolumeService,
         ]
         
         return {

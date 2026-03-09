@@ -18,8 +18,14 @@ export interface GateTokenPrice {
  * Raw token price data received from Gate.io API.
  */
 export interface GateTokenPriceData {
-    /** Trading symbol (e.g., "SOL_USDT"). */
+    /** Trading symbol (e.g. "SOL_USDT"). */
     symbol: string
     /** Token price. */
     price: number
+}
+
+/** Params for resolving Gate.io token prices. */
+export interface ResolveTokenPricesParams {
+    /** Token price data from Gate.io API. */
+    tokenPriceDataArray: Array<GateTokenPriceData>
 }

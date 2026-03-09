@@ -9,7 +9,7 @@ import {
 } from "./influxdb.providers"
 import {
     PrimaryInfluxdbPriceBucketService,
-    PrimaryInfluxdbWindowResultBucketService,
+    PrimaryInfluxdbVolumeBucketService,
 } from "./buckets"
 import {
     PrimaryInfluxdbLifecycleService 
@@ -31,7 +31,7 @@ export class PrimaryInfluxdbModule extends ConfigurableModuleClass {
         const providers: Array<Provider> = [
             createInfluxdbPrimaryProvider(),
             PrimaryInfluxdbPriceBucketService,
-            PrimaryInfluxdbWindowResultBucketService,
+            PrimaryInfluxdbVolumeBucketService,
             PrimaryInfluxdbLifecycleService,
         ]
         // return the dynamic module

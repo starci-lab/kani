@@ -4,6 +4,7 @@ import {
     OnApplicationBootstrap,
 } from "@nestjs/common"
 import {
+    CexId,
     MarketListingId,
     PrimaryInfluxdbPriceBucketService
 } from "@modules/databases"
@@ -42,7 +43,14 @@ import {
 import {
     MODULE_OPTIONS_TOKEN, OPTIONS_TYPE
 } from "./bybit.module-definition"
-  
+import type {
+    BybitTickerUpdate, BybitWsSubscribeResult 
+} from "./types"
+
+/**
+ * Subscribes to Bybit spot ticker stream and writes last prices to cache, InfluxDB, and events.
+ * @returns void
+ */
 @Injectable()
 export class BybitLastPriceService implements OnApplicationBootstrap {
     constructor(
@@ -59,10 +67,14 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
       private readonly options: typeof OPTIONS_TYPE,
     ) {}
   
+    /**
+     * Bootstraps last-price stream: chunks symbols, opens WS, subscribes to tickers, processes updates.
+     * @returns void
+     */
     onApplicationBootstrap() {
         const symbols = this.bybitTokenRegistryService.getSymbols()
         if (!symbols.length) return
-        // Split symbols into chunks (Bybit has a limit on subscription args)
+        // split symbols into chunks (Bybit limit on subscription args)
         const batches = _.chunk(
             symbols,
             envConfig().cexes.bybit.chunks.lastPrice
@@ -135,16 +147,10 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                             try {
                                 const parsed = JSON.parse(data.toString()) as BybitTickerUpdate | BybitWsSubscribeResult
                                 if ("success" in parsed) {
-                                    if (!parsed.success) {
-                                        continue
-                                    }
-                                    // subscription ACK
-                                    continue
+                                    if (!parsed.success) continue
+                                    continue // subscription ACK
                                 }
-
-                                if (!("data" in parsed)) {
-                                    continue
-                                }
+                                if (!("data" in parsed)) continue
 
                                 const tokenPrices = this.bybitTokenRegistryService.resolveTokenPrices({
                                     tokenPriceDataArray: [
@@ -171,7 +177,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                                                 this.primaryInfluxdbPriceBucketService.write({
                                                     id: tokenPrice.id,
                                                     price: new Decimal(tokenPrice.price),
-                                                    marketListingId: MarketListingId.Bybit,
+                                                    cexId: CexId.Bybit,
                                                 }),
                                                 this.eventEmitterService.emit(
                                                     {
@@ -211,38 +217,4 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
             })
         }
     }
-}
-  
-// Bybit WS v5: ticker update payload
-export interface BybitTickerUpdate {
-    topic: string;         // e.g., "tickers.BTCUSDT"
-    type: string;          // e.g., "snapshot" or "delta" :contentReference[oaicite:1]{index=1}
-    ts: number;            // timestamp in milliseconds :contentReference[oaicite:2]{index=2}
-    cs?: number;           // cross sequence (optional) :contentReference[oaicite:3]{index=3}
-    data: BybitTickerData;
-  }
-  
-export interface BybitTickerData {
-    symbol: string;          // e.g., "BTCUSDT"
-    tickDirection?: string;  // e.g., "PlusTick" or "MinusTick" :contentReference[oaicite:4]{index=4}
-    price24hPcnt: string;    // percentage change last 24h :contentReference[oaicite:5]{index=5}
-    lastPrice: string;       // last price :contentReference[oaicite:6]{index=6}
-    prevPrice24h?: string;   // price 24h ago :contentReference[oaicite:7]{index=7}
-    highPrice24h?: string;   // highest price last 24h :contentReference[oaicite:8]{index=8}
-    lowPrice24h?: string;    // lowest price last 24h :contentReference[oaicite:9]{index=9}
-    bid1Price?: string;      // best bid price :contentReference[oaicite:10]{index=10}
-    bid1Size?: string;       // best bid size :contentReference[oaicite:11]{index=11}
-    ask1Price?: string;      // best ask price :contentReference[oaicite:12]{index=12}
-    ask1Size?: string;       // best ask size :contentReference[oaicite:13]{index=13}
-    volume24h?: string;      // volume last 24h :contentReference[oaicite:14]{index=14}
-    turnover24h?: string;    // turnover last 24h :contentReference[oaicite:15]{index=15}
-}
-  
-
-// Interface for Bybit WebSocket subscription confirmation
-export interface BybitWsSubscribeResult {
-    success: boolean;       // true if subscription succeeded
-    ret_msg: string;        // return message from server, e.g., "subscribe"
-    conn_id: string;        // unique connection id for the WebSocket session
-    op: "subscribe" | string; // operation type, usually "subscribe"
 }

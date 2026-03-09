@@ -17,3 +17,8 @@ export const BYBIT_LAST_PRICE_STREAM_NAME = "bybit-last-price"
  * Stream name identifier for Bybit order book updates.
  */
 export const BYBIT_ORDER_BOOK_STREAM_NAME = "bybit-order-book"
+
+/**
+ * Stream name identifier for Bybit trade volume (per-fill volume).
+ */
+export const BYBIT_TRADE_VOLUME_STREAM_NAME = "bybit-trade-volume"

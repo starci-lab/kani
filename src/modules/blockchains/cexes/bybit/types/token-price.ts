@@ -18,8 +18,20 @@ export interface BybitTokenPrice {
  * Raw token price data received from Bybit API.
  */
 export interface BybitTokenPriceData {
-    /** Trading symbol (e.g., "BTCUSDT"). */
+    /** Trading symbol (e.g. "BTCUSDT"). */
     symbol: string
     /** Token price. */
     price: number
+}
+
+/** Params for resolving Bybit token prices. */
+export interface ResolveTokenPricesParams {
+    /** Token price data from Bybit API. */
+    tokenPriceDataArray: Array<BybitTokenPriceData>
+}
+
+/** Params for getting token ID by Bybit symbol. */
+export interface GetTokenIdBySymbolParams {
+    /** Bybit trading symbol. */
+    symbol: string
 }

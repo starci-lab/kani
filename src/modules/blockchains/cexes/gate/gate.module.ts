@@ -13,6 +13,9 @@ import {
 import {
     GateTokenRegistryService 
 } from "./token-registry.service"
+import {
+    GateTradeVolumeService 
+} from "./trade-volume.service"
 
 /**
  * Module for Gate.io exchange integration.
@@ -41,6 +44,7 @@ export class GateModule extends ConfigurableModuleClass {
             GateLastPriceService,
             GateOrderBookService,
             GateTokenRegistryService,
+            GateTradeVolumeService,
         ]
         
         return {

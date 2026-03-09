@@ -8,11 +8,11 @@ import {
     BybitLastPriceService 
 } from "./last-price.service"
 import {
-    BybitOrderBookService 
-} from "./order-book.service"
-import {
     BybitTokenRegistryService 
 } from "./token-registry.service"
+import {
+    BybitTradeVolumeService 
+} from "./trade-volume.service"
 
 /**
  * Module for Bybit exchange integration.
@@ -39,8 +39,8 @@ export class BybitModule extends ConfigurableModuleClass {
         // register all Bybit services
         const providers = [
             BybitLastPriceService,
-            BybitOrderBookService,
             BybitTokenRegistryService,
+            BybitTradeVolumeService,
         ]
         
         return {

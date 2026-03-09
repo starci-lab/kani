@@ -5,43 +5,58 @@ import {
 } from "@nestjs/common"
 import {
     BINANCE_LAST_PRICE_STREAM_NAME,
-    BINANCE_WS_URL
+    BINANCE_WS_URL,
 } from "./constants"
 import {
+    CexId,
     MarketListingId,
-    PrimaryInfluxdbPriceBucketService
+    PrimaryInfluxdbPriceBucketService,
 } from "@modules/databases"
 import {
-    AggregatedTokenPriceCacheService
+    AggregatedTokenPriceCacheService,
 } from "@modules/cache"
 import {
-    envConfig
+    envConfig,
 } from "@modules/env"
 import {
-    WinstonLog, WinstonService
+    WinstonLog,
+    WinstonService,
 } from "@modules/winston"
 import {
-    BinanceTokenRegistryService
+    BinanceTokenRegistryService,
 } from "./token-registry.service"
+import type {
+    NullTicker24hrStream,
+    Ticker24hrStream,
+} from "./types"
 import _ from "lodash"
 import {
-    AsyncService, DayjsService, RetryService
+    AsyncService,
+    DayjsService,
+    RetryService,
 } from "@modules/mixin"
 import {
-    WebSocketStreamConnection, StreamAsyncIteratorService
+    WebSocketStreamConnection,
+    StreamAsyncIteratorService,
 } from "@modules/stream-async-iterator"
 import {
-    EventEmitterService, EventName
+    EventEmitterService,
+    EventName,
 } from "@modules/event"
 import Decimal from "decimal.js"
 import {
-    Dayjs
+    Dayjs,
 } from "dayjs"
 import {
-    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE
+    MODULE_OPTIONS_TOKEN,
+    OPTIONS_TYPE,
 } from "./binance.module-definition"
+
 /**
  * Service for handling Binance last price data.
+ *
+ * @example
+ * Service subscribes to ticker stream on bootstrap and writes prices to cache and InfluxDB.
  */
 @Injectable()
 export class BinanceLastPriceService implements OnApplicationBootstrap {
@@ -61,11 +76,14 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
     }
 
     /**
+     * Subscribes to Binance ticker stream per batch and writes last price to cache, events, and InfluxDB.
+     *
+     * @returns void
      */
     onApplicationBootstrap(): void {
-        // get all Binance symbols
+        // get all Binance symbols for ticker stream
         const symbols = this.binanceTokenRegistryService.getBinanceSymbols()
-        // split symbols into batches based on configuration
+        // split symbols into batches from config
         const batches = _.chunk(
             symbols,
             envConfig().cexes.binance.chunks.lastPrice
@@ -169,20 +187,19 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
 
                             // extract symbol from stream name
                             const streamSymbol = parsed.stream.split("@")[0]
-
                             // get token prices from registry
-                            const tokenPrices = this.binanceTokenRegistryService.getBinanceTokenPrices({
-                                tokenPriceDataArray: [
-                                    {
-                                        price: parseFloat(parsed.data.c),
-                                        symbol: streamSymbol,
-                                    }
-                                ]
-                            })
-
+                            const tokenPrices = this.binanceTokenRegistryService.getBinanceTokenPrices(
+                                {
+                                    tokenPriceDataArray: [
+                                        {
+                                            price: parseFloat(parsed.data.c),
+                                            symbol: streamSymbol,
+                                        }
+                                    ]
+                                }
+                            )
                             // reset timeout to keep connection alive
                             resetTimeout()
-
                             // update token prices in cache and emit events
                             await this.asyncService.allIgnoreError(
                                 tokenPrices.map(
@@ -212,7 +229,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                                 {
                                                     id: tokenPrice.id,
                                                     price: new Decimal(tokenPrice.price),
-                                                    marketListingId: MarketListingId.Binance,
+                                                    cexId: CexId.Binance,
                                                 }
                                             )
                                         ])
@@ -235,76 +252,4 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
             })
         }
     }
-}
-
-/**
- * Represents a 24-hour ticker event from Binance WebSocket stream.
- */
-interface Ticker24hrEvent {
-    /** Event type, e.g., "24hrTicker". */
-    e: string
-    /** Event time (timestamp). */
-    E: number
-    /** Symbol, e.g., "SUIUSDT". */
-    s: string
-    /** Price change. */
-    p: string
-    /** Price change percent. */
-    P: string
-    /** Weighted average price. */
-    w: string
-    /** Previous day's close price. */
-    x: string
-    /** Current close price. */
-    c: string
-    /** Close trade quantity. */
-    Q: string
-    /** Best bid price. */
-    b: string
-    /** Best bid quantity. */
-    B: string
-    /** Best ask price. */
-    a: string
-    /** Best ask quantity. */
-    A: string
-    /** Open price. */
-    o: string
-    /** High price. */
-    h: string
-    /** Low price. */
-    l: string
-    /** Total traded base asset volume. */
-    v: string
-    /** Total traded quote asset volume. */
-    q: string
-    /** Statistics open time. */
-    O: number
-    /** Statistics close time. */
-    C: number
-    /** First trade ID. */
-    F: number
-    /** Last trade ID. */
-    L: number
-    /** Total number of trades. */
-    n: number
-}
-
-/**
- * Represents a ticker stream message from Binance WebSocket.
- */
-interface Ticker24hrStream {
-    /** Stream name, e.g., "suiusdt@ticker". */
-    stream: string
-    /** Detailed ticker data. */
-    data: Ticker24hrEvent
-}
-
-/**
- * Represents a null response from Binance WebSocket (subscription acknowledgment).
- */
-interface NullTicker24hrStream {
-    /** Null result indicating subscription acknowledgment. */
-    result: null
-    /** Request ID. */
-    id: number
 }
