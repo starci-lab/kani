@@ -153,11 +153,12 @@ export class BybitTradeVolumeService implements OnApplicationBootstrap {
 
                             for (const trade of parsed.data) {
                                 const symbol = trade.s
+                                const volume = new Decimal(trade.v).mul(new Decimal(trade.p)).toNumber()
                                 const tokenVolumes = this.bybitTokenRegistryService.getTokenVolumes({
                                     tokenVolumeDataArray: [
                                         {
                                             symbol,
-                                            volume: parseFloat(trade.v),
+                                            volume,
                                         },
                                     ],
                                 })

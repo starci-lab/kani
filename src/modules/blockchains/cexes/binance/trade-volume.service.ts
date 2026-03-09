@@ -151,12 +151,13 @@ export class BinanceTradeVolumeService implements OnApplicationBootstrap {
                             const trade = parsed.data
                             const symbol = trade.s.replace("@ticker",
                                 "@trade").toLowerCase()
+                            const volume = new Decimal(trade.q).mul(new Decimal(trade.p)).toNumber()
                             const tokenVolumes = this.binanceTokenRegistryService.getTokenVolumes(
                                 {
                                     tokenVolumeDataArray: [
                                         {
                                             symbol,
-                                            volume: parseFloat(trade.q),
+                                            volume,
                                         },
                                     ],
                                 }
