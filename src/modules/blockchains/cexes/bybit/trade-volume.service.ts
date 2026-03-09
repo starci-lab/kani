@@ -175,10 +175,10 @@ export class BybitTradeVolumeService implements OnApplicationBootstrap {
                                                 }),
                                                 this.cacheService.set({
                                                     key: CacheKey.CexTokenVolumeUpdated,
-                                                    args: [tokenVolume.id],
+                                                    args: [tokenVolume.id,
+                                                        CexId.Bybit],
                                                     cacheResult: {
                                                         tokenId: tokenVolume.id,
-                                                        cexId: CexId.Bybit,
                                                         snapshotAt: this.dayjsService.now(),
                                                     },
                                                 }),

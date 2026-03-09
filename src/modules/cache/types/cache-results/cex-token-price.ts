@@ -1,14 +1,9 @@
 import type {
-    CexId,
-} from "@modules/databases"
-import type {
     SnapshotCacheResult,
 } from "./base"
 
-/** Cex token cache result (tokens by market listing). */
+/** Cex token price cache result. CexId is in cache args, not in result. */
 export interface CexTokenPriceCacheResult extends SnapshotCacheResult {
-    /** Token display ID. */
+    /** Token ID. */
     tokenId: string
-    /** Cex ID. */
-    cexId: CexId
 }

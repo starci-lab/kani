@@ -176,10 +176,10 @@ export class BinanceTradeVolumeService implements OnApplicationBootstrap {
                                         }),
                                         this.cacheService.set({
                                             key: CacheKey.CexTokenVolumeUpdated,
-                                            args: [tokenVolume.id],
+                                            args: [tokenVolume.id,
+                                                CexId.Binance],
                                             cacheResult: {
                                                 tokenId: tokenVolume.id,
-                                                cexId: CexId.Binance,
                                                 snapshotAt: this.dayjsService.now(),
                                             },
                                         }),

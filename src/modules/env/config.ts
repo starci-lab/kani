@@ -1672,4 +1672,23 @@ export const envConfig = () => ({
             }),
         }
     },
+    /** CEX health monitor: stale threshold seconds, check interval ms. */
+    cexHealthMonitor: {
+        price: {
+            staleThresholdSeconds: parseEnvInt({
+                key: "CEX_HEALTH_MONITOR_PRICE_STALE_THRESHOLD_SECONDS", defaultValue: 10 
+            }),
+            checkIntervalMs: parseEnvMs({
+                key: "CEX_HEALTH_MONITOR_PRICE_CHECK_INTERVAL_MS", defaultValue: "2000ms" 
+            }),
+        },
+        volume: {
+            staleThresholdSeconds: parseEnvInt({
+                key: "CEX_HEALTH_MONITOR_VOLUME_STALE_THRESHOLD_SECONDS", defaultValue: 10 
+            }),
+            checkIntervalMs: parseEnvMs({
+                key: "CEX_HEALTH_MONITOR_VOLUME_CHECK_INTERVAL_MS", defaultValue: "2000ms" 
+            }),
+        },
+    },
 })

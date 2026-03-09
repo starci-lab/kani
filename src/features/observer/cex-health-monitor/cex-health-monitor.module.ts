@@ -1,13 +1,30 @@
-
+/**
+ * Module for monitoring CEX health.
+ * Provides services for checking CEX price and volume health.
+ */
 import {
     Module 
 } from "@nestjs/common"
 import {
     ConfigurableModuleClass 
-} from "./observer.module-definition"
+} from "./cex-health-monitor.module-definition"
+import {
+    PriceCheckService,
+} from "./price-check.service"
+import {
+    VolumeCheckService,
+} from "./volume-check.service"
 
-@Module({
-    imports: [
-    ],
-})
-export class ObserverModule extends ConfigurableModuleClass {}
+/**
+ * Module for monitoring CEX health.
+ * Provides services for checking CEX price and volume health.
+ */
+@Module(
+    {
+        providers: [
+            PriceCheckService,
+            VolumeCheckService,
+        ],
+    }
+)
+export class CexHealthMonitorModule extends ConfigurableModuleClass {}

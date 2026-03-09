@@ -174,11 +174,11 @@ export class GateTradeVolumeService implements OnApplicationBootstrap {
                                                 this.cacheService.set(
                                                     {
                                                         key: CacheKey.CexTokenVolumeUpdated,
-                                                        args: [tokenVolume.id],
+                                                        args: [tokenVolume.id,
+                                                            CexId.Gate],
                                                         cacheResult: {
                                                             tokenId: tokenVolume.id,
                                                             snapshotAt: this.dayjsService.now(),
-                                                            cexId: CexId.Gate,
                                                         },
                                                     }
                                                 ),

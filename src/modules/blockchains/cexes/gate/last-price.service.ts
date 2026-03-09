@@ -197,11 +197,11 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                                                     this.cacheService.set(
                                                         {
                                                             key: CacheKey.CexTokenPriceUpdated,
-                                                            args: [tokenPrice.id],
+                                                            args: [tokenPrice.id,
+                                                                CexId.Gate],
                                                             cacheResult: {
                                                                 tokenId: tokenPrice.id,
                                                                 snapshotAt: this.dayjsService.now(),
-                                                                cexId: CexId.Gate,
                                                             },
                                                         }
                                                     ),

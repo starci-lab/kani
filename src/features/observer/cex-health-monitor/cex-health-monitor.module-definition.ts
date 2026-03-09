@@ -1,12 +1,13 @@
 import {
     ConfigurableModuleBuilder,
 } from "@nestjs/common"
-import type { CexHealthMonitorOptions } from "./types/options"
 
 export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } =
-    new ConfigurableModuleBuilder<CexHealthMonitorOptions>()
+    new ConfigurableModuleBuilder()
         .setExtras(
-            { isGlobal: false },
+            {
+                isGlobal: false,
+            },
             (definition, extras) => ({
                 ...definition,
                 global: extras.isGlobal,
