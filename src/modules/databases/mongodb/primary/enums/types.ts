@@ -451,7 +451,8 @@ export enum BotViolateIndicatorType {
 
 export const GraphQLTypeBotViolateIndicatorType = createEnumType(BotViolateIndicatorType)
 
-registerEnumType(GraphQLTypeBotViolateIndicatorType,
+registerEnumType(
+    GraphQLTypeBotViolateIndicatorType,
     {
         name: "BotViolateIndicatorType",
         description: "The type of the bot violate indicator",

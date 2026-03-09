@@ -8,7 +8,7 @@ import {
 /** Type classification for tokens. */
 export enum TokenType {
     Native = "native",
-    StableUsdc = "stableUsdc",
+    StableCoin = "stableCoin",
     Wrapper = "wrapper",
     Regular = "regular",
     LiquidStaking = "liquidStaking",
@@ -24,8 +24,8 @@ registerEnumType(GraphQLTypeTokenType,
             [TokenType.Native]: {
                 description: "The token is native",
             },
-            [TokenType.StableUsdc]: {
-                description: "The token is stable",
+            [TokenType.StableCoin]: {
+                description: "The token is stable coin",
             },
             [TokenType.Wrapper]: {
                 description: "The token is wrapper",

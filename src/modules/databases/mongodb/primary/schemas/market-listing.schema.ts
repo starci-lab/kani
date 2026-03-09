@@ -56,18 +56,6 @@ export class MarketListingSchema {
         type: Number, required: true
     })
         priority: number
-    
-    /**
-     * Whether the market is a signal market for volatility detection
-     */
-    @Field(() => Boolean,
-        {
-            description: "Whether the market is a signal market for volatility detection"
-        })
-    @Prop({
-        type: Boolean, required: true, default: false
-    })
-        isSignal: boolean
 }
 
 export const MarketListingSchemaClass = SchemaFactory.createForClass(MarketListingSchema)

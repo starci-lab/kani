@@ -11,7 +11,10 @@ import {
     AbstractSchema 
 } from "./abstract"
 import {
-    GraphQLTypeTokenId, TokenId 
+    CexId,
+    GraphQLTypeCexId,
+    GraphQLTypeTokenId, 
+    TokenId 
 } from "../enums"
 import {
     MarketListingSchema 
@@ -132,6 +135,24 @@ export class TokenSchema extends AbstractSchema {
         type: [MarketListingSchema], required: true 
     })
         marketListings: Array<MarketListingSchema>
+
+    @Field(() => [GraphQLTypeCexId],
+        {
+            description: "List of cexs where the token is tracked for volatility detection"
+        })
+    @Prop({
+        type: [String], required: true, enum: CexId 
+    })
+        trackedCexIds: Array<CexId>
+
+    @Field(() => Boolean,
+        {
+            description: "Whether the token is USDT"
+        })
+    @Prop({
+        type: Boolean, required: true 
+    })
+        isUsdt: boolean
 }
 
 export const TokenSchemaClass = SchemaFactory.createForClass(TokenSchema)
