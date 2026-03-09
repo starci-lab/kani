@@ -17,8 +17,8 @@ import type {
  *
  * @example
  * const service = new BinanceTokenRegistryService(...)
- * const symbols = service.getBinanceSymbols()
- * const prices = service.getBinanceTokenPrices({ tokenPriceDataArray: binanceData })
+ * const priceSymbols = service.getPriceSymbols(); const volumeSymbols = service.getVolumeSymbols()
+ * const prices = service.getTokenPrices({ tokenPriceDataArray: binanceData })
  */
 @Injectable()
 export class BinanceTokenRegistryService {
@@ -27,36 +27,49 @@ export class BinanceTokenRegistryService {
     ) {}
 
     /**
-     * Gets Binance symbols for all tokens that have Binance market listings.
+     * Gets Binance symbols for ticker (price) stream.
      *
-     * @returns Array of unique Binance symbols formatted for ticker stream (e.g., "SUIUSDT@ticker")
-     *
-     * @example
-     * const symbols = service.getBinanceSymbols()
+     * @returns Array of symbols formatted for ticker stream (e.g. "SUIUSDT@ticker")
      */
-    getBinanceSymbols(): Array<string> {
-        // find all tokens with Binance market listings
+    getPriceSymbols(): Array<string> {
+        const raw = this.getRawSymbols()
+        return raw.map((s) => `${s}@ticker`)
+    }
+
+    /**
+     * Gets Binance symbols for trade (volume) stream.
+     *
+     * @returns Array of symbols formatted for trade stream (e.g. "suiusdt@trade")
+     */
+    getVolumeSymbols(): Array<string> {
+        const raw = this.getRawSymbols()
+        return raw.map((s) => `${s.toLowerCase()}@trade`)
+    }
+
+    /**
+     * Gets raw Binance symbols for all tokens that have Binance market listings.
+     *
+     * @returns Array of raw Binance symbols
+     */
+    private getRawSymbols(): Array<string> {
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             marketListings: {
                 $elemMatch: {
                     id: MarketListingId.Binance,
                 },
-            }
+            },
         })
-        
-        if (!tokens.length) {
-            return []
-        }
-        
-        // extract unique symbols and format for ticker stream
+        if (!tokens.length) return []
         return (
             [...new Set(
                 tokens.map(
-                    token => token.marketListings.find(market => market.id === MarketListingId.Binance)?.symbol
-                )
-            )
-            ].filter(Boolean) as Array<string>
-        ).map(symbol => `${symbol}@ticker`)
+                    (token) =>
+                        token.marketListings.find(
+                            (market) => market.id === MarketListingId.Binance,
+                        )?.symbol,
+                ),
+            )].filter(Boolean) as Array<string>
+        )
     }
 
     /**
@@ -67,9 +80,9 @@ export class BinanceTokenRegistryService {
      * @returns Array of Binance token prices with token identification
      *
      * @example
-     * const prices = service.getBinanceTokenPrices({ tokenPriceDataArray: binanceData })
+     * const prices = service.getTokenPrices({ tokenPriceDataArray: binanceData })
      */
-    getBinanceTokenPrices({
+    getTokenPrices({
         tokenPriceDataArray,
     }: GetBinanceTokenPricesParams): Array<BinanceTokenPrice> {
         // find all tokens with Binance market listings
@@ -118,9 +131,9 @@ export class BinanceTokenRegistryService {
      * @returns Array of token volumes with token identification
      *
      * @example
-     * const volumes = service.getBinanceTokenVolumes({ tokenVolumeDataArray: [{ symbol: "BTCUSDT", volume: 100 }] })
+     * const volumes = service.getTokenVolumes({ tokenVolumeDataArray: [{ symbol: "BTCUSDT", volume: 100 }] })
      */
-    getBinanceTokenVolumes({
+    getTokenVolumes({
         tokenVolumeDataArray,
     }: GetBinanceTokenVolumesParams): Array<BinanceTokenVolume> {
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({

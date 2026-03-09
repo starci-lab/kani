@@ -69,7 +69,7 @@ export class GateTradeVolumeService implements OnApplicationBootstrap {
      * @returns void
      */
     onApplicationBootstrap(): void {
-        const symbols = this.gateTokenRegistryService.getSymbols()
+        const symbols = this.gateTokenRegistryService.getVolumeSymbols()
         if (!symbols.length) return
         const batches = _.chunk(
             symbols,
@@ -149,7 +149,7 @@ export class GateTradeVolumeService implements OnApplicationBootstrap {
                             const { currency_pair: symbol, price: priceStr, amount: amountStr } =
                                 parsed.result
                             const quoteVolume = parseFloat(amountStr) * parseFloat(priceStr)
-                            const tokenVolumes = this.gateTokenRegistryService.resolveTokenVolumes({
+                            const tokenVolumes = this.gateTokenRegistryService.getTokenVolumes({
                                 tokenVolumeDataArray: [
                                     {
                                         symbol,

@@ -75,7 +75,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
      * @returns void
      */
     onApplicationBootstrap() {
-        const symbols = this.bybitTokenRegistryService.getSymbols()
+        const symbols = this.bybitTokenRegistryService.getPriceSymbols()
         if (!symbols.length) return
         // split symbols into chunks (Bybit limit on subscription args)
         const batches = _.chunk(
@@ -153,7 +153,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                             }
                             if (!("data" in parsed)) continue
 
-                            const tokenPrices = this.bybitTokenRegistryService.resolveTokenPrices({
+                            const tokenPrices = this.bybitTokenRegistryService.getTokenPrices({
                                 tokenPriceDataArray: [
                                     {
                                         symbol: parsed.data.symbol,

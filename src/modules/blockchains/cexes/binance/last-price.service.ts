@@ -85,7 +85,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
      */
     onApplicationBootstrap(): void {
         // get all Binance symbols for ticker stream
-        const symbols = this.binanceTokenRegistryService.getBinanceSymbols()
+        const symbols = this.binanceTokenRegistryService.getPriceSymbols()
         // split symbols into batches from config
         const batches = _.chunk(
             symbols,
@@ -191,7 +191,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                             // extract symbol from stream name
                             const streamSymbol = parsed.stream.split("@")[0]
                             // get token prices from registry
-                            const tokenPrices = this.binanceTokenRegistryService.getBinanceTokenPrices(
+                            const tokenPrices = this.binanceTokenRegistryService.getTokenPrices(
                                 {
                                     tokenPriceDataArray: [
                                         {

@@ -70,14 +70,10 @@ export class BinanceTradeVolumeService implements OnApplicationBootstrap {
      * @returns void
      */
     onApplicationBootstrap(): void {
-        const tickerSymbols = this.binanceTokenRegistryService.getBinanceSymbols()
-        const tradeStreamParams = tickerSymbols.map((s) =>
-            s.replace("@ticker",
-                "@trade").toLowerCase(),
-        )
-        if (!tradeStreamParams.length) return
+        const volumeSymbols = this.binanceTokenRegistryService.getVolumeSymbols()
+        if (!volumeSymbols.length) return
         const batches = _.chunk(
-            tradeStreamParams,
+            volumeSymbols,
             envConfig().cexes.binance.chunks.lastPrice,
         )
 
@@ -152,18 +148,19 @@ export class BinanceTradeVolumeService implements OnApplicationBootstrap {
                                 | BinanceTradeStreamAck
                             if ("result" in parsed && parsed.result === null) continue
                             if (!("data" in parsed)) continue
-
                             const trade = parsed.data
-                            const symbol = trade.s
-                            const quoteVolume = parseFloat(trade.q) * parseFloat(trade.p)
-                            const tokenVolumes = this.binanceTokenRegistryService.getBinanceTokenVolumes({
-                                tokenVolumeDataArray: [
-                                    {
-                                        symbol,
-                                        volume: quoteVolume,
-                                    },
-                                ],
-                            })
+                            const symbol = trade.s.replace("@ticker",
+                                "@trade").toLowerCase()
+                            const tokenVolumes = this.binanceTokenRegistryService.getTokenVolumes(
+                                {
+                                    tokenVolumeDataArray: [
+                                        {
+                                            symbol,
+                                            volume: parseFloat(trade.q),
+                                        },
+                                    ],
+                                }
+                            )
                             if (!tokenVolumes.length) continue
                             resetTimeout()
                             await this.asyncService.allIgnoreError(

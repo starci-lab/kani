@@ -18,8 +18,8 @@ import type {
  *
  * @example
  * const service = new GateTokenRegistryService(...)
- * const symbols = service.getSymbols()
- * const prices = service.resolveTokenPrices({ tokenPriceDataArray: gateData })
+ * const priceSymbols = service.getPriceSymbols(); const volumeSymbols = service.getVolumeSymbols()
+ * const prices = service.getTokenPrices({ tokenPriceDataArray: gateData })
  */
 @Injectable()
 export class GateTokenRegistryService {
@@ -28,37 +28,43 @@ export class GateTokenRegistryService {
     ) {}
 
     /**
-     * Gets Gate.io symbols for all tokens that have Gate.io market listings.
+     * Gets Gate.io symbols for ticker (price) stream.
      *
-     * Note: for Gate, `marketListings[].symbol` stores the Gate currency pair
-     * (e.g. `"SOL_USDT"`).
-     *
-     * @returns Array of unique Gate.io trading symbols
-     *
-     * @example
-     * const symbols = service.getSymbols()
+     * @returns Array of currency pairs (e.g. "SOL_USDT")
      */
-    getSymbols(): Array<string> {
-        // find all tokens with Gate.io market listings
+    getPriceSymbols(): Array<string> {
+        return this.getSymbols()
+    }
+
+    /**
+     * Gets Gate.io symbols for trade (volume) stream.
+     *
+     * @returns Array of currency pairs (e.g. "SOL_USDT")
+     */
+    getVolumeSymbols(): Array<string> {
+        return this.getSymbols()
+    }
+
+    private getSymbols(): Array<string> {
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             marketListings: {
                 $elemMatch: {
                     id: MarketListingId.Gate,
                 },
-            }
+            },
         })
-        
         if (!tokens.length) return []
-        
-        // extract unique symbols
         return [
             ...new Set(
                 tokens
-                    .map(token => token.marketListings.find(
-                        marketListing => marketListing.id === MarketListingId.Gate,
-                    )?.symbol ?? "")
+                    .map((token) =>
+                        token.marketListings.find(
+                            (marketListing) =>
+                                marketListing.id === MarketListingId.Gate,
+                        )?.symbol ?? "",
+                    )
                     .filter(Boolean),
-            )
+            ),
         ].filter(Boolean) as Array<string>
     }
 
@@ -70,9 +76,9 @@ export class GateTokenRegistryService {
      * @returns Array of Gate.io token prices with token identification
      *
      * @example
-     * const prices = service.resolveTokenPrices({ tokenPriceDataArray: gateData })
+     * const prices = service.getTokenPrices({ tokenPriceDataArray: gateData })
      */
-    resolveTokenPrices({ tokenPriceDataArray }: ResolveGateTokenPricesParams): Array<GateTokenPrice> {
+    getTokenPrices({ tokenPriceDataArray }: ResolveGateTokenPricesParams): Array<GateTokenPrice> {
         // find all tokens with Gate.io market listings
         const tokens = this.primaryMemoryStorageService.tokenCollection.find(
             {
@@ -117,9 +123,9 @@ export class GateTokenRegistryService {
      * @returns Array of token volumes with token identification
      *
      * @example
-     * const volumes = service.resolveTokenVolumes({ tokenVolumeDataArray: [{ symbol: "SOL_USDT", volume: 100 }] })
+     * const volumes = service.getTokenVolumes({ tokenVolumeDataArray: [{ symbol: "SOL_USDT", volume: 100 }] })
      */
-    resolveTokenVolumes({ tokenVolumeDataArray }: ResolveGateTokenVolumesParams): Array<GateTokenVolume> {
+    getTokenVolumes({ tokenVolumeDataArray }: ResolveGateTokenVolumesParams): Array<GateTokenVolume> {
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             marketListings: {
                 $elemMatch: {

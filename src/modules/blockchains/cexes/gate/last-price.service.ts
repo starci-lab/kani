@@ -73,7 +73,7 @@ export class GateLastPriceService implements OnApplicationBootstrap {
      * @returns void
      */
     onApplicationBootstrap() {
-        const symbols = this.gateTokenRegistryService.getSymbols()
+        const symbols = this.gateTokenRegistryService.getPriceSymbols()
         const batches = _.chunk(
             symbols,
             envConfig().cexes.gate.chunks.lastPrice)
@@ -151,7 +151,7 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                         for await (const data of stream) {
                             try {
                                 const parsed = JSON.parse(data.toString()) as GateTickerUpdate
-                                const tokenPrices = this.gateTokenRegistryService.resolveTokenPrices({
+                                const tokenPrices = this.gateTokenRegistryService.getTokenPrices({
                                     tokenPriceDataArray: [
                                         {
                                             symbol: parsed.result.currency_pair,
