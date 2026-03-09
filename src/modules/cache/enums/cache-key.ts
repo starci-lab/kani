@@ -3,6 +3,10 @@
  * Each key corresponds to a cache namespace and its result type.
  */
 export enum CacheKey {
+    ActivePriceCex = "cex.health.active.price.cex",
+    ActiveVolumeCex = "cex.health.active.volume.cex",
+    CexTokenPriceUpdated = "cex.token.price.updated",
+    CexTokenVolumeUpdated = "cex.token.volume.updated",
     RotationBotAssignments = "rotation.bot.assignments",
     Withdraw = "withdraw",
     SendOtpCode = "send.otp.code",

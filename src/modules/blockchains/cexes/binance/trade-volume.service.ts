@@ -38,11 +38,15 @@ import Decimal from "decimal.js"
 import {
     Dayjs,
 } from "dayjs"
+import {
+    CacheKey,
+    CacheService,
+} from "@modules/cache"
 
 /**
  * Service for handling Binance trade volume (volume per fill).
  * Subscribes to the @trade stream; each message is one filled trade.
- * Writes quote volume (qty * price, e.g. USDT) per trade to InfluxDB.
+ * Writes quote volume (qty * price) per trade to InfluxDB and cache.
  *
  * @example
  * Service subscribes to trade stream on bootstrap and writes volume to InfluxDB.
@@ -57,6 +61,7 @@ export class BinanceTradeVolumeService implements OnApplicationBootstrap {
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
         private readonly primaryInfluxdbVolumeBucketService: PrimaryInfluxdbVolumeBucketService,
+        private readonly cacheService: CacheService,
     ) {}
 
     /**
@@ -65,13 +70,12 @@ export class BinanceTradeVolumeService implements OnApplicationBootstrap {
      * @returns void
      */
     onApplicationBootstrap(): void {
-        // get ticker symbols and convert to trade stream params
         const tickerSymbols = this.binanceTokenRegistryService.getBinanceSymbols()
         const tradeStreamParams = tickerSymbols.map((s) =>
             s.replace("@ticker",
-                "@trade"),
+                "@trade").toLowerCase(),
         )
-        // split into batches from config
+        if (!tradeStreamParams.length) return
         const batches = _.chunk(
             tradeStreamParams,
             envConfig().cexes.binance.chunks.lastPrice,
@@ -83,15 +87,11 @@ export class BinanceTradeVolumeService implements OnApplicationBootstrap {
                     retries: Infinity,
                 },
                 action: async () => {
-                    const connection = new WebSocketStreamConnection(
-                        BINANCE_WS_URL,
-                    )
+                    const connection = new WebSocketStreamConnection(BINANCE_WS_URL)
                     const abortController = new AbortController()
                     let timeout: NodeJS.Timeout | undefined = undefined
                     const resetTimeout = () => {
-                        if (timeout) {
-                            clearTimeout(timeout)
-                        }
+                        if (timeout) clearTimeout(timeout)
                         timeout = setTimeout(
                             () => abortController.abort(),
                             envConfig().cexes.binance.interval.rest,
@@ -99,98 +99,100 @@ export class BinanceTradeVolumeService implements OnApplicationBootstrap {
                     }
 
                     let startTime: Dayjs | null = null
-                    const stream =
-                        await this.streamAsyncIteratorService.createStream({
-                            connection,
-                            signal: abortController.signal,
-                            onOpen: (conn: WebSocketStreamConnection) => {
-                                this.winstonService.log(
-                                    WinstonLog.WebsocketSubscriptionOpened,
-                                    {
-                                        streamName:
-                                            BINANCE_TRADE_VOLUME_STREAM_NAME,
-                                        symbols: batch,
-                                    },
-                                )
-                                startTime = this.dayjsService.now()
-                                conn.ws.send(
-                                    JSON.stringify({
-                                        method: "SUBSCRIBE",
-                                        params: batch,
-                                        id: 1,
-                                    }),
-                                )
-                            },
-                            onError: (error: Error) => {
-                                this.winstonService.log(
-                                    WinstonLog.WebsocketSubscriptionError,
-                                    {
-                                        error: error.message,
-                                        streamName:
-                                            BINANCE_TRADE_VOLUME_STREAM_NAME,
-                                        symbols: batch,
-                                    },
-                                )
-                            },
-                            onClose: () => {
-                                this.winstonService.log(
-                                    WinstonLog.WebsocketSubscriptionClosed,
-                                    {
-                                        streamName:
-                                            BINANCE_TRADE_VOLUME_STREAM_NAME,
-                                        symbols: batch,
-                                        durationMs: startTime
-                                            ? this.dayjsService.now().diff(
-                                                startTime,
-                                                "millisecond",
-                                            )
-                                            : null,
-                                    },
-                                )
-                            },
-                        })
+                    const stream = await this.streamAsyncIteratorService.createStream({
+                        connection,
+                        signal: abortController.signal,
+                        onOpen: (conn: WebSocketStreamConnection) => {
+                            this.winstonService.log(
+                                WinstonLog.WebsocketSubscriptionOpened,
+                                {
+                                    streamName: BINANCE_TRADE_VOLUME_STREAM_NAME,
+                                    symbols: batch,
+                                },
+                            )
+                            startTime = this.dayjsService.now()
+                            resetTimeout()
+                            conn.ws.send(JSON.stringify({
+                                method: "SUBSCRIBE",
+                                params: batch,
+                                id: 1,
+                            }))
+                        },
+                        onError: (error: Error) => {
+                            this.winstonService.log(
+                                WinstonLog.WebsocketSubscriptionError,
+                                {
+                                    error: error.message,
+                                    streamName: BINANCE_TRADE_VOLUME_STREAM_NAME,
+                                    symbols: batch,
+                                },
+                            )
+                        },
+                        onClose: () => {
+                            this.winstonService.log(
+                                WinstonLog.WebsocketSubscriptionClosed,
+                                {
+                                    streamName: BINANCE_TRADE_VOLUME_STREAM_NAME,
+                                    symbols: batch,
+                                    durationMs: startTime
+                                        ? this.dayjsService.now().diff(
+                                            startTime,
+                                            "millisecond",
+                                        )
+                                        : null,
+                                },
+                            )
+                        },
+                    })
 
                     for await (const data of stream) {
                         try {
-                            // parse trade or ack message
-                            const parsed = JSON.parse(
-                                data.toString(),
-                            ) as BinanceTradeStream | BinanceTradeStreamAck
-
-                            if ("result" in parsed && parsed.result === null) {
-                                continue
-                            }
+                            const parsed = JSON.parse(data.toString()) as
+                                | BinanceTradeStream
+                                | BinanceTradeStreamAck
+                            if ("result" in parsed && parsed.result === null) continue
                             if (!("data" in parsed)) continue
 
                             const trade = parsed.data
-                            const symbol = parsed.stream.split("@")[0]
-                            const quoteVolume = parseFloat(trade.q)
-                            const tokenVolumes =
-                                this.binanceTokenRegistryService.getBinanceTokenVolumes({
-                                    tokenVolumeDataArray: [
-                                        {
-                                            symbol, volume: quoteVolume 
-                                        }
-                                    ],
-                                })
+                            const symbol = trade.s
+                            const quoteVolume = parseFloat(trade.q) * parseFloat(trade.p)
+                            const tokenVolumes = this.binanceTokenRegistryService.getBinanceTokenVolumes({
+                                tokenVolumeDataArray: [
+                                    {
+                                        symbol,
+                                        volume: quoteVolume,
+                                    },
+                                ],
+                            })
                             if (!tokenVolumes.length) continue
                             resetTimeout()
                             await this.asyncService.allIgnoreError(
                                 tokenVolumes.map(async (tokenVolume) => {
-                                    await this.primaryInfluxdbVolumeBucketService.write({
-                                        id: tokenVolume.id,
-                                        volume: new Decimal(tokenVolume.volume),
-                                        cexId: CexId.Binance,
-                                    })
-                                }),
+                                    await this.asyncService.allIgnoreError([
+                                        this.primaryInfluxdbVolumeBucketService.write({
+                                            id: tokenVolume.id,
+                                            volume: new Decimal(tokenVolume.volume),
+                                            cexId: CexId.Binance,
+                                        }),
+                                        this.cacheService.set({
+                                            key: CacheKey.CexTokenVolumeUpdated,
+                                            args: [tokenVolume.id],
+                                            cacheResult: {
+                                                tokenId: tokenVolume.id,
+                                                cexId: CexId.Binance,
+                                                snapshotAt: this.dayjsService.now(),
+                                            },
+                                        }),
+                                    ])
+                                },
+                                ),
                             )
                         } catch (error) {
                             this.winstonService.log(
                                 WinstonLog.WebsocketSubscriptionError,
                                 {
                                     error: (error as Error).message,
-                                    streamName:
-                                        BINANCE_TRADE_VOLUME_STREAM_NAME,
+                                    streamName: BINANCE_TRADE_VOLUME_STREAM_NAME,
                                     symbols: batch,
                                 },
                             )

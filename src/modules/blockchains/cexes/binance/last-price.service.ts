@@ -14,6 +14,8 @@ import {
 } from "@modules/databases"
 import {
     AggregatedTokenPriceCacheService,
+    CacheKey,
+    CacheService,
 } from "@modules/cache"
 import {
     envConfig,
@@ -70,6 +72,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
         private readonly dayjsService: DayjsService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly primaryInfluxdbPriceBucketService: PrimaryInfluxdbPriceBucketService,
+        private readonly cacheService: CacheService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
     ) {
@@ -206,11 +209,25 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                     async (tokenPrice) => {
                                         await this.asyncService.allIgnoreError([
                                             // update cache
-                                            this.aggregatedTokenPriceCacheService.set({
-                                                id: tokenPrice.id,
-                                                price: tokenPrice.price,
-                                                marketListingId: MarketListingId.Binance,
-                                            }),
+                                            this.aggregatedTokenPriceCacheService.set(
+                                                {
+                                                    id: tokenPrice.id,
+                                                    price: tokenPrice.price,
+                                                    marketListingId: MarketListingId.Binance,
+                                                }
+                                            ),
+                                            // mark to cache that binance token snapshot is updated
+                                            this.cacheService.set(
+                                                {
+                                                    key: CacheKey.CexTokenPriceUpdated,
+                                                    args: [tokenPrice.id],
+                                                    cacheResult: {
+                                                        tokenId: tokenPrice.id,
+                                                        snapshotAt: this.dayjsService.now(),
+                                                        cexId: CexId.Binance,
+                                                    },
+                                                }
+                                            ),
                                             // emit price update event
                                             this.eventEmitterService.emit({
                                                 event: EventName.TokenPriceUpdated,

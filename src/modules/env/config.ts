@@ -898,6 +898,14 @@ export const envConfig = () => ({
                     defaultValue: "100years"
                 }
             ),
+            cexTokenPriceUpdated: parseEnvMs({
+                key: "CACHE_TTL_CEX_TOKEN_PRICE_UPDATED",
+                defaultValue: "0"
+            }),
+            cexTokenVolumeUpdated: parseEnvMs({
+                key: "CACHE_TTL_CEX_TOKEN_VOLUME_UPDATED",
+                defaultValue: "0"
+            }),
         },
         stale: {
             priceMaxAgeMs: parseEnvMs(

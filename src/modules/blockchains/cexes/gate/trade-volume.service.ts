@@ -37,6 +37,10 @@ import Decimal from "decimal.js"
 import {
     Dayjs,
 } from "dayjs"
+import {
+    CacheKey,
+    CacheService,
+} from "@modules/cache"
 
 /**
  * Service for handling Gate.io trade volume (volume per fill).
@@ -56,6 +60,7 @@ export class GateTradeVolumeService implements OnApplicationBootstrap {
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
         private readonly primaryInfluxdbVolumeBucketService: PrimaryInfluxdbVolumeBucketService,
+        private readonly cacheService: CacheService,
     ) {}
 
     /**
@@ -155,19 +160,36 @@ export class GateTradeVolumeService implements OnApplicationBootstrap {
                             if (!tokenVolumes.length) continue
                             resetTimeout()
                             await this.asyncService.allIgnoreError(
-                                tokenVolumes.map(async (tokenVolume) => {
-                                    await this.primaryInfluxdbVolumeBucketService.write({
-                                        id: tokenVolume.id,
-                                        volume: new Decimal(tokenVolume.volume),
-                                        cexId: CexId.Gate,
+                                tokenVolumes.map( 
+                                    async (tokenVolume) => {
+                                        await this.asyncService.allIgnoreError(
+                                            [
+                                                this.primaryInfluxdbVolumeBucketService.write(
+                                                    {
+                                                        id: tokenVolume.id,
+                                                        volume: new Decimal(tokenVolume.volume),
+                                                        cexId: CexId.Gate,
+                                                    }
+                                                ),
+                                                this.cacheService.set(
+                                                    {
+                                                        key: CacheKey.CexTokenVolumeUpdated,
+                                                        args: [tokenVolume.id],
+                                                        cacheResult: {
+                                                            tokenId: tokenVolume.id,
+                                                            snapshotAt: this.dayjsService.now(),
+                                                            cexId: CexId.Gate,
+                                                        },
+                                                    }
+                                                ),
+                                            ])
                                     })
-                                }),
                             )
                         } catch (error) {
                             this.winstonService.log(
                                 WinstonLog.WebsocketSubscriptionError,
                                 {
-                                    error: (error as Error).message,
+                                    error: error.message,
                                     streamName: GATE_TRADE_VOLUME_STREAM_NAME,
                                     symbols: batch,
                                 },

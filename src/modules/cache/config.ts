@@ -5,8 +5,11 @@ import {
     CacheKey 
 } from "./enums"
 import type {
+    ActiveCexCacheResult,
     AggregatedTokenPriceCacheResult,
     AggregatedTokenPriceTwapCacheResult,
+    CexTokenPriceCacheResult,
+    CexTokenVolumeCacheResult,
     DynamicClmmLiquidityPoolInfoCacheResult,
     DynamicDlmmLiquidityPoolInfoCacheResult,
     LiquidityPoolsSyncedDiagnosticReadinessCacheResult,
@@ -75,5 +78,25 @@ export const configMap = {
     [CacheKey.KafkaMessageDigest]: {
         ttl: envConfig().cache.ttl.kafkaMessageDigest,
         cacheResult: true,
+    },
+    [CacheKey.ActivePriceCex]: {
+        ttl: 0,
+        cacheResult: {
+        } as ActiveCexCacheResult,
+    },
+    [CacheKey.ActiveVolumeCex]: {
+        ttl: 0,
+        cacheResult: {
+        } as ActiveCexCacheResult,
+    },
+    [CacheKey.CexTokenPriceUpdated]: {
+        ttl: 0,
+        cacheResult: {
+        } as CexTokenPriceCacheResult,
+    },
+    [CacheKey.CexTokenVolumeUpdated]: {
+        ttl: envConfig().cache.ttl.cexTokenVolumeUpdated,
+        cacheResult: {
+        } as CexTokenVolumeCacheResult,
     },
 }

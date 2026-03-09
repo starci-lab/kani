@@ -38,11 +38,15 @@ import Decimal from "decimal.js"
 import {
     Dayjs,
 } from "dayjs"
+import {
+    CacheKey,
+    CacheService,
+} from "@modules/cache"
 
 /**
  * Service for handling Bybit trade volume (volume per fill).
  * Subscribes to the publicTrade stream; each message may contain multiple trades.
- * Writes quote volume (size * price) per trade to InfluxDB.
+ * Writes quote volume (size * price) per trade to InfluxDB and cache.
  *
  * @example
  * Service subscribes to trade stream on bootstrap and writes volume to InfluxDB.
@@ -57,6 +61,7 @@ export class BybitTradeVolumeService implements OnApplicationBootstrap {
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
         private readonly primaryInfluxdbVolumeBucketService: PrimaryInfluxdbVolumeBucketService,
+        private readonly cacheService: CacheService,
     ) {}
 
     /**
@@ -71,6 +76,7 @@ export class BybitTradeVolumeService implements OnApplicationBootstrap {
             symbols,
             envConfig().cexes.bybit.chunks.lastPrice,
         )
+
         for (const batch of batches) {
             this.retryService.retry({
                 options: {
@@ -87,6 +93,7 @@ export class BybitTradeVolumeService implements OnApplicationBootstrap {
                             envConfig().cexes.ws.idleTimeout,
                         )
                     }
+
                     let startTime: Dayjs | null = null
                     const stream = await this.streamAsyncIteratorService.createStream({
                         connection,
@@ -123,16 +130,21 @@ export class BybitTradeVolumeService implements OnApplicationBootstrap {
                                     streamName: BYBIT_TRADE_VOLUME_STREAM_NAME,
                                     symbols: batch,
                                     durationMs: startTime
-                                        ? this.dayjsService.now().diff(startTime,
-                                            "millisecond")
+                                        ? this.dayjsService.now().diff(
+                                            startTime,
+                                            "millisecond",
+                                        )
                                         : null,
                                 },
                             )
                         },
                     })
+
                     for await (const data of stream) {
                         try {
-                            const parsed = JSON.parse(data.toString()) as BybitTradeUpdate | BybitWsSubscribeResult
+                            const parsed = JSON.parse(data.toString()) as
+                                | BybitTradeUpdate
+                                | BybitWsSubscribeResult
                             if ("success" in parsed) {
                                 if (!parsed.success) continue
                                 continue
@@ -143,20 +155,37 @@ export class BybitTradeVolumeService implements OnApplicationBootstrap {
                                 const symbol = trade.s
                                 const quoteVolume = parseFloat(trade.v) * parseFloat(trade.p)
                                 const tokenVolumes = this.bybitTokenRegistryService.resolveTokenVolumes({
-                                    tokenVolumeDataArray: [{
-                                        symbol, volume: quoteVolume 
-                                    }],
+                                    tokenVolumeDataArray: [
+                                        {
+                                            symbol,
+                                            volume: quoteVolume,
+                                        },
+                                    ],
                                 })
                                 if (!tokenVolumes.length) continue
                                 resetTimeout()
                                 await this.asyncService.allIgnoreError(
                                     tokenVolumes.map(async (tokenVolume) => {
-                                        await this.primaryInfluxdbVolumeBucketService.write({
-                                            id: tokenVolume.id,
-                                            volume: new Decimal(tokenVolume.volume),
-                                            cexId: CexId.Bybit,
-                                        })
-                                    }),
+                                        await this.asyncService.allIgnoreError(
+                                            [
+                                                this.primaryInfluxdbVolumeBucketService.write({
+                                                    id: tokenVolume.id,
+                                                    volume: new Decimal(tokenVolume.volume),
+                                                    cexId: CexId.Bybit,
+                                                }),
+                                                this.cacheService.set({
+                                                    key: CacheKey.CexTokenVolumeUpdated,
+                                                    args: [tokenVolume.id],
+                                                    cacheResult: {
+                                                        tokenId: tokenVolume.id,
+                                                        cexId: CexId.Bybit,
+                                                        snapshotAt: this.dayjsService.now(),
+                                                    },
+                                                }),
+                                            ]
+                                        )
+                                    },
+                                    ),
                                 )
                             }
                         } catch (error) {

@@ -13,7 +13,9 @@ import {
     PrimaryInfluxdbPriceBucketService
 } from "@modules/databases"
 import {
-    AggregatedTokenPriceCacheService 
+    AggregatedTokenPriceCacheService,
+    CacheKey,
+    CacheService
 } from "@modules/cache"
 import {
     AsyncService, DayjsService, RetryService 
@@ -61,6 +63,7 @@ export class GateLastPriceService implements OnApplicationBootstrap {
         private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly primaryInfluxdbPriceBucketService: PrimaryInfluxdbPriceBucketService,
+        private readonly cacheService: CacheService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
     ) { }
@@ -145,70 +148,75 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                             }
                         })
 
-                        try {
-                            for await (const data of stream) {
-                                try {
-                                    const parsed = JSON.parse(data.toString()) as GateTickerUpdate
-                                    const tokenPrices = this.gateTokenRegistryService.resolveTokenPrices({
-                                        tokenPriceDataArray: [
-                                            {
-                                                symbol: parsed.result.currency_pair,
-                                                price: parseFloat(parsed.result.last),
-                                            }
-                                        ]
-                                    })
-                                    if (!tokenPrices.length) {
-                                        continue
-                                    }
-                                    resetTimeout()
-                                    await this.asyncService.allIgnoreError(
-                                        tokenPrices.map(
-                                            async (tokenPrice) => {
-                                                return this.asyncService.allIgnoreError(
-                                                    [
-                                                        this.aggregatedTokenPriceCacheService.set({
+                        for await (const data of stream) {
+                            try {
+                                const parsed = JSON.parse(data.toString()) as GateTickerUpdate
+                                const tokenPrices = this.gateTokenRegistryService.resolveTokenPrices({
+                                    tokenPriceDataArray: [
+                                        {
+                                            symbol: parsed.result.currency_pair,
+                                            price: parseFloat(parsed.result.last),
+                                        }
+                                    ]
+                                })
+                                if (!tokenPrices.length) {
+                                    continue
+                                }
+                                resetTimeout()
+                                await this.asyncService.allIgnoreError(
+                                    tokenPrices.map(
+                                        async (tokenPrice) => {
+                                            return this.asyncService.allIgnoreError(
+                                                [
+                                                    this.aggregatedTokenPriceCacheService.set({
+                                                        id: tokenPrice.id,
+                                                        price: tokenPrice.price,
+                                                        marketListingId: MarketListingId.Gate,
+                                                    }),
+                                                    this.primaryInfluxdbPriceBucketService.write(
+                                                        {
                                                             id: tokenPrice.id,
-                                                            price: tokenPrice.price,
-                                                            marketListingId: MarketListingId.Gate,
-                                                        }),
-                                                        this.primaryInfluxdbPriceBucketService.write(
-                                                            {
+                                                            price: new Decimal(tokenPrice.price),
+                                                            cexId: CexId.Gate,
+                                                        }
+                                                    ),
+                                                    this.eventEmitterService.emit(
+                                                        {
+                                                            event: EventName.TokenPriceUpdated,
+                                                            payload: {
                                                                 id: tokenPrice.id,
                                                                 price: new Decimal(tokenPrice.price),
+                                                                marketListingId: MarketListingId.Gate,
+                                                            },
+                                                            options: {
+                                                                useKafka: this.options.useKafka,
+                                                                useLocal: this.options.useLocal,
+                                                            }
+                                                        }
+                                                    ),
+                                                    this.cacheService.set(
+                                                        {
+                                                            key: CacheKey.CexTokenPriceUpdated,
+                                                            args: [tokenPrice.id],
+                                                            cacheResult: {
+                                                                tokenId: tokenPrice.id,
+                                                                snapshotAt: this.dayjsService.now(),
                                                                 cexId: CexId.Gate,
-                                                            }
-                                                        ),
-                                                        this.eventEmitterService.emit(
-                                                            {
-                                                                event: EventName.TokenPriceUpdated,
-                                                                payload: {
-                                                                    id: tokenPrice.id,
-                                                                    price: new Decimal(tokenPrice.price),
-                                                                    marketListingId: MarketListingId.Gate,
-                                                                },
-                                                                options: {
-                                                                    useKafka: this.options.useKafka,
-                                                                    useLocal: this.options.useLocal,
-                                                                }
-                                                            }
-                                                        ),
-                                                    ]
-                                                )
-                                            })
-                                    )
-                                } catch (error) {
-                                    this.winstonService.log(
-                                        WinstonLog.WebsocketSubscriptionError,
-                                        {
-                                            error: error.message,
-                                            streamName: "gate-last-price",
-                                            symbols,
+                                                            },
+                                                        }
+                                                    ),
+                                                ]
+                                            )
                                         })
-                                }
-                            }
-                        } finally {
-                            if (timeout) {
-                                clearTimeout(timeout)
+                                )
+                            } catch (error) {
+                                this.winstonService.log(
+                                    WinstonLog.WebsocketSubscriptionError,
+                                    {
+                                        error: error.message,
+                                        streamName: "gate-last-price",
+                                        symbols,
+                                    })
                             }
                         }
                     }

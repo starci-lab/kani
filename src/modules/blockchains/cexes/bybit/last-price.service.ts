@@ -9,7 +9,9 @@ import {
     PrimaryInfluxdbPriceBucketService
 } from "@modules/databases"
 import {
-    AggregatedTokenPriceCacheService
+    AggregatedTokenPriceCacheService,
+    CacheKey,
+    CacheService
 } from "@modules/cache"
 import {
     AsyncService,
@@ -63,6 +65,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
         private readonly dayjsService: DayjsService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly primaryInfluxdbPriceBucketService: PrimaryInfluxdbPriceBucketService,
+        private readonly cacheService: CacheService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
     ) { }
@@ -189,6 +192,17 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                                                         useKafka: this.options.useKafka,
                                                         useLocal: this.options.useLocal,
                                                     }
+                                                }
+                                            ),
+                                            this.cacheService.set(
+                                                {
+                                                    key: CacheKey.CexTokenPriceUpdated,
+                                                    args: [tokenPrice.id],
+                                                    cacheResult: {
+                                                        tokenId: tokenPrice.id,
+                                                        snapshotAt: this.dayjsService.now(),
+                                                        cexId: CexId.Bybit,
+                                                    },
                                                 }
                                             ),
                                         ]
