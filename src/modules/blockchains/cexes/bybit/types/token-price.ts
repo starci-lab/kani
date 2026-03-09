@@ -35,3 +35,31 @@ export interface GetBybitTokenIdBySymbolParams {
     /** Bybit trading symbol. */
     symbol: string
 }
+
+/**
+ * Raw token volume data (symbol + quote volume).
+ */
+export interface BybitTokenVolumeData {
+    /** Trading symbol (e.g. "BTCUSDT"). */
+    symbol: string
+    /** Quote volume. */
+    volume: number
+}
+
+/**
+ * Token volume with token identification (for writing to volume bucket).
+ */
+export interface BybitTokenVolume {
+    /** Token display ID. */
+    tokenId: TokenId
+    /** Token internal ID. */
+    id: string
+    /** Quote volume. */
+    volume: number
+}
+
+/** Params for resolving Bybit token volumes. */
+export interface ResolveBybitTokenVolumesParams {
+    /** Token volume data (symbol + volume). */
+    tokenVolumeDataArray: Array<BybitTokenVolumeData>
+}

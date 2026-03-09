@@ -3,12 +3,13 @@ import {
 } from "@nestjs/common"
 import {
     MarketListingId,
-    MarketListingSchema,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import type {
     GateTokenPrice,
+    GateTokenVolume,
     ResolveGateTokenPricesParams,
+    ResolveGateTokenVolumesParams,
 } from "./types"
 
 /**
@@ -73,35 +74,73 @@ export class GateTokenRegistryService {
      */
     resolveTokenPrices({ tokenPriceDataArray }: ResolveGateTokenPricesParams): Array<GateTokenPrice> {
         // find all tokens with Gate.io market listings
+        const tokens = this.primaryMemoryStorageService.tokenCollection.find(
+            {
+                marketListings: {
+                    $elemMatch: {
+                        id: MarketListingId.Gate,
+                    },
+                }
+            }
+        )
+        if (!tokens.length) return []
+        // map token prices to internal structure
+        return tokens.map(
+            token => {
+            // find Gate.io listing symbol for this token
+                const listingSymbol = token.marketListings.find(
+                    marketListing => marketListing.id === MarketListingId.Gate,
+                )?.symbol
+                if (!listingSymbol) return undefined
+            
+                // find matching price data
+                const tokenPrice = tokenPriceDataArray.find(
+                    tokenPriceData => tokenPriceData.symbol === listingSymbol
+                )
+                if (!tokenPrice) return undefined
+            
+                // return mapped token price
+                return {
+                    tokenId: token.displayId,
+                    id: token.id,
+                    price: tokenPrice.price,
+                }
+            }
+        ).filter(Boolean) as Array<GateTokenPrice>
+    }
+
+    /**
+     * Maps Gate.io token volume data to internal token volume structure.
+     *
+     * @param param - Parameters for resolving token volumes
+     * @param param.tokenVolumeDataArray - Array of symbol + volume from Gate.io API
+     * @returns Array of token volumes with token identification
+     *
+     * @example
+     * const volumes = service.resolveTokenVolumes({ tokenVolumeDataArray: [{ symbol: "SOL_USDT", volume: 100 }] })
+     */
+    resolveTokenVolumes({ tokenVolumeDataArray }: ResolveGateTokenVolumesParams): Array<GateTokenVolume> {
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             marketListings: {
-                $where: (marketListing: MarketListingSchema) => marketListing.id === MarketListingId.Gate,
+                $elemMatch: {
+                    id: MarketListingId.Gate,
+                },
             },
         })
-        
         if (!tokens.length) return []
-        
-        // map token prices to internal structure
         return tokens.map(token => {
-            // find Gate.io listing symbol for this token
             const listingSymbol = token.marketListings.find(
                 marketListing => marketListing.id === MarketListingId.Gate,
             )?.symbol
             if (!listingSymbol) return undefined
-            
-            // find matching price data
-            const tokenPrice = tokenPriceDataArray.find(
-                tokenPriceData => tokenPriceData.symbol === listingSymbol
-            )
-            if (!tokenPrice) return undefined
-            
-            // return mapped token price
+            const tokenVolume = tokenVolumeDataArray.find(d => d.symbol === listingSymbol)
+            if (!tokenVolume) return undefined
             return {
                 tokenId: token.displayId,
                 id: token.id,
-                price: tokenPrice.price,
+                volume: tokenVolume.volume,
             }
-        }).filter(Boolean) as Array<GateTokenPrice>
+        }).filter(Boolean) as Array<GateTokenVolume>
     }
 }
 

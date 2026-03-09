@@ -137,31 +137,28 @@ export class GateTradeVolumeService implements OnApplicationBootstrap {
                             )
                         },
                     })
-
                     for await (const data of stream) {
                         try {
                             const parsed = JSON.parse(data.toString()) as GateTradeUpdate
                             if (parsed.channel !== "spot.trades" || !parsed.result) continue
-
-                            const { currency_pair: symbol, price: priceStr, amount: amountStr } = parsed.result
-                            const price = parseFloat(priceStr)
-                            const quoteVolume = parseFloat(amountStr) * price
-                            const tokenPrices = this.gateTokenRegistryService.resolveTokenPrices({
-                                tokenPriceDataArray: [
+                            const { currency_pair: symbol, price: priceStr, amount: amountStr } =
+                                parsed.result
+                            const quoteVolume = parseFloat(amountStr) * parseFloat(priceStr)
+                            const tokenVolumes = this.gateTokenRegistryService.resolveTokenVolumes({
+                                tokenVolumeDataArray: [
                                     {
                                         symbol,
-                                        price,
+                                        volume: quoteVolume,
                                     },
                                 ],
                             })
-                            if (!tokenPrices.length) continue
-
+                            if (!tokenVolumes.length) continue
                             resetTimeout()
                             await this.asyncService.allIgnoreError(
-                                tokenPrices.map(async (tokenPrice) => {
+                                tokenVolumes.map(async (tokenVolume) => {
                                     await this.primaryInfluxdbVolumeBucketService.write({
-                                        id: tokenPrice.id,
-                                        volume: new Decimal(quoteVolume),
+                                        id: tokenVolume.id,
+                                        volume: new Decimal(tokenVolume.volume),
                                         cexId: CexId.Gate,
                                     })
                                 }),

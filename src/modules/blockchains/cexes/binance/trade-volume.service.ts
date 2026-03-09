@@ -163,31 +163,25 @@ export class BinanceTradeVolumeService implements OnApplicationBootstrap {
                             if (!("data" in parsed)) continue
 
                             const trade = parsed.data
-                            const symbol = trade.s
-                            const price = parseFloat(trade.p)
+                            const symbol = parsed.stream.split("@")[0]
                             const quoteVolume = parseFloat(trade.q)
-                            // map symbol to token ids and write volume per token
-                            const tokenPrices =
-                                this.binanceTokenRegistryService.getBinanceTokenPrices(
-                                    {
-                                        tokenPriceDataArray: [
-                                            {
-                                                symbol, price 
-                                            },
-                                        ],
-                                    },
-                                )
-                            resetTimeout()
-
-                            await this.asyncService.allIgnoreError(
-                                tokenPrices.map(async (tokenPrice) => {
-                                    await this.primaryInfluxdbVolumeBucketService.write(
+                            const tokenVolumes =
+                                this.binanceTokenRegistryService.getBinanceTokenVolumes({
+                                    tokenVolumeDataArray: [
                                         {
-                                            id: tokenPrice.id,
-                                            volume: new Decimal(quoteVolume),
-                                            cexId: CexId.Binance,
-                                        },
-                                    )
+                                            symbol, volume: quoteVolume 
+                                        }
+                                    ],
+                                })
+                            if (!tokenVolumes.length) continue
+                            resetTimeout()
+                            await this.asyncService.allIgnoreError(
+                                tokenVolumes.map(async (tokenVolume) => {
+                                    await this.primaryInfluxdbVolumeBucketService.write({
+                                        id: tokenVolume.id,
+                                        volume: new Decimal(tokenVolume.volume),
+                                        cexId: CexId.Binance,
+                                    })
                                 }),
                             )
                         } catch (error) {

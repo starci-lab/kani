@@ -9,8 +9,10 @@ import {
 } from "@modules/databases"
 import type {
     BybitTokenPrice,
+    BybitTokenVolume,
     GetBybitTokenIdBySymbolParams,
     ResolveBybitTokenPricesParams,
+    ResolveBybitTokenVolumesParams,
 } from "./types"
 
 /**
@@ -77,7 +79,9 @@ export class BybitTokenRegistryService {
         // find all tokens with Bybit market listings
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             marketListings: {
-                $where: (marketListing: MarketListingSchema) => marketListing.id === MarketListingId.Bybit,
+                $elemMatch: {
+                    id: MarketListingId.Bybit,
+                },
             },
         })
         
@@ -104,6 +108,40 @@ export class BybitTokenRegistryService {
                 price: tokenPrice.price,
             }
         }).filter(Boolean) as Array<BybitTokenPrice>
+    }
+
+    /**
+     * Maps Bybit token volume data to internal token volume structure.
+     *
+     * @param param - Parameters for resolving token volumes
+     * @param param.tokenVolumeDataArray - Array of symbol + volume from Bybit API
+     * @returns Array of token volumes with token identification
+     *
+     * @example
+     * const volumes = service.resolveTokenVolumes({ tokenVolumeDataArray: [{ symbol: "BTCUSDT", volume: 100 }] })
+     */
+    resolveTokenVolumes({ tokenVolumeDataArray }: ResolveBybitTokenVolumesParams): Array<BybitTokenVolume> {
+        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
+            marketListings: {
+                $elemMatch: {
+                    id: MarketListingId.Bybit,
+                },
+            },
+        })
+        if (!tokens.length) return []
+        return tokens.map(token => {
+            const listingSymbol = token.marketListings.find(
+                marketListing => marketListing.id === MarketListingId.Bybit,
+            )?.symbol
+            if (!listingSymbol) return undefined
+            const tokenVolume = tokenVolumeDataArray.find(d => d.symbol === listingSymbol)
+            if (!tokenVolume) return undefined
+            return {
+                tokenId: token.displayId,
+                id: token.id,
+                volume: tokenVolume.volume,
+            }
+        }).filter(Boolean) as Array<BybitTokenVolume>
     }
 
     /**

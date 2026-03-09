@@ -71,7 +71,6 @@ export class BybitTradeVolumeService implements OnApplicationBootstrap {
             symbols,
             envConfig().cexes.bybit.chunks.lastPrice,
         )
-
         for (const batch of batches) {
             this.retryService.retry({
                 options: {
@@ -88,7 +87,6 @@ export class BybitTradeVolumeService implements OnApplicationBootstrap {
                             envConfig().cexes.ws.idleTimeout,
                         )
                     }
-
                     let startTime: Dayjs | null = null
                     const stream = await this.streamAsyncIteratorService.createStream({
                         connection,
@@ -125,13 +123,13 @@ export class BybitTradeVolumeService implements OnApplicationBootstrap {
                                     streamName: BYBIT_TRADE_VOLUME_STREAM_NAME,
                                     symbols: batch,
                                     durationMs: startTime
-                                        ? this.dayjsService.now().diff(startTime, "millisecond")
+                                        ? this.dayjsService.now().diff(startTime,
+                                            "millisecond")
                                         : null,
                                 },
                             )
                         },
                     })
-
                     for await (const data of stream) {
                         try {
                             const parsed = JSON.parse(data.toString()) as BybitTradeUpdate | BybitWsSubscribeResult
@@ -143,19 +141,19 @@ export class BybitTradeVolumeService implements OnApplicationBootstrap {
 
                             for (const trade of parsed.data) {
                                 const symbol = trade.s
-                                const price = parseFloat(trade.p)
-                                const quoteVolume = parseFloat(trade.v) * price
-                                const tokenPrices = this.bybitTokenRegistryService.resolveTokenPrices({
-                                    tokenPriceDataArray: [{ symbol, price }],
+                                const quoteVolume = parseFloat(trade.v) * parseFloat(trade.p)
+                                const tokenVolumes = this.bybitTokenRegistryService.resolveTokenVolumes({
+                                    tokenVolumeDataArray: [{
+                                        symbol, volume: quoteVolume 
+                                    }],
                                 })
-                                if (!tokenPrices.length) continue
-
+                                if (!tokenVolumes.length) continue
                                 resetTimeout()
                                 await this.asyncService.allIgnoreError(
-                                    tokenPrices.map(async (tokenPrice) => {
+                                    tokenVolumes.map(async (tokenVolume) => {
                                         await this.primaryInfluxdbVolumeBucketService.write({
-                                            id: tokenPrice.id,
-                                            volume: new Decimal(quoteVolume),
+                                            id: tokenVolume.id,
+                                            volume: new Decimal(tokenVolume.volume),
                                             cexId: CexId.Bybit,
                                         })
                                     }),

@@ -9,42 +9,42 @@ import {
     PrimaryInfluxdbPriceBucketService
 } from "@modules/databases"
 import {
-    AggregatedTokenPriceCacheService 
+    AggregatedTokenPriceCacheService
 } from "@modules/cache"
 import {
-    AsyncService, 
-    DayjsService, 
-    RetryService 
+    AsyncService,
+    DayjsService,
+    RetryService
 } from "@modules/mixin"
 import {
     BYBIT_LAST_PRICE_STREAM_NAME,
-    BYBIT_WS_URL 
+    BYBIT_WS_URL
 } from "./constants"
 import {
-    envConfig 
+    envConfig
 } from "@modules/env"
 import {
-    WinstonLog, WinstonService 
+    WinstonLog, WinstonService
 } from "@modules/winston"
 import {
-    BybitTokenRegistryService 
+    BybitTokenRegistryService
 } from "./token-registry.service"
 import _ from "lodash"
 import {
-    WebSocketStreamConnection, StreamAsyncIteratorService 
+    WebSocketStreamConnection, StreamAsyncIteratorService
 } from "@modules/stream-async-iterator"
 import {
-    EventEmitterService, EventName 
+    EventEmitterService, EventName
 } from "@modules/event"
 import Decimal from "decimal.js"
 import {
-    Dayjs 
+    Dayjs
 } from "dayjs"
 import {
     MODULE_OPTIONS_TOKEN, OPTIONS_TYPE
 } from "./bybit.module-definition"
 import type {
-    BybitTickerUpdate, BybitWsSubscribeResult 
+    BybitTickerUpdate, BybitWsSubscribeResult
 } from "./types"
 
 /**
@@ -54,19 +54,19 @@ import type {
 @Injectable()
 export class BybitLastPriceService implements OnApplicationBootstrap {
     constructor(
-      private readonly retryService: RetryService,
-      private readonly bybitTokenRegistryService: BybitTokenRegistryService,
-      private readonly winstonService: WinstonService,
-      private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
-      private readonly asyncService: AsyncService,
-      private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
-      private readonly dayjsService: DayjsService,
-      private readonly eventEmitterService: EventEmitterService,
-      private readonly primaryInfluxdbPriceBucketService: PrimaryInfluxdbPriceBucketService,
-      @Inject(MODULE_OPTIONS_TOKEN)
-      private readonly options: typeof OPTIONS_TYPE,
-    ) {}
-  
+        private readonly retryService: RetryService,
+        private readonly bybitTokenRegistryService: BybitTokenRegistryService,
+        private readonly winstonService: WinstonService,
+        private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
+        private readonly asyncService: AsyncService,
+        private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
+        private readonly dayjsService: DayjsService,
+        private readonly eventEmitterService: EventEmitterService,
+        private readonly primaryInfluxdbPriceBucketService: PrimaryInfluxdbPriceBucketService,
+        @Inject(MODULE_OPTIONS_TOKEN)
+        private readonly options: typeof OPTIONS_TYPE,
+    ) { }
+
     /**
      * Bootstraps last-price stream: chunks symbols, opens WS, subscribes to tickers, processes updates.
      * @returns void
@@ -141,80 +141,74 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                             )
                         }
                     })
+                    for await (const data of stream) {
+                        try {
+                            const parsed = JSON.parse(data.toString()) as BybitTickerUpdate | BybitWsSubscribeResult
+                            if ("success" in parsed) {
+                                if (!parsed.success) continue
+                                continue // subscription ACK
+                            }
+                            if (!("data" in parsed)) continue
 
-                    try {
-                        for await (const data of stream) {
-                            try {
-                                const parsed = JSON.parse(data.toString()) as BybitTickerUpdate | BybitWsSubscribeResult
-                                if ("success" in parsed) {
-                                    if (!parsed.success) continue
-                                    continue // subscription ACK
-                                }
-                                if (!("data" in parsed)) continue
+                            const tokenPrices = this.bybitTokenRegistryService.resolveTokenPrices({
+                                tokenPriceDataArray: [
+                                    {
+                                        symbol: parsed.data.symbol,
+                                        price: parseFloat(parsed.data.lastPrice),
+                                    }
+                                ]
+                            })
 
-                                const tokenPrices = this.bybitTokenRegistryService.resolveTokenPrices({
-                                    tokenPriceDataArray: [
-                                        {
-                                            symbol: parsed.data.symbol,
-                                            price: parseFloat(parsed.data.lastPrice),
-                                        }
-                                    ]
-                                })
-
-                                if (!tokenPrices.length) {
-                                    continue
-                                }
-                                resetTimeout()
-                                await this.asyncService.allIgnoreError(
-                                    tokenPrices.map((tokenPrice) => 
-                                        this.asyncService.allIgnoreError(
-                                            [
-                                                this.aggregatedTokenPriceCacheService.set({
-                                                    id: tokenPrice.id,
-                                                    price: tokenPrice.price,
-                                                    marketListingId: MarketListingId.Bybit,
-                                                }),
-                                                this.primaryInfluxdbPriceBucketService.write({
-                                                    id: tokenPrice.id,
-                                                    price: new Decimal(tokenPrice.price),
-                                                    cexId: CexId.Bybit,
-                                                }),
-                                                this.eventEmitterService.emit(
-                                                    {
-                                                        event: EventName.TokenPriceUpdated,
-                                                        payload: {
-                                                            id: tokenPrice.id,
-                                                            price: new Decimal(tokenPrice.price),
-                                                            marketListingId: MarketListingId.Bybit,
-                                                        },
-                                                        options: {
-                                                            useKafka: this.options.useKafka,
-                                                            useLocal: this.options.useLocal,
-                                                        }
+                            if (!tokenPrices.length) {
+                                continue
+                            }
+                            resetTimeout()
+                            await this.asyncService.allIgnoreError(
+                                tokenPrices.map((tokenPrice) =>
+                                    this.asyncService.allIgnoreError(
+                                        [
+                                            this.aggregatedTokenPriceCacheService.set({
+                                                id: tokenPrice.id,
+                                                price: tokenPrice.price,
+                                                marketListingId: MarketListingId.Bybit,
+                                            }),
+                                            this.primaryInfluxdbPriceBucketService.write({
+                                                id: tokenPrice.id,
+                                                price: new Decimal(tokenPrice.price),
+                                                cexId: CexId.Bybit,
+                                            }),
+                                            this.eventEmitterService.emit(
+                                                {
+                                                    event: EventName.TokenPriceUpdated,
+                                                    payload: {
+                                                        id: tokenPrice.id,
+                                                        price: new Decimal(tokenPrice.price),
+                                                        marketListingId: MarketListingId.Bybit,
+                                                    },
+                                                    options: {
+                                                        useKafka: this.options.useKafka,
+                                                        useLocal: this.options.useLocal,
                                                     }
-                                                ),
-                                            ]
-                                        )
+                                                }
+                                            ),
+                                        ]
                                     )
                                 )
-                            } catch (error) {
-                                this.winstonService.log(
-                                    WinstonLog.WebsocketSubscriptionError,
-                                    {
-                                        error: error.message,
-                                        streamName: "bybit-last-price",
-                                        symbols: batch,
-                                    }
-                                )
-                            }
-                        }
-                    } finally {
-                        if (timeout) {
-                            clearTimeout(timeout)
+                            )
+                        } catch (error) {
+                            this.winstonService.log(
+                                WinstonLog.WebsocketSubscriptionError,
+                                {
+                                    error: error.message,
+                                    streamName: "bybit-last-price",
+                                    symbols: batch,
+                                }
+                            )
                         }
                     }
                 }
-            })
+            }
+            )
         }
     }
 }
