@@ -145,9 +145,16 @@ export class GateTradeVolumeService implements OnApplicationBootstrap {
                     for await (const data of stream) {
                         try {
                             const parsed = JSON.parse(data.toString()) as GateTradeUpdate
-                            if (parsed.channel !== "spot.trades" || !parsed.result) continue
-                            const { currency_pair: symbol, price: priceStr, amount: amountStr } =
-                                parsed.result
+                            if (
+                                parsed.channel !== "spot.trades" 
+                                || !parsed.result 
+                                || parsed.event !== "update"
+                            ) continue
+                            const { 
+                                currency_pair: symbol, 
+                                price: priceStr, 
+                                amount: amountStr 
+                            } = parsed.result
                             const volume = new Decimal(amountStr).mul(new Decimal(priceStr)).toNumber()
                             const tokenVolumes = this.gateTokenRegistryService.getTokenVolumes({
                                 tokenVolumeDataArray: [
