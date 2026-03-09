@@ -74,7 +74,7 @@ export class BinanceTradeVolumeService implements OnApplicationBootstrap {
         if (!volumeSymbols.length) return
         const batches = _.chunk(
             volumeSymbols,
-            envConfig().cexes.binance.chunks.lastPrice,
+            envConfig().cexes.binance.chunks.volume,
         )
 
         for (const batch of batches) {

@@ -74,7 +74,7 @@ export class BybitTradeVolumeService implements OnApplicationBootstrap {
         if (!symbols.length) return
         const batches = _.chunk(
             symbols,
-            envConfig().cexes.bybit.chunks.lastPrice,
+            envConfig().cexes.bybit.chunks.volume,
         )
 
         for (const batch of batches) {
@@ -153,12 +153,11 @@ export class BybitTradeVolumeService implements OnApplicationBootstrap {
 
                             for (const trade of parsed.data) {
                                 const symbol = trade.s
-                                const quoteVolume = parseFloat(trade.v) * parseFloat(trade.p)
                                 const tokenVolumes = this.bybitTokenRegistryService.getTokenVolumes({
                                     tokenVolumeDataArray: [
                                         {
                                             symbol,
-                                            volume: quoteVolume,
+                                            volume: parseFloat(trade.v),
                                         },
                                     ],
                                 })

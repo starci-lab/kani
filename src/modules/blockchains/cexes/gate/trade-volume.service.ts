@@ -73,7 +73,7 @@ export class GateTradeVolumeService implements OnApplicationBootstrap {
         if (!symbols.length) return
         const batches = _.chunk(
             symbols,
-            envConfig().cexes.gate.chunks.lastPrice,
+            envConfig().cexes.gate.chunks.volume,
         )
 
         for (const batch of batches) {

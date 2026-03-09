@@ -181,8 +181,8 @@ export const envConfig = () => ({
                 lastPrice: parseEnvInt({
                     key: "CEXES_BINANCE_CHUNKS_LAST_PRICE", defaultValue: 10 
                 }),
-                orderBook: parseEnvInt({
-                    key: "CEXES_BINANCE_CHUNKS_ORDER_BOOK", defaultValue: 10 
+                volume: parseEnvInt({
+                    key: "CEXES_BINANCE_CHUNKS_VOLUME", defaultValue: 10 
                 }),
             },
             ws: {
@@ -204,8 +204,8 @@ export const envConfig = () => ({
                 lastPrice: parseEnvInt({
                     key: "CEXES_GATE_CHUNKS_LAST_PRICE", defaultValue: 10 
                 }),    
-                orderBook: parseEnvInt({
-                    key: "CEXES_GATE_CHUNKS_ORDER_BOOK", defaultValue: 10 
+                volume: parseEnvInt({
+                    key: "CEXES_GATE_CHUNKS_VOLUME", defaultValue: 10 
                 }),
             },
             ws: {
@@ -227,8 +227,8 @@ export const envConfig = () => ({
                 lastPrice: parseEnvInt({
                     key: "CEXES_BYBIT_CHUNKS_LAST_PRICE", defaultValue: 10 
                 }),
-                orderBook: parseEnvInt({
-                    key: "CEXES_BYBIT_CHUNKS_ORDER_BOOK", defaultValue: 10 
+                volume: parseEnvInt({
+                    key: "CEXES_BYBIT_CHUNKS_VOLUME", defaultValue: 10 
                 }),
             },
         },
