@@ -25,7 +25,7 @@ export interface GateTokenPriceData {
 }
 
 /** Params for resolving Gate.io token prices. */
-export interface ResolveTokenPricesParams {
+export interface ResolveGateTokenPricesParams {
     /** Token price data from Gate.io API. */
     tokenPriceDataArray: Array<GateTokenPriceData>
 }

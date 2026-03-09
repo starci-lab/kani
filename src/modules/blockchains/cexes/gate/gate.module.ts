@@ -8,9 +8,6 @@ import {
     GateLastPriceService 
 } from "./last-price.service"
 import {
-    GateOrderBookService 
-} from "./order-book.service"
-import {
     GateTokenRegistryService 
 } from "./token-registry.service"
 import {
@@ -42,7 +39,6 @@ export class GateModule extends ConfigurableModuleClass {
         // register all Gate.io services
         const providers = [
             GateLastPriceService,
-            GateOrderBookService,
             GateTokenRegistryService,
             GateTradeVolumeService,
         ]

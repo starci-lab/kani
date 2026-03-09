@@ -25,13 +25,13 @@ export interface BybitTokenPriceData {
 }
 
 /** Params for resolving Bybit token prices. */
-export interface ResolveTokenPricesParams {
+export interface ResolveBybitTokenPricesParams {
     /** Token price data from Bybit API. */
     tokenPriceDataArray: Array<BybitTokenPriceData>
 }
 
 /** Params for getting token ID by Bybit symbol. */
-export interface GetTokenIdBySymbolParams {
+export interface GetBybitTokenIdBySymbolParams {
     /** Bybit trading symbol. */
     symbol: string
 }

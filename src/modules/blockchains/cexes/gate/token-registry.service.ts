@@ -8,7 +8,7 @@ import {
 } from "@modules/databases"
 import type {
     GateTokenPrice,
-    ResolveTokenPricesParams,
+    ResolveGateTokenPricesParams,
 } from "./types"
 
 /**
@@ -71,7 +71,7 @@ export class GateTokenRegistryService {
      * @example
      * const prices = service.resolveTokenPrices({ tokenPriceDataArray: gateData })
      */
-    resolveTokenPrices({ tokenPriceDataArray }: ResolveTokenPricesParams): Array<GateTokenPrice> {
+    resolveTokenPrices({ tokenPriceDataArray }: ResolveGateTokenPricesParams): Array<GateTokenPrice> {
         // find all tokens with Gate.io market listings
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             marketListings: {
