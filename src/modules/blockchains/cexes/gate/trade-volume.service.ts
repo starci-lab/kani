@@ -189,8 +189,10 @@ export class GateTradeVolumeService implements OnApplicationBootstrap {
                                                         },
                                                     }
                                                 ),
-                                            ])
-                                    })
+                                            ]
+                                        )
+                                    }
+                                )
                             )
                         } catch (error) {
                             this.winstonService.log(
