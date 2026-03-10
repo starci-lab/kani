@@ -31,7 +31,7 @@ import {
     RelativePriceBuilderService,
     PctCalculatorService,
     RegressionCalculatorService,
-} from "./violate-processors"
+} from "./violate-calculators"
 
 /**
  * Runtimes Module

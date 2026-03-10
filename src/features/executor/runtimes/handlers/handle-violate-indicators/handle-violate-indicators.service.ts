@@ -12,7 +12,7 @@ import {
 import {
     PctCalculatorService,
     RegressionCalculatorService,
-} from "../../violate-processors"
+} from "../../violate-calculators"
 
 /**
  * Handles bot violate indicators: loops over each indicator and delegates to the matching calculator.
