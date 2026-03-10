@@ -21,7 +21,9 @@ import {
     envConfig
 } from "@modules/env"
 import {
-    ActionJobStimulateMongoSessionException
+    ActionJobStimulateMongoSessionException,
+    PositionIdNotFoundException,
+    TaskPrepareResultNotFoundException,
 } from "@modules/exceptions"
 import {
     SendHeartbeatService
@@ -103,30 +105,42 @@ export class TransferFeesTaskConfirmService {
                         assert(updateJobResult.matchedCount > 0)
 
                         const task = job.tasks[taskIndex]
-                        const positionId = bot.activePosition?.position?.toString?.()
-                        if (positionId && task?.prepareResult && task?.steps?.length) {
-                            const prepareResult = this.superJson.parse<PrepareTransferFeesTransactionResult>(
-                                task.prepareResult,
-                            )
-                            const feeTargetAmount = prepareResult?.feeAmountTarget ?? new BN(0)
-                            const feeQuoteAmount = prepareResult?.feeAmountQuote ?? new BN(0)
-                            const feeTransferTxHashes = task.steps
-                                .map((step) => {
-                                    const exec = step?.executeResult
-                                        ? this.superJson.parse<ExecuteWithdrawTransactionResult>(step.executeResult)
-                                        : null
-                                    return exec?.txHash
-                                })
-                                .filter((txHash): txHash is string => Boolean(txHash))
-                            await this.transferFeesSnapshotService.updateTransferFeesRecord({
+                        const positionId = bot.activePosition?.position?.toString()
+                        if (!positionId) {
+                            throw new PositionIdNotFoundException({
+                                botId: bot.id,
+                            })
+                        }
+                        if (!task.prepareResult) {
+                            throw new TaskPrepareResultNotFoundException({
+                                botId: bot.id,
+                                taskIndex,
+                                taskType: TaskType.TransferFees,
+                            })
+                        }
+                        const prepareResult = this.superJson.parse<PrepareTransferFeesTransactionResult>(
+                            task.prepareResult,
+                        )
+                        const feeTargetAmount = prepareResult?.feeAmountTarget ?? new BN(0)
+                        const feeQuoteAmount = prepareResult?.feeAmountQuote ?? new BN(0)
+                        const feeTransferTxHashes = task.steps
+                            .map((step) => {
+                                const exec = step?.executeResult
+                                    ? this.superJson.parse<ExecuteWithdrawTransactionResult>(step.executeResult)
+                                    : null
+                                return exec?.txHash
+                            })
+                            .filter((txHash): txHash is string => Boolean(txHash))
+                        await this.transferFeesSnapshotService.updateTransferFeesRecord(
+                            {
                                 botId: bot.id,
                                 positionId,
                                 feeTargetAmount,
                                 feeQuoteAmount,
                                 feeTransferTxHashes,
                                 session: clientSession,
-                            })
-                        }
+                            }
+                        )
                         if (envConfig().executor.runtime.operation?.transferFees?.stimulate) {
                             throw new ActionJobStimulateMongoSessionException({
                                 botId: bot.id,

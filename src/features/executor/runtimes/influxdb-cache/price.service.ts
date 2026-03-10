@@ -20,6 +20,7 @@ import {
 import {
     LokiJSService,
     AsyncService,
+    DayjsService,
 } from "@modules/mixin"
 import {
     Interval 
@@ -36,6 +37,7 @@ export class InfluxdbPriceCacheService implements OnModuleInit, OnApplicationBoo
         private readonly lokiJSService: LokiJSService,
         private readonly asyncService: AsyncService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     /**
@@ -118,9 +120,16 @@ export class InfluxdbPriceCacheService implements OnModuleInit, OnApplicationBoo
      * @returns Price points in the time window, or empty array if none
      *
      * @example
-     * const points = await service.getPoints({ tokenId: "x", cexId: "binance", timeInterval: { startMs: 0, endMs: Date.now() } })
+     * const points = await service.getPoints({ tokenId: "x", cexId: "binance", timeIntervalMs: 1000 })
      */
-    async getPoints({ tokenId, cexId, timeInterval }: GetPointsParams): Promise<GetPricePointsResult> {
+    async getPoints(
+        { 
+            tokenId, 
+            cexId, 
+            timeIntervalMs 
+        }: GetPointsParams
+    ): Promise<GetPricePointsResult> {
+        // get the entries from the storage
         const entries = this.storage.find({
             tokenId,
             cexId,
@@ -128,8 +137,14 @@ export class InfluxdbPriceCacheService implements OnModuleInit, OnApplicationBoo
         if (!entries || entries.length === 0) {
             return []
         }
-        const { startMs, endMs } = timeInterval
+        // get the points from the entries
         const points = entries.flatMap((entry) => entry.points)
-        return points.filter((p) => p.time >= startMs && p.time <= endMs)
+        // filter the points by the time interval
+        return points.filter(
+            (point) => this.dayjsService.now().diff(
+                this.dayjsService.from(point.time),
+                "millisecond"
+            ) <= timeIntervalMs
+        )
     }
 }

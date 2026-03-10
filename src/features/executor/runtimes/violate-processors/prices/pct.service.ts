@@ -5,8 +5,22 @@ import {
     RelativePriceBuilderService 
 } from "./relative-price-builder.service"
 import {
-    BotSchema, BotViolateIndicatorSchema 
+    BotSchema, BotViolateIndicatorSchema, 
+    CexId, 
+    PricePctViolateIndicatorMetadata
 } from "@modules/databases"
+import {
+    InfluxdbPriceCacheService 
+} from "../../influxdb-cache"
+import {
+    TokenNotFoundException 
+} from "@modules/exceptions"
+import {
+    PrimaryMemoryStorageService 
+} from "@modules/databases"
+import {
+    CacheService 
+} from "@modules/cache"
 
 /**
  * Service for calculating percentage change between two prices.
@@ -15,6 +29,9 @@ import {
 export class PctCalculatorService {
     constructor(
         private readonly relativePriceBuilderService: RelativePriceBuilderService,
+        private readonly influxdbPriceCacheService: InfluxdbPriceCacheService,
+        private readonly cacheService: CacheService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     /**
@@ -26,7 +43,28 @@ export class PctCalculatorService {
         bot: BotSchema,
         violateIndicator: BotViolateIndicatorSchema
     ): Promise<void> {
-        // console.log(bot,
-        //     violateIndicator)
+        const { timeWindowMs } = violateIndicator.metadata as PricePctViolateIndicatorMetadata
+        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: bot.targetToken,
+            },
+        })
+        if (!targetToken) {
+            throw new TokenNotFoundException({
+                id: bot.targetToken.toString(),
+            })
+        }
+        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: bot.quoteToken,
+            },
+        })
+        if (!quoteToken) {
+            throw new TokenNotFoundException({
+                id: bot.quoteToken.toString(),
+            }
+            )
+        // thus, we will process later based on type of the target token and quote token
+        }
     }
 }

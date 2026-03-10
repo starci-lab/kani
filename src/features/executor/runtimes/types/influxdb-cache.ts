@@ -4,13 +4,6 @@ import type {
     VolumePoint,
 } from "@modules/databases"
 
-/** Time window for filtering points (milliseconds). */
-export interface TimeInterval {
-    /** Start time (ms). */
-    startMs: number
-    /** End time (ms). */
-    endMs: number
-}
 
 /** Params for getting cached price or volume points by token, CEX, and time window. */
 export interface GetPointsParams {
@@ -18,8 +11,8 @@ export interface GetPointsParams {
     tokenId: string
     /** CEX ID. */
     cexId: CexId
-    /** Time window to filter points. */
-    timeInterval: TimeInterval
+    /** Time window in milliseconds to filter points. */
+    timeIntervalMs: number
 }
 
 /** Result of getting cached price points. */

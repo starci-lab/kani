@@ -65,3 +65,23 @@ export class PositionNotFoundException extends AbstractException {
         )
     }
 }
+
+/** Thrown when position ID is missing (e.g. bot has no active position). */
+export interface PositionIdNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    botId: string
+}
+
+export class PositionIdNotFoundException extends AbstractException {
+    constructor(
+        { botId, originalError }: PositionIdNotFoundExceptionMetadata
+    ) {
+        super(
+            "Position ID not found",
+            "POSITION_ID_NOT_FOUND_EXCEPTION",
+            {
+                botId,
+                originalError,
+            }
+        )
+    }
+}

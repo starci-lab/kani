@@ -2,10 +2,6 @@ import type {
     CexId,
     PricePoint,
 } from "@modules/databases"
-import type {
-    TimeInterval,
-} from "./influxdb-cache"
-
 /** Params for building relative price series (token A / token B) with interpolated base. */
 export interface BuildRelativePriceParams {
     /** Token A (numerator) ID. */
@@ -17,7 +13,7 @@ export interface BuildRelativePriceParams {
     /** CEX B ID used for both tokens. */
     cexBId: CexId
     /** Time window for price points. */
-    timeInterval: TimeInterval
+    timeIntervalMs: number
 }
 
 /** Result of building relative price: series of price points with price = A(t) / B_interpolated(t). */

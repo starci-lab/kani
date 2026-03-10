@@ -5,7 +5,8 @@ import {
     AbstractException 
 } from "../abstract"
 import type {
-    LiquidityPoolId
+    LiquidityPoolId,
+    TaskType,
 } from "@modules/databases"
 /** Metadata for job not found. */
 export interface JobNotFoundExceptionMetadata extends AbstractExceptionMetadata {
@@ -84,6 +85,33 @@ export class PrepareResultNotFoundException extends AbstractException {
                 jobId,
                 liquidityPoolId,
                 taskIndex,
+            }
+        )
+    }
+}
+
+/** Thrown when task prepare result is not found (e.g. task.prepareResult is missing). */
+export interface TaskPrepareResultNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    botId: string
+    taskIndex: number
+    taskType: TaskType
+}
+
+export class TaskPrepareResultNotFoundException extends AbstractException {
+    constructor({
+        botId,
+        taskIndex,
+        taskType,
+        originalError,
+    }: TaskPrepareResultNotFoundExceptionMetadata) {
+        super(
+            "Task prepare result not found",
+            "TASK_PREPARE_RESULT_NOT_FOUND_EXCEPTION",
+            {
+                botId,
+                taskIndex,
+                taskType,
+                originalError,
             }
         )
     }

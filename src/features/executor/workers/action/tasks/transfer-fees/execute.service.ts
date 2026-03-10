@@ -66,7 +66,9 @@ export class TransferFeesTaskExecuteService {
     /**
      * Process the Transfer Fees Task EXECUTE step.
      */
-    async process({ bot, job, bullmqJob, taskIndex }: TransferFeesTaskExecuteParams) {
+    async process(
+        { bot, job, bullmqJob, taskIndex }: TransferFeesTaskExecuteParams
+    ) {
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
         const step = job.tasks[taskIndex].steps?.[stepIndex]
         const executeRetries = step?.executeRetries ?? 0
@@ -97,7 +99,7 @@ export class TransferFeesTaskExecuteService {
             const executeResult = await this.balanceActionService.executeWithdrawTransaction({
                 bot,
                 txCheck: true,
-                stimulate: envConfig().executor.runtime.operation?.withdraw?.stimulate ?? false,
+                stimulate: envConfig().executor.runtime.operation.transferFees.stimulate,
                 signedTx: this.superJson.parse<SignedTx>(signedTx),
             })
 

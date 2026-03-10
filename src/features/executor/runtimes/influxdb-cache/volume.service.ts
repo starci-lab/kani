@@ -22,6 +22,7 @@ import {
 import {
     LokiJSService,
     AsyncService,
+    DayjsService,
 } from "@modules/mixin"
 import {
     Interval,
@@ -39,6 +40,7 @@ export class InfluxdbVolumeCacheService implements OnModuleInit, OnApplicationBo
         private readonly lokiJSService: LokiJSService,
         private readonly asyncService: AsyncService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     /**
@@ -114,7 +116,13 @@ export class InfluxdbVolumeCacheService implements OnModuleInit, OnApplicationBo
      * @example
      * const points = await service.getPoints({ tokenId: "x", cexId: "binance", timeInterval: { startMs: 0, endMs: Date.now() } })
      */
-    async getPoints({ tokenId, cexId, timeInterval }: GetPointsParams): Promise<GetVolumePointsResult> {
+    async getPoints(
+        { 
+            tokenId, 
+            cexId, 
+            timeIntervalMs 
+        }: GetPointsParams
+    ): Promise<GetVolumePointsResult> {
         const entries = this.storage.find({
             tokenId,
             cexId,
@@ -122,8 +130,14 @@ export class InfluxdbVolumeCacheService implements OnModuleInit, OnApplicationBo
         if (!entries || entries.length === 0) {
             return []
         }
-        const { startMs, endMs } = timeInterval
+        // get the points from the entries
         const points = entries.flatMap((entry) => entry.points)
-        return points.filter((p) => p.time >= startMs && p.time <= endMs)
+        // filter the points by the time interval
+        return points.filter(
+            (point) => this.dayjsService.now().diff(
+                this.dayjsService.from(point.time),
+                "millisecond"
+            ) <= timeIntervalMs
+        )
     }
 }

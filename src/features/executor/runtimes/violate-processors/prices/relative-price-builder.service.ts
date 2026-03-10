@@ -41,7 +41,7 @@ export class RelativePriceBuilderService {
             tokenBId,
             cexAId,
             cexBId,
-            timeInterval
+            timeIntervalMs,
         }: BuildRelativePriceParams
     ): Promise<BuildRelativePriceResult> {
         const [
@@ -51,12 +51,12 @@ export class RelativePriceBuilderService {
             this.influxdbPriceCacheService.getPoints({
                 tokenId: tokenAId,
                 cexId: cexAId,
-                timeInterval,
+                timeIntervalMs,
             }),
             this.influxdbPriceCacheService.getPoints({
                 tokenId: tokenBId,
                 cexId: cexBId,
-                timeInterval,
+                timeIntervalMs,
             }),
         ])
         return this.buildRelativeSeriesInterpolated(
