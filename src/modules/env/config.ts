@@ -538,6 +538,14 @@ export const envConfig = () => ({
                         key: "EXECUTOR_OPERATION_TRANSFER_FEES_STIMULATE", defaultValue: false 
                     }),
                 },
+                violateIndicators: {
+                    interval: {
+                        poll: parseEnvMs({
+                            key: "EXECUTOR_OPERATION_VIOLATE_INDICATORS_INTERVAL_POLL",
+                            defaultValue: "250ms",
+                        }),
+                    },
+                },
             },
             /** InfluxDB cache: refresh interval and query time window for token price/volume points. */
             influxdbCache: {

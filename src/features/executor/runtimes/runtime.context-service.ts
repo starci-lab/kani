@@ -35,6 +35,7 @@ import {
     HandleClmmPositionCloseRequestedEventService,
     HandleDlmmPositionCloseRequestedEventService,
     HandleWithdrawService,
+    HandleViolateIndicatorsService,
     HandleNotSyncedService,
     HandleTransferFeesService,
 } from "./handlers"
@@ -63,6 +64,7 @@ export class RuntimeContextService {
         private readonly handleClmmPositionCloseRequestedEventService: HandleClmmPositionCloseRequestedEventService,
         private readonly handleDlmmPositionCloseRequestedEventService: HandleDlmmPositionCloseRequestedEventService,
         private readonly handleWithdrawService: HandleWithdrawService,
+        private readonly handleViolateIndicatorsService: HandleViolateIndicatorsService,
         private readonly handleNotSyncedService: HandleNotSyncedService,
         private readonly handleTransferFeesService: HandleTransferFeesService,
     ) { }
@@ -236,6 +238,19 @@ export class RuntimeContextService {
                             }
                             await this.handleTransferFeesService.process(
                                 bot
+                            )
+                        },
+                    )
+                    // invoke and schedule the violate indicators handler (loop over each indicator)
+                    this.invokeAndSchedule(
+                        envConfig().executor.runtime.operation.violateIndicators.interval.poll,
+                        async () => {
+                            const bot = await this.findBot()
+                            if (!bot) {
+                                return
+                            }
+                            await this.handleViolateIndicatorsService.process(
+                                bot,
                             )
                         },
                     )

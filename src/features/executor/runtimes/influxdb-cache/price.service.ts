@@ -10,6 +10,8 @@ import {
     Injectable, OnApplicationBootstrap, OnModuleInit
 } from "@nestjs/common"
 import type {
+    GetPointsParams,
+    GetPricePointsResult,
     InfluxdbPriceCache,
 } from "../types"
 import {
@@ -58,7 +60,7 @@ export class InfluxdbPriceCacheService implements OnModuleInit, OnApplicationBoo
         // loop all tokens and store price points
         const tokens = this.primaryMemoryStorageService.tokenCollection.find()
         const promises = tokens.map(async (token) => {
-            await this.storePricePoints(token)
+            await this.storePoints(token)
         })
         await this.asyncService.allIgnoreError(promises)
     }
@@ -67,7 +69,7 @@ export class InfluxdbPriceCacheService implements OnModuleInit, OnApplicationBoo
      * Store price points for a token in InfluxDB.
      * @param token - The token to store price points for.
      */
-    async storePricePoints(token: TokenSchema): Promise<void> {
+    async storePoints(token: TokenSchema): Promise<void> {
         const promises = token.trackedCexIds.map(async (cexId) => {
             const pricePoints = await this.primaryInfluxdbPriceBucketService.queryPromise(
                 {
@@ -99,13 +101,35 @@ export class InfluxdbPriceCacheService implements OnModuleInit, OnApplicationBoo
      * Store all price points for all tokens in InfluxDB on an interval.
      */
     @Interval(envConfig().executor.runtime.influxdbCache.price.storeIntervalMs)
-    async storeAllPricePoints(): Promise<void> {
+    async storeAllPoints(): Promise<void> {
         const tokens = this.primaryMemoryStorageService.tokenCollection.find()
         const promises = tokens.map( 
             async (token) => {
-                await this.storePricePoints(token)
+                await this.storePoints(token)
             }
         )
         await this.asyncService.allIgnoreError(promises)
+    }
+
+    /**
+     * Get price points for a token and CEX within the given time interval.
+     *
+     * @param params - tokenId, cexId, and timeInterval (startMs, endMs)
+     * @returns Price points in the time window, or empty array if none
+     *
+     * @example
+     * const points = await service.getPoints({ tokenId: "x", cexId: "binance", timeInterval: { startMs: 0, endMs: Date.now() } })
+     */
+    async getPoints({ tokenId, cexId, timeInterval }: GetPointsParams): Promise<GetPricePointsResult> {
+        const entries = this.storage.find({
+            tokenId,
+            cexId,
+        })
+        if (!entries || entries.length === 0) {
+            return []
+        }
+        const { startMs, endMs } = timeInterval
+        const points = entries.flatMap((entry) => entry.points)
+        return points.filter((p) => p.time >= startMs && p.time <= endMs)
     }
 }

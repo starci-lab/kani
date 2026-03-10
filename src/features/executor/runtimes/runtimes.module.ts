@@ -20,12 +20,18 @@ import {
     HandleReconcileBalanceService,
     HandleTransferFeesService,
     HandleWithdrawService,
+    HandleViolateIndicatorsService,
     HandleNotSyncedService,
 } from "./handlers"
 import {
     InfluxdbPriceCacheService,
     InfluxdbVolumeCacheService,
 } from "./influxdb-cache"
+import {
+    RelativePriceBuilderService,
+    PctCalculatorService,
+    RegressionCalculatorService,
+} from "./violate-processors"
 
 /**
  * Runtimes Module
@@ -62,9 +68,13 @@ export class RuntimesModule extends ConfigurableModuleClass {
                 HandleClmmPositionCloseRequestedEventService,
                 HandleDlmmPositionCloseRequestedEventService,
                 HandleWithdrawService,
+                HandleViolateIndicatorsService,
                 HandleNotSyncedService,
                 InfluxdbPriceCacheService,
                 InfluxdbVolumeCacheService,
+                RelativePriceBuilderService,
+                PctCalculatorService,
+                RegressionCalculatorService,
             ],
             exports: [
                 RuntimesFactoryService,

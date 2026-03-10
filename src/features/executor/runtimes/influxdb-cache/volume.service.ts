@@ -12,6 +12,8 @@ import {
     OnModuleInit,
 } from "@nestjs/common"
 import type {
+    GetPointsParams,
+    GetVolumePointsResult,
     InfluxdbVolumeCache,
 } from "../types"
 import {
@@ -60,7 +62,7 @@ export class InfluxdbVolumeCacheService implements OnModuleInit, OnApplicationBo
     async onApplicationBootstrap(): Promise<void> {
         const tokens = this.primaryMemoryStorageService.tokenCollection.find()
         const promises = tokens.map(async (token) => {
-            await this.storeVolumePoints(token)
+            await this.storePoints(token)
         })
         await this.asyncService.allIgnoreError(promises)
     }
@@ -69,23 +71,25 @@ export class InfluxdbVolumeCacheService implements OnModuleInit, OnApplicationBo
      * Store volume points for a token in InfluxDB.
      * @param token - The token to store volume points for.
      */
-    async storeVolumePoints(token: TokenSchema): Promise<void> {
-        const promises = token.trackedCexIds.map(async (cexId) => {
-            const volumePoints = await this.primaryInfluxdbVolumeBucketService.queryPromise({
-                id: token.id,
-                intervalMs: envConfig().executor.runtime.influxdbCache.volume.intervalMs,
-                cexId,
-            })
-            this.storage.findAndRemove({
-                tokenId: token.id,
-                cexId,
-            })
-            this.storage.insert({
-                tokenId: token.id,
-                cexId,
-                points: volumePoints,
-            })
-        })
+    async storePoints(token: TokenSchema): Promise<void> {
+        const promises = token.trackedCexIds.map(
+            async (cexId) => {
+                const volumePoints = await this.primaryInfluxdbVolumeBucketService.queryPromise({
+                    id: token.id,
+                    intervalMs: envConfig().executor.runtime.influxdbCache.volume.intervalMs,
+                    cexId,
+                })
+                this.storage.findAndRemove({
+                    tokenId: token.id,
+                    cexId,
+                })
+                this.storage.insert({
+                    tokenId: token.id,
+                    cexId,
+                    points: volumePoints,
+                })
+            }
+        )
         await this.asyncService.allIgnoreError(promises)
     }
 
@@ -93,11 +97,33 @@ export class InfluxdbVolumeCacheService implements OnModuleInit, OnApplicationBo
      * Store all volume points for all tokens in InfluxDB on an interval.
      */
     @Interval(envConfig().executor.runtime.influxdbCache.volume.storeIntervalMs)
-    async storeAllVolumePoints(): Promise<void> {
+    async storeAllPoints(): Promise<void> {
         const tokens = this.primaryMemoryStorageService.tokenCollection.find()
         const promises = tokens.map(async (token) => {
-            await this.storeVolumePoints(token)
+            await this.storePoints(token)
         })
         await this.asyncService.allIgnoreError(promises)
+    }
+
+    /**
+     * Get volume points for a token and CEX within the given time interval.
+     *
+     * @param params - tokenId, cexId, and timeInterval (startMs, endMs)
+     * @returns Volume points in the time window, or empty array if none
+     *
+     * @example
+     * const points = await service.getPoints({ tokenId: "x", cexId: "binance", timeInterval: { startMs: 0, endMs: Date.now() } })
+     */
+    async getPoints({ tokenId, cexId, timeInterval }: GetPointsParams): Promise<GetVolumePointsResult> {
+        const entries = this.storage.find({
+            tokenId,
+            cexId,
+        })
+        if (!entries || entries.length === 0) {
+            return []
+        }
+        const { startMs, endMs } = timeInterval
+        const points = entries.flatMap((entry) => entry.points)
+        return points.filter((p) => p.time >= startMs && p.time <= endMs)
     }
 }
