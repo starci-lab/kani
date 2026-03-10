@@ -75,7 +75,7 @@ export interface PrivyConfig {
 /** Fees config per chain (open position, swap referral). */
 export interface FeesConfig {
     /** ROI fee rate (0..1) applied to target token balance for transfer fees. */
-    feeRate?: number
+    feeRate: number
     openPosition: {
         solana: OpenPositionFeeConfig
         sui: OpenPositionFeeConfig

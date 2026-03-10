@@ -167,7 +167,7 @@ export class TransferFeesTaskPrepareService {
             const targetRatio = targetAmountInTarget.div(targetAmountInTarget.add(quoteAmountInTarget))
             const quoteRatio = quoteAmountInTarget.div(targetAmountInTarget.add(quoteAmountInTarget))
             // compute the fees amount in target token
-            const feeRate = this.mountStorageService.appConfig.fees.openPosition[bot.chainId].feeRate
+            const feeRate = new Decimal(this.mountStorageService.appConfig.fees.feeRate)
             const pnlFee = pnl.mul(feeRate)
             const feeAmountTarget = pnlFee.mul(targetRatio)
             const feeAmountQuoteInTarget = pnlFee.mul(quoteRatio)
@@ -217,6 +217,7 @@ export class TransferFeesTaskPrepareService {
                 }
             )
         } catch (error) {
+            console.error(error)
             // we log the failed task
             this.winstonService.log(
                 WinstonLog.ActiveJobTaskPreparedFailed,

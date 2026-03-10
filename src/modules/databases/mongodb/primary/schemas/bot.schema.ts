@@ -97,14 +97,6 @@ export class BotPerformance24H {
             description: "The profit and loss (PnL) in USD of the bot in the last 24 hours",
         })
         pnlInUsd: number
-    /**
-     * The list of bot violate indicators.
-     */
-    @Field(() => [BotViolateIndicatorSchema],
-        {
-            description: "The list of bot violate indicators",
-        })
-        violateIndicators: Array<BotViolateIndicatorSchema>
 }
 
 /**

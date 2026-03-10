@@ -26,7 +26,7 @@ export class RegressionCalculatorService {
         bot: BotSchema,
         violateIndicator: BotViolateIndicatorSchema
     ): Promise<void> {
-        console.log(bot,
-            violateIndicator)
+        // console.log(bot,
+        //     violateIndicator)
     }
 }

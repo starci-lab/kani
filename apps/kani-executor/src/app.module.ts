@@ -12,7 +12,9 @@ import {
     EnvModule,
 } from "@modules/env"
 import {
-    DexId, PrimaryMongoDbModule 
+    DexId, 
+    PrimaryInfluxdbModule, 
+    PrimaryMongoDbModule 
 } from "@modules/databases"
 import {
     ScheduleModule 
@@ -125,6 +127,9 @@ import {
                 ],
             }
         ),
+        PrimaryInfluxdbModule.register({
+            isGlobal: true,
+        }),
         RedisModule.register({
             isGlobal: true,
             instanceKeys: [
