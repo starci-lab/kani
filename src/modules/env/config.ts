@@ -539,6 +539,29 @@ export const envConfig = () => ({
                     }),
                 },
             },
+            /** InfluxDB cache: refresh interval and query time window for token price/volume points. */
+            influxdbCache: {
+                price: {    
+                    storeIntervalMs: parseEnvMs({
+                        key: "EXECUTOR_RUNTIME_INFLUXDB_CACHE_PRICE_STORE_INTERVAL_MS",
+                        defaultValue: "100ms",
+                    }),
+                    intervalMs: parseEnvMs({
+                        key: "EXECUTOR_RUNTIME_INFLUXDB_CACHE_PRICE_INTERVAL_MS",
+                        defaultValue: "1m",
+                    }), 
+                },
+                volume: {
+                    storeIntervalMs: parseEnvMs({
+                        key: "EXECUTOR_RUNTIME_INFLUXDB_CACHE_VOLUME_STORE_INTERVAL_MS",
+                        defaultValue: "100ms",
+                    }),
+                    intervalMs: parseEnvMs({
+                        key: "EXECUTOR_RUNTIME_INFLUXDB_CACHE_VOLUME_INTERVAL_MS",
+                        defaultValue: "1m",
+                    }),
+                },
+            }
         },
         lockAuthority: {
             interval: {
@@ -1690,5 +1713,5 @@ export const envConfig = () => ({
                 key: "CEX_HEALTH_MONITOR_VOLUME_CHECK_INTERVAL_MS", defaultValue: "2000ms" 
             }),
         },
-    },
+    },  
 })

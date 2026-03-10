@@ -22,6 +22,10 @@ import {
     HandleWithdrawService,
     HandleNotSyncedService,
 } from "./handlers"
+import {
+    InfluxdbPriceCacheService,
+    InfluxdbVolumeCacheService,
+} from "./influxdb-cache"
 
 /**
  * Runtimes Module
@@ -59,10 +63,14 @@ export class RuntimesModule extends ConfigurableModuleClass {
                 HandleDlmmPositionCloseRequestedEventService,
                 HandleWithdrawService,
                 HandleNotSyncedService,
+                InfluxdbPriceCacheService,
+                InfluxdbVolumeCacheService,
             ],
             exports: [
                 RuntimesFactoryService,
                 RuntimeContextService,
+                InfluxdbPriceCacheService,
+                InfluxdbVolumeCacheService,
             ],
         }
     }
