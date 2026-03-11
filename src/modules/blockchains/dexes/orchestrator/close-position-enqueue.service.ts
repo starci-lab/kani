@@ -58,6 +58,9 @@ import {
     CacheKey,
     CacheService,
 } from "@modules/cache"
+import { 
+    AsyncService 
+} from "@modules/mixin"
 
 /**
  * Service responsible for enqueuing close position jobs.
@@ -83,6 +86,7 @@ export class ClosePositionEnqueueService {
         private readonly settlementService: SettlementService,
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly cacheService: CacheService,
+        private readonly asyncService: AsyncService,
     ) { }
 
     /**
@@ -332,11 +336,15 @@ export class ClosePositionEnqueueService {
             )
             positionSettlements = settlement.positionSettlements
             // cache to Redis for requeue to reuse
-            await this.cacheService.set({
-                key: CacheKey.ClosePositionSettlements,
-                args: [bot.id],
-                cacheResult: positionSettlements,
-            })
+            this.asyncService.safeRun( 
+                async () => await this.cacheService.set(
+                    {
+                        key: CacheKey.ClosePositionSettlements,
+                        args: [bot.id],
+                        cacheResult: positionSettlements,
+                    }
+                )
+            )
             // if settle is enabled, we check if the position can be settled
             const settleEnabled =
                 envConfig().executor.runtime.operation.closePosition.settle.enabled

@@ -78,4 +78,21 @@ export class AsyncService {
 error as Error]
         }
     }
+
+    /**
+     * Run a callback silently, ignoring errors.
+     * @param callback - The callback to run.
+     */
+    async safeRun(callback: () => Promise<void>, options?: RetryOptions): Promise<void> {
+        try {
+            await this.allMustDone(
+                [
+                    callback()
+                ],
+                options
+            )
+        } catch {
+            // do nothing
+        }
+    }
 }
