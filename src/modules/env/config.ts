@@ -946,6 +946,10 @@ export const envConfig = () => ({
                 key: "CACHE_TTL_VIOLATE_INDICATOR_RESULTS",
                 defaultValue: "100years"
             }),
+            closePositionSettlements: parseEnvMs({
+                key: "CACHE_TTL_CLOSE_POSITION_SETTLEMENTS",
+                defaultValue: "1h"
+            }),
         },
         stale: {
             priceMaxAgeMs: parseEnvMs(

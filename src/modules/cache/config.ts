@@ -10,6 +10,7 @@ import type {
     AggregatedTokenPriceTwapCacheResult,
     CexTokenPriceCacheResult,
     CexTokenVolumeCacheResult,
+    ClosePositionSettlementsCacheResult,
     DynamicClmmLiquidityPoolInfoCacheResult,
     DynamicDlmmLiquidityPoolInfoCacheResult,
     LiquidityPoolsSyncedDiagnosticReadinessCacheResult,
@@ -104,5 +105,9 @@ export const configMap = {
         ttl: envConfig().cache.ttl.violateIndicatorResults,
         cacheResult: {
         } as ViolateIndicatorResultsCacheResult,
+    },
+    [CacheKey.ClosePositionSettlements]: {
+        ttl: envConfig().cache.ttl.closePositionSettlements,
+        cacheResult: [] as ClosePositionSettlementsCacheResult,
     },
 }

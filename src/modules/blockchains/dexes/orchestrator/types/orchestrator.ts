@@ -46,6 +46,8 @@ export interface EnqueueClosePositionParams {
     isRetry?: boolean
     /** Old job (Optional) */
     oldJob?: JobSchema
+    /** Position settlements. */
+    positionSettlements?: Array<Partial<PositionSettlementSchema>>
 }
 
 /**

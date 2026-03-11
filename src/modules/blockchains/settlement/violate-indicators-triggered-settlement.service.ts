@@ -45,13 +45,15 @@ export class ViolateIndicatorsTriggeredSettlementService implements ISettlementS
             args: [bot.id],
         })
         // consider settled if any result has status Trigger
-        const triggered = cached?.results?.some(
-            (r) => r !== null && r.status === IndicatorStatus.Trigger,
+        const indicatorsTriggered = cached?.results?.filter(
+            (r) => r.status === IndicatorStatus.Trigger,
         )
         return {
-            settled: Boolean(triggered),
+            settled: Boolean(indicatorsTriggered?.length),
             reason: PositionSettlementReason.ViolateIndicatorsTriggered,
-            metadata: cached?.results
+            metadata: {
+                indicators: indicatorsTriggered,
+            },
         }
     }
 }

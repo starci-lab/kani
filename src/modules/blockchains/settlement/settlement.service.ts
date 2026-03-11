@@ -12,6 +12,9 @@ import type {
     SettleResult,
     SettleStrategyResult,
 } from "./types"
+import {
+    AsyncService 
+} from "@modules/mixin"
 
 /**
  * Service responsible for running all settlement strategies and aggregating results.
@@ -25,6 +28,7 @@ export class SettlementService {
     constructor(
         private readonly outOfRangeSettlementService: OutOfRangeSettlementService,
         private readonly violateIndicatorsTriggeredSettlementService: ViolateIndicatorsTriggeredSettlementService,
+        private readonly asyncService: AsyncService,
     ) { }
 
     /**
@@ -44,23 +48,26 @@ export class SettlementService {
         }: SettleParams,
     ): Promise<SettleResult> {
         const strategyResults: Array<SettleStrategyResult> = []
-
-        // run out-of-range strategy
-        const outOfRangeResult = await this.outOfRangeSettlementService.settle({
-            bot,
-            state,
-            liquidityPool,
-        })
-        strategyResults.push(outOfRangeResult)
-
-        // run violate-indicators-triggered strategy
-        const violateIndicatorsResult = await this.violateIndicatorsTriggeredSettlementService.settle({
-            bot,
-            state,
-            liquidityPool,
-        })
-        strategyResults.push(violateIndicatorsResult)
-
+        await this.asyncService.allIgnoreError(
+            [
+                (async () => {
+                    const result = await this.outOfRangeSettlementService.settle({
+                        bot,
+                        state,
+                        liquidityPool,
+                    })
+                    strategyResults.push(result)
+                })(),
+                (async () => {
+                    const result = await this.violateIndicatorsTriggeredSettlementService.settle({
+                        bot,
+                        state,
+                        liquidityPool,
+                    })
+                    strategyResults.push(result)
+                })(),
+            ]
+        )
         // aggregate: settled if any strategy settled
         const settled = strategyResults.some((result) => result.settled)
         return {

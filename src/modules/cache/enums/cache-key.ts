@@ -19,4 +19,6 @@ export enum CacheKey {
     LiquidityPoolsSyncedDiagnosticReadiness = "liquidity.pools.synced.diagnostic.readiness",
     KafkaMessageDigest = "kafka.message.digest",
     ViolateIndicatorResults = "violate.indicator.results",
+    /** Close position settlements (per bot) for requeue. */
+    ClosePositionSettlements = "close.position.settlements",
 }

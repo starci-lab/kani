@@ -29,6 +29,10 @@ import {
     TransferFeesEnqueueService,
 } from "@modules/blockchains"
 import {
+    CacheKey,
+    CacheService,
+} from "@modules/cache"
+import {
     InjectPrimaryMongoose
 } from "@modules/databases"
 import {
@@ -57,6 +61,7 @@ export class ActionRequeueService implements OnApplicationBootstrap {
         private readonly withdrawEnqueueService: WithdrawEnqueueService,
         private readonly reconcileBalanceEnqueueService: ReconcileBalanceEnqueueService,
         private readonly transferFeesEnqueueService: TransferFeesEnqueueService,
+        private readonly cacheService: CacheService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
     ) {
@@ -141,15 +146,18 @@ export class ActionRequeueService implements OnApplicationBootstrap {
                             id: bot.activeJob?.liquidityPool.toString() ?? "",
                         })
                     }
-
-                    await this.closePositionEnqueueService.enqueue(
-                        {
-                            liquidityPool,
-                            bot,
-                            oldJob,
-                            isRetry: true,
-                        }
-                    )
+                    // load position settlements from Redis (cached at first enqueue)
+                    const positionSettlements = await this.cacheService.get({
+                        key: CacheKey.ClosePositionSettlements,
+                        args: [bot.id],
+                    })
+                    await this.closePositionEnqueueService.enqueue({
+                        liquidityPool,
+                        bot,
+                        oldJob,
+                        isRetry: true,
+                        positionSettlements: positionSettlements ?? [],
+                    })
                     break
                 }
                 case JobType.Withdraw: {

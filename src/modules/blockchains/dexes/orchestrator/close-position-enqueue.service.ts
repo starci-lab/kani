@@ -7,7 +7,6 @@ import {
     JobSchema,
     JobStatus,
     JobType,
-    PositionSettlementSchema,
     TaskType,
 } from "@modules/databases"
 import {
@@ -55,6 +54,10 @@ import {
 import {
     SettlementService
 } from "../../settlement"
+import {
+    CacheKey,
+    CacheService,
+} from "@modules/cache"
 
 /**
  * Service responsible for enqueuing close position jobs.
@@ -79,6 +82,7 @@ export class ClosePositionEnqueueService {
         private readonly liquidityPoolStateService: LiquidityPoolStateService,
         private readonly settlementService: SettlementService,
         private readonly lockAuthorityService: LockAuthorityService,
+        private readonly cacheService: CacheService,
     ) { }
 
     /**
@@ -96,6 +100,7 @@ export class ClosePositionEnqueueService {
             liquidityPool,
             oldJob,
             isRetry,
+            positionSettlements
         } = params
         // Attach associated positions to the bot's active position
         await this.activePositionAssociateService
@@ -104,11 +109,14 @@ export class ClosePositionEnqueueService {
             }
             )
         // Validate the close position job and get positionSettlements when valid
-        const validation: ValidateClosePositionResult = await this.validate(params)
-        if (!validation.isValid) {
+        const { 
+            isValid, 
+            positionSettlements: validatedPositionSettlements,
+        } = await this.validate(params)
+        if (!isValid) {
             return
         }
-        const positionSettlements = validation.positionSettlements ?? []
+        const _positionSettlements = (isRetry ? positionSettlements : validatedPositionSettlements) ?? []
         try {
             let jobId = oldJob?.id
             if (!isRetry) {
@@ -173,7 +181,7 @@ export class ClosePositionEnqueueService {
                         payload: {
                             /** Payload for close position task */
                             liquidityPoolId: liquidityPool.id,
-                            positionSettlements,
+                            positionSettlements: _positionSettlements,
                         },
                     },
                     {
@@ -263,14 +271,10 @@ export class ClosePositionEnqueueService {
      * @returns True if the job is valid, false otherwise.
      */
     private async validate(
-        {
-            bot,
-            liquidityPool,
-            oldJob,
-            isRetry,
-        }: EnqueueClosePositionParams
+        params: EnqueueClosePositionParams,
     ): Promise<ValidateClosePositionResult> {
-        let positionSettlements: Array<Partial<PositionSettlementSchema>> = []
+        const { bot, liquidityPool, oldJob, isRetry } = params
+        let positionSettlements = params.positionSettlements ?? []
         // Ensure the bot has an active position
         if (!bot.activePosition && !isRetry) {
             this.winstonService.log(
@@ -317,14 +321,22 @@ export class ClosePositionEnqueueService {
         }
         // Retrieve the latest pool state
         const state = await this.liquidityPoolStateService.getState(liquidityPool)
-        // Run settlement logic to determine whether position should close
         if (!isRetry) {
-            const settlement = await this.settlementService.settle({
-                bot,
-                liquidityPool,
-                state,
-            })
+            // Run settlement logic to determine whether position should close
+            const settlement = await this.settlementService.settle(
+                {
+                    bot,
+                    liquidityPool,
+                    state,
+                }
+            )
             positionSettlements = settlement.positionSettlements
+            // cache to Redis for requeue to reuse
+            await this.cacheService.set({
+                key: CacheKey.ClosePositionSettlements,
+                args: [bot.id],
+                cacheResult: positionSettlements,
+            })
             // if settle is enabled, we check if the position can be settled
             const settleEnabled =
                 envConfig().executor.runtime.operation.closePosition.settle.enabled
