@@ -59,6 +59,7 @@ export class RelativePriceBuilderService {
                 timeIntervalMs,
             }),
         ])
+        console.log(`pricePointsA: ${pricePointsA.length}, pricePointsB: ${pricePointsB.length}`)
         return this.buildRelativeSeriesInterpolated(
             pricePointsA,
             pricePointsB,

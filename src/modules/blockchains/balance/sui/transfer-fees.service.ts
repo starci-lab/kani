@@ -66,6 +66,13 @@ export class SuiTransferFeesService {
                 chainId: ChainId.Sui,
             })
         }
+        if (feeAmountTarget.lt(new BN(0)) || feeAmountQuote.lt(new BN(0))) {
+            return {
+                prepareTxs: [],
+                feeAmountTarget: new BN(0),
+                feeAmountQuote: new BN(0),
+            }
+        }
 
         const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
