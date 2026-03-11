@@ -1,5 +1,9 @@
-import { createEnumType } from "@modules/common"
-import { registerEnumType } from "@nestjs/graphql"
+import {
+    createEnumType 
+} from "@modules/common"
+import {
+    registerEnumType 
+} from "@nestjs/graphql"
 
 /**
  * The operation.

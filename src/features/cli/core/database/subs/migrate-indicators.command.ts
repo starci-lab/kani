@@ -39,13 +39,17 @@ export class MigrateIndicatorsCommand extends CommandRunner {
                 type: BotViolateIndicatorType.PricePct,
                 triggerThresholds: {
                     indicators: [
-                        { name: IndicatorName.Pct, op: Operation.Gte, value: 0.01 },
+                        {
+                            name: IndicatorName.Pct, op: Operation.Gte, value: 0.01 
+                        },
                     ],
                     operation: LogicalOperator.And,
                 },
                 reentryThresholds: {
                     indicators: [
-                        { name: IndicatorName.Pct, op: Operation.Lt, value: 0.005 },
+                        {
+                            name: IndicatorName.Pct, op: Operation.Lt, value: 0.005 
+                        },
                     ],
                     operation: LogicalOperator.And,
                 },
@@ -56,13 +60,17 @@ export class MigrateIndicatorsCommand extends CommandRunner {
                 type: BotViolateIndicatorType.PricePct,
                 triggerThresholds: {
                     indicators: [
-                        { name: IndicatorName.Pct, op: Operation.Gte, value: 0.005 },
+                        {
+                            name: IndicatorName.Pct, op: Operation.Gte, value: 0.005 
+                        },
                     ],
                     operation: LogicalOperator.And,
                 },
                 reentryThresholds: {
                     indicators: [
-                        { name: IndicatorName.Pct, op: Operation.Lt, value: 0.0025 },
+                        {
+                            name: IndicatorName.Pct, op: Operation.Lt, value: 0.0025 
+                        },
                     ],
                     operation: LogicalOperator.And,
                 },
@@ -73,15 +81,23 @@ export class MigrateIndicatorsCommand extends CommandRunner {
                 type: BotViolateIndicatorType.PriceRegression,
                 triggerThresholds: {
                     indicators: [
-                        { name: IndicatorName.Pct, op: Operation.Gte, value: 0.003 },
-                        { name: IndicatorName.R2, op: Operation.Gte, value: 0.64 },
+                        {
+                            name: IndicatorName.Pct, op: Operation.Gte, value: 0.003 
+                        },
+                        {
+                            name: IndicatorName.R2, op: Operation.Gte, value: 0.64 
+                        },
                     ],
                     operation: LogicalOperator.And,
                 },
                 reentryThresholds: {
                     indicators: [
-                        { name: IndicatorName.Pct, op: Operation.Lt, value: 0.0015 },
-                        { name: IndicatorName.R2, op: Operation.Lt, value: 0.64 },
+                        {
+                            name: IndicatorName.Pct, op: Operation.Lt, value: 0.0015 
+                        },
+                        {
+                            name: IndicatorName.R2, op: Operation.Lt, value: 0.64 
+                        },
                     ],
                     operation: LogicalOperator.Or,
                 },
@@ -92,15 +108,23 @@ export class MigrateIndicatorsCommand extends CommandRunner {
                 type: BotViolateIndicatorType.PriceRegression,
                 triggerThresholds: {
                     indicators: [
-                        { name: IndicatorName.Pct, op: Operation.Gte, value: 0.006 },
-                        { name: IndicatorName.R2, op: Operation.Gte, value: 0.64 },
+                        {
+                            name: IndicatorName.Pct, op: Operation.Gte, value: 0.006 
+                        },
+                        {
+                            name: IndicatorName.R2, op: Operation.Gte, value: 0.64 
+                        },
                     ],
                     operation: LogicalOperator.And,
                 },
                 reentryThresholds: {
                     indicators: [
-                        { name: IndicatorName.Pct, op: Operation.Lt, value: 0.003 },
-                        { name: IndicatorName.R2, op: Operation.Lt, value: 0.64 },
+                        {
+                            name: IndicatorName.Pct, op: Operation.Lt, value: 0.003 
+                        },
+                        {
+                            name: IndicatorName.R2, op: Operation.Lt, value: 0.64 
+                        },
                     ],
                     operation: LogicalOperator.Or,
                 },

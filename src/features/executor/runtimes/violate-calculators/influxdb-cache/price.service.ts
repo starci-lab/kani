@@ -25,9 +25,12 @@ import {
 import {
     Interval 
 } from "@nestjs/schedule"
-import fs from "fs"
-import { PriceService } from "@modules/blockchains"
-import { TokenNotFoundException } from "@modules/exceptions"
+import {
+    PriceService 
+} from "@modules/blockchains"
+import {
+    TokenNotFoundException 
+} from "@modules/exceptions"
 
 /**
  * Service for caching price points in InfluxDB.
@@ -167,7 +170,8 @@ export class InfluxdbPriceCacheService implements OnModuleInit, OnApplicationBoo
                     id: token.id,
                     cex_id: cexId,
                     price: price.price.toNumber(),
-                    time: now.subtract(timeIntervalMs, "millisecond").toDate().getTime(),
+                    time: now.subtract(timeIntervalMs,
+                        "millisecond").toDate().getTime(),
                 },
                 {
                     id: token.id,
@@ -184,13 +188,14 @@ export class InfluxdbPriceCacheService implements OnModuleInit, OnApplicationBoo
                     id: points[points.length - 1].id,
                     cex_id: points[points.length - 1].cex_id,
                     price: points[points.length - 1].price,
-                    time: now.subtract(timeIntervalMs, "millisecond").toDate().getTime(),
+                    time: now.subtract(timeIntervalMs,
+                        "millisecond").toDate().getTime(),
                 },
                 {
                     id: points[points.length - 1].id,
                     cex_id: points[points.length - 1].cex_id,
                     price: points[points.length - 1].price,
-                     time: now.toDate().getTime(),
+                    time: now.toDate().getTime(),
                 },
             ]
         }
@@ -201,7 +206,8 @@ export class InfluxdbPriceCacheService implements OnModuleInit, OnApplicationBoo
                     id: influxdbPricePoints[0].id,
                     cex_id: influxdbPricePoints[0].cex_id,
                     price: influxdbPricePoints[0].price,
-                    time: now.subtract(timeIntervalMs, "millisecond").toDate().getTime(),
+                    time: now.subtract(timeIntervalMs,
+                        "millisecond").toDate().getTime(),
                 },
                 {
                     id: influxdbPricePoints[0].id,
@@ -219,9 +225,11 @@ export class InfluxdbPriceCacheService implements OnModuleInit, OnApplicationBoo
                 id: firstPoint.id,
                 cex_id: firstPoint.cex_id,
                 price: firstPoint.price,
-                time: now.subtract(timeIntervalMs, "millisecond").toDate().getTime(),
+                time: now.subtract(timeIntervalMs,
+                    "millisecond").toDate().getTime(),
             },
-            ...influxdbPricePoints.slice(1, -1),
+            ...influxdbPricePoints.slice(1,
+                -1),
             {
                 id: lastPoint.id,
                 cex_id: lastPoint.cex_id,

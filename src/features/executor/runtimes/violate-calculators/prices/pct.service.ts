@@ -7,7 +7,6 @@ import {
 import {
     BotSchema,
     BotViolateIndicatorSchema,
-    CexId,
     IndicatorName,
     PricePoint,
 } from "@modules/databases"
@@ -33,7 +32,6 @@ import {
 import {
     AsyncService
 } from "@modules/mixin"
-import fs from "fs"
 import {
     OpService,
 } from "../op.service"
@@ -292,15 +290,19 @@ export class PctCalculatorService {
         const values: Partial<Record<IndicatorName, number>> = {
             [IndicatorName.Pct]: pctValue,
         }
-        const metadata = { pct: pctValue }
-        if (this.opService.evaluateGroup(values, triggerThresholds)) {
+        const metadata = {
+            pct: pctValue 
+        }
+        if (this.opService.evaluateGroup(values,
+            triggerThresholds)) {
             return {
                 status: IndicatorStatus.Trigger,
                 timeWindowMs,
                 metadata,
             }
         }
-        if (this.opService.evaluateGroup(values, reentryThresholds)) {
+        if (this.opService.evaluateGroup(values,
+            reentryThresholds)) {
             return {
                 status: IndicatorStatus.Reentry,
                 timeWindowMs,

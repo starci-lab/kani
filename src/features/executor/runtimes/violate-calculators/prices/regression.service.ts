@@ -7,7 +7,6 @@ import {
 import {
     BotSchema,
     BotViolateIndicatorSchema,
-    CexId,
     IndicatorName,
     PricePoint,
     PrimaryMemoryStorageService,
@@ -71,17 +70,25 @@ export class RegressionCalculatorService {
         } = violateIndicator
 
         const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: { $eq: bot.targetToken },
+            id: {
+                $eq: bot.targetToken 
+            },
         })
         if (!targetToken) {
-            throw new TokenNotFoundException({ id: bot.targetToken.toString() })
+            throw new TokenNotFoundException({
+                id: bot.targetToken.toString() 
+            })
         }
 
         const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: { $eq: bot.quoteToken },
+            id: {
+                $eq: bot.quoteToken 
+            },
         })
         if (!quoteToken) {
-            throw new TokenNotFoundException({ id: bot.quoteToken.toString() })
+            throw new TokenNotFoundException({
+                id: bot.quoteToken.toString() 
+            })
         }
 
         let relativePricePoints: Array<PricePoint> = []
@@ -134,7 +141,8 @@ export class RegressionCalculatorService {
             if (!targetToken.trackedCexIds?.length || !quoteToken.trackedCexIds?.length) {
                 return null
             }
-            const [activeCexA, activeCexB] = await this.asyncService.allMustDone([
+            const [activeCexA,
+                activeCexB] = await this.asyncService.allMustDone([
                 (async () => {
                     let activeCex = targetToken.trackedCexIds![0]
                     const rec = await this.cacheService.get({
@@ -171,10 +179,11 @@ export class RegressionCalculatorService {
         const data = sorted.map(p => [
             p.time - (sorted.at(0)?.time ?? 0),
             p.price
-          ] as [number, number])
+        ] as [number, number])
         const lr = ss.linearRegression(data)
         const line = ss.linearRegressionLine(lr)
-        const r2Raw = ss.rSquared(data, line)
+        const r2Raw = ss.rSquared(data,
+            line)
         const r2Value = Number.isFinite(r2Raw) ? r2Raw : 1
         const pctValue = new Decimal(lastPrice).div(new Decimal(firstPrice)).sub(1).abs().toNumber()
 
@@ -182,15 +191,19 @@ export class RegressionCalculatorService {
             [IndicatorName.Pct]: pctValue,
             [IndicatorName.R2]: r2Value,
         }
-        const metadata = { pct: pctValue, r2: r2Value }
-        if (this.opService.evaluateGroup(values, triggerThresholds)) {
+        const metadata = {
+            pct: pctValue, r2: r2Value 
+        }
+        if (this.opService.evaluateGroup(values,
+            triggerThresholds)) {
             return { 
                 status: IndicatorStatus.Trigger, 
                 timeWindowMs, 
                 metadata 
             }
         }
-        if (this.opService.evaluateGroup(values, reentryThresholds)) {
+        if (this.opService.evaluateGroup(values,
+            reentryThresholds)) {
             return { 
                 status: IndicatorStatus.Reentry, 
                 timeWindowMs, 

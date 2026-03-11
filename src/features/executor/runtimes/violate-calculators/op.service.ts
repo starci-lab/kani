@@ -7,7 +7,6 @@ import {
     Operation,
 } from "@modules/databases"
 import type {
-    BotViolateIndicatorOpSchema,
     BotViolateIndicatorThresholdGroupSchema,
 } from "@modules/databases"
 
@@ -32,20 +31,20 @@ export class OpService {
         thresholdValue: number,
     ): boolean {
         switch (op) {
-            case Operation.Eq:
-                return currentValue === thresholdValue
-            case Operation.Ne:
-                return currentValue !== thresholdValue
-            case Operation.Gt:
-                return currentValue > thresholdValue
-            case Operation.Gte:
-                return currentValue >= thresholdValue
-            case Operation.Lt:
-                return currentValue < thresholdValue
-            case Operation.Lte:
-                return currentValue <= thresholdValue
-            default:
-                return false
+        case Operation.Eq:
+            return currentValue === thresholdValue
+        case Operation.Ne:
+            return currentValue !== thresholdValue
+        case Operation.Gt:
+            return currentValue > thresholdValue
+        case Operation.Gte:
+            return currentValue >= thresholdValue
+        case Operation.Lt:
+            return currentValue < thresholdValue
+        case Operation.Lte:
+            return currentValue <= thresholdValue
+        default:
+            return false
         }
     }
 
@@ -66,7 +65,9 @@ export class OpService {
             if (current === undefined) {
                 return false
             }
-            return this.evaluate(current, t.op, t.value)
+            return this.evaluate(current,
+                t.op,
+                t.value)
         })
         if (operation === LogicalOperator.And) {
             return results.every(Boolean)

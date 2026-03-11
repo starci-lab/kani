@@ -48,7 +48,7 @@ export class HandleViolateIndicatorsService {
         if (indicators.length === 0) {
             return
         }
-        await this.asyncService.allIgnoreError(
+        const results = await this.asyncService.allIgnoreError(
             indicators.map(
                 (indicator) => this.processIndicator(
                     bot,
@@ -56,6 +56,7 @@ export class HandleViolateIndicatorsService {
                 )
             ),
         )
+        console.log(results)
     }
 
     /**
@@ -67,11 +68,15 @@ export class HandleViolateIndicatorsService {
     ): Promise<IndicatorResult<unknown> | null> {
         switch (indicator.type) {
         case BotViolateIndicatorType.PricePct:
-            return await this.pctCalculatorService.calculate(bot,
-                indicator)
+            return await this.pctCalculatorService.calculate(
+                bot,
+                indicator
+            )
         case BotViolateIndicatorType.PriceRegression:
-            return await this.regressionCalculatorService.calculate(bot,
-                indicator)
+            return await this.regressionCalculatorService.calculate(
+                bot,
+                indicator
+            )
         case BotViolateIndicatorType.VolumeSpike:
             // not implemented yet
             return null
