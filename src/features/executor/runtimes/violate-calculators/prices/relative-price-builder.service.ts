@@ -118,7 +118,6 @@ export class RelativePriceBuilderService {
             } else if (right && p.time === right.time) {
                 interp = right.price
             } else {
-    
                 if (!right) continue
                 if (p.time < left.time || p.time > right.time) continue
     

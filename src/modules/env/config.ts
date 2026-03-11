@@ -463,6 +463,11 @@ export const envConfig = () => ({
                     stimulate: parseEnvBoolean({
                         key: "EXECUTOR_OPERATION_OPEN_POSITION_STIMULATE", defaultValue: false 
                     }),
+                    reentry: {
+                        staleMs: parseEnvMs({
+                            key: "EXECUTOR_OPERATION_OPEN_POSITION_REENTRY_STALE_MS", defaultValue: "10s" 
+                        }),
+                    }
                 },
                 closePosition: {
                     settle: {
@@ -931,11 +936,15 @@ export const envConfig = () => ({
             ),
             cexTokenPriceUpdated: parseEnvMs({
                 key: "CACHE_TTL_CEX_TOKEN_PRICE_UPDATED",
-                defaultValue: "0"
+                defaultValue: "100years"
             }),
             cexTokenVolumeUpdated: parseEnvMs({
                 key: "CACHE_TTL_CEX_TOKEN_VOLUME_UPDATED",
-                defaultValue: "0"
+                defaultValue: "100years"
+            }),
+            violateIndicatorResults: parseEnvMs({
+                key: "CACHE_TTL_VIOLATE_INDICATOR_RESULTS",
+                defaultValue: "100years"
             }),
         },
         stale: {

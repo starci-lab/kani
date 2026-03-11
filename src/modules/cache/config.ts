@@ -17,6 +17,7 @@ import type {
     RotationBotAssignmentsCacheResult,
     SendOtpCodeCacheResult,
     SessionIdCacheResult,
+    ViolateIndicatorResultsCacheResult,
     WithdrawCacheResult,
 } from "./types"
 
@@ -98,5 +99,9 @@ export const configMap = {
         ttl: envConfig().cache.ttl.cexTokenVolumeUpdated,
         cacheResult: {
         } as CexTokenVolumeCacheResult,
+    },
+    [CacheKey.ViolateIndicatorResults]: {
+        ttl: envConfig().cache.ttl.violateIndicatorResults,
+        cacheResult: [] as ViolateIndicatorResultsCacheResult,
     },
 }

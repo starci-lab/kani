@@ -65,7 +65,12 @@ import {
 import {
     DynamicLiquidityPoolInfoDiagnosticService,
     PriceDiagnosticService
-} from "@modules/blockchains/diagnostics"
+} from "../../diagnostics"
+import {
+    IndicatorStatus,
+    CacheKey, 
+    CacheService 
+} from "@modules/cache"
 
 /**
  * Service responsible for enqueuing open position jobs.
@@ -93,6 +98,7 @@ export class OpenPositionEnqueueService {
         private readonly dynamicLiquidityPoolInfoDiagnosticService: DynamicLiquidityPoolInfoDiagnosticService,
         private readonly priceDiagnosticService: PriceDiagnosticService,
         private readonly asyncService: AsyncService,
+        private readonly cacheService: CacheService,
     ) { }
 
     /**
@@ -406,7 +412,14 @@ export class OpenPositionEnqueueService {
         ) {
             return false
         }
-
+        // Skip if the violate indicators are not all must reentry
+        if (!
+        (
+            await this.validateViolateIndicators(bot)
+        ) && !isRetry
+        ) {
+            return false
+        }
         // Skip if a job already exists in the queue for this bot
         const existingJob = await this.actionQueue.getJob(bot.id)
         if (existingJob) {
@@ -601,5 +614,33 @@ export class OpenPositionEnqueueService {
         }
 
         return true
+    }
+
+    /**
+     * Validate if the violate indicators are all must reentry.
+     * 
+     * @param bot - The bot.
+     * @returns True if the violate indicators are all must reentry, false otherwise.
+     */
+    private async validateViolateIndicators(
+        bot: BotSchema,
+    ): Promise<boolean> {
+        const violateIndicators = await this.cacheService.get({
+            key: CacheKey.ViolateIndicatorResults,
+            args: [bot.id],
+        })
+        if (!violateIndicators) {
+            return false
+        }
+        // check if snapshotAt is within the time window of the violate indicators
+        const diffMs = this.dayjsService.now().diff(
+            this.dayjsService.from(violateIndicators?.snapshotAt ?? ""),
+            "millisecond",
+        )
+        if (diffMs > envConfig().executor.runtime.operation.openPosition.reentry.staleMs) {
+            return false
+        }
+        // all must reentry
+        return violateIndicators?.results?.every((violateIndicator) => violateIndicator?.status === IndicatorStatus.Reentry) ?? false
     }
 }

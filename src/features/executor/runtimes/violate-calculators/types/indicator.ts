@@ -1,19 +1,9 @@
-/**
- * The status of the indicator.
- */
-export enum IndicatorStatus {
-    /**
-     * The indicator has triggered.
-     */
-    Trigger = "trigger",
-    /**
-     * The indicator has reentered.
-     */
-    Reentry = "reentry",
-    /**
-     * The indicator has no action.
-     */
-    NoAction = "noAction",
+import {
+    IndicatorStatus,
+} from "@modules/cache"
+
+export {
+    IndicatorStatus,
 }
 
 /**
@@ -44,8 +34,7 @@ export interface IndicatorResult<T> {
 /**
  * The result of the price pct indicator.
  */
-export interface PricePctIndicatorResult extends IndicatorResult<PricePctIndicatorMetadata> {
-}
+export type PricePctIndicatorResult = IndicatorResult<PricePctIndicatorMetadata>
 
 /**
  * The metadata of the price regression indicator.
@@ -58,5 +47,4 @@ export interface PriceRegressionIndicatorMetadata {
 /**
  * The result of the price regression indicator.
  */
-export interface PriceRegressionIndicatorResult extends IndicatorResult<PriceRegressionIndicatorMetadata> {
-}
+export type PriceRegressionIndicatorResult = IndicatorResult<PriceRegressionIndicatorMetadata>

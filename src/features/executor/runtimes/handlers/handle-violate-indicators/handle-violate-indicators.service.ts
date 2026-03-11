@@ -7,12 +7,17 @@ import {
     BotViolateIndicatorType,
 } from "@modules/databases"
 import {
+    CacheKey,
+    CacheService,
+} from "@modules/cache"
+import {
+    DayjsService,
     AsyncService,
 } from "@modules/mixin"
 import {
     PctCalculatorService,
     RegressionCalculatorService,
-    IndicatorResult
+    IndicatorResult,
 } from "../../violate-calculators"
 
 /**
@@ -27,6 +32,8 @@ export class HandleViolateIndicatorsService {
         private readonly pctCalculatorService: PctCalculatorService,
         private readonly regressionCalculatorService: RegressionCalculatorService,
         private readonly asyncService: AsyncService,
+        private readonly cacheService: CacheService,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     /**
@@ -56,7 +63,14 @@ export class HandleViolateIndicatorsService {
                 )
             ),
         )
-        console.log(results)
+        await this.cacheService.set({
+            key: CacheKey.ViolateIndicatorResults,
+            args: [bot.id],
+            cacheResult: {
+                snapshotAt: this.dayjsService.now(),
+                results: results.filter((result) => result !== null),
+            },
+        })
     }
 
     /**
