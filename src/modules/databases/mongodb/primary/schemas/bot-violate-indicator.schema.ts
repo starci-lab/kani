@@ -68,19 +68,6 @@ export class BotViolateIndicatorSchema extends AbstractSchema {
     triggerThresholds: Array<BotViolateIndicatorOpSchema>
 
     /**
-     * The emergency exit thresholds of the bot violate indicator.
-     */
-    @Field(() => [BotViolateIndicatorOpSchema],
-        {
-            description: "The emergency exit thresholds of the bot violate indicator",
-        })
-    @Prop({
-        type: [BotViolateIndicatorOpSchema],
-        required: true,
-    })
-    emergencyExitThresholds: Array<BotViolateIndicatorOpSchema>
-
-    /**
      * The reentry thresholds of the bot violate indicator.
      */
     @Field(() => [BotViolateIndicatorOpSchema],

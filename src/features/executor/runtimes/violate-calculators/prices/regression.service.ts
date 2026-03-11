@@ -42,7 +42,7 @@ import ss from "simple-statistics"
 
 /**
  * Service for calculating linear regression (slope + R²) on relative price series
- * and evaluating trigger / emergency exit / reentry thresholds via OpService.
+ * and evaluating trigger / reentry thresholds via OpService.
  */
 @Injectable()
 export class RegressionCalculatorService {
@@ -67,7 +67,6 @@ export class RegressionCalculatorService {
         const {
             timeWindowMs,
             triggerThresholds,
-            emergencyExitThresholds,
             reentryThresholds,
         } = violateIndicator
 
@@ -184,13 +183,6 @@ export class RegressionCalculatorService {
             [IndicatorName.R2]: r2Value,
         }
         const metadata = { pct: pctValue, r2: r2Value }
-        if (this.opService.evaluateAll(values, emergencyExitThresholds)) {
-            return { 
-                status: IndicatorStatus.EmergencyExit, 
-                timeWindowMs, 
-                metadata 
-            }
-        }
         if (this.opService.evaluateAll(values, triggerThresholds)) {
             return { 
                 status: IndicatorStatus.Trigger, 

@@ -82,8 +82,7 @@ export class PctCalculatorService {
         const {
             timeWindowMs,
             triggerThresholds,
-            emergencyExitThresholds,
-            reentryThresholds
+            reentryThresholds,
         } = violateIndicator
 
         /**
@@ -294,13 +293,6 @@ export class PctCalculatorService {
             [IndicatorName.Pct]: pctValue,
         }
         const metadata = { pct: pctValue }
-        if (this.opService.evaluateAll(values, emergencyExitThresholds)) {
-            return {
-                status: IndicatorStatus.EmergencyExit,
-                timeWindowMs,
-                metadata,
-            }
-        }
         if (this.opService.evaluateAll(values, triggerThresholds)) {
             return {
                 status: IndicatorStatus.Trigger,

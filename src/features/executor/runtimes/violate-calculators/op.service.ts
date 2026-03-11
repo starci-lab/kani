@@ -17,7 +17,7 @@ export type IndicatorValues = Partial<Record<IndicatorName, number>>
 
 /**
  * Evaluates (op + value) conditions against current indicator values.
- * Used by violate calculators to decide trigger / emergency exit / reentry.
+ * Used by violate calculators to decide trigger / reentry.
  */
 @Injectable()
 export class OpService {

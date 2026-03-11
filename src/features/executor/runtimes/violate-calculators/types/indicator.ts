@@ -14,10 +14,6 @@ export enum IndicatorStatus {
      * The indicator has no action.
      */
     NoAction = "noAction",
-    /**
-     * The indicator has emergency exited.
-     */
-    EmergencyExit = "emergencyExit",
 }
 
 /**
