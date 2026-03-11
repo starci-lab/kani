@@ -88,70 +88,65 @@ export class RelativePriceBuilderService {
         a: Array<PricePoint>,
         b: Array<PricePoint>,
     ): Array<PricePoint> {
+    
         const A = [...a].sort((x, y) => x.time - y.time)
         const B = [...b].sort((x, y) => x.time - y.time)
     
-        const times = Array.from(
-            new Set([
-                ...A.map(p => p.time),
-                ...B.map(p => p.time),
-            ])
-        ).sort((x, y) => x - y)
+        const anchorIsB = B.length >= A.length
+    
+        const anchor = anchorIsB ? B : A
+        const other = anchorIsB ? A : B
     
         const out: Array<PricePoint> = []
     
-        let ia = 0
-        let ib = 0
+        let j = 0
     
-        const interpolate = (
-            t: number,
-            arr: Array<PricePoint>,
-            idxRef: { i: number },
-        ): number | null => {
-            let i = idxRef.i
+        for (const p of anchor) {
     
-            while (i + 1 < arr.length && arr[i + 1].time < t) {
-                i++
+            while (j + 1 < other.length && other[j + 1].time <= p.time) {
+                j++
             }
     
-            idxRef.i = i
+            const left = other[j]
+            const right = other[j + 1]
     
-            const left = arr[i]
-            const right = arr[i + 1]
+            if (!left) continue
     
-            if (!left) return null
+            let interp: number | null = null
     
-            if (t === left.time) return left.price
-            if (right && t === right.time) return right.price
+            if (p.time === left.time) {
+                interp = left.price
+            } else if (right && p.time === right.time) {
+                interp = right.price
+            } else {
     
-            if (!right) return null
-            if (t < left.time || t > right.time) return null
+                if (!right) continue
+                if (p.time < left.time || p.time > right.time) continue
     
-            const span = right.time - left.time
-            if (span <= 0) return null
+                const span = right.time - left.time
+                if (span <= 0) continue
     
-            const alpha = (t - left.time) / span
-            if (alpha < 0 || alpha > 1) return null
+                const alpha = (p.time - left.time) / span
+                interp = left.price + alpha * (right.price - left.price)
+            }
     
-            return left.price + alpha * (right.price - left.price)
-        }
+            if (!Number.isFinite(interp)) continue
+            if (!Number.isFinite(p.price)) continue
     
-        const refA = { i: ia }
-        const refB = { i: ib }
+            let relative: number
     
-        for (const t of times) {
-            const pa = interpolate(t, A, refA)
-            const pb = interpolate(t, B, refB)
-    
-            if (!Number.isFinite(pa) || !Number.isFinite(pb)) continue
-            if (pb! <= 0) continue
+            if (anchorIsB) {
+                relative = p.price / interp
+            } else {
+                relative = interp / p.price
+            }
     
             out.push({
-                ...A[0],
-                time: t,
-                price: pa! / pb!,
+                ...p,
+                price: relative,
             })
         }
+    
         return out
     }
 }
