@@ -314,24 +314,6 @@ export class PositionSchema extends AbstractSchema {
      * - final transferred amounts
      * - settlement status
      */
-    @Field(() => PositionSettlementSchema,
-        {
-            description: "The settlement of the position",
-            nullable: true,
-        })
-    @Prop({
-        type: PositionSettlementSchemaClass,
-        required: false,
-    })
-        positionSettlement?: PositionSettlementSchema
-
-    /**
-     * Settlement information after the position is closed.
-     *
-     * Includes:
-     * - final transferred amounts
-     * - settlement status
-     */
     @Field(() => [PositionSettlementSchema],
         {
             description: "The settlement of the position",
