@@ -469,3 +469,30 @@ registerEnumType(
         }
     }
 )
+
+/**
+ * Name of the field used in bot violate indicator conditions (op + value).
+ * Expand with new values as needed.
+ */
+export enum IndicatorName {
+    Pct = "pct",
+    R2 = "r2",
+}
+
+export const GraphQLTypeIndicatorName = createEnumType(IndicatorName)
+
+registerEnumType(
+    GraphQLTypeIndicatorName,
+    {
+        name: "IndicatorName",
+        description: "The name of the field used in a violate indicator condition",
+        valuesMap: {
+            [IndicatorName.Pct]: {
+                description: "Percentage (e.g. price drop pct)",
+            },
+            [IndicatorName.R2]: {
+                description: "R² (coefficient of determination, e.g. regression fit)",
+            },
+        },
+    }
+)

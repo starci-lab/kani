@@ -76,7 +76,6 @@ export class TransferFeesSnapshotService {
                     },
                 )
             assert(positionUpdate.matchedCount > 0)
-            return
         }
         const botUpdate = await this.connection
             .model<BotSchema>(BotSchema.name)

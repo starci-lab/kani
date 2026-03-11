@@ -43,7 +43,12 @@ export class PctCalculatorService {
         bot: BotSchema,
         violateIndicator: BotViolateIndicatorSchema
     ): Promise<void> {
-        const { timeWindowMs } = violateIndicator.metadata as PricePctViolateIndicatorMetadata
+        const { 
+            timeWindowMs, 
+            triggerThresholds, 
+            emergencyExitThresholds, 
+            reentryThresholds 
+        } = violateIndicator
         const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: bot.targetToken,
@@ -64,7 +69,13 @@ export class PctCalculatorService {
                 id: bot.quoteToken.toString(),
             }
             )
-        // thus, we will process later based on type of the target token and quote token
+            // thus, we will process later based on type of the target token and quote token
         }
+        console.log(
+            timeWindowMs, 
+            triggerThresholds, 
+            emergencyExitThresholds, 
+            reentryThresholds 
+        )
     }
 }

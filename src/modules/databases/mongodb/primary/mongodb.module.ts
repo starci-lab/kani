@@ -68,6 +68,8 @@ import {
     TxFailureSchema,
     BotViolateIndicatorSchemaClass,
     BotViolateIndicatorSchema,
+    BotViolateIndicatorOpSchemaClass,
+    BotViolateIndicatorOpSchema,
 } from "./schemas"
 import {
     MongooseModule as NestMongooseModule 
@@ -317,6 +319,10 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     {
                         name: BotViolateIndicatorSchema.name,
                         useFactory: () => BotViolateIndicatorSchemaClass,
+                    },
+                    {
+                        name: BotViolateIndicatorOpSchema.name,
+                        useFactory: () => BotViolateIndicatorOpSchemaClass,
                     },
                 ],
                 CONNECTION_NAME),

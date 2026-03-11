@@ -1,20 +1,19 @@
 import {
-    Prop, Schema, SchemaFactory 
+    Prop, Schema, SchemaFactory
 } from "@nestjs/mongoose"
 import {
-    AbstractSchema 
+    AbstractSchema
 } from "./abstract"
 import {
     BotViolateIndicatorType,
-    GraphQLTypeBotViolateIndicatorType 
+    GraphQLTypeBotViolateIndicatorType
 } from "../enums"
 import {
-    Field, ObjectType 
+    Field, Int, ObjectType
 } from "@nestjs/graphql"
-import GraphQLJSON from "graphql-type-json"
-import {
-    Schema as MongooseSchema 
-} from "mongoose"
+import { 
+    BotViolateIndicatorOpSchema 
+} from "./bot-violate-indicator-op.schema"
 
 /**
  * Represents a decentralized exchange (DEX) supported by the platform.
@@ -40,7 +39,7 @@ export class BotViolateIndicatorSchema extends AbstractSchema {
         type: String,
         required: true,
     })
-        name: string
+    name: string
     /**
      * The type of the bot violate indicator.
      */
@@ -49,37 +48,63 @@ export class BotViolateIndicatorSchema extends AbstractSchema {
             description: "The type of the bot violate indicator",
         })
     @Prop({
-        type: String, 
+        type: String,
         enum: BotViolateIndicatorType,
         required: true,
     })
-        type: BotViolateIndicatorType
+    type: BotViolateIndicatorType
 
     /**
      * The threshold of the bot violate indicator.
      */
-    @Field(() => GraphQLJSON,
+    @Field(() => [BotViolateIndicatorOpSchema],
         {
-            description: "The threshold of the bot violate indicator",
+            description: "The trigger thresholds of the bot violate indicator",
         })
     @Prop({
-        type: MongooseSchema.Types.Mixed,
+        type: [BotViolateIndicatorOpSchema],
         required: true,
     })
-        threshold: unknown
+    triggerThresholds: Array<BotViolateIndicatorOpSchema>
+
+    /**
+     * The emergency exit thresholds of the bot violate indicator.
+     */
+    @Field(() => [BotViolateIndicatorOpSchema],
+        {
+            description: "The emergency exit thresholds of the bot violate indicator",
+        })
+    @Prop({
+        type: [BotViolateIndicatorOpSchema],
+        required: true,
+    })
+    emergencyExitThresholds: Array<BotViolateIndicatorOpSchema>
+
+    /**
+     * The reentry thresholds of the bot violate indicator.
+     */
+    @Field(() => [BotViolateIndicatorOpSchema],
+        {
+            description: "The reentry thresholds of the bot violate indicator",
+        })
+    @Prop({
+        type: [BotViolateIndicatorOpSchema],
+        required: true,
+    })
+    reentryThresholds: Array<BotViolateIndicatorOpSchema>
 
     /**
      * The metadata of the bot violate indicator.
      */
-    @Field(() => GraphQLJSON,
+    @Field(() => Int,
         {
-            description: "The metadata of the bot violate indicator",
+            description: "The time window in milliseconds",
         })
     @Prop({
-        type: MongooseSchema.Types.Mixed,
+        type: Number,
         required: true,
     })
-        metadata: unknown
+    timeWindowMs: number
 }
 
 export const BotViolateIndicatorSchemaClass = SchemaFactory.createForClass(BotViolateIndicatorSchema)

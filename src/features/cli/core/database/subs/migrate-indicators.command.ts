@@ -6,9 +6,9 @@ import {
     InjectPrimaryMongoose,
     BotSchema,
     BotViolateIndicatorSchema,
-} from "@modules/databases"
-import {
     BotViolateIndicatorType,
+    IndicatorName,
+    Operation,
 } from "@modules/databases"
 import {
     Connection,
@@ -36,58 +36,66 @@ export class MigrateIndicatorsCommand extends CommandRunner {
             {
                 name: "PricePct: Threshold Value 1%: TimeWindow 30s",
                 type: BotViolateIndicatorType.PricePct,
-                threshold: {
-                    triggerPct: 0.01, // trigger violation when average price drops 1% within 30s
-                    emergencyExitPct: 0.02, // if price drops 2% or more within 30s, exit all assets to target/USDC and stop the bot
-                    reentryPct: 0.005 // if price drop recovers to below 0.5%, bot is allowed to re-enter positions
-                },
-                metadata: {
-                    timeWindowMs: 30000, // 30s
-                },
+                triggerThresholds: [
+                    { name: IndicatorName.Pct, op: Operation.Gte, value: 0.01 },
+                ],
+                emergencyExitThresholds: [
+                    { name: IndicatorName.Pct, op: Operation.Gte, value: 0.02 },
+                ],
+                reentryThresholds: [
+                    { name: IndicatorName.Pct, op: Operation.Lt, value: 0.005 },
+                ],
+                timeWindowMs: 30000,
             },
             {
                 name: "PricePct: Threshold Value 0.5%: TimeWindow 10s",
                 type: BotViolateIndicatorType.PricePct,
-                threshold: {
-                    trigger: {
-                        value: 0.005, // trigger violation when average price drops 0.5% within 10s
-                    },
-                    emergencyExit: {
-                        value: 0.01, // if price drops 1% or more within 10s, exit all assets to target/USDC and stop the bot
-                    },
-                    reentry: {
-                        value: 0.0025, // if price drop recovers to below 0.25%, bot is allowed to re-enter positions
-                    },
-                },
-                metadata: {
-                    timeWindowMs: 10000, // 10s
-                },
+                triggerThresholds: [
+                    { name: IndicatorName.Pct, op: Operation.Gte, value: 0.005 },
+                ],
+                emergencyExitThresholds: [
+                    { name: IndicatorName.Pct, op: Operation.Gte, value: 0.01 },
+                ],
+                reentryThresholds: [
+                    { name: IndicatorName.Pct, op: Operation.Lt, value: 0.0025 },
+                ],
+                timeWindowMs: 10000,
             },
             {
                 name: "PriceRegression: Threshold Value 0.3%: R2 Threshold 0.9: TimeWindow 10s",
                 type: BotViolateIndicatorType.PriceRegression,
-                threshold: {
-                    triggerPct: 0.003, // trigger violation when average price drops 0.3% within 10s
-                    emergencyExitPct: 0.006, // if price drops 0.6% or more within 10s, exit all assets to target/USDC and stop the bot
-                    reentryPct: 0.0015, // if price drop recovers to below 0.15%, bot is allowed to re-enter positions
-                },
-                metadata: {
-                    timeWindowMs: 10000, // 10s
-                    r2Threshold: 0.9, // r2 threshold is 0.9
-                },
+                triggerThresholds: [
+                    { name: IndicatorName.Pct, op: Operation.Gte, value: 0.003 },
+                    { name: IndicatorName.R2, op: Operation.Gte, value: 0.9 },
+                ],
+                emergencyExitThresholds: [
+                    { name: IndicatorName.Pct, op: Operation.Gte, value: 0.006 },
+                    { name: IndicatorName.R2, op: Operation.Gte, value: 0.9 },
+                ],
+                reentryThresholds: [
+                    { name: IndicatorName.Pct, op: Operation.Lt, value: 0.0015 },
+                    { name: IndicatorName.R2, op: Operation.Gte, value: 0.9 },
+                ],
+                timeWindowMs: 10000,
             },
             {
                 name: "PriceRegression: Threshold Value 0.6%: R2 Threshold 0.9: TimeWindow 30s",
                 type: BotViolateIndicatorType.PriceRegression,
-                threshold: {
-                    value: 0.006, // mean lose 0.6% in 30s
-                    r2Threshold: 0.9, // r2 threshold is 0.9
-                },
-                metadata: {
-                    timeWindowMs: 30000, // 30s
-                },
+                triggerThresholds: [
+                    { name: IndicatorName.Pct, op: Operation.Gte, value: 0.006 },
+                    { name: IndicatorName.R2, op: Operation.Gte, value: 0.9 },
+                ],
+                emergencyExitThresholds: [
+                    { name: IndicatorName.Pct, op: Operation.Gte, value: 0.012 },
+                    { name: IndicatorName.R2, op: Operation.Gte, value: 0.9 },
+                ],
+                reentryThresholds: [
+                    { name: IndicatorName.Pct, op: Operation.Lt, value: 0.003 },
+                    { name: IndicatorName.R2, op: Operation.Gte, value: 0.9 },
+                ],
+                timeWindowMs: 30000,
             },
-        ] as const
+        ]
         try {
             this.winstonService.log(WinstonLog.MigrationStarted,
                 {
