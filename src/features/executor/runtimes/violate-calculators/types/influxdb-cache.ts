@@ -4,7 +4,6 @@ import type {
     VolumePoint,
 } from "@modules/databases"
 
-
 /** Params for getting cached price or volume points by token, CEX, and time window. */
 export interface GetPointsParams {
     /** Token ID. */

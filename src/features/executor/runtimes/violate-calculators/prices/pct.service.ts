@@ -13,7 +13,7 @@ import {
 } from "@modules/databases"
 import {
     InfluxdbPriceCacheService
-} from "../../influxdb-cache"
+} from "../influxdb-cache"
 import {
     BothTokensCannotBeUsdtException,
     TokenNotFoundException,

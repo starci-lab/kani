@@ -7,10 +7,10 @@ import {
 import type {
     BuildRelativePriceParams,
     BuildRelativePriceResult,
-} from "../../types"
+} from "../types"
 import {
     InfluxdbPriceCacheService,
-} from "../../influxdb-cache"
+} from "../influxdb-cache"
 import {
     AsyncService
 } from "@modules/mixin"

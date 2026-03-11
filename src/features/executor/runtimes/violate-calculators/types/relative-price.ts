@@ -2,6 +2,7 @@ import type {
     CexId,
     PricePoint,
 } from "@modules/databases"
+
 /** Params for building relative price series (token A / token B) with interpolated base. */
 export interface BuildRelativePriceParams {
     /** Token A (numerator) ID. */
