@@ -1,7 +1,8 @@
 import {
     BotSchema,
     JobSchema,
-    LiquidityPoolSchema
+    LiquidityPoolSchema,
+    PositionSettlementSchema,
 } from "@modules/databases"
 import {
     LiquidityPoolState
@@ -40,8 +41,19 @@ export interface EnqueueClosePositionParams {
     bot: BotSchema
     /** Liquidity pool schema. */
     liquidityPool: LiquidityPoolSchema
+    /** Use  */
     /** Whether this is a retry. */
     isRetry?: boolean
     /** Old job (Optional) */
     oldJob?: JobSchema
+}
+
+/**
+ * Result of validating a close position job.
+ */
+export interface ValidateClosePositionResult {
+    /** Whether the close position job is valid. */
+    isValid: boolean
+    /** The position settlements. */
+    positionSettlements?: Array<Partial<PositionSettlementSchema>>
 }

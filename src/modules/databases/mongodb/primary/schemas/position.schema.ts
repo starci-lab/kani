@@ -326,6 +326,24 @@ export class PositionSchema extends AbstractSchema {
         positionSettlement?: PositionSettlementSchema
 
     /**
+     * Settlement information after the position is closed.
+     *
+     * Includes:
+     * - final transferred amounts
+     * - settlement status
+     */
+    @Field(() => [PositionSettlementSchema],
+        {
+            description: "The settlement of the position",
+            nullable: true,
+        })
+    @Prop({
+        type: [PositionSettlementSchemaClass],
+        required: false,
+    })
+        positionSettlements?: Array<PositionSettlementSchema>
+
+    /**
      * GraphQL-only field.
      *
      * Fully resolved liquidity pool document for API responses.

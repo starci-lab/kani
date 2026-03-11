@@ -3,7 +3,8 @@ import type {
 } from "mongoose"
 import type {
     TokenSchema,
-    BotSchema 
+    BotSchema,
+    PositionSettlementSchema,
 } from "@modules/databases"
 import type {
     BalanceSnapshotParams 
@@ -11,6 +12,7 @@ import type {
 
 /** Params for updating a close-position record with before/after balances. */
 export interface UpdateClosePositionRecordParams {
+    positionSettlements: Array<Partial<PositionSettlementSchema>>
     bot: BotSchema
     before: BalanceSnapshotParams
     after: BalanceSnapshotParams

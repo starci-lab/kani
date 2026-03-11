@@ -1,7 +1,10 @@
 import BN from "bn.js"
+import type {
+    PositionSettlementSchema,
+} from "@modules/databases"
 import {
     JobType,
-    TaskType 
+    TaskType,
 } from "@modules/databases"
 
 /** Base payload for all action jobs. */
@@ -9,8 +12,6 @@ export interface BasePayload {
   jobId: string
   botId: string
   isRetry?: boolean
-  /** Whether to use the context. */
-  useContext?: boolean
 }
 
 /** Payload for open position action tasks. */
@@ -20,7 +21,10 @@ export interface OpenPositionActionTaskPayload {
 
 /** Payload for close position action tasks. */
 export interface ClosePositionActionTaskPayload {
+  /** Liquidity pool ID. */
   liquidityPoolId: string
+  /** Position settlements. */
+  positionSettlements: Array<Partial<PositionSettlementSchema>>
 }
 
 /** Payload for reconcile balance action tasks. */

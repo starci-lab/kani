@@ -1,15 +1,13 @@
-import type {
-    SettleStrategyResult 
-} from "@modules/blockchains"
 import {
     JobFailureStrategy 
 } from "@modules/common"
-import {
+import type {
     JobType, 
     LiquidityPoolId,
     QuoteRatioStatus,
     TokenId,
     TaskType,
+    PositionSettlementSchema
 } from "@modules/databases"
 
 /**
@@ -343,7 +341,7 @@ export interface JobSkippedCannotSettlePositionMessage {
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
     /** Strategy results. */
-    strategyResults?: Array<SettleStrategyResult>
+    positionSettlements?: Array<Partial<PositionSettlementSchema>>
 }
 
 /**

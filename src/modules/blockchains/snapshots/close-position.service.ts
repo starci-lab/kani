@@ -66,6 +66,7 @@ export class ClosePositionSnapshotService {
             gasToken,
             session,
             bot,
+            positionSettlements,
         }: UpdateClosePositionRecordParams
     ): Promise<UpdateClosePositionRecordResult> {
         const now = this.dayjsService.now().toDate()
@@ -135,6 +136,7 @@ export class ClosePositionSnapshotService {
         {
             $set: {
                 closeTxHashes,
+                positionSettlements,
                 isActive: false,
                 closeSnapshot,
                 performance,

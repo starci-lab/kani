@@ -1,57 +1,73 @@
 import {
-    Injectable 
+    Injectable,
 } from "@nestjs/common"
 import {
-    ActivePositionNotFoundException, 
+    ActivePositionNotFoundException,
     PositionClmmStateNotFoundException,
-    PositionDlmmStateNotFoundException
+    PositionDlmmStateNotFoundException,
 } from "@modules/exceptions"
 import {
-    LiquidityPoolType, 
-    PositionSettlementReason
+    LiquidityPoolType,
+    PositionSettlementReason,
 } from "@modules/databases"
-import {
-    ISettlementStrategyService, 
+import type {
+    ISettlementStrategyService,
     SettleParams,
-    SettleStrategyResult
-} from "./settlement.interface"
+    SettleStrategyResult,
+} from "./types"
 import BN from "bn.js"
-import {
-    ClmmLiquidityPoolState, DlmmLiquidityPoolState 
+import type {
+    ClmmLiquidityPoolState,
+    DlmmLiquidityPoolState,
 } from "../types"
 
+/**
+ * Settlement strategy service for out-of-range positions (tick/bin outside range).
+ *
+ * @example
+ * const result = await outOfRangeSettlementService.settle({ bot, state, liquidityPool })
+ */
 @Injectable()
 export class OutOfRangeSettlementService implements ISettlementStrategyService {
-    // Check if the bot will exit the position due to being out of range
+    /**
+     * Checks whether the active position is out of range for the current pool state.
+     *
+     * @param params - Bot, liquidity pool state, and liquidity pool
+     * @returns Settle strategy result with reason and optional tick/bin metadata
+     *
+     * @example
+     * const result = await this.outOfRangeSettlementService.settle({ bot, state, liquidityPool })
+     */
     async settle(
-        { 
-            bot, 
+        {
+            bot,
             state,
             liquidityPool,
-        }: SettleParams
+        }: SettleParams,
     ): Promise<SettleStrategyResult> {
+        // ensure bot has an active position
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
-            throw new ActivePositionNotFoundException(
-                {
-                    botId: bot.id,
-                }
-            )
+            throw new ActivePositionNotFoundException({
+                botId: bot.id 
+            })
         }
+
         const isClmm = liquidityPool.type === LiquidityPoolType.Clmm
         let settled = false
+
         if (isClmm) {
             const _state = state as ClmmLiquidityPoolState
             if (!bot.activePosition.associatedPosition.clmmState) {
-                throw new PositionClmmStateNotFoundException(
-                    {
-                        positionId: bot.activePosition.associatedPosition.id,
-                        botId: bot.id,
-                    }
-                )
+                throw new PositionClmmStateNotFoundException({
+                    positionId: bot.activePosition.associatedPosition.id,
+                    botId: bot.id,
+                })
             }
+            // tick current outside [tickLower, tickUpper] => out of range
+            const { tickLower, tickUpper } = bot.activePosition.associatedPosition.clmmState
             if (
-                _state.tickCurrent.lt(new BN(bot.activePosition.associatedPosition.clmmState.tickLower)) 
-                || _state.tickCurrent.gt(new BN(bot.activePosition.associatedPosition.clmmState.tickUpper))
+                _state.tickCurrent.lt(new BN(tickLower))
+                || _state.tickCurrent.gt(new BN(tickUpper))
             ) {
                 settled = true
             }
@@ -60,33 +76,35 @@ export class OutOfRangeSettlementService implements ISettlementStrategyService {
                 reason: PositionSettlementReason.OutOfRange,
                 metadata: {
                     tickCurrent: _state.tickCurrent.toNumber(),
-                    tickLower: bot.activePosition.associatedPosition.clmmState.tickLower,
-                    tickUpper: bot.activePosition.associatedPosition.clmmState.tickUpper,
+                    tickLower,
+                    tickUpper,
                 },
             }
-        } else {
-            const _state = state as DlmmLiquidityPoolState
-            if (!bot.activePosition.associatedPosition.dlmmState) {
-                throw new PositionDlmmStateNotFoundException({
-                    positionId: bot.activePosition.associatedPosition.id,
-                    botId: bot.id,
-                })
-            }
-            if (
-                new BN(_state.activeId).lt(new BN(bot.activePosition.associatedPosition.dlmmState.minBinId)) 
-                || new BN(_state.activeId).gt(new BN(bot.activePosition.associatedPosition.dlmmState.maxBinId))
-            ) {
-                settled = true
-            }
-            return {
-                settled,
-                reason: PositionSettlementReason.OutOfRange,
-                metadata: {
-                    activeId: _state.activeId,
-                    minBinId: bot.activePosition.associatedPosition.dlmmState.minBinId,
-                    maxBinId: bot.activePosition.associatedPosition.dlmmState.maxBinId,
-                },
-            }
+        }
+
+        // DLMM: active bin outside [minBinId, maxBinId] => out of range
+        const _state = state as DlmmLiquidityPoolState
+        if (!bot.activePosition.associatedPosition.dlmmState) {
+            throw new PositionDlmmStateNotFoundException({
+                positionId: bot.activePosition.associatedPosition.id,
+                botId: bot.id,
+            })
+        }
+        const { minBinId, maxBinId } = bot.activePosition.associatedPosition.dlmmState
+        if (
+            new BN(_state.activeId).lt(new BN(minBinId))
+            || new BN(_state.activeId).gt(new BN(maxBinId))
+        ) {
+            settled = true
+        }
+        return {
+            settled,
+            reason: PositionSettlementReason.OutOfRange,
+            metadata: {
+                activeId: _state.activeId,
+                minBinId,
+                maxBinId,
+            },
         }
     }
 }

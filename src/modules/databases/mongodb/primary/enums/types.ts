@@ -196,6 +196,7 @@ registerEnumType(
 
 export enum PositionSettlementReason {
     OutOfRange = "outOfRange",
+    ViolateIndicatorsTriggered = "violateIndicatorsTriggered",
 }
 export const GraphQLTypePositionSettlementReason = createEnumType(PositionSettlementReason)
 
@@ -207,7 +208,10 @@ registerEnumType(
         valuesMap: {
             [PositionSettlementReason.OutOfRange]: {
                 description: "The position is settled out of range"
-            }
+            },
+            [PositionSettlementReason.ViolateIndicatorsTriggered]: {
+                description: "Violate indicators triggered"
+            },
         }
     }
 )

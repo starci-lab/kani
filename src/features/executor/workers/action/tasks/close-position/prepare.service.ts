@@ -5,7 +5,6 @@ import {
     ClosePositionActionService,
 } from "@modules/blockchains"
 import {
-
     JobType,
     TaskType
 } from "@modules/databases"

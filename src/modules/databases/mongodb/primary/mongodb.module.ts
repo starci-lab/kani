@@ -37,9 +37,9 @@ import {
     PrivyMetadataSchemaClass,
     PrivyMetadataSchema,
     BotSnapshotsSchemaClass,
-    BotSnapshotsSchema,
+    BotSnapshotsSchema, 
     PositionSettlementSchema,
-    PositionSettlementSchemaClass,
+    PositionSettlementSchemaClass,  
     PositionSnapshotsSchemaClass,
     PositionSnapshotsSchema,
     PositionFeesSchemaClass,
@@ -215,6 +215,10 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                         useFactory: () => TokenSchemaClass,
                     },
                     {
+                        name: PositionSettlementSchema.name,
+                        useFactory: () => PositionSettlementSchemaClass,
+                    },
+                    {
                         name: DexSchema.name,
                         useFactory: () => DexSchemaClass,
                     },
@@ -225,10 +229,6 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     {
                         name: PositionSchema.name,
                         useFactory: () => PositionSchemaClass,
-                    },
-                    {
-                        name: PositionSettlementSchema.name,
-                        useFactory: () => PositionSettlementSchemaClass,
                     },
                     {
                         name: TransactionSchema.name,

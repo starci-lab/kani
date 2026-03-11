@@ -1,5 +1,5 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
     BotSchema,
@@ -7,39 +7,41 @@ import {
     JobSchema,
     JobStatus,
     JobType,
+    PositionSettlementSchema,
     TaskType,
 } from "@modules/databases"
 import {
-    Connection, 
+    Connection,
     Types
 } from "mongoose"
 import {
-    envConfig 
+    envConfig
 } from "@modules/env"
 import {
-    ActionPayload 
+    ActionPayload
 } from "../../types"
 import SuperJSON from "superjson"
 import {
-    DayjsService, InjectSuperJson 
+    DayjsService, InjectSuperJson
 } from "@modules/mixin"
 import {
-    InjectQueue 
+    InjectQueue
 } from "@nestjs/bullmq"
 import {
-    bullData, BullQueueName 
+    bullData, BullQueueName
 } from "@modules/bullmq"
 import {
-    Queue 
+    Queue
 } from "bullmq"
 import {
-    WinstonLog 
+    WinstonLog
 } from "@modules/winston"
 import {
-    WinstonService 
+    WinstonService
 } from "@modules/winston"
 import type {
-    EnqueueClosePositionParams 
+    EnqueueClosePositionParams,
+    ValidateClosePositionResult,
 } from "./types"
 import {
     ActivePositionAssociateService,
@@ -77,7 +79,7 @@ export class ClosePositionEnqueueService {
         private readonly liquidityPoolStateService: LiquidityPoolStateService,
         private readonly settlementService: SettlementService,
         private readonly lockAuthorityService: LockAuthorityService,
-    ) {}
+    ) { }
 
     /**
      * Enqueue a close position job.
@@ -101,11 +103,12 @@ export class ClosePositionEnqueueService {
                 bots: [bot],
             }
             )
-        // Validate the close position job.
-        if (!await this.validate(params)) {
+        // Validate the close position job and get positionSettlements when valid
+        const validation: ValidateClosePositionResult = await this.validate(params)
+        if (!validation.isValid) {
             return
         }
-
+        const positionSettlements = validation.positionSettlements ?? []
         try {
             let jobId = oldJob?.id
             if (!isRetry) {
@@ -157,7 +160,7 @@ export class ClosePositionEnqueueService {
                         )
                     }
                 )
-            } 
+            }
             const payload: ActionPayload = {
                 jobId: jobId ?? "",
                 botId: bot.id,
@@ -165,18 +168,19 @@ export class ClosePositionEnqueueService {
                 isRetry,
                 tasks: [
                     {
-                    /** Close position task */
+                        /** Close position task */
                         type: TaskType.ClosePosition,
                         payload: {
-                        /** Payload for close position task */
+                            /** Payload for close position task */
                             liquidityPoolId: liquidityPool.id,
+                            positionSettlements,
                         },
                     },
                     {
                         /** Reconcile balance task */
                         type: TaskType.ReconcileBalance,
                         payload: {
-                        /** Payload for reconcile balance task */
+                            /** Payload for reconcile balance task */
                             swap: true,
                             reconcile: false,
                         },
@@ -259,13 +263,14 @@ export class ClosePositionEnqueueService {
      * @returns True if the job is valid, false otherwise.
      */
     private async validate(
-        { 
-            bot, 
+        {
+            bot,
             liquidityPool,
             oldJob,
             isRetry,
         }: EnqueueClosePositionParams
-    ): Promise<boolean> {
+    ): Promise<ValidateClosePositionResult> {
+        let positionSettlements: Array<Partial<PositionSettlementSchema>> = []
         // Ensure the bot has an active position
         if (!bot.activePosition && !isRetry) {
             this.winstonService.log(
@@ -277,7 +282,9 @@ export class ClosePositionEnqueueService {
                     jobId: oldJob?.id,
                 }
             )
-            return false
+            return {
+                isValid: false,
+            }
         }
         // Skip if bot position is closed
         if (bot.activePosition?.positionClosed && !isRetry) {
@@ -289,7 +296,9 @@ export class ClosePositionEnqueueService {
                     liquidityPoolId: liquidityPool.displayId,
                 }
             )
-            return false
+            return {
+                isValid: false,
+            }
         }
         // Skip if bot has an active job
         if (bot.activeJob && !isRetry) {
@@ -302,27 +311,28 @@ export class ClosePositionEnqueueService {
                     liquidityPoolId: liquidityPool.displayId,
                 }
             )
-            return false
+            return {
+                isValid: false,
+            }
         }
         // Retrieve the latest pool state
         const state = await this.liquidityPoolStateService.getState(liquidityPool)
         // Run settlement logic to determine whether position should close
         if (!isRetry) {
-            const { settled, strategyResults } =
-          await this.settlementService.settle({
-              bot,
-              liquidityPool,
-              state,
-          })
+            const settlement = await this.settlementService.settle({
+                bot,
+                liquidityPool,
+                state,
+            })
+            positionSettlements = settlement.positionSettlements
             // if settle is enabled, we check if the position can be settled
             const settleEnabled =
-          envConfig().executor.runtime.operation.closePosition.settle.enabled
+                envConfig().executor.runtime.operation.closePosition.settle.enabled
             // if the position is not settled and the bot has an active position and the position is not forced to close and the job is not a retry and settle is enabled, we skip the job
             if (
-                (!settled) &&
-            (!bot.activePosition?.forceClose) &&
-            (!isRetry) &&
-            settleEnabled
+                (!settlement.settled) &&
+                (!bot.activePosition?.forceClose) &&
+                settleEnabled
             ) {
                 this.winstonService.log(
                     WinstonLog.JobSkippedCannotSettlePosition,
@@ -330,14 +340,14 @@ export class ClosePositionEnqueueService {
                         botId: bot.id,
                         liquidityPoolId: liquidityPool.displayId,
                         type: JobType.ClosePosition,
-                        strategyResults,
                         jobId: oldJob?.id,
                     }
                 )
-                return false
+                return {
+                    isValid: false,
+                }
             }
         }
-
         // Ensure there is no existing job in the queue for this bot
         const bullmqJob = await this.actionQueue.getJob(bot.id)
         if (bullmqJob) {
@@ -351,14 +361,14 @@ export class ClosePositionEnqueueService {
                     jobId: oldJob?.id,
                 }
             )
-            return false
+            return {
+                isValid: false,
+            }
         }
-      
         // Acquire lock authority to prevent concurrent execution
         const acquired = await this.lockAuthorityService.acquire({
             botId: bot.id,
         })
-      
         if (!acquired) {
             this.winstonService.log(
                 WinstonLog.JobSkippedBotAuthorityNotAcquired,
@@ -368,9 +378,13 @@ export class ClosePositionEnqueueService {
                     type: JobType.ClosePosition,
                 }
             )
-            return false
+            return {
+                isValid: false,
+            }
         }
-      
-        return true
+        return {
+            isValid: true,
+            positionSettlements,
+        }
     }
 }

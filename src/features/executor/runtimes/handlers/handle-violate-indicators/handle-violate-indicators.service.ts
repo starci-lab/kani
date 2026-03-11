@@ -9,6 +9,7 @@ import {
 import {
     CacheKey,
     CacheService,
+    IndicatorStatus,
 } from "@modules/cache"
 import {
     DayjsService,
@@ -19,6 +20,16 @@ import {
     RegressionCalculatorService,
     IndicatorResult,
 } from "../../violate-calculators"
+import {
+    ClosePositionEnqueueService 
+} from "@modules/blockchains"
+import {
+    PrimaryMemoryStorageService 
+} from "@modules/databases"
+import {
+    ActivePositionNotFoundException, 
+    LiquidityPoolNotFoundException 
+} from "@modules/exceptions"
 
 /**
  * Handles bot violate indicators: loops over each indicator and delegates to the matching calculator.
@@ -34,6 +45,8 @@ export class HandleViolateIndicatorsService {
         private readonly asyncService: AsyncService,
         private readonly cacheService: CacheService,
         private readonly dayjsService: DayjsService,
+        private readonly closePositionEnqueueService: ClosePositionEnqueueService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     /**
@@ -63,14 +76,38 @@ export class HandleViolateIndicatorsService {
                 )
             ),
         )
+        const filteredResults = results.filter((result) => result !== null)
         await this.cacheService.set({
             key: CacheKey.ViolateIndicatorResults,
             args: [bot.id],
             cacheResult: {
                 snapshotAt: this.dayjsService.now(),
-                results: results.filter((result) => result !== null),
+                results: filteredResults,
             },
         })
+        const violateIndicatorsTriggered = filteredResults.some((result) => result?.status === IndicatorStatus.Trigger)
+        if (violateIndicatorsTriggered) {
+            // close position
+            if (!bot.activePosition) {
+                throw new ActivePositionNotFoundException({
+                    botId: bot.id,
+                })
+            }
+            const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
+                id: {
+                    $eq: bot.activePosition.liquidityPool,
+                },
+            })
+            if (!liquidityPool) {
+                throw new LiquidityPoolNotFoundException({
+                    id: bot.activePosition.liquidityPool.toString(),
+                })
+            }
+            await this.closePositionEnqueueService.enqueue({
+                bot,
+                liquidityPool,
+            })
+        }
     }
 
     /**

@@ -1,23 +1,27 @@
 import {
-    SettlementService 
-} from "./settlement.service"
-import {
-    Module 
+    Module,
 } from "@nestjs/common"
 import {
-    ConfigurableModuleClass 
+    ConfigurableModuleClass,
 } from "./settlement.module-definition"
 import {
-    OutOfRangeSettlementService 
-} from "./out-of-range-settlement.service"    
+    OutOfRangeSettlementService,
+} from "./out-of-range-settlement.service"
+import {
+    ViolateIndicatorsTriggeredSettlementService,
+} from "./violate-indicators-triggered-settlement.service"
+import {
+    SettlementService,
+} from "./settlement.service"
 
 @Module({
     providers: [
         SettlementService,
-        OutOfRangeSettlementService
+        OutOfRangeSettlementService,
+        ViolateIndicatorsTriggeredSettlementService,
     ],
     exports: [
-        SettlementService
+        SettlementService,
     ],
 })
 export class SettlementModule extends ConfigurableModuleClass {}

@@ -85,6 +85,7 @@ export class ClosePositionTaskConfirmService {
             state,
             liquidityPool,
             bullmqJob,
+            payload
         }: ClosePositionTaskConfirmParams
     ) {
         try {
@@ -186,6 +187,7 @@ export class ClosePositionTaskConfirmService {
                     // update the close position record
                     await this.closePositionSnapshotService.updateClosePositionRecord(
                         {
+                            positionSettlements: payload.positionSettlements,
                             before: {
                                 targetBalanceAmount: new BN(bot.balanceSnapshots?.targetBalanceAmount ?? 0),
                                 quoteBalanceAmount: new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? 0),
