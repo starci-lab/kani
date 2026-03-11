@@ -35,8 +35,12 @@ export class HandleViolateIndicatorsService {
      * @param bot - Bot with violateIndicators
      */
     async process(bot: BotSchema): Promise<void> {
+        // do nothing if bot do not have active position
+        if (!bot.activePosition) {
+            return
+        }
         //do nothing if there is no active position or the position is closed
-        if (bot.activePosition && !bot.activePosition.positionClosed) {
+        if (bot.activePosition && bot.activePosition.positionClosed) {
             return
         }
         const indicators = bot.violateIndicators ?? []

@@ -109,11 +109,12 @@ export class PctCalculatorService {
          * Quote token must exist for pair calculation.
          */
         if (!quoteToken) {
-            throw new TokenNotFoundException({
-                id: bot.quoteToken.toString(),
-            })
+            throw new TokenNotFoundException(
+                {
+                    id: bot.quoteToken.toString(),
+                }
+            )
         }
-
         /**
          * Container for the normalized price points
          * representing the relative price movement of the pair.
@@ -186,7 +187,6 @@ export class PctCalculatorService {
              * directly in USDT.
              */
         } else if (quoteToken.isUsdt) {
-
             /**
              * Skip calculation if token has tracked CEX logic handled elsewhere.
              */
@@ -219,7 +219,6 @@ export class PctCalculatorService {
                 cexId: activeCex,
                 timeIntervalMs: timeWindowMs,
             })
-
             /**
              * Convert price to the relative pair representation.
              *

@@ -14,6 +14,10 @@ import {
 import {
     AsyncService
 } from "@modules/mixin"
+import fs from "fs"
+import { 
+    DayjsService 
+} from "@modules/mixin"
 
 /**
  * Service for building relative price series (A / B) using linear interpolation on B.
@@ -23,6 +27,7 @@ export class RelativePriceBuilderService {
     constructor(
         private readonly influxdbPriceCacheService: InfluxdbPriceCacheService,
         private readonly asyncService: AsyncService,
+        private readonly dayjsService: DayjsService,
     ) { }
 
     /**
@@ -44,6 +49,7 @@ export class RelativePriceBuilderService {
             timeIntervalMs,
         }: BuildRelativePriceParams
     ): Promise<BuildRelativePriceResult> {
+        const now = this.dayjsService.now()
         const [
             pricePointsA,
             pricePointsB,
@@ -52,14 +58,15 @@ export class RelativePriceBuilderService {
                 tokenId: tokenAId,
                 cexId: cexAId,
                 timeIntervalMs,
+                snapshotMs: now.toDate().getTime(),
             }),
             this.influxdbPriceCacheService.getPoints({
                 tokenId: tokenBId,
                 cexId: cexBId,
                 timeIntervalMs,
+                snapshotMs: now.toDate().getTime(),
             }),
         ])
-        console.log(`pricePointsA: ${pricePointsA.length}, pricePointsB: ${pricePointsB.length}`)
         return this.buildRelativeSeriesInterpolated(
             pricePointsA,
             pricePointsB,
@@ -84,39 +91,84 @@ export class RelativePriceBuilderService {
     ): Array<PricePoint> {
         const A = [...a].sort((x, y) => x.time - y.time)
         const B = [...b].sort((x, y) => x.time - y.time)
-
+        console.log(`A: ${A.length}, B: ${B.length}`)
+    
+        const times = Array.from(
+            new Set([
+                ...A.map(p => p.time),
+                ...B.map(p => p.time),
+            ])
+        ).sort((x, y) => x - y)
+    
         const out: Array<PricePoint> = []
-
-        let j = 0
-
-        for (const pa of A) {
-            while (j + 1 < B.length && B[j + 1].time < pa.time) {
-                j++
+    
+        let ia = 0
+        let ib = 0
+    
+        const interpolate = (
+            t: number,
+            arr: Array<PricePoint>,
+            idxRef: { i: number },
+        ): number | null => {
+            let i = idxRef.i
+    
+            while (i + 1 < arr.length && arr[i + 1].time < t) {
+                i++
             }
-
-            const left = B[j]
-            const right = B[j + 1]
-
-            if (!left || !right) continue
-            if (pa.time < left.time || pa.time > right.time) continue
-            if (!Number.isFinite(left.price) || !Number.isFinite(right.price)) continue
-            if (left.price <= 0 || right.price <= 0) continue
-
+    
+            idxRef.i = i
+    
+            const left = arr[i]
+            const right = arr[i + 1]
+    
+            if (!left) return null
+    
+            if (t === left.time) return left.price
+            if (right && t === right.time) return right.price
+    
+            if (!right) return null
+            if (t < left.time || t > right.time) return null
+    
             const span = right.time - left.time
-            if (span <= 0) continue
-
-            const alpha = (pa.time - left.time) / span
-            if (alpha < 0 || alpha > 1) continue
-            if (!Number.isFinite(pa.price)) continue
-
-            const interpolatedBase = left.price + alpha * (right.price - left.price)
-
+            if (span <= 0) return null
+    
+            const alpha = (t - left.time) / span
+            if (alpha < 0 || alpha > 1) return null
+    
+            return left.price + alpha * (right.price - left.price)
+        }
+    
+        const refA = { i: ia }
+        const refB = { i: ib }
+    
+        for (const t of times) {
+            const pa = interpolate(t, A, refA)
+            const pb = interpolate(t, B, refB)
+    
+            if (!Number.isFinite(pa) || !Number.isFinite(pb)) continue
+            if (pb! <= 0) continue
+    
             out.push({
-                ...pa,
-                price: pa.price / interpolatedBase,
+                ...A[0],
+                time: t,
+                price: pa! / pb!,
             })
         }
-
+        const debug = [
+            "IN",
+            `A.length: ${A.length}`,
+            `B.length: ${B.length}`,
+            "A",
+            ...A.map(p => `${p.time},${p.price}`),
+            "B",
+            ...B.map(p => `${p.time},${p.price}`),
+            "OUT",
+            ...out.map(p => `${p.time},${p.price}`),
+            "",
+        ].join("\n")
+    
+        fs.writeFileSync(`relativePricePoints-${a[0].id}-${b[0].id}.json`, debug)
+    
         return out
     }
 }

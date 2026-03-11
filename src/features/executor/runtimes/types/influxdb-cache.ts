@@ -13,6 +13,8 @@ export interface GetPointsParams {
     cexId: CexId
     /** Time window in milliseconds to filter points. */
     timeIntervalMs: number
+    /** Snapshot time in milliseconds. */
+    snapshotMs?: number
 }
 
 /** Result of getting cached price points. */
