@@ -336,14 +336,12 @@ export class ClosePositionEnqueueService {
             )
             positionSettlements = settlement.positionSettlements
             // cache to Redis for requeue to reuse
-            this.asyncService.safeRun( 
-                async () => await this.cacheService.set(
-                    {
-                        key: CacheKey.ClosePositionSettlements,
-                        args: [bot.id],
-                        cacheResult: positionSettlements,
-                    }
-                )
+            await this.cacheService.set(
+                {
+                    key: CacheKey.ClosePositionSettlements,
+                    args: [bot.id],
+                    cacheResult: positionSettlements,
+                }
             )
             // if settle is enabled, we check if the position can be settled
             const settleEnabled =
