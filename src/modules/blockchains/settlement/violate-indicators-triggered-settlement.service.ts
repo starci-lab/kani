@@ -49,7 +49,7 @@ export class ViolateIndicatorsTriggeredSettlementService implements ISettlementS
             (r) => r.status === IndicatorStatus.Trigger,
         )
         return {
-            settled: Boolean(indicatorsTriggered?.length),
+            settled: !!(indicatorsTriggered?.length),
             reason: PositionSettlementReason.ViolateIndicatorsTriggered,
             metadata: {
                 indicators: indicatorsTriggered,
