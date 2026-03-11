@@ -948,7 +948,7 @@ export const envConfig = () => ({
             }),
             closePositionSettlements: parseEnvMs({
                 key: "CACHE_TTL_CLOSE_POSITION_SETTLEMENTS",
-                defaultValue: "1h"
+                defaultValue: "100years"
             }),
         },
         stale: {
