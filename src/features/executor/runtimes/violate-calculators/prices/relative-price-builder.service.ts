@@ -17,7 +17,6 @@ import {
 import { 
     DayjsService 
 } from "@modules/mixin"
-
 /**
  * Service for building relative price series (A / B) using linear interpolation on B.
  */
@@ -146,7 +145,6 @@ export class RelativePriceBuilderService {
                 price: relative,
             })
         }
-    
         return out
     }
 }
