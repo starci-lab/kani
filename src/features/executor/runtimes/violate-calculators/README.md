@@ -1,99 +1,187 @@
-# Violate calculators
+# Mathematical intuition: why this model can detect a dump
 
-Module that evaluates **violate indicators**: it turns a price series into one or more scalar signals, compares them to configurable thresholds, and returns a status (**Trigger**, **Reentry**, or **NoAction**). The goal is to detect a **violation** (e.g. sharp move in relative price beyond a threshold) and to recognise when conditions are safe again for **reentry**.
+A **dump** is a rapid and significant decrease in the relative price of an asset within a short time window.  
+Mathematically, a dump corresponds to a **large negative return occurring over a short time interval**.
 
----
+The violate calculators detect such events by analysing the **relative price time series** and converting it into **scalar signals** that capture either:
 
-## Why this model can detect a violation
+1. the **magnitude of the move**, or  
+2. the **strength and direction of a trend**.
 
-A **violation** is when the relative price (e.g. token vs USDC) moves by a large amount over the time window, exceeding the trigger threshold. The model does two things:
-
-1. **Turn the series into numbers**  
-   Over a fixed time window \( \tau \) (e.g. 10s or 30s), we compute one or two scalars from the relative price series \( P(t) \):
-   - **PricePct**: size of the move, e.g. \( \Delta = \bigl| \tfrac{P(t_{\mathrm{last}})}{P(t_{\mathrm{first}})} - 1 \bigr| \).
-   - **PriceRegression**: trend strength and quality — fit \( P(t) \approx a + b\,t \), then use the slope (as a percentage over the window) and R².
-
-2. **Compare to thresholds**  
-   We define two sets of conditions:
-   - **Trigger**: e.g. “\( \Delta \geq \theta_{\mathrm{trig}} \)” (and optionally “R² ≥ …”). If all are satisfied → **Trigger** (violation).
-   - **Reentry**: e.g. “\( \Delta < \theta_{\mathrm{reentry}} \)” (and optionally R²). If all are satisfied → **Reentry** (move has eased, safe to consider re-entering).
-
-So a **violation** is detected when the measured move (or regression-based move) **exceeds** the trigger threshold; **reentry** is allowed when the same metric **falls below** a (smaller) reentry threshold. Order of evaluation: trigger first, then reentry; if neither passes → **NoAction**.
+These signals are then compared to configurable thresholds.
 
 ---
 
-## Mathematical setup
+# Relative price time series
 
-- **Relative price** \( P(t) \): price of the target asset in units of the quote asset (e.g. token per USDC), over a window of length \( \tau \) (milliseconds).
-- **Time window** \( \tau \): fixed length of the lookback (e.g. \( \tau = 10\,000 \) ms or \( 30\,000 \) ms).
+Let
 
-### PricePct (discrete move)
+P(t)
 
-- Take first and last observed price in the window: \( P_{\mathrm{first}} \), \( P_{\mathrm{last}} \).
-- **Signal**:
-  \[
-  \Delta
-  \;=\;
-  \left| \frac{P_{\mathrm{last}}}{P_{\mathrm{first}}} - 1 \right|.
-  \]
-- **Trigger**: e.g. \( \Delta \geq \theta_{\mathrm{trig}} \) (e.g. 0.01 = 1%).
-- **Reentry**: e.g. \( \Delta < \theta_{\mathrm{reentry}} \) (e.g. 0.005 = 0.5%), with \( \theta_{\mathrm{reentry}} < \theta_{\mathrm{trig}} \).
+be the **relative price** of the target asset expressed in units of the quote asset at time t.
 
-So a **violation** is when the relative price has moved by at least \( \theta_{\mathrm{trig}} \) in the window; **reentry** when the move is below \( \theta_{\mathrm{reentry}} \).
+For example:
 
-### PriceRegression (trend + fit quality)
+P(t) = target_price_USDT / quote_price_USDT
 
-- **Model**: \( P(t) \approx a + b\,t \) over the window (linear regression).
-- **Slope** \( b \): rate of change of price per unit time.
-- **Percentage change implied by the trend** over the window \( \tau \):
-  \[
-  \Delta_{\mathrm{reg}}
-  \;=\;
-  \left| \frac{b \cdot (t_{\mathrm{last}} - t_{\mathrm{first}})}{P_{\mathrm{first}}} \right|
-  \;=\;
-  \left| \frac{b \cdot T}{P_{\mathrm{first}}} \right|,
-  \]
-  where \( T = t_{\mathrm{last}} - t_{\mathrm{first}} \approx \tau \) (length of the window).
-- **R²**: coefficient of determination of the regression (how well the line fits the data; \( 0 \leq R^2 \leq 1 \)).
+This removes market-wide effects (such as the overall movement of USDT pairs) and isolates the **relative movement between the two assets**.
 
-**Trigger**: e.g. \( \Delta_{\mathrm{reg}} \geq \theta_{\mathrm{trig}} \) **and** \( R^2 \geq \rho_{\min} \) (e.g. 0.64). So we only treat as a **violation** when there is both a large enough trend and a clear linear move (not noise).
+The model analyses the behaviour of P(t) over a **fixed window**
 
-**Reentry**: e.g. \( \Delta_{\mathrm{reg}} < \theta_{\mathrm{reentry}} \) **and** \( R^2 < \rho_{\min} \) (or another condition), so we only allow reentry when the trend has weakened and/or the line no longer fits well.
+τ
 
-This way the model can **detect a violation** when:
-- the relative price moves by more than \( \theta_{\mathrm{trig}} \) in the window (PricePct), or  
-- the relative price has a strong **linear trend** of size \( \geq \theta_{\mathrm{trig}} \) with high R² (PriceRegression),
-
-and **allow reentry** when the same metric falls below \( \theta_{\mathrm{reentry}} \) (and, for regression, when R² condition is met).
+such as 10 seconds or 30 seconds.
 
 ---
 
-## Thresholds (generic form)
+# Detecting a dump using price change
 
-Each threshold is a **set of conditions**; **all** must hold (AND):
+The simplest signal is the **percentage move** over the window.
 
-- Each condition: compare a **quantity** \( x \) (e.g. \( \Delta \), \( \Delta_{\mathrm{reg}} \), or \( R^2 \)) to a **reference** \( v \) with a relation \( \circ \in \{ =, \neq, <, \leq, >, \geq \} \): i.e. \( x \circ v \).
-- **Trigger**: e.g. \( \Delta \geq \theta_{\mathrm{trig}} \); for regression, \( \Delta_{\mathrm{reg}} \geq \theta_{\mathrm{trig}} \wedge R^2 \geq \rho_{\min} \).
-- **Reentry**: e.g. \( \Delta < \theta_{\mathrm{reentry}} \); for regression, \( \Delta_{\mathrm{reg}} < \theta_{\mathrm{reentry}} \wedge R^2 < \rho_{\min} \) (or similar).
+Let
 
-Evaluation order: if trigger conditions hold → **Trigger**; else if reentry conditions hold → **Reentry**; else → **NoAction**.
+P_first = P(t_first)
+
+P_last = P(t_last)
+
+The magnitude of the move is
+
+Δ = | P_last / P_first − 1 |
+
+This quantity represents the **relative change in price** over the window.
+
+A **dump** corresponds to a large negative move:
+
+P_last / P_first − 1 << 0
+
+Since the model uses the absolute value, it detects **both pumps and dumps** as violations.
+
+If
+
+Δ ≥ θ_trigger
+
+the movement is considered **abnormally large**, indicating a potential market event such as a dump.
 
 ---
 
-## Relative price \( P(t) \)
+# Detecting structured moves using regression
 
-\( P(t) \) is “target asset per unit of quote asset”. It is built from one or two CEX price series depending on which side is USDT:
+Price changes can also occur due to noise or temporary spikes.  
+To distinguish **real directional moves** from noise, the model also measures the **trend structure** of the series.
 
-- If target = USDT: use quote price in USDT (already a “per USDT” price).
-- If quote = USDT: use target price in USDT, then \( P = 1 / \text{(target in USDT)} \).
-- If neither is USDT: for each time \( t \), take target price and quote price (interpolated if needed) and form \( P(t) = \text{target}(t) / \text{quote}(t) \).
+Over the window τ, the model fits a linear regression:
 
-All comparisons (violation vs trigger, recovery vs reentry) are then done on this single series \( P(t) \) over the window \( \tau \).
+P(t) ≈ a + b t
+
+where
+
+a is the intercept  
+b is the **slope** (rate of change of price)
+
+The slope represents how fast the price is moving.
+
+To make the slope comparable across assets, it is converted to a **percentage change over the window**:
+
+Δ_reg = | (b · T) / P_first |
+
+where
+
+T = t_last − t_first
+
+This represents the **trend-implied price change** over the window.
 
 ---
 
-## Summary
+# Filtering noise using R²
 
-- **Violation (Trigger)**: Compare a scalar derived from \( P(t) \) (either discrete move \( \Delta \) or regression-based \( \Delta_{\mathrm{reg}} \) plus R²) to a **trigger** threshold; if the move is large enough (and, for regression, linear enough), output **Trigger**.
-- **Reentry**: Compare the same scalar(s) to a **reentry** threshold (smaller than trigger); if the move is below that, output **Reentry**.
-- No code in this README; the implementation lives in the calculator and threshold-evaluation logic in this module.
+A large slope alone does not guarantee that the move is meaningful.  
+The price series may contain noise or outliers.
+
+To measure how well the regression line explains the data, the model computes the **coefficient of determination**:
+
+R²
+
+which satisfies
+
+0 ≤ R² ≤ 1
+
+R² ≈ 1 → the data closely follows a linear trend  
+R² ≈ 0 → the data is mostly noise
+
+Therefore, a strong directional move should satisfy both:
+
+Δ_reg ≥ θ_trigger
+
+and
+
+R² ≥ ρ_min
+
+This ensures that the detected move is **not random fluctuation**, but a **coherent directional movement**, which is characteristic of a real dump.
+
+---
+
+# Why this works for dump detection
+
+A market dump typically exhibits three properties.
+
+### 1. Large price displacement
+
+The price drops significantly over a short interval.
+
+This is captured by **PricePct**.
+
+### 2. Consistent downward movement
+
+During a dump, prices often move steadily downward rather than oscillating randomly.
+
+This produces a **negative regression slope**.
+
+### 3. Structured trend
+
+Because many trades occur in the same direction during a dump, the price series often follows a clear trend.
+
+This produces a **high R²**.
+
+---
+
+# Combined detection logic
+
+The violate model therefore detects dumps when the relative price series exhibits:
+
+- **large displacement** (PricePct), or
+- **strong directional trend** (PriceRegression).
+
+Formally, a violation is triggered when
+
+Δ ≥ θ_trigger
+
+or
+
+Δ_reg ≥ θ_trigger AND R² ≥ ρ_min
+
+These conditions correspond to the mathematical signature of a dump:  
+**a large and structured movement of price over a short time interval**.
+
+---
+
+# Reentry condition
+
+After a dump, the market may stabilise.  
+Reentry is allowed once the signal falls below a smaller threshold:
+
+Δ < θ_reentry
+
+This indicates that the extreme movement has subsided and the market is returning to normal behaviour.
+
+---
+
+# Interpretation
+
+In summary, the violate calculators detect dumps by analysing the **geometry of the price trajectory** over time:
+
+- **PricePct** measures the **size of the move**
+- **Regression slope** measures the **direction and speed of change**
+- **R²** measures the **coherence of the trend**
+
+Together, these metrics identify the mathematical signature of a dump:  
+a **large, directional, and structured change in relative price over a short window**.
