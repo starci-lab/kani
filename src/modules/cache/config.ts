@@ -102,6 +102,7 @@ export const configMap = {
     },
     [CacheKey.ViolateIndicatorResults]: {
         ttl: envConfig().cache.ttl.violateIndicatorResults,
-        cacheResult: [] as ViolateIndicatorResultsCacheResult,
+        cacheResult: {
+        } as ViolateIndicatorResultsCacheResult,
     },
 }

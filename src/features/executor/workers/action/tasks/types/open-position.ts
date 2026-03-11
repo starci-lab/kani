@@ -1,5 +1,5 @@
 import {
-    ClosePositionActionTaskPayload,
+    OpenPositionActionTaskPayload,
     LiquidityPoolState,
 } from "@modules/blockchains"
 import {
@@ -20,7 +20,7 @@ export interface OpenPositionTaskBaseParams {
     /** Liquidity pool */
     liquidityPool: LiquidityPoolSchema
     /** Payload */
-    payload: ClosePositionActionTaskPayload
+    payload: OpenPositionActionTaskPayload
     /** State */
     state: LiquidityPoolState
     /** BullMQ job */

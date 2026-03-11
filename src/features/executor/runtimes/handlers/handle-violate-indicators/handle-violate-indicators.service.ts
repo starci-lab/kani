@@ -27,7 +27,6 @@ import {
     PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
-    ActivePositionNotFoundException, 
     LiquidityPoolNotFoundException 
 } from "@modules/exceptions"
 
@@ -56,14 +55,6 @@ export class HandleViolateIndicatorsService {
      * @param bot - Bot with violateIndicators
      */
     async process(bot: BotSchema): Promise<void> {
-        // do nothing if bot do not have active position
-        if (!bot.activePosition) {
-            return
-        }
-        //do nothing if there is no active position or the position is closed
-        if (bot.activePosition && bot.activePosition.positionClosed) {
-            return
-        }
         const indicators = bot.violateIndicators ?? []
         if (indicators.length === 0) {
             return
@@ -87,11 +78,13 @@ export class HandleViolateIndicatorsService {
         })
         const violateIndicatorsTriggered = filteredResults.some((result) => result?.status === IndicatorStatus.Trigger)
         if (violateIndicatorsTriggered) {
-            // close position
+            // do nothing if bot do not have active position
             if (!bot.activePosition) {
-                throw new ActivePositionNotFoundException({
-                    botId: bot.id,
-                })
+                return
+            }
+            //do nothing if there is no active position or the position is closed
+            if (bot.activePosition && bot.activePosition.positionClosed) {
+                return
             }
             const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
                 id: {

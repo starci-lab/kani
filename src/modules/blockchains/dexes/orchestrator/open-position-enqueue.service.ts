@@ -71,6 +71,7 @@ import {
     CacheKey, 
     CacheService 
 } from "@modules/cache"
+import _ from "lodash"
 
 /**
  * Service responsible for enqueuing open position jobs.
@@ -330,27 +331,26 @@ export class OpenPositionEnqueueService {
                 })
             return false
         }
-
-        // /**
-        //  * Ownership check:
-        //  * Ensure the liquidity pool is associated with this bot.
-        //  */
-        // if (
-        //     !_.some(
-        //         bot.liquidityPools,
-        //         _liquidityPool => _liquidityPool.toString() === liquidityPool.id.toString()
-        //     )
-        // ) {
-        //     this.winstonService.log(
-        //         WinstonLog.JobSkippedLiquidityPoolNotOwnedByBot,
-        //         {
-        //             botId: bot.id,
-        //             liquidityPoolId: liquidityPool.displayId,
-        //             type: JobType.OpenPosition,
-        //             jobId: oldJob?.id,
-        //         })
-        //     return false
-        // }
+        /**
+         * Ownership check:
+         * Ensure the liquidity pool is associated with this bot.
+         */
+        if (
+            !_.some(
+                bot.liquidityPools,
+                _liquidityPool => _liquidityPool.toString() === liquidityPool.id.toString()
+            ) && !isRetry
+        ) {
+            this.winstonService.log(
+                WinstonLog.JobSkippedLiquidityPoolNotOwnedByBot,
+                {
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                    type: JobType.OpenPosition,
+                    jobId: oldJob?.id,
+                })
+            return false
+        }
         if (!isRetry) {
         // Skip if the balance snapshot is outside the rescan cooldown window
             const diffMs = this.dayjsService.now().diff(
@@ -641,6 +641,10 @@ export class OpenPositionEnqueueService {
             return false
         }
         // all must reentry
-        return violateIndicators?.results?.every((violateIndicator) => violateIndicator?.status === IndicatorStatus.Reentry) ?? false
+        const allMustReentry = violateIndicators?.
+            results?.
+            every((violateIndicator) => violateIndicator?.status === IndicatorStatus.Reentry) ?? false
+        console.log(allMustReentry)
+        return allMustReentry
     }
 }
