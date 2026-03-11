@@ -12,6 +12,7 @@ import {
 import {
     PctCalculatorService,
     RegressionCalculatorService,
+    IndicatorResult
 } from "../../violate-calculators"
 
 /**
@@ -47,7 +48,7 @@ export class HandleViolateIndicatorsService {
         if (indicators.length === 0) {
             return
         }
-        await this.asyncService.allIgnoreError(
+        const results = await this.asyncService.allIgnoreError(
             indicators.map(
                 (indicator) => this.processIndicator(
                     bot,
@@ -55,6 +56,7 @@ export class HandleViolateIndicatorsService {
                 )
             ),
         )
+        console.log(results)
     }
 
     /**
@@ -63,21 +65,19 @@ export class HandleViolateIndicatorsService {
     private async processIndicator(
         bot: BotSchema,
         indicator: BotViolateIndicatorSchema,
-    ): Promise<void> {
+    ): Promise<IndicatorResult<unknown> | null> {
         switch (indicator.type) {
         case BotViolateIndicatorType.PricePct:
-            await this.pctCalculatorService.calculate(bot,
+            return await this.pctCalculatorService.calculate(bot,
                 indicator)
-            break
         case BotViolateIndicatorType.PriceRegression:
-            await this.regressionCalculatorService.calculate(bot,
+            return await this.regressionCalculatorService.calculate(bot,
                 indicator)
-            break
         case BotViolateIndicatorType.VolumeSpike:
             // not implemented yet
-            break
+            return null
         default:
-            break
+            return null
         }
     }
 }

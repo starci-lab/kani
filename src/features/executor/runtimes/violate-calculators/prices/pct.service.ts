@@ -8,6 +8,7 @@ import {
     BotSchema,
     BotViolateIndicatorSchema,
     CexId,
+    IndicatorName,
     PricePoint,
 } from "@modules/databases"
 import {
@@ -33,6 +34,13 @@ import {
     AsyncService
 } from "@modules/mixin"
 import fs from "fs"
+import {
+    OpService,
+} from "../op.service"
+import {
+    IndicatorStatus,
+    PricePctIndicatorResult,
+} from "../types"
 
 /**
  * Service responsible for calculating percentage change
@@ -49,6 +57,7 @@ export class PctCalculatorService {
         private readonly influxdbPriceCacheService: InfluxdbPriceCacheService,
         private readonly cacheService: CacheService,
         private readonly asyncService: AsyncService,
+        private readonly opService: OpService,
     ) { }
 
     /**
@@ -64,7 +73,7 @@ export class PctCalculatorService {
     async calculate(
         bot: BotSchema,
         violateIndicator: BotViolateIndicatorSchema
-    ): Promise<null> {
+    ): Promise<PricePctIndicatorResult | null> {
         /**
          * Extract configuration used to evaluate the indicator.
          * - timeWindowMs: how far back we look for price data
@@ -275,8 +284,41 @@ export class PctCalculatorService {
                 }
             )
         }
-        console.log(`targetToken: ${targetToken.displayId}, quoteToken: ${quoteToken.displayId}, relativePricePoints: ${relativePricePoints.length}`)
-        fs.writeFileSync(`relativePricePoints-${targetToken.displayId}-${quoteToken.displayId}.json`, JSON.stringify(relativePricePoints, null, 2))
-        return null
+        const firstPoint = relativePricePoints.at(0)
+        const lastPoint = relativePricePoints.at(-1)
+        if (!firstPoint || !lastPoint) {
+            return null
+        }
+        const pctValue = new Decimal(lastPoint.price).div(new Decimal(firstPoint.price)).sub(1).abs().toNumber()
+        const values: Partial<Record<IndicatorName, number>> = {
+            [IndicatorName.Pct]: pctValue,
+        }
+        const metadata = { pct: pctValue }
+        if (this.opService.evaluateAll(values, emergencyExitThresholds)) {
+            return {
+                status: IndicatorStatus.EmergencyExit,
+                timeWindowMs,
+                metadata,
+            }
+        }
+        if (this.opService.evaluateAll(values, triggerThresholds)) {
+            return {
+                status: IndicatorStatus.Trigger,
+                timeWindowMs,
+                metadata,
+            }
+        }
+        if (this.opService.evaluateAll(values, reentryThresholds)) {
+            return {
+                status: IndicatorStatus.Reentry,
+                timeWindowMs,
+                metadata,
+            }
+        }
+        return {
+            status: IndicatorStatus.NoAction,
+            timeWindowMs,
+            metadata,
+        }
     }
 }

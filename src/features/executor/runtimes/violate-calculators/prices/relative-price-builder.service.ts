@@ -14,7 +14,6 @@ import {
 import {
     AsyncService
 } from "@modules/mixin"
-import fs from "fs"
 import { 
     DayjsService 
 } from "@modules/mixin"
@@ -91,7 +90,6 @@ export class RelativePriceBuilderService {
     ): Array<PricePoint> {
         const A = [...a].sort((x, y) => x.time - y.time)
         const B = [...b].sort((x, y) => x.time - y.time)
-        console.log(`A: ${A.length}, B: ${B.length}`)
     
         const times = Array.from(
             new Set([
@@ -154,21 +152,6 @@ export class RelativePriceBuilderService {
                 price: pa! / pb!,
             })
         }
-        const debug = [
-            "IN",
-            `A.length: ${A.length}`,
-            `B.length: ${B.length}`,
-            "A",
-            ...A.map(p => `${p.time},${p.price}`),
-            "B",
-            ...B.map(p => `${p.time},${p.price}`),
-            "OUT",
-            ...out.map(p => `${p.time},${p.price}`),
-            "",
-        ].join("\n")
-    
-        fs.writeFileSync(`relativePricePoints-${a[0].id}-${b[0].id}.json`, debug)
-    
         return out
     }
 }

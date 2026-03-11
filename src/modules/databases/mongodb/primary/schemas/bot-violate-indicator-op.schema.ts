@@ -61,15 +61,15 @@ export class BotViolateIndicatorOpSchema {
     /**
      * The value to compare against.
      */
-    @Field(() => GraphQLJSON,
+    @Field(() => Number,
         {
             description: "The value to compare against",
         })
     @Prop({
-        type: MongooseSchema.Types.Mixed,
+        type: Number,
         required: true,
     })
-        value: unknown
+        value: number
 }
 
 export const BotViolateIndicatorOpSchemaClass = SchemaFactory.createForClass(BotViolateIndicatorOpSchema)

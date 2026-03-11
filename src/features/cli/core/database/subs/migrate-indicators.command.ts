@@ -34,7 +34,7 @@ export class MigrateIndicatorsCommand extends CommandRunner {
     async run(): Promise<void> {
         const violateIndicators: Array<Partial<BotViolateIndicatorSchema>> = [
             {
-                name: "PricePct: Threshold Value 1%: TimeWindow 30s",
+                name: "Price pct - 30s - trigger: pct gte 1%, emergency: pct gte 2%, reentry: pct lt 0.5%",
                 type: BotViolateIndicatorType.PricePct,
                 triggerThresholds: [
                     { name: IndicatorName.Pct, op: Operation.Gte, value: 0.01 },
@@ -48,7 +48,7 @@ export class MigrateIndicatorsCommand extends CommandRunner {
                 timeWindowMs: 30000,
             },
             {
-                name: "PricePct: Threshold Value 0.5%: TimeWindow 10s",
+                name: "Price pct - 10s - trigger: pct gte 0.5%, emergency: pct gte 1%, reentry: pct lt 0.25%",
                 type: BotViolateIndicatorType.PricePct,
                 triggerThresholds: [
                     { name: IndicatorName.Pct, op: Operation.Gte, value: 0.005 },
@@ -62,36 +62,36 @@ export class MigrateIndicatorsCommand extends CommandRunner {
                 timeWindowMs: 10000,
             },
             {
-                name: "PriceRegression: Threshold Value 0.3%: R2 Threshold 0.9: TimeWindow 10s",
+                name: "Price regression - 10s - trigger: pct gte 0.3% and R2 gte 0.64, emergency: pct gte 0.6% and R2 gte 0.64, reentry: pct lt 0.15% and R2 lt 0.64",
                 type: BotViolateIndicatorType.PriceRegression,
                 triggerThresholds: [
                     { name: IndicatorName.Pct, op: Operation.Gte, value: 0.003 },
-                    { name: IndicatorName.R2, op: Operation.Gte, value: 0.9 },
+                    { name: IndicatorName.R2, op: Operation.Gte, value: 0.64 },
                 ],
                 emergencyExitThresholds: [
                     { name: IndicatorName.Pct, op: Operation.Gte, value: 0.006 },
-                    { name: IndicatorName.R2, op: Operation.Gte, value: 0.9 },
+                    { name: IndicatorName.R2, op: Operation.Gte, value: 0.64 },
                 ],
                 reentryThresholds: [
                     { name: IndicatorName.Pct, op: Operation.Lt, value: 0.0015 },
-                    { name: IndicatorName.R2, op: Operation.Gte, value: 0.9 },
+                    { name: IndicatorName.R2, op: Operation.Lt, value: 0.64 },
                 ],
                 timeWindowMs: 10000,
             },
             {
-                name: "PriceRegression: Threshold Value 0.6%: R2 Threshold 0.9: TimeWindow 30s",
+                name: "Price regression - 30s - trigger: pct gte 0.6% and R2 gte 0.64, emergency: pct gte 1.2% and R2 gte 0.64, reentry: pct lt 0.3% and R2 lt 0.64",
                 type: BotViolateIndicatorType.PriceRegression,
                 triggerThresholds: [
                     { name: IndicatorName.Pct, op: Operation.Gte, value: 0.006 },
-                    { name: IndicatorName.R2, op: Operation.Gte, value: 0.9 },
+                    { name: IndicatorName.R2, op: Operation.Gte, value: 0.64 },
                 ],
                 emergencyExitThresholds: [
                     { name: IndicatorName.Pct, op: Operation.Gte, value: 0.012 },
-                    { name: IndicatorName.R2, op: Operation.Gte, value: 0.9 },
+                    { name: IndicatorName.R2, op: Operation.Gte, value: 0.64 },
                 ],
                 reentryThresholds: [
                     { name: IndicatorName.Pct, op: Operation.Lt, value: 0.003 },
-                    { name: IndicatorName.R2, op: Operation.Gte, value: 0.9 },
+                    { name: IndicatorName.R2, op: Operation.Lt, value: 0.64 },
                 ],
                 timeWindowMs: 30000,
             },

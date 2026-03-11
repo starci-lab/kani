@@ -28,6 +28,7 @@ import {
     InfluxdbVolumeCacheService,
 } from "./influxdb-cache"
 import {
+    OpService,
     RelativePriceBuilderService,
     PctCalculatorService,
     RegressionCalculatorService,
@@ -72,6 +73,7 @@ export class RuntimesModule extends ConfigurableModuleClass {
                 HandleNotSyncedService,
                 InfluxdbPriceCacheService,
                 InfluxdbVolumeCacheService,
+                OpService,
                 RelativePriceBuilderService,
                 PctCalculatorService,
                 RegressionCalculatorService,
