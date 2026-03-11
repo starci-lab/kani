@@ -3,10 +3,12 @@ import {
 } from "@nestjs/common"
 import {
     IndicatorName,
+    LogicalOperator,
     Operation,
 } from "@modules/databases"
 import type {
     BotViolateIndicatorOpSchema,
+    BotViolateIndicatorThresholdGroupSchema,
 } from "@modules/databases"
 
 /**
@@ -48,26 +50,27 @@ export class OpService {
     }
 
     /**
-     * Evaluate all conditions in a threshold array.
-     * Returns true only if every condition is satisfied (AND).
+     * Evaluate a threshold group: indicators combined by operation (And / Or).
      * If a condition refers to an indicator name not present in values, it is treated as not satisfied.
      */
-    evaluateAll(
+    evaluateGroup(
         values: IndicatorValues,
-        thresholds: Array<BotViolateIndicatorOpSchema>,
+        group: BotViolateIndicatorThresholdGroupSchema,
     ): boolean {
-        if (thresholds.length === 0) {
+        const { indicators, operation } = group
+        if (indicators.length === 0) {
             return false
         }
-        for (const t of thresholds) {
+        const results = indicators.map((t) => {
             const current = values[t.name]
             if (current === undefined) {
                 return false
             }
-            if (!this.evaluate(current, t.op, t.value)) {
-                return false
-            }
+            return this.evaluate(current, t.op, t.value)
+        })
+        if (operation === LogicalOperator.And) {
+            return results.every(Boolean)
         }
-        return true
+        return results.some(Boolean)
     }
 }

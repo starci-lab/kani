@@ -293,14 +293,14 @@ export class PctCalculatorService {
             [IndicatorName.Pct]: pctValue,
         }
         const metadata = { pct: pctValue }
-        if (this.opService.evaluateAll(values, triggerThresholds)) {
+        if (this.opService.evaluateGroup(values, triggerThresholds)) {
             return {
                 status: IndicatorStatus.Trigger,
                 timeWindowMs,
                 metadata,
             }
         }
-        if (this.opService.evaluateAll(values, reentryThresholds)) {
+        if (this.opService.evaluateGroup(values, reentryThresholds)) {
             return {
                 status: IndicatorStatus.Reentry,
                 timeWindowMs,

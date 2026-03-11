@@ -48,7 +48,7 @@ export class HandleViolateIndicatorsService {
         if (indicators.length === 0) {
             return
         }
-        const results = await this.asyncService.allIgnoreError(
+        await this.asyncService.allIgnoreError(
             indicators.map(
                 (indicator) => this.processIndicator(
                     bot,
@@ -56,7 +56,6 @@ export class HandleViolateIndicatorsService {
                 )
             ),
         )
-        console.log(results)
     }
 
     /**

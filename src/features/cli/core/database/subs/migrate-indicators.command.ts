@@ -8,6 +8,7 @@ import {
     BotViolateIndicatorSchema,
     BotViolateIndicatorType,
     IndicatorName,
+    LogicalOperator,
     Operation,
 } from "@modules/databases"
 import {
@@ -36,49 +37,73 @@ export class MigrateIndicatorsCommand extends CommandRunner {
             {
                 name: "Price pct - 30s - trigger: pct gte 1%, reentry: pct lt 0.5%",
                 type: BotViolateIndicatorType.PricePct,
-                triggerThresholds: [
-                    { name: IndicatorName.Pct, op: Operation.Gte, value: 0.01 },
-                ],
-                reentryThresholds: [
-                    { name: IndicatorName.Pct, op: Operation.Lt, value: 0.005 },
-                ],
+                triggerThresholds: {
+                    indicators: [
+                        { name: IndicatorName.Pct, op: Operation.Gte, value: 0.01 },
+                    ],
+                    operation: LogicalOperator.And,
+                },
+                reentryThresholds: {
+                    indicators: [
+                        { name: IndicatorName.Pct, op: Operation.Lt, value: 0.005 },
+                    ],
+                    operation: LogicalOperator.And,
+                },
                 timeWindowMs: 30000,
             },
             {
                 name: "Price pct - 10s - trigger: pct gte 0.5%, reentry: pct lt 0.25%",
                 type: BotViolateIndicatorType.PricePct,
-                triggerThresholds: [
-                    { name: IndicatorName.Pct, op: Operation.Gte, value: 0.005 },
-                ],
-                reentryThresholds: [
-                    { name: IndicatorName.Pct, op: Operation.Lt, value: 0.0025 },
-                ],
+                triggerThresholds: {
+                    indicators: [
+                        { name: IndicatorName.Pct, op: Operation.Gte, value: 0.005 },
+                    ],
+                    operation: LogicalOperator.And,
+                },
+                reentryThresholds: {
+                    indicators: [
+                        { name: IndicatorName.Pct, op: Operation.Lt, value: 0.0025 },
+                    ],
+                    operation: LogicalOperator.And,
+                },
                 timeWindowMs: 10000,
             },
             {
                 name: "Price regression - 10s - trigger: pct gte 0.3% and R2 gte 0.64, reentry: pct lt 0.15% and R2 lt 0.64",
                 type: BotViolateIndicatorType.PriceRegression,
-                triggerThresholds: [
-                    { name: IndicatorName.Pct, op: Operation.Gte, value: 0.003 },
-                    { name: IndicatorName.R2, op: Operation.Gte, value: 0.64 },
-                ],
-                reentryThresholds: [
-                    { name: IndicatorName.Pct, op: Operation.Lt, value: 0.0015 },
-                    { name: IndicatorName.R2, op: Operation.Lt, value: 0.64 },
-                ],
+                triggerThresholds: {
+                    indicators: [
+                        { name: IndicatorName.Pct, op: Operation.Gte, value: 0.003 },
+                        { name: IndicatorName.R2, op: Operation.Gte, value: 0.64 },
+                    ],
+                    operation: LogicalOperator.And,
+                },
+                reentryThresholds: {
+                    indicators: [
+                        { name: IndicatorName.Pct, op: Operation.Lt, value: 0.0015 },
+                        { name: IndicatorName.R2, op: Operation.Lt, value: 0.64 },
+                    ],
+                    operation: LogicalOperator.Or,
+                },
                 timeWindowMs: 10000,
             },
             {
                 name: "Price regression - 30s - trigger: pct gte 0.6% and R2 gte 0.64, reentry: pct lt 0.3% and R2 lt 0.64",
                 type: BotViolateIndicatorType.PriceRegression,
-                triggerThresholds: [
-                    { name: IndicatorName.Pct, op: Operation.Gte, value: 0.006 },
-                    { name: IndicatorName.R2, op: Operation.Gte, value: 0.64 },
-                ],
-                reentryThresholds: [
-                    { name: IndicatorName.Pct, op: Operation.Lt, value: 0.003 },
-                    { name: IndicatorName.R2, op: Operation.Lt, value: 0.64 },
-                ],
+                triggerThresholds: {
+                    indicators: [
+                        { name: IndicatorName.Pct, op: Operation.Gte, value: 0.006 },
+                        { name: IndicatorName.R2, op: Operation.Gte, value: 0.64 },
+                    ],
+                    operation: LogicalOperator.And,
+                },
+                reentryThresholds: {
+                    indicators: [
+                        { name: IndicatorName.Pct, op: Operation.Lt, value: 0.003 },
+                        { name: IndicatorName.R2, op: Operation.Lt, value: 0.64 },
+                    ],
+                    operation: LogicalOperator.Or,
+                },
                 timeWindowMs: 30000,
             },
         ]

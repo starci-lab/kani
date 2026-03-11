@@ -11,9 +11,9 @@ import {
 import {
     Field, Int, ObjectType
 } from "@nestjs/graphql"
-import { 
-    BotViolateIndicatorOpSchema 
-} from "./bot-violate-indicator-op.schema"
+import {
+    BotViolateIndicatorThresholdGroupSchema,
+} from "./bot-violate-indicator-threshold-group.schema"
 
 /**
  * Represents a decentralized exchange (DEX) supported by the platform.
@@ -55,30 +55,30 @@ export class BotViolateIndicatorSchema extends AbstractSchema {
     type: BotViolateIndicatorType
 
     /**
-     * The threshold of the bot violate indicator.
+     * The trigger threshold: indicators combined by logical operator (And / Or).
      */
-    @Field(() => [BotViolateIndicatorOpSchema],
+    @Field(() => BotViolateIndicatorThresholdGroupSchema,
         {
-            description: "The trigger thresholds of the bot violate indicator",
+            description: "The trigger threshold of the bot violate indicator",
         })
     @Prop({
-        type: [BotViolateIndicatorOpSchema],
+        type: BotViolateIndicatorThresholdGroupSchema,
         required: true,
     })
-    triggerThresholds: Array<BotViolateIndicatorOpSchema>
+    triggerThresholds: BotViolateIndicatorThresholdGroupSchema
 
     /**
-     * The reentry thresholds of the bot violate indicator.
+     * The reentry threshold: indicators combined by logical operator (And / Or).
      */
-    @Field(() => [BotViolateIndicatorOpSchema],
+    @Field(() => BotViolateIndicatorThresholdGroupSchema,
         {
-            description: "The reentry thresholds of the bot violate indicator",
+            description: "The reentry threshold of the bot violate indicator",
         })
     @Prop({
-        type: [BotViolateIndicatorOpSchema],
+        type: BotViolateIndicatorThresholdGroupSchema,
         required: true,
     })
-    reentryThresholds: Array<BotViolateIndicatorOpSchema>
+    reentryThresholds: BotViolateIndicatorThresholdGroupSchema
 
     /**
      * The metadata of the bot violate indicator.

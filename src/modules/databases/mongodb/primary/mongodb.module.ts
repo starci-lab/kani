@@ -70,6 +70,8 @@ import {
     BotViolateIndicatorSchema,
     BotViolateIndicatorOpSchemaClass,
     BotViolateIndicatorOpSchema,
+    BotViolateIndicatorThresholdGroupSchemaClass,
+    BotViolateIndicatorThresholdGroupSchema,
 } from "./schemas"
 import {
     MongooseModule as NestMongooseModule 
@@ -323,6 +325,10 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     {
                         name: BotViolateIndicatorOpSchema.name,
                         useFactory: () => BotViolateIndicatorOpSchemaClass,
+                    },
+                    {
+                        name: BotViolateIndicatorThresholdGroupSchema.name,
+                        useFactory: () => BotViolateIndicatorThresholdGroupSchemaClass,
                     },
                 ],
                 CONNECTION_NAME),

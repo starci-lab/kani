@@ -60,3 +60,29 @@ registerEnumType(
         }
     }
 )
+
+/**
+ * Logical operator to combine multiple indicator conditions.
+ */
+export enum LogicalOperator {
+    And = "and",
+    Or = "or",
+}
+
+export const GraphQLTypeLogicalOperator = createEnumType(LogicalOperator)
+
+registerEnumType(
+    GraphQLTypeLogicalOperator,
+    {
+        name: "LogicalOperator",
+        description: "Logical operator to combine indicator conditions",
+        valuesMap: {
+            [LogicalOperator.And]: {
+                description: "All conditions must hold (AND)",
+            },
+            [LogicalOperator.Or]: {
+                description: "At least one condition must hold (OR)",
+            },
+        },
+    }
+)
