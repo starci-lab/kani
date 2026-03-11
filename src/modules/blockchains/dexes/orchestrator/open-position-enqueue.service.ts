@@ -644,7 +644,6 @@ export class OpenPositionEnqueueService {
         const allMustReentry = violateIndicators?.
             results?.
             every((violateIndicator) => violateIndicator?.status === IndicatorStatus.Reentry) ?? false
-        console.log(allMustReentry)
         return allMustReentry
     }
 }
