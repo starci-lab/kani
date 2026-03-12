@@ -58,7 +58,7 @@ export const createIoRedisProvider = (key: IoRedisInstanceKey): Provider => ({
                 useCluster: envConfig().redis.cache.useCluster,
             },
         }
-        const { host, port, password, additionalOptions, useCluster } = map[key]
+        const { host, port, password, useCluster, additionalOptions } = map[key]
         // use valkey if key === IoRedisInstanceKey.Cache
         if (useCluster) {
             if (key === IoRedisInstanceKey.Cache) {
@@ -88,7 +88,8 @@ export const createIoRedisProvider = (key: IoRedisInstanceKey): Provider => ({
                     redisOptions: {
                         password,
                         enableAutoPipelining: true,
-                        ...additionalOptions,
+                        ...(additionalOptions || {
+                        }),
                     },
                 }
             )
@@ -106,7 +107,8 @@ export const createIoRedisProvider = (key: IoRedisInstanceKey): Provider => ({
             `redis://${host}:${port}`,
             {
                 password, 
-                ...additionalOptions 
+                ...(additionalOptions || {
+                }),
             }
         )
     },

@@ -56,21 +56,9 @@ export const createRedisProvider = (key: RedisInstanceKey): Provider => ({
             host, 
             port, 
             password, 
-            additionalOptions, 
-            useCluster 
+            useCluster,
+            additionalOptions
         } = map[key]
-        console.log("key",
-            key)
-        console.log("host",
-            host)
-        console.log("port",
-            port)
-        console.log("password",
-            password)
-        console.log("additionalOptions",
-            additionalOptions)
-        console.log("useCluster",
-            useCluster)
         if (useCluster) {
             const cluster = createCluster({
                 rootNodes: [
@@ -83,20 +71,21 @@ export const createRedisProvider = (key: RedisInstanceKey): Provider => ({
                 ],
                 defaults: {
                     password,
-                    ...additionalOptions,
+                    ...(additionalOptions || {
+                    }),
                 },
             })
             await cluster.connect()
             return cluster
-        }
-        
+        }       
         const client = createClient({
             socket: {
                 host,
                 port,
             },
             password,
-            ...additionalOptions,
+            ...(additionalOptions || {
+            }),
         })
         await client.connect()
         return client
