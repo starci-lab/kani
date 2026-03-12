@@ -52,7 +52,6 @@ export const createRedisProvider = (key: RedisInstanceKey): Provider => ({
                 useCluster: envConfig().redis.cache.useCluster,
             },
         }
-        console.log(map)
         const { 
             host, 
             port, 
@@ -60,6 +59,18 @@ export const createRedisProvider = (key: RedisInstanceKey): Provider => ({
             additionalOptions, 
             useCluster 
         } = map[key]
+        console.log("key",
+            key)
+        console.log("host",
+            host)
+        console.log("port",
+            port)
+        console.log("password",
+            password)
+        console.log("additionalOptions",
+            additionalOptions)
+        console.log("useCluster",
+            useCluster)
         if (useCluster) {
             const cluster = createCluster({
                 rootNodes: [
