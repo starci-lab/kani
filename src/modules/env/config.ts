@@ -1623,18 +1623,18 @@ export const envConfig = () => ({
             resources: {
                 limits: {
                     cpu: parseEnvString({
-                        key: "KANI_EXECUTOR_RESOURCES_LIMITS_CPU", defaultValue: "512m" 
+                        key: "KANI_EXECUTOR_RESOURCES_LIMITS_CPU", defaultValue: "2048m" 
                     }),
                     memory: parseEnvString({
-                        key: "KANI_EXECUTOR_RESOURCES_LIMITS_MEMORY", defaultValue: "1Gi" 
+                        key: "KANI_EXECUTOR_RESOURCES_LIMITS_MEMORY", defaultValue: "8192Mi" 
                     }),
                 },
                 requests: {
                     cpu: parseEnvString({
-                        key: "KANI_EXECUTOR_RESOURCES_REQUESTS_CPU", defaultValue: "64m" 
+                        key: "KANI_EXECUTOR_RESOURCES_REQUESTS_CPU", defaultValue: "128m" 
                     }),
                     memory: parseEnvString({
-                        key: "KANI_EXECUTOR_RESOURCES_REQUESTS_MEMORY", defaultValue: "128Mi" 
+                        key: "KANI_EXECUTOR_RESOURCES_REQUESTS_MEMORY", defaultValue: "256Mi" 
                     }),
                 },
             },
