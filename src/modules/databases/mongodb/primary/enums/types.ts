@@ -417,7 +417,7 @@ registerEnumType(GraphQLTypeStepType,
  * The tier of the range
  */
 export enum RangeTier {
-    Low = "lowRange",
+    Narrow = "narrowRange",
     Mid = "midRange",
     Wide = "wideRange"
 }
@@ -431,8 +431,8 @@ registerEnumType(GraphQLTypeRangeTier,
         name: "RangeTier",
         description: "The tier of the range",
         valuesMap: {
-            [RangeTier.Low]: {
-                description: "The low range"
+            [RangeTier.Narrow]: {
+                description: "The narrow range"
             },
             [RangeTier.Mid]: {
                 description: "The mid range"

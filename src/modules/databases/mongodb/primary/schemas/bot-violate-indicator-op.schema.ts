@@ -13,10 +13,6 @@ import {
     Operation,
     GraphQLTypeOperation,
 } from "../enums"
-import GraphQLJSON from "graphql-type-json"
-import {
-    Schema as MongooseSchema,
-} from "mongoose"
 
 /**
  * Represents a single condition (name, op, value) for a bot violate indicator.
