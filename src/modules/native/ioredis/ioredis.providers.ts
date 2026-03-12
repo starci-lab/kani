@@ -17,7 +17,13 @@ export const createIoRedisProvider = (key: IoRedisInstanceKey): Provider => ({
     provide: createIoRedisKey(key),
     useFactory: (
     ) => {
-        const { host, port, password, additionalOptions, useCluster } = ioRedisInstanceKeyMap[key]
+        const { 
+            host, 
+            port, 
+            password, 
+            additionalOptions, 
+            useCluster 
+        } = ioRedisInstanceKeyMap()[key]
         // use valkey if key === IoRedisInstanceKey.Cache
         if (useCluster) {
             if (key === IoRedisInstanceKey.Cache) {

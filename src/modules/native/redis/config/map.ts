@@ -8,10 +8,10 @@ import type {
     RedisInstanceKeyOptions
 } from "../types"
 
-export const redisInstanceKeyMap: Record<
+export const redisInstanceKeyMap = (): Record<
     RedisInstanceKey,
     RedisInstanceKeyOptions
-> = {
+> => ({
     [RedisInstanceKey.BullMQ]: {
         host: envConfig().redis.bullmq.host,
         port: envConfig().redis.bullmq.port,
@@ -42,4 +42,4 @@ export const redisInstanceKeyMap: Record<
         password: envConfig().redis.cache.password,
         useCluster: envConfig().redis.cache.useCluster,
     },
-}
+})

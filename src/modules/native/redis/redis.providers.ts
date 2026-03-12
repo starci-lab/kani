@@ -17,8 +17,13 @@ import {
 export const createRedisProvider = (key: RedisInstanceKey): Provider => ({
     provide: createRedisKey(key),
     useFactory: async () => {
-        const { host, port, password, additionalOptions, useCluster } = redisInstanceKeyMap[key]
-        
+        const { 
+            host, 
+            port, 
+            password, 
+            additionalOptions, 
+            useCluster 
+        } = redisInstanceKeyMap()[key]
         if (useCluster) {
             const cluster = createCluster({
                 rootNodes: [
