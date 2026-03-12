@@ -1118,7 +1118,7 @@ export const configMap = {
     // Price Diagnostic Failed
     [WinstonLog.PriceDiagnosticFailed]: {
         name: WinstonLog.PriceDiagnosticFailed,
-        level: WinstonLevel.Error,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as PriceDiagnosticFailedMessage,
