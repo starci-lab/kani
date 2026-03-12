@@ -35,7 +35,7 @@ export class MigrateIndicatorsCommand extends CommandRunner {
     async run(): Promise<void> {
         const violateIndicators: Array<Partial<BotViolateIndicatorSchema>> = [
             {
-                name: "Price pct - 30s - trigger: pct gte 1%, reentry: pct lt 0.5%",
+                name: "Price Pct 30s - Violate 1%",
                 type: BotViolateIndicatorType.PricePct,
                 triggerThresholds: {
                     indicators: [
@@ -56,7 +56,7 @@ export class MigrateIndicatorsCommand extends CommandRunner {
                 timeWindowMs: 30000,
             },
             {
-                name: "Price pct - 10s - trigger: pct gte 0.5%, reentry: pct lt 0.25%",
+                name: "Price Pct 10s - Violate 0.5%",
                 type: BotViolateIndicatorType.PricePct,
                 triggerThresholds: {
                     indicators: [
@@ -77,7 +77,7 @@ export class MigrateIndicatorsCommand extends CommandRunner {
                 timeWindowMs: 10000,
             },
             {
-                name: "Price regression - 10s - trigger: pct gte 0.3% and R2 gte 0.64, reentry: pct lt 0.15% and R2 lt 0.64",
+                name: "Price Regression 10s - Violate 0.3% and R2 0.64",
                 type: BotViolateIndicatorType.PriceRegression,
                 triggerThresholds: {
                     indicators: [
@@ -104,7 +104,7 @@ export class MigrateIndicatorsCommand extends CommandRunner {
                 timeWindowMs: 10000,
             },
             {
-                name: "Price regression - 30s - trigger: pct gte 0.6% and R2 gte 0.64, reentry: pct lt 0.3% and R2 lt 0.64",
+                name: "Price Regression 30s - Violate 0.6% and R2 0.64",
                 type: BotViolateIndicatorType.PriceRegression,
                 triggerThresholds: {
                     indicators: [
