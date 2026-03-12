@@ -40,9 +40,7 @@ export class KafkaService {
             options: {
                 client: {
                     clientId: this.instanceService.getId(),
-                    brokers: [
-                        `${cfg.host}:${cfg.port}`,
-                    ],
+                    brokers: cfg.brokers.map((broker) => `${broker.host}:${broker.port}`),
                     sasl: cfg.sasl.enabled ? {
                         mechanism: "scram-sha-256",
                         username: cfg.sasl.username,

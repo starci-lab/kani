@@ -27,57 +27,57 @@ export const envConfig = () => ({
         axios: {
             retry: {
                 delay: parseEnvMs({
-                    key: "CLIENT_AXIOS_RETRY_DELAY", defaultValue: "1s" 
+                    key: "CLIENT_AXIOS_RETRY_DELAY", defaultValue: "1s"
                 }),
                 maxRetries: parseEnvInt({
-                    key: "CLIENT_AXIOS_RETRY_MAX_RETRIES", defaultValue: 3 
+                    key: "CLIENT_AXIOS_RETRY_MAX_RETRIES", defaultValue: 3
                 }),
             },
         },
         apollo: {
             timeout: {
                 ms: parseEnvMs({
-                    key: "CLIENT_APOLLO_TIMEOUT_MS", defaultValue: "10s" 
+                    key: "CLIENT_APOLLO_TIMEOUT_MS", defaultValue: "10s"
                 }),
             },
             retry: {
                 jitter: parseEnvBoolean({
-                    key: "CLIENT_APOLLO_RETRY_JITTER", defaultValue: true 
+                    key: "CLIENT_APOLLO_RETRY_JITTER", defaultValue: true
                 }),
                 initial: parseEnvMs({
-                    key: "CLIENT_APOLLO_RETRY_INITIAL", defaultValue: "1s" 
+                    key: "CLIENT_APOLLO_RETRY_INITIAL", defaultValue: "1s"
                 }),
                 max: parseEnvMs({
-                    key: "CLIENT_APOLLO_RETRY_MAX", defaultValue: "10s" 
+                    key: "CLIENT_APOLLO_RETRY_MAX", defaultValue: "10s"
                 }),
                 maxRetries: parseEnvInt({
-                    key: "CLIENT_APOLLO_RETRY_MAX_RETRIES", defaultValue: 3 
+                    key: "CLIENT_APOLLO_RETRY_MAX_RETRIES", defaultValue: 3
                 }),
             },
         },
     },
     debug: {
         enabled: parseEnvBoolean({
-            key: "DEBUG_ENABLED", defaultValue: false 
+            key: "DEBUG_ENABLED", defaultValue: false
         }),
     },
     /** Generic retry policy (exponential backoff): retries, factor, timeouts, randomize. */
     retry: {
         base: {
             retries: parseEnvInt({
-                key: "RETRY_BASE_RETRIES", defaultValue: 3 
+                key: "RETRY_BASE_RETRIES", defaultValue: 3
             }),
             factor: parseEnvFloat({
-                key: "RETRY_BASE_FACTOR", defaultValue: 2 
+                key: "RETRY_BASE_FACTOR", defaultValue: 2
             }),
             minTimeout: parseEnvMs({
-                key: "RETRY_BASE_MIN_TIMEOUT", defaultValue: "1s" 
+                key: "RETRY_BASE_MIN_TIMEOUT", defaultValue: "1s"
             }),
             maxTimeout: parseEnvMs({
-                key: "RETRY_BASE_MAX_TIMEOUT", defaultValue: "10s" 
+                key: "RETRY_BASE_MAX_TIMEOUT", defaultValue: "10s"
             }),
             randomize: parseEnvBoolean({
-                key: "RETRY_BASE_RANDOMIZE", defaultValue: true 
+                key: "RETRY_BASE_RANDOMIZE", defaultValue: true
             }),
         },
     },
@@ -85,10 +85,10 @@ export const envConfig = () => ({
     wait: {
         base: {
             retries: parseEnvInt({
-                key: "WAIT_BASE_RETRIES", defaultValue: 30 
+                key: "WAIT_BASE_RETRIES", defaultValue: 30
             }),
             intervalMs: parseEnvMs({
-                key: "WAIT_BASE_INTERVAL_MS", defaultValue: "100ms" 
+                key: "WAIT_BASE_INTERVAL_MS", defaultValue: "100ms"
             }),
         },
     },
@@ -96,31 +96,31 @@ export const envConfig = () => ({
     transaction: {
         swap: {
             slippage: parseEnvFloat({
-                key: "TRANSACTION_SWAP_SLIPPAGE", defaultValue: 0.005 
+                key: "TRANSACTION_SWAP_SLIPPAGE", defaultValue: 0.005
             }),
         },
     },
     /** Terminus: timeout for health checks. */
     terminus: {
         timeout: parseEnvMs({
-            key: "TERMINUS_TIMEOUT", defaultValue: "30s", 
+            key: "TERMINUS_TIMEOUT", defaultValue: "30s",
         }),
     },
     /** Numeric precision: fraction digits for amounts, rounding, and operations. */
     computation: {
         amount: {
             fractionDigits: parseEnvInt({
-                key: "COMPUTATION_AMOUNT_FRACTION_DIGITS", defaultValue: 10 
+                key: "COMPUTATION_AMOUNT_FRACTION_DIGITS", defaultValue: 10
             }),
         },
         round: {
             fractionDigits: parseEnvInt({
-                key: "COMPUTATION_ROUND_FRACTION_DIGITS", defaultValue: 5 
+                key: "COMPUTATION_ROUND_FRACTION_DIGITS", defaultValue: 5
             }),
         },
         operation: {
             fractionDigits: parseEnvInt({
-                key: "COMPUTATION_OPERATION_FRACTION_DIGITS", defaultValue: 10 
+                key: "COMPUTATION_OPERATION_FRACTION_DIGITS", defaultValue: 10
             }),
         },
     },
@@ -129,39 +129,39 @@ export const envConfig = () => ({
         coingecko: {
             interval: {
                 rest: parseEnvMs({
-                    key: "PRICE_FEEDS_COINGECKO_INTERVAL_REST", defaultValue: "10s" 
+                    key: "PRICE_FEEDS_COINGECKO_INTERVAL_REST", defaultValue: "10s"
                 }),
             },
             chunks: {
                 rest: parseEnvInt({
-                    key: "PRICE_FEEDS_COINGECKO_CHUNKS_REST", defaultValue: 20 
+                    key: "PRICE_FEEDS_COINGECKO_CHUNKS_REST", defaultValue: 20
                 }),
             },
         },
         pyth: {
             interval: {
                 rest: parseEnvMs({
-                    key: "PRICE_FEEDS_PYTH_INTERVAL_REST", defaultValue: "10s" 
+                    key: "PRICE_FEEDS_PYTH_INTERVAL_REST", defaultValue: "10s"
                 }),
             },
             chunks: {
                 rest: parseEnvInt({
-                    key: "PRICE_FEEDS_PYTH_CHUNKS_REST", defaultValue: 20 
+                    key: "PRICE_FEEDS_PYTH_CHUNKS_REST", defaultValue: 20
                 }),
                 subscription: parseEnvInt({
-                    key: "PRICE_FEEDS_PYTH_CHUNKS_SUBSCRIPTION", defaultValue: 5 
+                    key: "PRICE_FEEDS_PYTH_CHUNKS_SUBSCRIPTION", defaultValue: 5
                 }),
             },
         },
         coinmarketcap: {
             interval: {
                 rest: parseEnvMs({
-                    key: "PRICE_FEEDS_COINMARKETCAP_INTERVAL_REST", defaultValue: "5m" 
+                    key: "PRICE_FEEDS_COINMARKETCAP_INTERVAL_REST", defaultValue: "5m"
                 }),
             },
             chunks: {
                 rest: parseEnvInt({
-                    key: "PRICE_FEEDS_COINMARKETCAP_CHUNKS_REST", defaultValue: 20 
+                    key: "PRICE_FEEDS_COINMARKETCAP_CHUNKS_REST", defaultValue: 20
                 }),
             },
         },
@@ -170,71 +170,71 @@ export const envConfig = () => ({
     cexes: {
         binance: {
             slippage: parseEnvFloat({
-                key: "CEXES_BINANCE_BINANCE_SLIPPAGE", defaultValue: 0.05 
+                key: "CEXES_BINANCE_BINANCE_SLIPPAGE", defaultValue: 0.05
             }),
             interval: {
                 rest: parseEnvMs({
-                    key: "CEXES_BINANCE_INTERVAL_REST", defaultValue: "10s" 
+                    key: "CEXES_BINANCE_INTERVAL_REST", defaultValue: "10s"
                 }),
             },
             chunks: {
                 lastPrice: parseEnvInt({
-                    key: "CEXES_BINANCE_CHUNKS_LAST_PRICE", defaultValue: 10 
+                    key: "CEXES_BINANCE_CHUNKS_LAST_PRICE", defaultValue: 10
                 }),
                 volume: parseEnvInt({
-                    key: "CEXES_BINANCE_CHUNKS_VOLUME", defaultValue: 10 
+                    key: "CEXES_BINANCE_CHUNKS_VOLUME", defaultValue: 10
                 }),
             },
             ws: {
                 idleTimeout: parseEnvMs({
-                    key: "CEXES_BINANCE_WS_IDLE_TIMEOUT", defaultValue: "10s" 
+                    key: "CEXES_BINANCE_WS_IDLE_TIMEOUT", defaultValue: "10s"
                 }),
             },
         },
         gate: {
             slippage: parseEnvFloat({
-                key: "CEXES_GATE_SLIPPAGE", defaultValue: 0.05 
+                key: "CEXES_GATE_SLIPPAGE", defaultValue: 0.05
             }),
             interval: {
                 rest: parseEnvMs({
-                    key: "CEXES_GATE_INTERVAL_REST", defaultValue: "10s" 
+                    key: "CEXES_GATE_INTERVAL_REST", defaultValue: "10s"
                 }),
             },
             chunks: {
                 lastPrice: parseEnvInt({
-                    key: "CEXES_GATE_CHUNKS_LAST_PRICE", defaultValue: 10 
-                }),    
+                    key: "CEXES_GATE_CHUNKS_LAST_PRICE", defaultValue: 10
+                }),
                 volume: parseEnvInt({
-                    key: "CEXES_GATE_CHUNKS_VOLUME", defaultValue: 10 
+                    key: "CEXES_GATE_CHUNKS_VOLUME", defaultValue: 10
                 }),
             },
             ws: {
                 idleTimeout: parseEnvMs({
-                    key: "CEXES_GATE_WS_IDLE_TIMEOUT", defaultValue: "10s" 
+                    key: "CEXES_GATE_WS_IDLE_TIMEOUT", defaultValue: "10s"
                 }),
             },
         },
         bybit: {
             slippage: parseEnvFloat({
-                key: "CEXES_BYBIT_SLIPPAGE", defaultValue: 0.05 
+                key: "CEXES_BYBIT_SLIPPAGE", defaultValue: 0.05
             }),
             interval: {
                 rest: parseEnvMs({
-                    key: "CEXES_BYBIT_INTERVAL_REST", defaultValue: "10s" 
+                    key: "CEXES_BYBIT_INTERVAL_REST", defaultValue: "10s"
                 }),
             },
             chunks: {
                 lastPrice: parseEnvInt({
-                    key: "CEXES_BYBIT_CHUNKS_LAST_PRICE", defaultValue: 10 
+                    key: "CEXES_BYBIT_CHUNKS_LAST_PRICE", defaultValue: 10
                 }),
                 volume: parseEnvInt({
-                    key: "CEXES_BYBIT_CHUNKS_VOLUME", defaultValue: 10 
+                    key: "CEXES_BYBIT_CHUNKS_VOLUME", defaultValue: 10
                 }),
             },
         },
         ws: {
             idleTimeout: parseEnvMs({
-                key: "CEXES_WS_IDLE_TIMEOUT", defaultValue: "10s" 
+                key: "CEXES_WS_IDLE_TIMEOUT", defaultValue: "10s"
             }),
         },
     },
@@ -243,45 +243,45 @@ export const envConfig = () => ({
         cetus: {
             interval: {
                 analytics: parseEnvMs({
-                    key: "DEXES_CETUS_INTERVAL_ANALYTICS", defaultValue: "1m" 
+                    key: "DEXES_CETUS_INTERVAL_ANALYTICS", defaultValue: "1m"
                 }),
                 observer: {
                     fetch: parseEnvMs({
-                        key: "DEXES_CETUS_INTERVAL_OBSERVER_FETCH", defaultValue: "5s" 
+                        key: "DEXES_CETUS_INTERVAL_OBSERVER_FETCH", defaultValue: "5s"
                     }),
                 }
             },
             openPosition: {
                 slippage: parseEnvFloat({
                     key: "DEXES_CETUS_OPEN_POSITION_SLIPPAGE", defaultValue: 0.2
-                }), 
+                }),
             },
         },
         flowx: {
             interval: {
                 analytics: parseEnvMs({
-                    key: "DEXES_FLOWX_INTERVAL_ANALYTICS", defaultValue: "1m" 
+                    key: "DEXES_FLOWX_INTERVAL_ANALYTICS", defaultValue: "1m"
                 }),
                 observer: {
                     fetch: parseEnvMs({
-                        key: "DEXES_FLOWX_INTERVAL_OBSERVER_FETCH", defaultValue: "5s" 
+                        key: "DEXES_FLOWX_INTERVAL_OBSERVER_FETCH", defaultValue: "5s"
                     }),
                 },
             },
             openPosition: {
                 slippage: parseEnvFloat({
-                    key: "DEXES_FLOWX_OPEN_POSITION_SLIPPAGE", defaultValue: 0.5 
+                    key: "DEXES_FLOWX_OPEN_POSITION_SLIPPAGE", defaultValue: 0.5
                 }),
             },
         },
         momentum: {
             interval: {
                 analytics: parseEnvMs({
-                    key: "DEXES_MOMENTUM_INTERVAL_ANALYTICS", defaultValue: "1m" 
+                    key: "DEXES_MOMENTUM_INTERVAL_ANALYTICS", defaultValue: "1m"
                 }),
                 observer: {
                     fetch: parseEnvMs({
-                        key: "DEXES_MOMENTUM_INTERVAL_OBSERVER_FETCH", defaultValue: "5s" 
+                        key: "DEXES_MOMENTUM_INTERVAL_OBSERVER_FETCH", defaultValue: "5s"
                     }),
                 },
             },
@@ -294,11 +294,11 @@ export const envConfig = () => ({
         turbos: {
             interval: {
                 analytics: parseEnvMs({
-                    key: "DEXES_TURBOS_INTERVAL_ANALYTICS", defaultValue: "1m" 
+                    key: "DEXES_TURBOS_INTERVAL_ANALYTICS", defaultValue: "1m"
                 }),
                 observer: {
                     fetch: parseEnvMs({
-                        key: "DEXES_TURBOS_INTERVAL_OBSERVER_FETCH", defaultValue: "5s" 
+                        key: "DEXES_TURBOS_INTERVAL_OBSERVER_FETCH", defaultValue: "5s"
                     }),
                 },
             },
@@ -316,11 +316,11 @@ export const envConfig = () => ({
             },
             interval: {
                 analytics: parseEnvMs({
-                    key: "DEXES_METEORA_INTERVAL_ANALYTICS", defaultValue: "1m" 
+                    key: "DEXES_METEORA_INTERVAL_ANALYTICS", defaultValue: "1m"
                 }),
                 observer: {
                     fetch: parseEnvMs({
-                        key: "DEXES_METEORA_INTERVAL_OBSERVER_FETCH", defaultValue: "10s" 
+                        key: "DEXES_METEORA_INTERVAL_OBSERVER_FETCH", defaultValue: "10s"
                     }),
                 },
             },
@@ -328,28 +328,28 @@ export const envConfig = () => ({
         raydium: {
             interval: {
                 analytics: parseEnvMs({
-                    key: "DEXES_RAYDIUM_INTERVAL_ANALYTICS", defaultValue: "1m" 
+                    key: "DEXES_RAYDIUM_INTERVAL_ANALYTICS", defaultValue: "1m"
                 }),
                 observer: {
                     fetch: parseEnvMs({
-                        key: "DEXES_RAYDIUM_INTERVAL_OBSERVER_FETCH", defaultValue: "10s" 
+                        key: "DEXES_RAYDIUM_INTERVAL_OBSERVER_FETCH", defaultValue: "10s"
                     }),
                 },
             },
             openPosition: {
                 slippage: parseEnvFloat({
-                    key: "DEXES_RAYDIUM_OPEN_POSITION_SLIPPAGE", defaultValue: 0.2 
+                    key: "DEXES_RAYDIUM_OPEN_POSITION_SLIPPAGE", defaultValue: 0.2
                 }),
             },
         },
         orca: {
             interval: {
                 analytics: parseEnvMs({
-                    key: "DEXES_ORCA_INTERVAL_ANALYTICS", defaultValue: "1m" 
+                    key: "DEXES_ORCA_INTERVAL_ANALYTICS", defaultValue: "1m"
                 }),
                 observer: {
                     fetch: parseEnvMs({
-                        key: "DEXES_ORCA_INTERVAL_OBSERVER_FETCH", defaultValue: "10s" 
+                        key: "DEXES_ORCA_INTERVAL_OBSERVER_FETCH", defaultValue: "10s"
                     }),
                 },
             },
@@ -362,17 +362,17 @@ export const envConfig = () => ({
         saros: {
             interval: {
                 analytics: parseEnvMs({
-                    key: "DEXES_SAROS_INTERVAL_ANALYTICS", defaultValue: "1m" 
+                    key: "DEXES_SAROS_INTERVAL_ANALYTICS", defaultValue: "1m"
                 }),
                 observer: {
                     fetch: parseEnvMs({
-                        key: "DEXES_SAROS_INTERVAL_OBSERVER_FETCH", defaultValue: "10s" 
+                        key: "DEXES_SAROS_INTERVAL_OBSERVER_FETCH", defaultValue: "10s"
                     }),
                 },
             },
             openPosition: {
                 slippage: parseEnvFloat({
-                    key: "DEXES_SAROS_OPEN_POSITION_SLIPPAGE", defaultValue: 0.05 
+                    key: "DEXES_SAROS_OPEN_POSITION_SLIPPAGE", defaultValue: 0.05
                 }),
             },
         },
@@ -388,96 +388,96 @@ export const envConfig = () => ({
         },
         capacity: {
             maxBots: parseEnvInt({
-                key: "EXECUTOR_CAPACITY_MAX_BOTS", defaultValue: 1000 
+                key: "EXECUTOR_CAPACITY_MAX_BOTS", defaultValue: 1000
             }),
         },
         id: parseEnvString({
-            key: "EXECUTOR_ID", defaultValue: "6956717486b425cf9938c665" 
+            key: "EXECUTOR_ID", defaultValue: "6956717486b425cf9938c665"
         }),
         streams: {
             mongoDbChangeStream: {
                 timeout: parseEnvMs({
-                    key: "EXECUTOR_STREAMS_MONGO_DB_CHANGE_STREAM_TIMEOUT", defaultValue: "10s" 
+                    key: "EXECUTOR_STREAMS_MONGO_DB_CHANGE_STREAM_TIMEOUT", defaultValue: "10s"
                 }),
             },
         },
         subscriptions: {
             clmm: {
                 interval: parseEnvMs({
-                    key: "EXECUTOR_SUBSCRIPTIONS_CLMM_INTERVAL", defaultValue: "1s" 
+                    key: "EXECUTOR_SUBSCRIPTIONS_CLMM_INTERVAL", defaultValue: "1s"
                 }),
             },
             dlmm: {
                 interval: parseEnvMs({
-                    key: "EXECUTOR_SUBSCRIPTIONS_DLMM_INTERVAL", defaultValue: "1s" 
+                    key: "EXECUTOR_SUBSCRIPTIONS_DLMM_INTERVAL", defaultValue: "1s"
                 }),
             },
         },
         diagnose: {
             price: {
                 interval: parseEnvMs({
-                    key: "EXECUTOR_DIAGNOSE_PRICE_INTERVAL", defaultValue: "1s" 
+                    key: "EXECUTOR_DIAGNOSE_PRICE_INTERVAL", defaultValue: "1s"
                 }),
             },
             dynamicLiquidityPoolInfo: {
                 interval: parseEnvMs({
-                    key: "EXECUTOR_DIAGNOSE_DYNAMIC_LIQUIDITY_POOL_INFO_INTERVAL", defaultValue: "1s" 
+                    key: "EXECUTOR_DIAGNOSE_DYNAMIC_LIQUIDITY_POOL_INFO_INTERVAL", defaultValue: "1s"
                 }),
             },
             liquidityPoolsSynced: {
                 interval: parseEnvMs({
-                    key: "EXECUTOR_DIAGNOSE_LIQUIDITY_POOLS_SYNCED_INTERVAL", defaultValue: "1s" 
+                    key: "EXECUTOR_DIAGNOSE_LIQUIDITY_POOLS_SYNCED_INTERVAL", defaultValue: "1s"
                 }),
                 stale: parseEnvMs({
-                    key: "EXECUTOR_DIAGNOSE_LIQUIDITY_POOLS_SYNCED_STALE", defaultValue: "10s" 
+                    key: "EXECUTOR_DIAGNOSE_LIQUIDITY_POOLS_SYNCED_STALE", defaultValue: "10s"
                 }),
             },
         },
         interval: {
             load: parseEnvMs({
-                key: "EXECUTOR_INTERVAL_LOAD", defaultValue: "10s" 
+                key: "EXECUTOR_INTERVAL_LOAD", defaultValue: "10s"
             }),
             rotate: parseEnvMs({
-                key: "EXECUTOR_INTERVAL_ROTATE", defaultValue: "10s" 
+                key: "EXECUTOR_INTERVAL_ROTATE", defaultValue: "10s"
             }),
-            
+
         },
         runtime: {
             interval: {
                 refresh: parseEnvMs({
-                    key: "EXECUTOR_RUNTIME_INTERVAL_REFRESH", defaultValue: "10s" 
+                    key: "EXECUTOR_RUNTIME_INTERVAL_REFRESH", defaultValue: "10s"
                 }),
             },
             operation: {
                 notSynced: {
                     interval: parseEnvMs({
-                        key: "EXECUTOR_OPERATION_NOT_SYNCED_INTERVAL", defaultValue: "10s" 
+                        key: "EXECUTOR_OPERATION_NOT_SYNCED_INTERVAL", defaultValue: "10s"
                     }),
                 },
                 openPosition: {
                     requeue: {
                         interval: parseEnvMs({
-                            key: "EXECUTOR_OPERATION_OPEN_POSITION_REQUEUE_INTERVAL", defaultValue: "10s" 
+                            key: "EXECUTOR_OPERATION_OPEN_POSITION_REQUEUE_INTERVAL", defaultValue: "10s"
                         }),
                     },
                     stimulate: parseEnvBoolean({
-                        key: "EXECUTOR_OPERATION_OPEN_POSITION_STIMULATE", defaultValue: false 
+                        key: "EXECUTOR_OPERATION_OPEN_POSITION_STIMULATE", defaultValue: false
                     }),
                     reentry: {
                         staleMs: parseEnvMs({
-                            key: "EXECUTOR_OPERATION_OPEN_POSITION_REENTRY_STALE_MS", defaultValue: "10s" 
+                            key: "EXECUTOR_OPERATION_OPEN_POSITION_REENTRY_STALE_MS", defaultValue: "10s"
                         }),
                     }
                 },
                 closePosition: {
                     settle: {
                         enabled: parseEnvBoolean({
-                            key: "EXECUTOR_OPERATION_CLOSE_POSITION_SETTLE_ENABLED", defaultValue: true 
+                            key: "EXECUTOR_OPERATION_CLOSE_POSITION_SETTLE_ENABLED", defaultValue: true
                         }),
                     },
                     requeue: {
                         interval: parseEnvMs({
-                            key: "EXECUTOR_OPERATION_CLOSE_POSITION_REQUEUE_INTERVAL", defaultValue: "10s" 
+                            key: "EXECUTOR_OPERATION_CLOSE_POSITION_REQUEUE_INTERVAL", defaultValue: "10s"
                         }),
                     },
                     stimulate: parseEnvBoolean({
@@ -489,13 +489,13 @@ export const envConfig = () => ({
                 },
                 interval: {
                     poll: parseEnvMs({
-                        key: "EXECUTOR_OPERATION_INTERVAL_POLL", defaultValue: "10s" 
+                        key: "EXECUTOR_OPERATION_INTERVAL_POLL", defaultValue: "10s"
                     }),
                 },
                 reconcileBalance: {
                     interval: {
                         poll: parseEnvMs({
-                            key: "EXECUTOR_OPERATION_RECONCILE_BALANCE_INTERVAL_POLL", defaultValue: "10s" 
+                            key: "EXECUTOR_OPERATION_RECONCILE_BALANCE_INTERVAL_POLL", defaultValue: "10s"
                         }),
                     },
                     cooldown: {
@@ -506,41 +506,41 @@ export const envConfig = () => ({
                     },
                     requeue: {
                         interval: parseEnvMs({
-                            key: "EXECUTOR_OPERATION_REQUEUE_INTERVAL", defaultValue: "10s" 
+                            key: "EXECUTOR_OPERATION_REQUEUE_INTERVAL", defaultValue: "10s"
                         }),
                     },
                     stimulate: parseEnvBoolean({
-                        key: "EXECUTOR_OPERATION_RECONCILE_BALANCE_STIMULATE", defaultValue: false 
+                        key: "EXECUTOR_OPERATION_RECONCILE_BALANCE_STIMULATE", defaultValue: false
                     }),
                 },
                 withdraw: {
                     interval: {
                         poll: parseEnvMs({
-                            key: "EXECUTOR_OPERATION_WITHDRAW_INTERVAL_POLL", defaultValue: "10s" 
+                            key: "EXECUTOR_OPERATION_WITHDRAW_INTERVAL_POLL", defaultValue: "10s"
                         }),
                     },
                     requeue: {
                         interval: parseEnvMs({
-                            key: "EXECUTOR_OPERATION_WITHDRAW_REQUEUE_INTERVAL", defaultValue: "10s" 
+                            key: "EXECUTOR_OPERATION_WITHDRAW_REQUEUE_INTERVAL", defaultValue: "10s"
                         }),
                     },
                     stimulate: parseEnvBoolean({
-                        key: "EXECUTOR_OPERATION_WITHDRAW_STIMULATE", defaultValue: false 
+                        key: "EXECUTOR_OPERATION_WITHDRAW_STIMULATE", defaultValue: false
                     }),
                 },
                 transferFees: {
                     interval: {
                         poll: parseEnvMs({
-                            key: "EXECUTOR_OPERATION_TRANSFER_FEES_INTERVAL_POLL", defaultValue: "10s" 
+                            key: "EXECUTOR_OPERATION_TRANSFER_FEES_INTERVAL_POLL", defaultValue: "10s"
                         }),
                     },
                     requeue: {
                         interval: parseEnvMs({
-                            key: "EXECUTOR_OPERATION_TRANSFER_FEES_REQUEUE_INTERVAL", defaultValue: "10s" 
+                            key: "EXECUTOR_OPERATION_TRANSFER_FEES_REQUEUE_INTERVAL", defaultValue: "10s"
                         }),
                     },
                     stimulate: parseEnvBoolean({
-                        key: "EXECUTOR_OPERATION_TRANSFER_FEES_STIMULATE", defaultValue: false 
+                        key: "EXECUTOR_OPERATION_TRANSFER_FEES_STIMULATE", defaultValue: false
                     }),
                 },
                 violateIndicators: {
@@ -554,7 +554,7 @@ export const envConfig = () => ({
             },
             /** InfluxDB cache: refresh interval and query time window for token price/volume points. */
             influxdbCache: {
-                price: {    
+                price: {
                     storeIntervalMs: parseEnvMs({
                         key: "EXECUTOR_RUNTIME_INFLUXDB_CACHE_PRICE_STORE_INTERVAL_MS",
                         defaultValue: "100ms",
@@ -562,7 +562,7 @@ export const envConfig = () => ({
                     intervalMs: parseEnvMs({
                         key: "EXECUTOR_RUNTIME_INFLUXDB_CACHE_PRICE_INTERVAL_MS",
                         defaultValue: "1m",
-                    }), 
+                    }),
                 },
                 volume: {
                     storeIntervalMs: parseEnvMs({
@@ -579,11 +579,11 @@ export const envConfig = () => ({
         lockAuthority: {
             interval: {
                 notifyExpiredLocks: parseEnvMs({
-                    key: "EXECUTOR_LOCK_AUTHORITY_INTERVAL_NOTIFY_EXPIRED_LOCKS", defaultValue: "1s" 
+                    key: "EXECUTOR_LOCK_AUTHORITY_INTERVAL_NOTIFY_EXPIRED_LOCKS", defaultValue: "1s"
                 }),
             },
             ttl: parseEnvMs({
-                key: "EXECUTOR_LOCK_AUTHORITY_TTL", defaultValue: "30s" 
+                key: "EXECUTOR_LOCK_AUTHORITY_TTL", defaultValue: "30s"
             }),
         },
         workers: {
@@ -595,19 +595,19 @@ export const envConfig = () => ({
              */
             job: {
                 retryInterval: parseEnvMs({
-                    key: "EXECUTOR_WORKERS_JOB_RETRY_INTERVAL", defaultValue: "1s" 
+                    key: "EXECUTOR_WORKERS_JOB_RETRY_INTERVAL", defaultValue: "1s"
                 }),
                 level: parseEnvInt({
-                    key: "EXECUTOR_WORKERS_JOB_LEVEL", defaultValue: 0 
+                    key: "EXECUTOR_WORKERS_JOB_LEVEL", defaultValue: 0
                 }),
                 txSignMaxRetries: parseEnvInt({
-                    key: "EXECUTOR_WORKERS_JOB_TX_SIGN_MAX_RETRIES", defaultValue: 2 
+                    key: "EXECUTOR_WORKERS_JOB_TX_SIGN_MAX_RETRIES", defaultValue: 2
                 }),
                 txExecuteMaxRetries: parseEnvInt({
                     key: "EXECUTOR_WORKERS_JOB_TX_EXECUTE_MAX_RETRIES", defaultValue: 3
                 }),
                 prepareMaxAttempts: parseEnvInt({
-                    key: "EXECUTOR_WORKERS_JOB_PREPARE_MAX_ATTEMPTS", defaultValue: 3 
+                    key: "EXECUTOR_WORKERS_JOB_PREPARE_MAX_ATTEMPTS", defaultValue: 3
                 }),
             },
         },
@@ -617,36 +617,36 @@ export const envConfig = () => ({
         priceWindow: {
             storage: {
                 queryIntervalMs: parseEnvMs({
-                    key: "INSPECTOR_PRICE_WINDOW_STORAGE_QUERY_INTERVAL_MS", defaultValue: "250ms" 
+                    key: "INSPECTOR_PRICE_WINDOW_STORAGE_QUERY_INTERVAL_MS", defaultValue: "250ms"
                 }),
             },
             builder: {
                 intervalMs: parseEnvMs({
-                    key: "INSPECTOR_PRICE_WINDOW_BUILDER_INTERVAL_MS", defaultValue: "1m" 
+                    key: "INSPECTOR_PRICE_WINDOW_BUILDER_INTERVAL_MS", defaultValue: "1m"
                 }),
             },
             proccess: {
                 intervalMs: parseEnvMs({
-                    key: "INSPECTOR_PRICE_WINDOW_PROCCES_INTERVAL_MS", defaultValue: "250ms" 
+                    key: "INSPECTOR_PRICE_WINDOW_PROCCES_INTERVAL_MS", defaultValue: "250ms"
                 }),
             },
             /**
              * Interval in milliseconds for analyzing a price window.
              */
             intervalMs: parseEnvMs({
-                key: "INSPECTOR_PRICE_WINDOW_INTERVAL_MS", defaultValue: "5m" 
+                key: "INSPECTOR_PRICE_WINDOW_INTERVAL_MS", defaultValue: "5m"
             }),
             /**
              * Minimum number of samples required to analyze a price window.
              */
             minSamples: parseEnvInt({
-                key: "INSPECTOR_PRICE_WINDOW_MIN_SAMPLES", defaultValue: 50 
+                key: "INSPECTOR_PRICE_WINDOW_MIN_SAMPLES", defaultValue: 50
             }),
             /**
              * Maximum gap in milliseconds allowed between two price points.
              */
             maxGapMs: parseEnvMs({
-                key: "INSPECTOR_PRICE_WINDOW_MAX_GAP_MS", defaultValue: "30s" 
+                key: "INSPECTOR_PRICE_WINDOW_MAX_GAP_MS", defaultValue: "30s"
             }),
             momentum: {
                 dumpFromPeakPct: parseEnvFloat({
@@ -699,7 +699,7 @@ export const envConfig = () => ({
                         key: "INSPECTOR_DUMP_PCT",
                         defaultValue: 3,
                     }),
-          
+
                     /** % drop from peak considered crash (e.g., -5%) */
                     crashPct: parseEnvFloat({
                         key: "INSPECTOR_DUMP_CRASH_PCT",
@@ -746,7 +746,7 @@ export const envConfig = () => ({
                         key: "INSPECTOR_PUMP_SPIKE_PCT",
                         defaultValue: 5,
                     }),
-                  
+
                     /** Prevent classifying slow drifts as pumps */
                     maxBarsSinceTrough: parseEnvInt({
                         key: "INSPECTOR_PUMP_MAX_BARS",
@@ -786,30 +786,30 @@ export const envConfig = () => ({
                  * - efficiency ratio (straightness vs chop)
                  */
                 shape: {
-          
+
                     /** Threshold for classifying clean straight trend */
                     straightR2: parseEnvFloat({
                         key: "INSPECTOR_SHAPE_STRAIGHT_R2",
                         defaultValue: 0.8,
                     }),
-          
+
                     straightEfficiency: parseEnvFloat({
                         key: "INSPECTOR_SHAPE_STRAIGHT_EFFICIENCY",
                         defaultValue: 0.7,
                     }),
-          
+
                     /** Threshold for classifying noisy trend */
                     noisyR2: parseEnvFloat({
                         key: "INSPECTOR_SHAPE_NOISY_R2",
                         defaultValue: 0.4,
                     }),
-          
+
                     noisyEfficiency: parseEnvFloat({
                         key: "INSPECTOR_SHAPE_NOISY_EFFICIENCY",
                         defaultValue: 0.4,
                     }),
                 },
-          
+
                 /**
                  * Range alert configuration.
                  * 
@@ -830,14 +830,14 @@ export const envConfig = () => ({
         price: {
             broadcast: {
                 interval: parseEnvMs({
-                    key: "SOCKET_IO_PRICE_BROADCAST_INTERVAL", defaultValue: "5s" 
+                    key: "SOCKET_IO_PRICE_BROADCAST_INTERVAL", defaultValue: "5s"
                 }),
             },
         },
         dynamic: {
             liquidityPoolsInfo: {
                 interval: parseEnvMs({
-                    key: "SOCKET_IO_DYNAMIC_LIQUIDITY_POOLS_INFO_INTERVAL", defaultValue: "5s" 
+                    key: "SOCKET_IO_DYNAMIC_LIQUIDITY_POOLS_INFO_INTERVAL", defaultValue: "5s"
                 }),
             },
         },
@@ -852,7 +852,7 @@ export const envConfig = () => ({
              */
             safe: {
                 above: parseEnvFloat({
-                    key: "QUOTE_RATIO_SAFE_ABOVE", defaultValue: 0.9 
+                    key: "QUOTE_RATIO_SAFE_ABOVE", defaultValue: 0.9
                 }),
                 below: parseEnvFloat({
                     key: "QUOTE_RATIO_SAFE_BELOW", defaultValue: 0.8
@@ -866,24 +866,24 @@ export const envConfig = () => ({
     /** Winston log level. */
     winston: {
         level: parseEnvString({
-            key: "WINSTON_LEVEL", defaultValue: "verbose" 
+            key: "WINSTON_LEVEL", defaultValue: "verbose"
         }),
     },
     /** Cache: debug flags/TTL, key TTLs (withdraw, session, pool analytics, etc.), stale price max age. */
     cache: {
         debug: {
             enabled: parseEnvBoolean({
-                key: "CACHE_DEBUG_ENABLED", defaultValue: true 
+                key: "CACHE_DEBUG_ENABLED", defaultValue: true
             }),
             ttl: parseEnvMs({
-                key: "CACHE_DEBUG_TTL", defaultValue: "5000" 
+                key: "CACHE_DEBUG_TTL", defaultValue: "5000"
             }),
             ok: {
                 redis: parseEnvString({
-                    key: "CACHE_DEBUG_OK_REDIS", defaultValue: "ok-redis" 
+                    key: "CACHE_DEBUG_OK_REDIS", defaultValue: "ok-redis"
                 }),
                 memory: parseEnvString({
-                    key: "CACHE_DEBUG_OK_MEMORY", defaultValue: "ok-memory" 
+                    key: "CACHE_DEBUG_OK_MEMORY", defaultValue: "ok-memory"
                 }),
             },
         },
@@ -969,7 +969,7 @@ export const envConfig = () => ({
     /** Price validation: max allowed deviation ratio. */
     price: {
         deviationMaxRatio: parseEnvFloat({
-            key: "PRICE_DEVIATION_MAX_RATIO", defaultValue: 0.01 
+            key: "PRICE_DEVIATION_MAX_RATIO", defaultValue: 0.01
         }),
     },
     /** API pagination: default/min/max limit and page number per resource (bots, positions, transactions, liquidity pools). */
@@ -977,84 +977,84 @@ export const envConfig = () => ({
         bots: {
             limit: {
                 default: parseEnvInt({
-                    key: "PAGINATION_BOTS_LIMIT_DEFAULT", defaultValue: 20 
+                    key: "PAGINATION_BOTS_LIMIT_DEFAULT", defaultValue: 20
                 }),
                 min: parseEnvInt({
-                    key: "PAGINATION_BOTS_LIMIT_MIN", defaultValue: 1 
+                    key: "PAGINATION_BOTS_LIMIT_MIN", defaultValue: 1
                 }),
                 max: parseEnvInt({
-                    key: "PAGINATION_BOTS_LIMIT_MAX", defaultValue: 20 
+                    key: "PAGINATION_BOTS_LIMIT_MAX", defaultValue: 20
                 }),
             },
             pageNumber: {
                 default: parseEnvInt({
-                    key: "PAGINATION_BOTS_PAGE_NUMBER_DEFAULT", defaultValue: 1 
+                    key: "PAGINATION_BOTS_PAGE_NUMBER_DEFAULT", defaultValue: 1
                 }),
                 max: parseEnvInt({
-                    key: "PAGINATION_BOTS_PAGE_NUMBER_MAX", defaultValue: 100 
+                    key: "PAGINATION_BOTS_PAGE_NUMBER_MAX", defaultValue: 100
                 }),
             },
         },
         positions: {
             limit: {
                 default: parseEnvInt({
-                    key: "PAGINATION_POSITIONS_LIMIT_DEFAULT", defaultValue: 10 
+                    key: "PAGINATION_POSITIONS_LIMIT_DEFAULT", defaultValue: 10
                 }),
                 min: parseEnvInt({
-                    key: "PAGINATION_POSITIONS_LIMIT_MIN", defaultValue: 10 
+                    key: "PAGINATION_POSITIONS_LIMIT_MIN", defaultValue: 10
                 }),
                 max: parseEnvInt({
-                    key: "PAGINATION_POSITIONS_LIMIT_MAX", defaultValue: 10 
+                    key: "PAGINATION_POSITIONS_LIMIT_MAX", defaultValue: 10
                 }),
             },
             pageNumber: {
                 default: parseEnvInt({
-                    key: "PAGINATION_POSITIONS_PAGE_NUMBER_DEFAULT", defaultValue: 10 
+                    key: "PAGINATION_POSITIONS_PAGE_NUMBER_DEFAULT", defaultValue: 10
                 }),
                 max: parseEnvInt({
-                    key: "PAGINATION_POSITIONS_PAGE_NUMBER_MAX", defaultValue: 100 
+                    key: "PAGINATION_POSITIONS_PAGE_NUMBER_MAX", defaultValue: 100
                 }),
             },
         },
         transactions: {
             limit: {
                 default: parseEnvInt({
-                    key: "PAGINATION_TRANSACTIONS_LIMIT_DEFAULT", defaultValue: 10 
+                    key: "PAGINATION_TRANSACTIONS_LIMIT_DEFAULT", defaultValue: 10
                 }),
                 min: parseEnvInt({
-                    key: "PAGINATION_TRANSACTIONS_LIMIT_MIN", defaultValue: 10 
+                    key: "PAGINATION_TRANSACTIONS_LIMIT_MIN", defaultValue: 10
                 }),
                 max: parseEnvInt({
-                    key: "PAGINATION_TRANSACTIONS_LIMIT_MAX", defaultValue: 10 
+                    key: "PAGINATION_TRANSACTIONS_LIMIT_MAX", defaultValue: 10
                 }),
             },
             pageNumber: {
                 default: parseEnvInt({
-                    key: "PAGINATION_TRANSACTIONS_PAGE_NUMBER_DEFAULT", defaultValue: 10 
+                    key: "PAGINATION_TRANSACTIONS_PAGE_NUMBER_DEFAULT", defaultValue: 10
                 }),
                 max: parseEnvInt({
-                    key: "PAGINATION_TRANSACTIONS_PAGE_NUMBER_MAX", defaultValue: 100 
+                    key: "PAGINATION_TRANSACTIONS_PAGE_NUMBER_MAX", defaultValue: 100
                 }),
             },
         },
         liquidityPools: {
             limit: {
                 default: parseEnvInt({
-                    key: "PAGINATION_LIQUIDITY_POOLS_LIMIT_DEFAULT", defaultValue: 20 
+                    key: "PAGINATION_LIQUIDITY_POOLS_LIMIT_DEFAULT", defaultValue: 20
                 }),
                 min: parseEnvInt({
-                    key: "PAGINATION_LIQUIDITY_POOLS_LIMIT_MIN", defaultValue: 1 
+                    key: "PAGINATION_LIQUIDITY_POOLS_LIMIT_MIN", defaultValue: 1
                 }),
                 max: parseEnvInt({
-                    key: "PAGINATION_LIQUIDITY_POOLS_LIMIT_MAX", defaultValue: 20 
+                    key: "PAGINATION_LIQUIDITY_POOLS_LIMIT_MAX", defaultValue: 20
                 }),
             },
             pageNumber: {
                 default: parseEnvInt({
-                    key: "PAGINATION_LIQUIDITY_POOLS_PAGE_NUMBER_DEFAULT", defaultValue: 20 
+                    key: "PAGINATION_LIQUIDITY_POOLS_PAGE_NUMBER_DEFAULT", defaultValue: 20
                 }),
                 max: parseEnvInt({
-                    key: "PAGINATION_LIQUIDITY_POOLS_PAGE_NUMBER_MAX", defaultValue: 20 
+                    key: "PAGINATION_LIQUIDITY_POOLS_PAGE_NUMBER_MAX", defaultValue: 20
                 }),
             },
         },
@@ -1063,72 +1063,72 @@ export const envConfig = () => ({
     redis: {
         cache: {
             host: parseEnvString({
-                key: "REDIS_CACHE_HOST", defaultValue: "localhost" 
+                key: "REDIS_CACHE_HOST", defaultValue: "localhost"
             }),
             port: parseEnvInt({
-                key: "REDIS_CACHE_PORT", defaultValue: 6379 
+                key: "REDIS_CACHE_PORT", defaultValue: 6379
             }),
             password: parseEnvString({
-                key: "REDIS_CACHE_PASSWORD", defaultValue: "Cuong123_A" 
+                key: "REDIS_CACHE_PASSWORD", defaultValue: "Cuong123_A"
             }),
             useCluster: parseEnvBoolean({
-                key: "REDIS_CACHE_USE_CLUSTER", defaultValue: false 
+                key: "REDIS_CACHE_USE_CLUSTER", defaultValue: false
             }),
         },
         bullmq: {
             host: parseEnvString({
-                key: "REDIS_BULLMQ_HOST", defaultValue: "localhost" 
+                key: "REDIS_BULLMQ_HOST", defaultValue: "localhost"
             }),
             port: parseEnvInt({
-                key: "REDIS_BULLMQ_PORT", defaultValue: 6379 
+                key: "REDIS_BULLMQ_PORT", defaultValue: 6379
             }),
             password: parseEnvString({
-                key: "REDIS_BULLMQ_PASSWORD", defaultValue: "Cuong123_A" 
+                key: "REDIS_BULLMQ_PASSWORD", defaultValue: "Cuong123_A"
             }),
             useCluster: parseEnvBoolean({
-                key: "REDIS_BULLMQ_USE_CLUSTER", defaultValue: false 
+                key: "REDIS_BULLMQ_USE_CLUSTER", defaultValue: false
             }),
         },
         throttler: {
             host: parseEnvString({
-                key: "REDIS_THROTTLER_HOST", defaultValue: "localhost" 
+                key: "REDIS_THROTTLER_HOST", defaultValue: "localhost"
             }),
             port: parseEnvInt({
-                key: "REDIS_THROTTLER_PORT", defaultValue: 6379 
+                key: "REDIS_THROTTLER_PORT", defaultValue: 6379
             }),
             password: parseEnvString({
-                key: "REDIS_THROTTLER_PASSWORD", defaultValue: "Cuong123_A" 
+                key: "REDIS_THROTTLER_PASSWORD", defaultValue: "Cuong123_A"
             }),
             useCluster: parseEnvBoolean({
-                key: "REDIS_THROTTLER_USE_CLUSTER", defaultValue: false 
+                key: "REDIS_THROTTLER_USE_CLUSTER", defaultValue: false
             }),
         },
         lockAuthority: {
             host: parseEnvString({
-                key: "REDIS_LOCK_AUTHORITY_HOST", defaultValue: "localhost" 
+                key: "REDIS_LOCK_AUTHORITY_HOST", defaultValue: "localhost"
             }),
             port: parseEnvInt({
-                key: "REDIS_LOCK_AUTHORITY_PORT", defaultValue: 6379 
+                key: "REDIS_LOCK_AUTHORITY_PORT", defaultValue: 6379
             }),
             password: parseEnvString({
-                key: "REDIS_LOCK_AUTHORITY_PASSWORD", defaultValue: "Cuong123_A" 
+                key: "REDIS_LOCK_AUTHORITY_PASSWORD", defaultValue: "Cuong123_A"
             }),
             useCluster: parseEnvBoolean({
-                key: "REDIS_LOCK_AUTHORITY_USE_CLUSTER", defaultValue: false 
+                key: "REDIS_LOCK_AUTHORITY_USE_CLUSTER", defaultValue: false
             }),
         },
         adapter: {
             host: parseEnvString({
-                key: "REDIS_ADAPTER_HOST", defaultValue: "localhost" 
+                key: "REDIS_ADAPTER_HOST", defaultValue: "localhost"
             }),
             port: parseEnvInt({
-                key: "REDIS_ADAPTER_PORT", defaultValue: 6379 
+                key: "REDIS_ADAPTER_PORT", defaultValue: 6379
             }),
             password: parseEnvString({
-                key: "REDIS_ADAPTER_PASSWORD", defaultValue: "Cuong123_A" 
+                key: "REDIS_ADAPTER_PASSWORD", defaultValue: "Cuong123_A"
             }),
             useCluster: parseEnvBoolean({
-                key: "REDIS_ADAPTER_USE_CLUSTER", defaultValue: false 
+                key: "REDIS_ADAPTER_USE_CLUSTER", defaultValue: false
             }),
         },
     },
@@ -1137,20 +1137,20 @@ export const envConfig = () => ({
         influxdb: {
             primary: {
                 database: parseEnvString({
-                    key: "PRIMARY_INFLUXDB_DATABASE", defaultValue: "kani" 
+                    key: "PRIMARY_INFLUXDB_DATABASE", defaultValue: "kani"
                 }),
                 url: parseEnvString({
-                    key: "PRIMARY_INFLUXDB_URL", defaultValue: "http://localhost:8181" 
+                    key: "PRIMARY_INFLUXDB_URL", defaultValue: "http://localhost:8181"
                 }),
                 token: parseEnvString({
-                    key: "PRIMARY_INFLUXDB_TOKEN", defaultValue: "apiv3_rlUR0TJxuHIckRcSWi3LDwdemZZTAwWFoyqdfUIV1gfICe60GDTPf_k7nOdAXqvoMZPeRjgriMK4RqU-2cuhtA" 
+                    key: "PRIMARY_INFLUXDB_TOKEN", defaultValue: "apiv3_rlUR0TJxuHIckRcSWi3LDwdemZZTAwWFoyqdfUIV1gfICe60GDTPf_k7nOdAXqvoMZPeRjgriMK4RqU-2cuhtA"
                 }),
                 retentionPeriod: parseEnvString({
-                    key: "PRIMARY_INFLUXDB_RETENTION_PERIOD", defaultValue: "1d" 
+                    key: "PRIMARY_INFLUXDB_RETENTION_PERIOD", defaultValue: "1d"
                 }),
                 buckets: {
                     price: parseEnvString({
-                        key: "PRIMARY_INFLUXDB_BUCKET_PRICE", defaultValue: "kani-price" 
+                        key: "PRIMARY_INFLUXDB_BUCKET_PRICE", defaultValue: "kani-price"
                     }),
                 }
             },
@@ -1158,31 +1158,31 @@ export const envConfig = () => ({
         mongoose: {
             primary: {
                 host: parseEnvString({
-                    key: "PRIMARY_MONGO_DB_HOST", defaultValue: "localhost" 
+                    key: "PRIMARY_MONGO_DB_HOST", defaultValue: "localhost"
                 }),
                 port: parseEnvInt({
-                    key: "PRIMARY_MONGO_DB_PORT", defaultValue: 27018 
+                    key: "PRIMARY_MONGO_DB_PORT", defaultValue: 27018
                 }),
                 password: parseEnvString({
-                    key: "PRIMARY_MONGO_DB_PASSWORD", defaultValue: "Cuong123_A" 
+                    key: "PRIMARY_MONGO_DB_PASSWORD", defaultValue: "Cuong123_A"
                 }),
                 username: parseEnvString({
-                    key: "PRIMARY_MONGO_DB_USERNAME", defaultValue: "root" 
+                    key: "PRIMARY_MONGO_DB_USERNAME", defaultValue: "root"
                 }),
                 dbName: parseEnvString({
-                    key: "PRIMARY_MONGO_DB_NAME", defaultValue: "cicore" 
+                    key: "PRIMARY_MONGO_DB_NAME", defaultValue: "cicore"
                 }),
                 manualSeed: parseEnvBoolean({
-                    key: "PRIMARY_MONGO_DB_MANUAL_SEED", defaultValue: false 
+                    key: "PRIMARY_MONGO_DB_MANUAL_SEED", defaultValue: false
                 }),
                 manualLoad: parseEnvBoolean({
-                    key: "PRIMARY_MONGO_DB_MANUAL_LOAD", defaultValue: false 
+                    key: "PRIMARY_MONGO_DB_MANUAL_LOAD", defaultValue: false
                 }),
                 associate: parseEnvBoolean({
-                    key: "PRIMARY_MONGO_DB_ASSOCIATE", defaultValue: true 
+                    key: "PRIMARY_MONGO_DB_ASSOCIATE", defaultValue: true
                 }),
                 maxAwaitTimeMS: parseEnvMs({
-                    key: "PRIMARY_MONGO_DB_MAX_AWAIT_TIME_MS", defaultValue: "30s" 
+                    key: "PRIMARY_MONGO_DB_MAX_AWAIT_TIME_MS", defaultValue: "30s"
                 }),
             },
         },
@@ -1211,29 +1211,29 @@ export const envConfig = () => ({
         metrics: {
             /** Interval for Prometheus metrics. */
             interval: parseEnvString({
-                key: "PROMETHEUS_METRICS_INTERVAL", defaultValue: "10s" 
+                key: "PROMETHEUS_METRICS_INTERVAL", defaultValue: "10s"
             }),
         },
     },
     /** Loki log aggregation: host, optional auth (username, password). */
     loki: {
         host: parseEnvString({
-            key: "LOKI_HOST", defaultValue: "http://localhost:3100" 
+            key: "LOKI_HOST", defaultValue: "http://localhost:3100"
         }),
         requireAuth: parseEnvBoolean({
-            key: "LOKI_REQUIRE_AUTH", defaultValue: false 
+            key: "LOKI_REQUIRE_AUTH", defaultValue: false
         }),
         username: parseEnvString({
-            key: "LOKI_USERNAME", defaultValue: "" 
+            key: "LOKI_USERNAME", defaultValue: ""
         }),
         password: parseEnvString({
-            key: "LOKI_PASSWORD", defaultValue: "" 
+            key: "LOKI_PASSWORD", defaultValue: ""
         }),
     },
     /** History: number of series (data points) to keep per history. */
     history: {
         serieCount: parseEnvInt({
-            key: "HISTORY_SERIE_COUNT", defaultValue: 5000 
+            key: "HISTORY_SERIE_COUNT", defaultValue: 5000
         }),
     },
     /** File paths: data restore/backup, Terraform secrets (API keys, GCP, Privy), app/rpcs config. */
@@ -1333,12 +1333,12 @@ export const envConfig = () => ({
     jwt: {
         accessToken: {
             expiration: parseEnvMs({
-                key: "JWT_ACCESS_TOKEN_EXPIRATION", defaultValue: "1h" 
+                key: "JWT_ACCESS_TOKEN_EXPIRATION", defaultValue: "1h"
             }),
         },
         refreshToken: {
             expiration: parseEnvMs({
-                key: "JWT_REFRESH_TOKEN_EXPIRATION", defaultValue: "1d" 
+                key: "JWT_REFRESH_TOKEN_EXPIRATION", defaultValue: "1d"
             }),
         },
     },
@@ -1346,152 +1346,165 @@ export const envConfig = () => ({
     rpc: {
         ejection: {
             ttl: parseEnvMs({
-                key: "RPCS_EJECTION_TTL", defaultValue: "1h" 
+                key: "RPCS_EJECTION_TTL", defaultValue: "1h"
             }),
         }
     },
     /** Kafka: broker, partitions, retention, SASL, retry and heartbeat; used by coordinator/executor. */
     kafka: {
         maxInFlightRequests: parseEnvInt({
-            key: "KAFKA_MAX_IN_FLIGHT_REQUESTS", defaultValue: 20 
+            key: "KAFKA_MAX_IN_FLIGHT_REQUESTS", defaultValue: 20
         }),
         metadataStabilizationDelayMs: parseEnvMs({
-            key: "KAFKA_METADATA_STABILIZATION_DELAY_MS", defaultValue: "1s" 
+            key: "KAFKA_METADATA_STABILIZATION_DELAY_MS", defaultValue: "1s"
         }),
         kafkaTopicPollIntervalMs: parseEnvMs({
-            key: "KAFKA_TOPIC_POLL_INTERVAL_MS", defaultValue: "500ms" 
+            key: "KAFKA_TOPIC_POLL_INTERVAL_MS", defaultValue: "500ms"
         }),
         kafkaTopicPollTimeoutMs: parseEnvMs({
-            key: "KAFKA_TOPIC_POLL_TIMEOUT_MS", defaultValue: "10s" 
+            key: "KAFKA_TOPIC_POLL_TIMEOUT_MS", defaultValue: "10s"
         }),
         resetTopics: parseEnvBoolean({
-            key: "KAFKA_RESET_TOPICS", defaultValue: false 
+            key: "KAFKA_RESET_TOPICS", defaultValue: false
         }),
         heartbeatInterval: parseEnvMs({
-            key: "KAFKA_HEARTBEAT_INTERVAL", defaultValue: "3s" 
+            key: "KAFKA_HEARTBEAT_INTERVAL", defaultValue: "3s"
         }), // 3 seconds
         consumer: {
             retry: {
                 retries: parseEnvInt({
-                    key: "KAFKA_RETRY_RETRIES", defaultValue: 3 
+                    key: "KAFKA_RETRY_RETRIES", defaultValue: 3
                 }), // 10 retries
                 restartOnFailure: parseEnvBoolean({
-                    key: "KAFKA_RETRY_RESTART_ON_FAILURE", defaultValue: true 
+                    key: "KAFKA_RETRY_RESTART_ON_FAILURE", defaultValue: true
                 }),
                 factor: parseEnvFloat({
-                    key: "KAFKA_RETRY_FACTOR", defaultValue: 2.0 
+                    key: "KAFKA_RETRY_FACTOR", defaultValue: 2.0
                 }), // 2x exponential backoff
                 maxTimeout: parseEnvMs({
-                    key: "KAFKA_RETRY_MAX_TIMEOUT", defaultValue: "30s" 
+                    key: "KAFKA_RETRY_MAX_TIMEOUT", defaultValue: "30s"
                 }),
             },
             idleTimeout: parseEnvMs({
-                key: "KAFKA_CONSUMER_IDLE_TIMEOUT", defaultValue: "30s" 
+                key: "KAFKA_CONSUMER_IDLE_TIMEOUT", defaultValue: "30s"
             }),
         },
         ping: {
             interval: parseEnvMs({
-                key: "KAFKA_PING_INTERVAL", defaultValue: "10s" 
+                key: "KAFKA_PING_INTERVAL", defaultValue: "10s"
             }),
         },
         producer: {
             retry: {
                 retries: parseEnvInt({
-                    key: "KAFKA_RETRY_RETRIES", defaultValue: Infinity 
+                    key: "KAFKA_RETRY_RETRIES", defaultValue: Infinity
                 }), // retries when producer is not ready
                 restartOnFailure: parseEnvBoolean({
-                    key: "KAFKA_RETRY_RESTART_ON_FAILURE", defaultValue: true 
+                    key: "KAFKA_RETRY_RESTART_ON_FAILURE", defaultValue: true
                 }),
                 factor: parseEnvFloat({
-                    key: "KAFKA_RETRY_FACTOR", defaultValue: 2.0 
+                    key: "KAFKA_RETRY_FACTOR", defaultValue: 2.0
                 }), // 2x exponential backoff
                 maxTimeout: parseEnvMs({
-                    key: "KAFKA_RETRY_MAX_TIMEOUT", defaultValue: "30s" 
+                    key: "KAFKA_RETRY_MAX_TIMEOUT", defaultValue: "30s"
                 }),
             },
         },
         numPartitions: parseEnvInt({
-            key: "KAFKA_NUM_PARTITIONS", defaultValue: 1 
+            key: "KAFKA_NUM_PARTITIONS", defaultValue: 1
         }),
         replicationFactor: parseEnvInt({
-            key: "KAFKA_REPLICATION_FACTOR", defaultValue: 1 
+            key: "KAFKA_REPLICATION_FACTOR", defaultValue: 1
         }),
         retentionMs: parseEnvMs({
-            key: "KAFKA_RETENTION_MS", defaultValue: "1s" 
+            key: "KAFKA_RETENTION_MS", defaultValue: "1s"
         }), // 1 second
         cleanupPolicy: parseEnvString({
-            key: "KAFKA_CLEANUP_POLICY", defaultValue: "delete" 
+            key: "KAFKA_CLEANUP_POLICY", defaultValue: "delete"
         }),
         segmentMs: parseEnvInt({
-            key: "KAFKA_SEGMENT_MS", defaultValue: 1000 
+            key: "KAFKA_SEGMENT_MS", defaultValue: 1000
         }), // 1 second
         segmentBytes: parseEnvInt({
-            key: "KAFKA_SEGMENT_BYTES", defaultValue: 10485760 
+            key: "KAFKA_SEGMENT_BYTES", defaultValue: 10485760
         }), // 10 MB
         maxMessageBytes: parseEnvInt({
-            key: "KAFKA_MAX_MESSAGE_BYTES", defaultValue: 1024 
+            key: "KAFKA_MAX_MESSAGE_BYTES", defaultValue: 1024
         }), // 1 KB
         fileDeleteDelayMs: parseEnvMs({
-            key: "KAFKA_FILE_DELETE_DELAY_MS", defaultValue: "1s" 
+            key: "KAFKA_FILE_DELETE_DELAY_MS", defaultValue: "1s"
         }), // 1 second
-        host: parseEnvString({
-            key: "KAFKA_BROKER_HOST", defaultValue: "localhost" 
-        }),
-        port: parseEnvInt({
-            key: "KAFKA_BROKER_PORT", defaultValue: 9092 
-        }),
+        brokers: Array.from(
+            {
+                length: parseEnvInt({
+                    key: "KAFKA_BROKERS_LENGTH", defaultValue: 1
+                })
+            },
+            (_, i) =>
+                ({
+                    host: parseEnvString({
+                        key: `KAFKA_BROKER_${i + 1}_HOST`,
+                        defaultValue: "localhost"
+                    }),
+                    port: parseEnvInt({
+                        key: `KAFKA_BROKER_${i + 1}_PORT`,
+                        defaultValue: 9092
+                    }),
+                }
+                )
+        ),
         sasl: {
             enabled: parseEnvBoolean({
-                key: "KAFKA_SASL_ENABLED", defaultValue: false 
+                key: "KAFKA_SASL_ENABLED", defaultValue: false
             }),
             username: parseEnvString({
-                key: "KAFKA_SASL_USERNAME", defaultValue: "" 
+                key: "KAFKA_SASL_USERNAME", defaultValue: ""
             }),
             password: parseEnvString({
-                key: "KAFKA_SASL_PASSWORD", defaultValue: "" 
+                key: "KAFKA_SASL_PASSWORD", defaultValue: ""
             }),
         },
     },
     /** Salts for derived keys: JWT signing, AES-CBC encryption. */
     salt: {
         jwt: parseEnvString({
-            key: "SALT_JWT", defaultValue: "ZsOM7sCx0UemrdC3gsi2q6NRQLb7TCsI" 
+            key: "SALT_JWT", defaultValue: "ZsOM7sCx0UemrdC3gsi2q6NRQLb7TCsI"
         }),
         aesCbc: parseEnvString({
-            key: "SALT_AES_CBC", defaultValue: "ZsOM7sCx0UemrdC3gsi2q6NRQLb7TCsI" 
+            key: "SALT_AES_CBC", defaultValue: "ZsOM7sCx0UemrdC3gsi2q6NRQLb7TCsI"
         }),
     },
     /** BullMQ: attempts, delay, concurrency, batch size, lock duration, job counts, timeout, stalled handling. */
     bullmq: {
         attempts: parseEnvInt({
-            key: "BULLMQ_ATTEMPTS", defaultValue: 5 
+            key: "BULLMQ_ATTEMPTS", defaultValue: 5
         }),
         delay: parseEnvMs({
-            key: "BULLMQ_DELAY", defaultValue: "200ms" 
+            key: "BULLMQ_DELAY", defaultValue: "200ms"
         }),
         concurrency: parseEnvInt({
-            key: "BULLMQ_CONCURRENCY", defaultValue: 1000 
+            key: "BULLMQ_CONCURRENCY", defaultValue: 1000
         }),
         batchSize: parseEnvInt({
-            key: "BULLMQ_BATCH_SIZE", defaultValue: 1000 
+            key: "BULLMQ_BATCH_SIZE", defaultValue: 1000
         }),
         lockDuration: parseEnvMs({
-            key: "BULLMQ_LOCK_DURATION", defaultValue: "10s" 
+            key: "BULLMQ_LOCK_DURATION", defaultValue: "10s"
         }),
         completedJobCount: parseEnvInt({
-            key: "BULLMQ_COMPLETED_JOB_COUNT", defaultValue: 1000 
+            key: "BULLMQ_COMPLETED_JOB_COUNT", defaultValue: 1000
         }),
         failedJobCount: parseEnvInt({
-            key: "BULLMQ_FAILED_JOB_COUNT", defaultValue: 1000 
+            key: "BULLMQ_FAILED_JOB_COUNT", defaultValue: 1000
         }),
         timeout: parseEnvMs({
-            key: "BULLMQ_TIMEOUT", defaultValue: "30s" 
+            key: "BULLMQ_TIMEOUT", defaultValue: "30s"
         }),
         stalledInterval: parseEnvMs({
-            key: "BULLMQ_STALLED_INTERVAL", defaultValue: "10s" 
+            key: "BULLMQ_STALLED_INTERVAL", defaultValue: "10s"
         }),
         maxStalledCount: parseEnvInt({
-            key: "BULLMQ_MAX_STALLED_COUNT", defaultValue: 1 
+            key: "BULLMQ_MAX_STALLED_COUNT", defaultValue: 1
         }),
     },
     /** Kubernetes: executor pod (namespace, image, probes, replicas, resources, node pool, env ConfigMap/Secret). */
@@ -1501,145 +1514,145 @@ export const envConfig = () => ({
             /** Pod namespace. */
             podNamespace: parseEnvString(
                 {
-                    key: "POD_NAMESPACE", 
-                    defaultValue: "default" 
+                    key: "POD_NAMESPACE",
+                    defaultValue: "default"
                 }
             ),
             /** Pod name. */
             podName: parseEnvString(
                 {
-                    key: "POD_NAME", 
-                    defaultValue: "emiuacuong" 
+                    key: "POD_NAME",
+                    defaultValue: "emiuacuong"
                 }
             ),
             /** Pod IP. */
             podIp: parseEnvString(
                 {
-                    key: "POD_IP", 
-                    defaultValue: "localhost" 
+                    key: "POD_IP",
+                    defaultValue: "localhost"
                 }
             ),
         },
         /** Executor: namespace for executor service. */
         executor: {
             image: parseEnvString({
-                key: "KANI_EXECUTOR_IMAGE", defaultValue: "nginx:alpine" 
+                key: "KANI_EXECUTOR_IMAGE", defaultValue: "nginx:alpine"
             }),
             probes: {
                 liveness: {
                     failureThreshold: parseEnvInt({
-                        key: "KANI_EXECUTOR_PROBES_LIVENESS_FAILURE_THRESHOLD", defaultValue: 3 
+                        key: "KANI_EXECUTOR_PROBES_LIVENESS_FAILURE_THRESHOLD", defaultValue: 3
                     }),
                     httpGet: {
                         path: parseEnvString({
-                            key: "KANI_EXECUTOR_PROBES_LIVENESS_PATH", defaultValue: "/api/terminus/liveness" 
+                            key: "KANI_EXECUTOR_PROBES_LIVENESS_PATH", defaultValue: "/api/terminus/liveness"
                         }),
                         port: parseEnvString({
-                            key: "KANI_EXECUTOR_PROBES_LIVENESS_PORT", defaultValue: "app" 
+                            key: "KANI_EXECUTOR_PROBES_LIVENESS_PORT", defaultValue: "app"
                         }),
                         scheme: parseEnvString({
-                            key: "KANI_EXECUTOR_PROBES_LIVENESS_SCHEME", defaultValue: "HTTP" 
+                            key: "KANI_EXECUTOR_PROBES_LIVENESS_SCHEME", defaultValue: "HTTP"
                         }),
                     },
                     initialDelaySeconds: parseEnvSecond({
-                        key: "KANI_EXECUTOR_PROBES_LIVENESS_INITIAL_DELAY_SECONDS", defaultValue: "60s" 
+                        key: "KANI_EXECUTOR_PROBES_LIVENESS_INITIAL_DELAY_SECONDS", defaultValue: "60s"
                     }),
                     periodSeconds: parseEnvSecond({
-                        key: "KANI_EXECUTOR_PROBES_LIVENESS_PERIOD_SECONDS", defaultValue: "60s" 
+                        key: "KANI_EXECUTOR_PROBES_LIVENESS_PERIOD_SECONDS", defaultValue: "60s"
                     }),
                     successThreshold: parseEnvInt({
-                        key: "KANI_EXECUTOR_PROBES_LIVENESS_SUCCESS_THRESHOLD", defaultValue: 1 
+                        key: "KANI_EXECUTOR_PROBES_LIVENESS_SUCCESS_THRESHOLD", defaultValue: 1
                     }),
                     timeoutSeconds: parseEnvSecond({
-                        key: "KANI_EXECUTOR_PROBES_LIVENESS_TIMEOUT_SECONDS", defaultValue: "30s" 
+                        key: "KANI_EXECUTOR_PROBES_LIVENESS_TIMEOUT_SECONDS", defaultValue: "30s"
                     }),
                 },
                 readiness: {
                     failureThreshold: parseEnvInt({
-                        key: "KANI_EXECUTOR_PROBES_READINESS_FAILURE_THRESHOLD", defaultValue: 3 
+                        key: "KANI_EXECUTOR_PROBES_READINESS_FAILURE_THRESHOLD", defaultValue: 3
                     }),
                     httpGet: {
                         path: parseEnvString({
-                            key: "KANI_EXECUTOR_PROBES_READINESS_PATH", defaultValue: "/api/terminus/readiness" 
+                            key: "KANI_EXECUTOR_PROBES_READINESS_PATH", defaultValue: "/api/terminus/readiness"
                         }),
                         port: parseEnvString({
-                            key: "KANI_EXECUTOR_PROBES_READINESS_PORT", defaultValue: "app" 
+                            key: "KANI_EXECUTOR_PROBES_READINESS_PORT", defaultValue: "app"
                         }),
                         scheme: parseEnvString({
-                            key: "KANI_EXECUTOR_PROBES_READINESS_SCHEME", defaultValue: "HTTP" 
+                            key: "KANI_EXECUTOR_PROBES_READINESS_SCHEME", defaultValue: "HTTP"
                         }),
                     },
                     initialDelaySeconds: parseEnvSecond({
-                        key: "KANI_EXECUTOR_PROBES_READINESS_INITIAL_DELAY_SECONDS", defaultValue: "60s" 
+                        key: "KANI_EXECUTOR_PROBES_READINESS_INITIAL_DELAY_SECONDS", defaultValue: "60s"
                     }),
                     periodSeconds: parseEnvSecond({
-                        key: "KANI_EXECUTOR_PROBES_READINESS_PERIOD_SECONDS", defaultValue: "120s" 
+                        key: "KANI_EXECUTOR_PROBES_READINESS_PERIOD_SECONDS", defaultValue: "120s"
                     }),
                     successThreshold: parseEnvInt({
-                        key: "KANI_EXECUTOR_PROBES_READINESS_SUCCESS_THRESHOLD", defaultValue: 1 
+                        key: "KANI_EXECUTOR_PROBES_READINESS_SUCCESS_THRESHOLD", defaultValue: 1
                     }),
                     timeoutSeconds: parseEnvSecond({
-                        key: "KANI_EXECUTOR_PROBES_READINESS_TIMEOUT_SECONDS", defaultValue: "30s" 
+                        key: "KANI_EXECUTOR_PROBES_READINESS_TIMEOUT_SECONDS", defaultValue: "30s"
                     }),
                 },
                 startup: {
                     failureThreshold: parseEnvInt({
-                        key: "KANI_EXECUTOR_PROBES_STARTUP_FAILURE_THRESHOLD", defaultValue: 3 
+                        key: "KANI_EXECUTOR_PROBES_STARTUP_FAILURE_THRESHOLD", defaultValue: 3
                     }),
                     httpGet: {
                         path: parseEnvString({
-                            key: "KANI_EXECUTOR_PROBES_STARTUP_PATH", defaultValue: "/api/terminus/startup" 
+                            key: "KANI_EXECUTOR_PROBES_STARTUP_PATH", defaultValue: "/api/terminus/startup"
                         }),
                         port: parseEnvString({
-                            key: "KANI_EXECUTOR_PROBES_STARTUP_PORT", defaultValue: "app" 
+                            key: "KANI_EXECUTOR_PROBES_STARTUP_PORT", defaultValue: "app"
                         }),
                         scheme: parseEnvString({
-                            key: "KANI_EXECUTOR_PROBES_STARTUP_SCHEME", defaultValue: "HTTP" 
+                            key: "KANI_EXECUTOR_PROBES_STARTUP_SCHEME", defaultValue: "HTTP"
                         }),
                     },
                     initialDelaySeconds: parseEnvSecond({
-                        key: "KANI_EXECUTOR_PROBES_STARTUP_INITIAL_DELAY_SECONDS", defaultValue: "60s" 
+                        key: "KANI_EXECUTOR_PROBES_STARTUP_INITIAL_DELAY_SECONDS", defaultValue: "60s"
                     }),
                     periodSeconds: parseEnvSecond({
-                        key: "KANI_EXECUTOR_PROBES_STARTUP_PERIOD_SECONDS", defaultValue: "120s" 
+                        key: "KANI_EXECUTOR_PROBES_STARTUP_PERIOD_SECONDS", defaultValue: "120s"
                     }),
                     successThreshold: parseEnvInt({
-                        key: "KANI_EXECUTOR_PROBES_STARTUP_SUCCESS_THRESHOLD", defaultValue: 1 
+                        key: "KANI_EXECUTOR_PROBES_STARTUP_SUCCESS_THRESHOLD", defaultValue: 1
                     }),
                     timeoutSeconds: parseEnvSecond({
-                        key: "KANI_EXECUTOR_PROBES_STARTUP_TIMEOUT_SECONDS", defaultValue: "30s" 
+                        key: "KANI_EXECUTOR_PROBES_STARTUP_TIMEOUT_SECONDS", defaultValue: "30s"
                     }),
                 }
             },
             replicas: parseEnvInt({
-                key: "KANI_EXECUTOR_REPLICAS", defaultValue: 1 
+                key: "KANI_EXECUTOR_REPLICAS", defaultValue: 1
             }),
             envVarsConfigMapName: parseEnvString({
-                key: "KANI_EXECUTOR_ENV_VARS_CONFIG_MAP_NAME", defaultValue: "kani-executor-service-env-vars" 
+                key: "KANI_EXECUTOR_ENV_VARS_CONFIG_MAP_NAME", defaultValue: "kani-executor-service-env-vars"
             }),
             envVarsSecretName: parseEnvString({
-                key: "KANI_EXECUTOR_ENV_VARS_SECRET_NAME", defaultValue: "kani-executor-service-env-vars" 
+                key: "KANI_EXECUTOR_ENV_VARS_SECRET_NAME", defaultValue: "kani-executor-service-env-vars"
             }),
             resources: {
                 limits: {
                     cpu: parseEnvString({
-                        key: "KANI_EXECUTOR_RESOURCES_LIMITS_CPU", defaultValue: "2048m" 
+                        key: "KANI_EXECUTOR_RESOURCES_LIMITS_CPU", defaultValue: "2048m"
                     }),
                     memory: parseEnvString({
-                        key: "KANI_EXECUTOR_RESOURCES_LIMITS_MEMORY", defaultValue: "8192Mi" 
+                        key: "KANI_EXECUTOR_RESOURCES_LIMITS_MEMORY", defaultValue: "8192Mi"
                     }),
                 },
                 requests: {
                     cpu: parseEnvString({
-                        key: "KANI_EXECUTOR_RESOURCES_REQUESTS_CPU", defaultValue: "128m" 
+                        key: "KANI_EXECUTOR_RESOURCES_REQUESTS_CPU", defaultValue: "128m"
                     }),
                     memory: parseEnvString({
-                        key: "KANI_EXECUTOR_RESOURCES_REQUESTS_MEMORY", defaultValue: "256Mi" 
+                        key: "KANI_EXECUTOR_RESOURCES_REQUESTS_MEMORY", defaultValue: "256Mi"
                     }),
                 },
             },
             nodePool: parseEnvString({
-                key: "KANI_EXECUTOR_NODE_POOL", defaultValue: "kani-primary-node-pool" 
+                key: "KANI_EXECUTOR_NODE_POOL", defaultValue: "kani-primary-node-pool"
             }),
         },
     },
@@ -1650,57 +1663,57 @@ export const envConfig = () => ({
                 key: "RAM_ALLOCATION_THRESHOLD",
                 defaultValue: bytes("1GB") as number
             }),
-        }, 
+        },
         disk: {
             threadholdPercent: parseEnvFloat({
-                key: "DISK_ALLOCATION_THRESHOLD", defaultValue: 1 
-            }), 
+                key: "DISK_ALLOCATION_THRESHOLD", defaultValue: 1
+            }),
         },
     },
     /** Service listen ports: interface, coordinator, executor, observer, inspector, etc. */
     ports: {
         /** Global port: used for common services like Prometheus, Grafana, etc. */
         global: parseEnvInt({
-            key: "KANI_GLOBAL_PORT", defaultValue: 3000 
+            key: "KANI_GLOBAL_PORT", defaultValue: 3000
         }),
         kaniInterface: parseEnvInt({
-            key: "KANI_INTERFACE_PORT", defaultValue: 3001 
+            key: "KANI_INTERFACE_PORT", defaultValue: 3001
         }),
         kaniCoordinator: parseEnvInt({
-            key: "KANI_COORDINATOR_PORT", defaultValue: 3002 
+            key: "KANI_COORDINATOR_PORT", defaultValue: 3002
         }),
         kaniExecutor: parseEnvInt({
-            key: "KANI_EXECUTOR_PORT", defaultValue: 3003 
+            key: "KANI_EXECUTOR_PORT", defaultValue: 3003
         }),
         botCoordinator: parseEnvInt({
-            key: "BOT_COORDINATOR_PORT", defaultValue: 3002 
+            key: "BOT_COORDINATOR_PORT", defaultValue: 3002
         }),
         botExecutor: parseEnvInt({
-            key: "BOT_EXECUTOR_PORT", defaultValue: 3004 
+            key: "BOT_EXECUTOR_PORT", defaultValue: 3004
         }),
         kaniObserver: parseEnvInt({
-            key: "KANI_OBSERVER_PORT", defaultValue: 3005 
+            key: "KANI_OBSERVER_PORT", defaultValue: 3005
         }),
         kaniInspector: parseEnvInt({
-            key: "KANI_INSPECTOR_PORT", defaultValue: 3006 
+            key: "KANI_INSPECTOR_PORT", defaultValue: 3006
         }),
     },
     /** CORS: allowed origins (CORS_ORIGIN_1 … CORS_ORIGIN_10, empty skipped). */
     cors: {
         origins: Array.from({
-            length: 10 
+            length: 10
         },
         (_, i) =>
             parseEnvString({
                 key: `CORS_ORIGIN_${i + 1}`,
                 defaultValue: ""
             }),
-        ).filter((url) => url !== ""),
+        ).filter((url) => url !== "")
     },
     /** Coordinator: version, MongoDB change stream timeout, load interval. */
     coordinator: {
         version: parseEnvString({
-            key: "COORDINATOR_VERSION", defaultValue: "1" 
+            key: "COORDINATOR_VERSION", defaultValue: "1"
         }),
         streams: {
             mongoDbChangeStream: {
@@ -1712,7 +1725,7 @@ export const envConfig = () => ({
         },
         interval: {
             load: parseEnvMs({
-                key: "COORDINATOR_INTERVAL_LOAD", defaultValue: "5s" 
+                key: "COORDINATOR_INTERVAL_LOAD", defaultValue: "5s"
             }),
         }
     },
@@ -1720,19 +1733,20 @@ export const envConfig = () => ({
     cexHealthMonitor: {
         price: {
             staleThresholdSeconds: parseEnvInt({
-                key: "CEX_HEALTH_MONITOR_PRICE_STALE_THRESHOLD_SECONDS", defaultValue: 10 
+                key: "CEX_HEALTH_MONITOR_PRICE_STALE_THRESHOLD_SECONDS", defaultValue: 10
             }),
             checkIntervalMs: parseEnvMs({
-                key: "CEX_HEALTH_MONITOR_PRICE_CHECK_INTERVAL_MS", defaultValue: "2000ms" 
+                key: "CEX_HEALTH_MONITOR_PRICE_CHECK_INTERVAL_MS", defaultValue: "2000ms"
             }),
         },
         volume: {
             staleThresholdSeconds: parseEnvInt({
-                key: "CEX_HEALTH_MONITOR_VOLUME_STALE_THRESHOLD_SECONDS", defaultValue: 10 
+                key: "CEX_HEALTH_MONITOR_VOLUME_STALE_THRESHOLD_SECONDS", defaultValue: 10
             }),
             checkIntervalMs: parseEnvMs({
-                key: "CEX_HEALTH_MONITOR_VOLUME_CHECK_INTERVAL_MS", defaultValue: "2000ms" 
+                key: "CEX_HEALTH_MONITOR_VOLUME_CHECK_INTERVAL_MS", defaultValue: "2000ms"
             }),
         },
-    },  
-})
+    },
+}
+)

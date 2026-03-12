@@ -21,7 +21,7 @@ export const createKafkaProvider = (): Provider => ({
     inject: [],
     useFactory: (): Kafka => {
         return new Kafka({
-            brokers: [`${envConfig().kafka.host}:${envConfig().kafka.port}`],
+            brokers: envConfig().kafka.brokers.map((broker) => `${broker.host}:${broker.port}`),
             clientId: envConfig().k8s.global.podName,
             logLevel: logLevel.NOTHING,
             sasl: envConfig().kafka.sasl.enabled ? {
