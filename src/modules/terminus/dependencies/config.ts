@@ -25,9 +25,9 @@ export enum DependencyName {
      */
     LockAuthorityRedis = "lock-authority-redis",
     /**
-     * Kafka broker used for event streaming and messaging
+     * NATS server used for event streaming and messaging
      */
-    Kafka = "kafka",
+    Nats = "nats",
     /**
      * Primary MongoDB instance (read/write)
      */
@@ -66,8 +66,8 @@ export enum DependencyName {
  * liveness/readiness/startup probes or internal health endpoints.
  */
 export const config: Record<DependencyName, DependencyConfig> = {
-    // Kafka: critical for message processing, but should not restart the pod if temporarily down
-    [DependencyName.Kafka]: {
+    // NATS: critical for message processing, but should not restart the pod if temporarily down
+    [DependencyName.Nats]: {
         liveness: false,
         readiness: true,
         startup: true,

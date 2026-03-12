@@ -228,16 +228,16 @@ import {
             isGlobal: true,
         }),
         EventModule.register({
-            kafka: {
-                groupId: `${ServiceName.KaniExecutor}-${envConfig().executor.id}`,
-                createTopicsIfNotExists: true,
-                topics: [
+            isGlobal: true,
+            nats: {
+                queueGroup: `${ServiceName.KaniExecutor}-${envConfig().executor.id}`,
+                createStreamsIfNotExists: true,
+                subjects: [
                     EventName.ReinitializeBalancers,
                     EventName.ClmmLiquidityPoolsSynced,
                     EventName.DlmmLiquidityPoolsSynced,
                 ],
             },
-            isGlobal: true,
         }),
         EvalModule.register({
             isGlobal: true,
@@ -290,7 +290,7 @@ import {
             dependencies: [
                 DependencyName.MongodbPrimary,
                 DependencyName.CacheRedis,
-                DependencyName.Kafka,
+                DependencyName.Nats,
                 DependencyName.Memory,
                 DependencyName.Disk,
                 DependencyName.LockAuthorityRedis,

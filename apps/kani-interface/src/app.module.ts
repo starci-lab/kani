@@ -152,10 +152,10 @@ import {
         EventEmitterModule.forRoot(),
         EventModule.register({
             isGlobal: true,
-            kafka: {
-                createTopicsIfNotExists: true,
-                groupId: ServiceName.KaniInterface,
-                topics: [
+            nats: {
+                createStreamsIfNotExists: true,
+                queueGroup: ServiceName.KaniInterface,
+                subjects: [
                     EventName.ReinitializeBalancers,
                 ],
             },
@@ -260,7 +260,7 @@ import {
             dependencies: [
                 DependencyName.Disk,
                 DependencyName.Memory,
-                DependencyName.Kafka,
+                DependencyName.Nats,
                 DependencyName.MongodbPrimary,
                 DependencyName.CacheRedis,
                 DependencyName.AdapterRedis,

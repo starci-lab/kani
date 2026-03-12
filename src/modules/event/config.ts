@@ -3,7 +3,7 @@ import {
 } from "./enums"
 import {
     ConfirmWithdrawalEventPayload,
-    KafkaTopicConfig,
+    EventSubjectConfig,
     PingEventPayload,
 } from "./types"
 import {
@@ -30,189 +30,189 @@ import {
     TokenPriceUpdatedEventPayload,
 } from "./types"
 
-/** Map of event names to Kafka/local usage and payload type. */
+/** Map of event names to NATS/local usage and payload type. */
 export const configMap = {
     [EventName.ClmmLiquidityPoolsSynced]: {
-        useKafka: true,
+        useNats: true,
         useLocal: false,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as ClmmLiquidityPoolsSyncedEventPayload
     },
     [EventName.DlmmLiquidityPoolsSynced]: {
-        useKafka: true,
+        useNats: true,
         useLocal: false,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as DlmmLiquidityPoolsSyncedEventPayload
     },
     [EventName.ReinitializeBalancers]: {
-        useKafka: true,
+        useNats: true,
         useLocal: false,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as ReinitializeBalancersEventPayload
     },
     [EventName.Ping]: {
-        useKafka: true,
+        useNats: true,
         useLocal: false,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as PingEventPayload
     },
     [EventName.CoordinatorExecutorCreated]: {
-        useKafka: false,
+        useNats: false,
         useLocal: true,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as CoordinatorExecutorCreatedEventPayload
     },
     [EventName.CoordinatorExecutorDeleted]: {
-        useKafka: false,
+        useNats: false,
         useLocal: true,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as CoordinatorExecutorDeletedEventPayload
     },
     [EventName.CoordinatorExecutorUpdated]: {
-        useKafka: false,
+        useNats: false,
         useLocal: true,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as CoordinatorExecutorUpdatedEventPayload
     },
     [EventName.ClmmPositionOpenRequested]: {
-        useKafka: false,
+        useNats: false,
         useLocal: true,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as ClmmPositionOpenRequestedEventPayload
     },
     [EventName.ClmmPositionCloseRequested]: {
-        useKafka: false,
+        useNats: false,
         useLocal: true,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as ClmmPositionCloseRequestedEventPayload
     },
     [EventName.DlmmPositionOpenRequested]: {
-        useKafka: false,
+        useNats: false,
         useLocal: true,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as DlmmPositionOpenRequestedEventPayload
     },
     [EventName.DlmmPositionCloseRequested]: {
-        useKafka: false,
+        useNats: false,
         useLocal: true,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as DlmmPositionCloseRequestedEventPayload
     },
     [EventName.ExecutorBotUpdated]: {
-        useKafka: false,
+        useNats: false,
         useLocal: true,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as ExecutorBotUpdatedEventPayload
     },
     [EventName.ExecutorBotCreated]: {
-        useKafka: false,
+        useNats: false,
         useLocal: true,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as ExecutorBotCreatedEventPayload
     },
     [EventName.ExecutorBotDeleted]: {
-        useKafka: false,
+        useNats: false,
         useLocal: true,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as ExecutorBotDeletedEventPayload
     },
     [EventName.LockAuthorityTimeout]: {
-        useKafka: false,
+        useNats: false,
         useLocal: true,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as LockAuthorityTimeoutEventPayload
     },
     [EventName.LiquidityPoolsBecameReady]: {
-        useKafka: false,
+        useNats: false,
         useLocal: true,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as LiquidityPoolsBecameReadyEventPayload
     },
     [EventName.LiquidityPoolsBecameNotReady]: {
-        useKafka: false,
+        useNats: false,
         useLocal: true,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as LiquidityPoolsBecameNotReadyEventPayload
     },
     [EventName.ClmmPositionOpenWithoutEventRequested]: {
-        useKafka: false,
+        useNats: false,
         useLocal: true,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as ClmmPositionOpenWithoutEventRequestedEventPayload
     },
     [EventName.ClmmPositionCloseWithoutEventRequested]: {
-        useKafka: false,
+        useNats: false,
         useLocal: true,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as ClmmPositionCloseWithoutEventRequestedEventPayload
     },
     [EventName.DlmmPositionOpenWithoutEventRequested]: {
-        useKafka: false,
+        useNats: false,
         useLocal: true,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as DlmmPositionOpenWithoutEventRequestedEventPayload
     },
     [EventName.DlmmPositionCloseWithoutEventRequested]: {
-        useKafka: false,
+        useNats: false,
         useLocal: true,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as DlmmPositionCloseWithoutEventRequestedEventPayload
     },
     [EventName.TokenPriceUpdated]: {
-        useKafka: true,
+        useNats: true,
         useLocal: false,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as TokenPriceUpdatedEventPayload
     },
     [EventName.ConfirmWithdrawal]: {
-        useKafka: false,
+        useNats: false,
         useLocal: true,
         config: {
-        } as Partial<KafkaTopicConfig>,
+        } as Partial<EventSubjectConfig>,
         eventPayload: {
         } as ConfirmWithdrawalEventPayload
     },

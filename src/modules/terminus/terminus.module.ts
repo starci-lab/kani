@@ -10,13 +10,13 @@ import {
 import {
     TerminusController 
 } from "./terminus.controller"
-import { 
-    DependenciesService, 
-    KafkaService, 
-    MongodbService, 
+import {
+    DependenciesService,
+    MongodbService,
+    NatsService,
     RedisService,
     DiskService,
-    MemoryService
+    MemoryService,
 } from "./dependencies"
 
 /**
@@ -31,7 +31,7 @@ import {
     ],
     controllers: [TerminusController],
     providers: [
-        KafkaService,
+        NatsService,
         MongodbService,
         RedisService,
         DiskService,

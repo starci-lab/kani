@@ -69,9 +69,9 @@ import {
         EventEmitterModule.forRoot(),
         EventModule.register({
             isGlobal: true,
-            kafka: {
-                createTopicsIfNotExists: true,
-                groupId: ServiceName.KaniCoordinator,
+            nats: {
+                createStreamsIfNotExists: true,
+                queueGroup: ServiceName.KaniCoordinator,
             },
         }),
         WinstonModule.register({

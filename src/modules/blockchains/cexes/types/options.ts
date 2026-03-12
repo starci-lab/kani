@@ -7,7 +7,7 @@ export interface CexesModuleOptions {
      */
     useLocal?: boolean
     /**
-     * Whether to use Kafka.
+     * Whether to use NATS (event streaming).
      */
-    useKafka?: boolean
+    useNats?: boolean
 }

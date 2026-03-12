@@ -1,8 +1,6 @@
-import type {
-    KafkaOptions,
-} from "../kafka"
+import type { NatsOptions } from "../nats"
 
 /** Event module registration options. */
 export interface EventOptions {
-    kafka?: KafkaOptions
+    nats?: NatsOptions
 }

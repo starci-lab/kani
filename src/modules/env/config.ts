@@ -892,9 +892,9 @@ export const envConfig = () => ({
                 key: "CACHE_TTL_ROTATION_BOT_ASSIGNMENTS",
                 defaultValue: "100years"
             }),
-            kafkaMessageDigest: parseEnvMs({
-                key: "CACHE_TTL_KAFKA_MESSAGE_DIGEST",
-                defaultValue: "3s"
+            natsMessageDigest: parseEnvMs({
+                key: "CACHE_TTL_NATS_MESSAGE_DIGEST",
+                defaultValue: "3s",
             }),
             withdraw: parseEnvMs({
                 key: "CACHE_TTL_WITHDRAW",
@@ -1350,118 +1350,28 @@ export const envConfig = () => ({
             }),
         }
     },
-    /** Kafka: broker, partitions, retention, SASL, retry and heartbeat; used by coordinator/executor. */
-    kafka: {
-        maxInFlightRequests: parseEnvInt({
-            key: "KAFKA_MAX_IN_FLIGHT_REQUESTS", defaultValue: 20
+    /** NATS: server URL, reconnect, ping; used by coordinator/executor. */
+    nats: {
+        servers: parseEnvString({
+            key: "NATS_SERVERS", defaultValue: "nats://localhost:4222"
+        }).split(",").map(s => s.trim()),
+        reconnect: parseEnvBoolean({
+            key: "NATS_RECONNECT", defaultValue: true
         }),
-        metadataStabilizationDelayMs: parseEnvMs({
-            key: "KAFKA_METADATA_STABILIZATION_DELAY_MS", defaultValue: "1s"
+        maxReconnectAttempts: parseEnvInt({
+            key: "NATS_MAX_RECONNECT_ATTEMPTS", defaultValue: 10
         }),
-        kafkaTopicPollIntervalMs: parseEnvMs({
-            key: "KAFKA_TOPIC_POLL_INTERVAL_MS", defaultValue: "500ms"
+        pingIntervalMs: parseEnvInt({
+            key: "NATS_PING_INTERVAL_MS", defaultValue: 120000
         }),
-        kafkaTopicPollTimeoutMs: parseEnvMs({
-            key: "KAFKA_TOPIC_POLL_TIMEOUT_MS", defaultValue: "10s"
-        }),
-        resetTopics: parseEnvBoolean({
-            key: "KAFKA_RESET_TOPICS", defaultValue: false
-        }),
-        heartbeatInterval: parseEnvMs({
-            key: "KAFKA_HEARTBEAT_INTERVAL", defaultValue: "3s"
-        }), // 3 seconds
         consumer: {
-            retry: {
-                retries: parseEnvInt({
-                    key: "KAFKA_RETRY_RETRIES", defaultValue: 3
-                }), // 10 retries
-                restartOnFailure: parseEnvBoolean({
-                    key: "KAFKA_RETRY_RESTART_ON_FAILURE", defaultValue: true
-                }),
-                factor: parseEnvFloat({
-                    key: "KAFKA_RETRY_FACTOR", defaultValue: 2.0
-                }), // 2x exponential backoff
-                maxTimeout: parseEnvMs({
-                    key: "KAFKA_RETRY_MAX_TIMEOUT", defaultValue: "30s"
-                }),
-            },
             idleTimeout: parseEnvMs({
-                key: "KAFKA_CONSUMER_IDLE_TIMEOUT", defaultValue: "30s"
+                key: "NATS_CONSUMER_IDLE_TIMEOUT", defaultValue: "3m"
             }),
         },
         ping: {
             interval: parseEnvMs({
-                key: "KAFKA_PING_INTERVAL", defaultValue: "10s"
-            }),
-        },
-        producer: {
-            retry: {
-                retries: parseEnvInt({
-                    key: "KAFKA_RETRY_RETRIES", defaultValue: Infinity
-                }), // retries when producer is not ready
-                restartOnFailure: parseEnvBoolean({
-                    key: "KAFKA_RETRY_RESTART_ON_FAILURE", defaultValue: true
-                }),
-                factor: parseEnvFloat({
-                    key: "KAFKA_RETRY_FACTOR", defaultValue: 2.0
-                }), // 2x exponential backoff
-                maxTimeout: parseEnvMs({
-                    key: "KAFKA_RETRY_MAX_TIMEOUT", defaultValue: "30s"
-                }),
-            },
-        },
-        numPartitions: parseEnvInt({
-            key: "KAFKA_NUM_PARTITIONS", defaultValue: 1
-        }),
-        replicationFactor: parseEnvInt({
-            key: "KAFKA_REPLICATION_FACTOR", defaultValue: 1
-        }),
-        retentionMs: parseEnvMs({
-            key: "KAFKA_RETENTION_MS", defaultValue: "1s"
-        }), // 1 second
-        cleanupPolicy: parseEnvString({
-            key: "KAFKA_CLEANUP_POLICY", defaultValue: "delete"
-        }),
-        segmentMs: parseEnvInt({
-            key: "KAFKA_SEGMENT_MS", defaultValue: 1000
-        }), // 1 second
-        segmentBytes: parseEnvInt({
-            key: "KAFKA_SEGMENT_BYTES", defaultValue: 10485760
-        }), // 10 MB
-        maxMessageBytes: parseEnvInt({
-            key: "KAFKA_MAX_MESSAGE_BYTES", defaultValue: 1024
-        }), // 1 KB
-        fileDeleteDelayMs: parseEnvMs({
-            key: "KAFKA_FILE_DELETE_DELAY_MS", defaultValue: "1s"
-        }), // 1 second
-        brokers: Array.from(
-            {
-                length: parseEnvInt({
-                    key: "KAFKA_BROKERS_LENGTH", defaultValue: 1
-                })
-            },
-            (_, i) =>
-                ({
-                    host: parseEnvString({
-                        key: `KAFKA_BROKER_${i + 1}_HOST`,
-                        defaultValue: "localhost"
-                    }),
-                    port: parseEnvInt({
-                        key: `KAFKA_BROKER_${i + 1}_PORT`,
-                        defaultValue: 9092
-                    }),
-                }
-                )
-        ),
-        sasl: {
-            enabled: parseEnvBoolean({
-                key: "KAFKA_SASL_ENABLED", defaultValue: false
-            }),
-            username: parseEnvString({
-                key: "KAFKA_SASL_USERNAME", defaultValue: ""
-            }),
-            password: parseEnvString({
-                key: "KAFKA_SASL_PASSWORD", defaultValue: ""
+                key: "NATS_PING_INTERVAL", defaultValue: "10s"
             }),
         },
     },

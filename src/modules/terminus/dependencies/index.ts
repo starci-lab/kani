@@ -1,5 +1,5 @@
 export * from "./dependencies.service"
-export * from "./kafka.service"
+export * from "./nats.service"
 export * from "./mongodb.service"
 export * from "./redis.service"
 export * from "./config"

@@ -1,4 +1,4 @@
-/** Event names; each maps to a config entry (useKafka, useLocal, eventPayload type). */
+/** Event names; each maps to a config entry (useNats, useLocal, eventPayload type). */
 export enum EventName {
     ConfirmWithdrawal = "confirm.withdrawal",
     TokenPriceUpdated = "token.price.updated",

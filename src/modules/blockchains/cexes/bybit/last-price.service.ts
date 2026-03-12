@@ -189,7 +189,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                                                         marketListingId: MarketListingId.Bybit,
                                                     },
                                                     options: {
-                                                        useKafka: this.options.useKafka,
+                                                        useNats: this.options.useNats,
                                                         useLocal: this.options.useLocal,
                                                     }
                                                 }

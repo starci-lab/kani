@@ -5,87 +5,66 @@ import {
     EventEmitter2 
 } from "@nestjs/event-emitter"
 import {
-    CompressionTypes 
-} from "kafkajs"
-import {
-    configMap,
+    configMap 
 } from "./config"
 import {
-    EventName,
+    EventName 
 } from "./enums"
-import {
-    KafkaMessageFactoryService, KafkaProducerService 
-} from "./kafka"
 import {
     getEventName 
 } from "./utils"
+import {
+    NatsMessageFactoryService, NatsProducerService 
+} from "./nats"
 
 export interface EmitOptions {
-    useKafka?: boolean
+    useNats?: boolean
     useLocal?: boolean
 }
 
 @Injectable()
 export class EventEmitterService {
     constructor(
-        private readonly kafkaProducerService: KafkaProducerService,
-        private readonly kafkaMessageFactoryService: KafkaMessageFactoryService,
+        private readonly natsProducerService: NatsProducerService,
+        private readonly natsMessageFactoryService: NatsMessageFactoryService,
         private readonly eventEmitter: EventEmitter2,
     ) {}
-    
 
     /**
      * Emit an event.
      */
-    async emit<T extends EventName>(
-        {
-            event,
-            args,
-            payload,
-            options = {
-            },
-        }: EmitParams<T>
-    ) {
+    async emit<T extends EventName>({
+        event,
+        args,
+        payload,
+        options = {
+        },
+    }: EmitParams<T>): Promise<void> {
         const config = configMap[event]
-        const eventName = getEventName(
-            event,
-            args
-        )
-        // if useLocal is not provided, use the config value
+        const eventName = getEventName(event,
+            args)
+
         const useLocal =
-          options?.useLocal !== undefined
-              ? options?.useLocal
-              : config?.useLocal
-        // if useKafka is not provided, use the config value
-        const useKafka =
-          options?.useKafka !== undefined
-              ? options?.useKafka
-              : config?.useKafka
-      
-        // Emit locally (in-process listeners)
+            options?.useLocal !== undefined
+                ? options.useLocal
+                : config?.useLocal
+        const useNats =
+            options?.useNats !== undefined
+                ? options.useNats
+                : config?.useNats
+
         if (useLocal) {
-            this.eventEmitter.emit(
-                eventName,
-                payload
-            )
+            this.eventEmitter.emit(eventName,
+                payload)
         }
-      
-        // Emit to Kafka (cross-instance / distributed)
-        if (
-            useKafka
-        ) {
-            await this.kafkaProducerService.producer.send({
-                topic: eventName,
-                compression: CompressionTypes.GZIP,
-                // ack = 0 means the producer will not wait for the leader to commit the message to the partition
-                acks: 0,
-                messages: [
-                    {
-                        value: this.kafkaMessageFactoryService.create(
-                            payload
-                        ),
-                    },
-                ],
+
+        if (useNats) {
+            const serialized = this.natsMessageFactoryService.create({
+                message: payload,
+            })
+            this.natsProducerService.publish({
+                subject: eventName,
+                payload: serialized,
             })
         }
     }
@@ -93,68 +72,42 @@ export class EventEmitterService {
     /**
      * On an event.
      */
-    on<T extends EventName>(
-        {
-            event,
-            args,
-            listener,
-        }: OnParams<T>
-    ) {
-        const eventName = getEventName(
-            event,
-            args
-        )
-        this.eventEmitter.on(
-            eventName,
-            listener
-        )
+    on<T extends EventName>({ event, args, listener }: OnParams<T>): void {
+        const eventName = getEventName(event,
+            args)
+        this.eventEmitter.on(eventName,
+            listener)
     }
 
     /**
      * Off an event.
      */
-    off<T extends EventName>(
-        {
-            event,
-            args,
-            listener,
-        }: OffParams<T>
-    ) {
-        const eventName = getEventName(
-            event,
-            args
-        )
-        this.eventEmitter.off(
-            eventName,
-            listener
-        )
+    off<T extends EventName>({ event, args, listener }: OffParams<T>): void {
+        const eventName = getEventName(event,
+            args)
+        this.eventEmitter.off(eventName,
+            listener)
     }
 }
 
-/**
- * Emit parameters.
- */
+/** Emit parameters. */
 export interface EmitParams<T extends EventName> {
     event: T
     args?: Array<unknown>
-    payload: typeof configMap[T]["eventPayload"]
+    payload: (typeof configMap)[T]["eventPayload"]
     options?: EmitOptions
 }
 
-/**
- * On parameters.
- */
+/** On parameters. */
 export interface OnParams<T extends EventName> {
     event: T
     args?: Array<unknown>
-    listener: (payload: typeof configMap[T]["eventPayload"]) => void
+    listener: (payload: (typeof configMap)[T]["eventPayload"]) => void
 }
 
-/**
- * Off parameters.
- */
+/** Off parameters. */
 export interface OffParams<T extends EventName> {
     event: T
     args?: Array<unknown>
-    listener: (payload: typeof configMap[T]["eventPayload"]) => void
+    listener: (payload: (typeof configMap)[T]["eventPayload"]) => void
 }

@@ -41,8 +41,8 @@ Applications live under `apps/` and share `src/modules` and `src/features`:
 
 | App | Description |
 |-----|-------------|
-| **kani-executor** | Runs bots: open/close position workers, reconcile balance, withdraw. Subscribes to CLMM/DLMM sync events (Kafka), enqueues BullMQ jobs. |
-| **kani-coordinator** | Orchestrates executors (e.g. Kubernetes), load balancing, event fan-out. Uses Kafka, Redis, MongoDB. |
+| **kani-executor** | Runs bots: open/close position workers, reconcile balance, withdraw. Subscribes to CLMM/DLMM sync events (NATS), enqueues BullMQ jobs. |
+| **kani-coordinator** | Orchestrates executors (e.g. Kubernetes), load balancing, event fan-out. Uses NATS, Redis, MongoDB. |
 | **kani-interface** | User-facing API: GraphQL (Apollo), REST, auth (Passport, Privy, TOTP). Manages bots, pools, keypairs. |
 | **kani-observer** | Observability and monitoring. |
 | **kani-inspector** | Inspection and debugging utilities. |
@@ -66,7 +66,7 @@ kani/
 │   ├── modules/             # Shared modules
 │   │   ├── blockchains/     # DEX adapters, balance, signers, formulas, price-feeds, tx-builder
 │   │   ├── databases/       # MongoDB (primary), schemas, enums (DexId, TokenId, …)
-│   │   ├── event/           # Event emitter + Kafka
+│   │   ├── event/           # Event emitter + NATS
 │   │   ├── env/             # Runtime config (envConfig)
 │   │   ├── winston/         # Logging (Loki, levels, message types)
 │   │   ├── bullmq/          # Queues (open-position, close-position, reconcile-balance, withdraw)
@@ -89,7 +89,7 @@ kani/
 
 ## Installation & quick start
 
-**Requirements:** Node.js 18+, npm/pnpm, **MongoDB**, **Redis** (cache, BullMQ, lock authority), **Kafka** (coordinator/executor events). RPC endpoints for Sui and/or Solana as needed.
+**Requirements:** Node.js 18+, npm/pnpm, **MongoDB**, **Redis** (cache, BullMQ, lock authority), **NATS** (coordinator/executor events). RPC endpoints for Sui and/or Solana as needed.
 
 ```bash
 # Install dependencies (project root)
@@ -123,7 +123,7 @@ Configuration is built from environment variables in `src/modules/env/config.ts`
 - **Ports:** `KANI_INTERFACE_PORT` (3001), `KANI_COORDINATOR_PORT` (3002), `KANI_EXECUTOR_PORT` (3003).
 - **Databases:** MongoDB primary (connection, seed, in-memory storage flags).
 - **Redis:** Cache, BullMQ, lock authority, throttler (instance keys in config).
-- **Kafka:** Brokers, topics (e.g. `ClmmLiquidityPoolsSynced`, `DlmmLiquidityPoolsSynced`), SASL, retries.
+- **NATS:** Servers (e.g. `nats://localhost:4222`), subjects (e.g. `ClmmLiquidityPoolsSynced`, `DlmmLiquidityPoolsSynced`), reconnect, ping.
 - **Executor:** `executor.id` for instance identity, runtime/operation cooldowns (e.g. reconcile balance rescan).
 - **RPC / CEX / Oracles:** Per-module (blockchains, cexes, price-feeds) timeouts, retries, API keys (prefer env/secrets, not hardcoded).
 

@@ -157,10 +157,10 @@ import {
         }),
         EventModule.register({
             isGlobal: true,
-            kafka: {
-                createTopicsIfNotExists: true,
-                groupId: ServiceName.KaniObserver,
-                topics: [
+            nats: {
+                createStreamsIfNotExists: true,
+                queueGroup: ServiceName.KaniObserver,
+                subjects: [
                     EventName.ReinitializeBalancers,
                 ],
             },
@@ -227,7 +227,7 @@ import {
         }),
         CexesModule.register({
             isGlobal: true,
-            useKafka: true,
+            useNats: true,
             useLocal: false,
         }), 
         ObserverModule.register({

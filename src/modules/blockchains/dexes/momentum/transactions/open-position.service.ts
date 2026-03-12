@@ -91,7 +91,7 @@ export class OpenPositionTxbService {
         // we check balances of tokenA and tokenB
         const targetOperationalAmount =
       this.mountStorageService.appConfig.gas.gasAmountRequired[ChainId.Sui]
-            ?.targetOperationalAmount
+          ?.targetOperationalAmount
         if (!targetOperationalAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
                 {

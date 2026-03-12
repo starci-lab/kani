@@ -237,7 +237,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                                     marketListingId: MarketListingId.Binance,
                                                 },
                                                 options: {
-                                                    useKafka: this.options.useKafka,
+                                                    useNats: this.options.useNats,
                                                     useLocal: this.options.useLocal,
                                                 }
                                             }),

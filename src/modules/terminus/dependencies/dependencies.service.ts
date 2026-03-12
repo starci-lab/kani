@@ -9,9 +9,7 @@ import {
 import {
     DependencyName 
 } from "./config"
-import {
-    KafkaService 
-} from "./kafka.service"
+import { NatsService } from "./nats.service"
 import {
     MongodbService 
 } from "./mongodb.service"
@@ -34,7 +32,7 @@ import {
 @Injectable()
 export class DependenciesService {
     constructor(
-        private readonly kafkaService: KafkaService,
+        private readonly natsService: NatsService,
         private readonly mongodbService: MongodbService,
         private readonly redisService: RedisService,
         private readonly diskService: DiskService,
@@ -51,8 +49,8 @@ export class DependenciesService {
         const promises: Array<HealthIndicatorFunction> = []
         for (const dependencyName of dependencyNames) {
             switch (dependencyName) {
-            case DependencyName.Kafka:
-                promises.push(() => this.kafkaService.pingKafka())
+            case DependencyName.Nats:
+                promises.push(() => this.natsService.pingNats())
                 break
             case DependencyName.MongodbPrimary:
                 promises.push(() => this.mongodbService.pingPrimaryMongodb())
