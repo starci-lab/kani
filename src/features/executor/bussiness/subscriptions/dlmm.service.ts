@@ -62,7 +62,7 @@ export class DlmmSubscriptionService {
         // Select bots that are currently idle and associated with THIS DLMM pool
         const idleDlmmBots = await this.connection.model<BotSchema>(BotSchema.name).find({
             executor: {
-                $eq: envConfig().executor.id,
+                $eq: new Types.ObjectId(envConfig().executor.id),
             },
             activePosition: {
                 $exists: false,
@@ -89,14 +89,16 @@ export class DlmmSubscriptionService {
         const activeDlmmBots = await this.connection.model<BotSchema>(BotSchema.name)
             .find({
                 executor: {
-                    $eq: envConfig().executor.id,
+                    $eq: new Types.ObjectId(envConfig().executor.id),
                 },
                 activePosition: {
                     $exists: true,
-                    $ne: null,
                 },
                 "activePosition.liquidityPool": {
                     $eq: new Types.ObjectId(event.id),
+                },
+                "activePosition.positionClosed": {
+                    $ne: true 
                 },
                 activeJob: {
                     $exists: false,

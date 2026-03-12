@@ -36,10 +36,7 @@ export class KafkaMessageFactoryService {
             {
                 data: message,
                 digest: withoutHash ? undefined : createHash(
-                    _.omit(
-                        message,
-                        ["snapshotAt"]
-                    )
+                    message
                 ),
                 id: this.instanceService.getId(),
             },

@@ -53,23 +53,25 @@ implements StreamConnection<EachMessagePayload>
         // call handler when consumer is opened
         await handler()
         // run the consumer
-        await this.consumer.run({
-            eachMessage: async (payload: EachMessagePayload) => {
-                if (this.onDataHandler) {
-                    try {
-                        await this.onDataHandler(payload)
-                    } catch (error) {
-                        if (this.onErrorHandler) {
-                            this.onErrorHandler(
-                                error instanceof Error
-                                    ? error
-                                    : new Error(String(error))
-                            )
+        await this.consumer.run(
+            {
+                eachMessage: async (payload: EachMessagePayload) => {
+                    const process = async () => {
+                        if (this.onDataHandler) {
+                            try {
+                                await this.onDataHandler(payload)
+                            } catch (error) {
+                                if (this.onErrorHandler) {
+                                    this.onErrorHandler(
+                                        error
+                                    )
+                                }
+                            }
                         }
                     }
-                }
-            },
-        })
+                    process()
+                },
+            })
     }
 
     private onDataHandler:
@@ -98,10 +100,14 @@ implements StreamConnection<EachMessagePayload>
      * Closes Kafka consumer safely.
      */
     async close(): Promise<void> {
-        await this.consumer.stop().then(() => {
-        })
-        await this.consumer.disconnect().then(() => {
-        })
+        await this.consumer.stop().then(
+            () => {
+            }
+        )
+        await this.consumer.disconnect().then(
+            () => {
+            }
+        )
         // call the onClose handler
         if (this.onCloseHandler) {
             this.onCloseHandler()

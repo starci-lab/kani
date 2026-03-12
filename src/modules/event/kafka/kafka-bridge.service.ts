@@ -160,46 +160,48 @@ implements
                     // create start time for duration calculation
                     let startTime: Dayjs | null = null
                     // create the stream
-                    const stream = await this.streamAsyncIteratorService.createStream({
-                        connection,
-                        signal: abortController.signal,
-                        onOpen: () => {
+                    const stream = await this.streamAsyncIteratorService.createStream(
+                        {
+                            connection,
+                            signal: abortController.signal,
+                            onOpen: () => {
                             // log connection opened
-                            this.winstonService.log(
-                                WinstonLog.KafkaConsumerOpened,
-                                {
-                                    topics: this.topics
-                                }
-                            )
-                            startTime = this.dayjsService.now()
-                        },
-                        onClose: () => {
+                                this.winstonService.log(
+                                    WinstonLog.KafkaConsumerOpened,
+                                    {
+                                        topics: this.topics
+                                    }
+                                )
+                                startTime = this.dayjsService.now()
+                            },
+                            onClose: () => {
                             // log connection closed
-                            this.winstonService.log(
-                                WinstonLog.KafkaConsumerClosed,
-                                {
-                                    topics: this.topics,
-                                    durationMs: startTime
-                                        ? this.dayjsService.now().diff(
-                                            startTime,
-                                            "millisecond"
-                                        )
-                                        : null,
-                                }
-                            )
-                        },
-                        onError: (error: Error) => {
+                                this.winstonService.log(
+                                    WinstonLog.KafkaConsumerClosed,
+                                    {
+                                        topics: this.topics,
+                                        durationMs: startTime
+                                            ? this.dayjsService.now().diff(
+                                                startTime,
+                                                "millisecond"
+                                            )
+                                            : null,
+                                    }
+                                )
+                            },
+                            onError: (error: Error) => {
                             // log error with info level
-                            this.winstonService.log(
-                                WinstonLog.KafkaConsumerError,
-                                {
-                                    topics: this.topics,
-                                    error: error.message,
-                                    stack: error.stack,
-                                }
-                            )
-                        },
-                    })
+                                this.winstonService.log(
+                                    WinstonLog.KafkaConsumerError,
+                                    {
+                                        topics: this.topics,
+                                        error: error.message,
+                                        stack: error.stack,
+                                    }
+                                )
+                            },
+                        }
+                    )
                     // reset timeout when the stream is opened
                     resetTimeout()
                     // consume the stream
@@ -211,11 +213,10 @@ implements
                         const data = this.kafkaMessageFactoryService.parse(value)
                         // skip messages from same instance to prevent loops
                         if (data.id === this.instanceService.getId()) {
-                            continue
-                        }
-                        // if topic is ping, skip it
-                        if (topic === EventName.Ping) {
-                            resetTimeout()
+                            // if topic is ping, skip it
+                            if (topic === EventName.Ping) {
+                                resetTimeout()
+                            }
                             continue
                         }
                         // we check the digest to prevent duplicate messages
@@ -260,8 +261,6 @@ implements
     onApplicationShutdown() {
         // Consumer disconnect is handled by KafkaConsumerService.onApplicationShutdown
         this.kafkaConsumerService.consumer.disconnect()
-        // Delete the group from Kafka
-        this.kafkaAdmin.deleteGroups([this.instanceService.getId()])
     }
 }
 

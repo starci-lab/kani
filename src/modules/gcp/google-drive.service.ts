@@ -176,7 +176,6 @@ export class GoogleDriveService {
                         },
                     )
                 } catch (error) {
-                    console.log(error)
                     throw new GoogleDriveFileDownloadFailedException({
                         fileId: id,
                         outputPath,

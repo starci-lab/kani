@@ -122,7 +122,6 @@ export class CacheService {
     }: SetParams<K>): Promise<void> {
         const cacheKey = this.getCacheKey(key,
             args)
-
         try {
             const serializedCachedResult =
                 this.superjson.stringify(cacheResult)
@@ -132,11 +131,7 @@ export class CacheService {
                     ? this.redisCacheManager
                     : this.memoryCacheManager
 
-            const ttl =
-                cacheType === CacheType.Redis
-                    ? configMap[key].ttl
-                    : configMap[key].ttl
-
+            const ttl = configMap[key].ttl
             await cacheManager.set(
                 cacheKey,
                 serializedCachedResult,
