@@ -21,14 +21,24 @@ export class RedisIoAdapter extends IoAdapter {
     }
 
     public async connect(): Promise<void> {
-        // if cluster is enabled,
         const pubClient = this.redisClient.duplicate()
-        const subClient = this.redisClient.duplicate() 
-        this.adapterConstructor = createAdapter(pubClient,
-            subClient)
+        const subClient = this.redisClient.duplicate()
+        await Promise.all(
+            [
+                pubClient.connect(),
+                subClient.connect(),
+            ]
+        )
+        this.adapterConstructor = createAdapter(
+            this.redisClient,
+            subClient
+        )
     }
 
-    public createIOServer(port: number, options?: ServerOptions) {
+    public createIOServer(
+        port: number, 
+        options?: ServerOptions
+    ) {
         const server = super.createIOServer(port,
             options)
         server.adapter(this.adapterConstructor)

@@ -75,7 +75,6 @@ export const createRedisProvider = (key: RedisInstanceKey): Provider => ({
                     }),
                 },
             })
-            await cluster.connect()
             return cluster
         }       
         const client = createClient({
@@ -87,7 +86,6 @@ export const createRedisProvider = (key: RedisInstanceKey): Provider => ({
             ...(additionalOptions || {
             }),
         })
-        await client.connect()
         return client
     },
 })
