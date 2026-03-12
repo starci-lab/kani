@@ -52,6 +52,7 @@ export const createRedisProvider = (key: RedisInstanceKey): Provider => ({
                 useCluster: envConfig().redis.cache.useCluster,
             },
         }
+        console.log(map)
         const { 
             host, 
             port, 

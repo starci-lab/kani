@@ -30,10 +30,12 @@ import {
 } from "@modules/logger"
 
 const bootstrap = async () => {
-    const app = await NestFactory.create(AppModule,
+    const app = await NestFactory.create(
+        AppModule,
         {
             logger: new ContextLoggerService(),
-        })
+        }
+    )
     // set the app to the globalThis object
     globalThis.__APP__ = app
     setupCors(app)
