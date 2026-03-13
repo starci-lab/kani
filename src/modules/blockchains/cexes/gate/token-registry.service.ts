@@ -39,7 +39,8 @@ export class GateTokenRegistryService implements OnModuleInit {
         await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
         this.tokenMap = new Map(
             Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
-                (token) => token.marketListings?.some((market) => market.id === MarketListingId.Gate),
+                (token) => token.marketListings?.some(
+                    (marketListing) => marketListing.id === MarketListingId.Gate),
             ).map((token) => [token.id,
                 token])
         )

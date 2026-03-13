@@ -36,7 +36,7 @@ export class BinanceTokenRegistryService implements OnModuleInit {
         await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
         this.tokenMap = new Map(
             Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
-                (token) => token.marketListings?.some((market) => market.id === MarketListingId.Binance),
+                (token) => token.marketListings?.some((marketListing) => marketListing.id === MarketListingId.Binance),
             ).map((token) => [token.id,
                 token])
         )

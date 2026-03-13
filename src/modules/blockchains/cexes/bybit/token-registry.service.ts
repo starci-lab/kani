@@ -71,14 +71,11 @@ export class BybitTokenRegistryService implements OnModuleInit {
         return [
             ...new Set(
                 tokens
-                    .map((token) =>
-                        token.marketListings.find(
-                            (marketListing) =>
-                                marketListing.id === MarketListingId.Bybit,
-                        )?.symbol ?? "",
-                    )
-                    .filter(Boolean),
-            ),
+                    .map(token => token.marketListings.find(
+                        marketListing => marketListing.id === MarketListingId.Bybit
+                    )?.symbol ?? "")
+                    .filter(symbol => symbol !== undefined)
+            )
         ].filter(Boolean) as Array<string>
     }
 
