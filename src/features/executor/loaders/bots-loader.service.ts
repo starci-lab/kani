@@ -85,7 +85,7 @@ implements OnApplicationBootstrap, OnModuleInit {
      * In-memory map holding the bot snapshot by id.
      * Other modules read from here instead of querying MongoDB on each request.
      */
-    public botMap: Map<string, BotSchema>
+    public botMap: Map<string, BotSchema> = new Map()
 
     constructor(
         @InjectPrimaryMongoose()
@@ -119,9 +119,6 @@ implements OnApplicationBootstrap, OnModuleInit {
             BotsLoaderService.name,
             1,
         )
-
-        this.botMap = new Map()
-
         // Initial load from MongoDB
         await this.load()
         // Mark BotsLoaderService as ready for other services

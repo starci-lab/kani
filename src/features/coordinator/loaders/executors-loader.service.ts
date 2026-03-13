@@ -61,7 +61,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
     // mutex for loading executors
     private sema!: Sema
     // executors
-    public executorMap: Map<string, ExecutorSchema>
+    public executorMap: Map<string, ExecutorSchema> = new Map()
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
@@ -81,7 +81,6 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
         // init semaphore before any load/observe work uses it
         this.sema = this.semaService.sema(ExecutorsLoaderService.name,
             1)
-        this.executorMap = new Map()
         // load executors
         await this.load()
         // set readiness
