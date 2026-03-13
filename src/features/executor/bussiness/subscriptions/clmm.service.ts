@@ -127,6 +127,7 @@ export class ClmmSubscriptionService {
                     },
                 }
             )
+        console.log(`${liquidityPool?.displayId}: ${activeClmmBots.length}`)
         if (!liquidityPool) {
             throw new LiquidityPoolNotFoundException({
                 id: event.id,
@@ -140,8 +141,6 @@ export class ClmmSubscriptionService {
                 activeClmmBots: activeClmmBots.length,
             }
         )
-        console.log(idleClmmBots.length,
-            activeClmmBots.length)
         // Broadcast open-position request to all idle bots on this pool.
         // No round-robin: each bot owns and opens its own position.
         for (const bot of idleClmmBots) {

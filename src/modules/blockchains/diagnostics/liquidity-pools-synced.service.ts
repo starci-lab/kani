@@ -94,6 +94,7 @@ implements OnModuleInit, OnApplicationBootstrap
                 id: event.id 
             },
         )
+        console.log(`ClmmLiquidityPoolsSynced: ${event.id}`)
         await this.updateAndCheckDiff(event.id)
     }
   

@@ -289,8 +289,6 @@ import {
                 DependencyName.MongodbPrimary,
                 DependencyName.CacheRedis,
                 DependencyName.Nats,
-                DependencyName.Memory,
-                DependencyName.Disk,
                 DependencyName.LockAuthorityRedis,
                 DependencyName.BullmqRedis,
             ],
