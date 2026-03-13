@@ -372,7 +372,7 @@ export const configMap = {
     // Liquidity Pool Updated (observer)
     [WinstonLog.LiquidityPoolUpdated]: {
         name: WinstonLog.LiquidityPoolUpdated,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as LiquidityPoolUpdatedMessage,
@@ -500,7 +500,7 @@ export const configMap = {
     // Coin Market Cap Prices Fetched
     [WinstonLog.CoinMarketCapPricesFetched]: {
         name: WinstonLog.CoinMarketCapPricesFetched,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as CoinMarketCapPricesFetchedMessage,
@@ -516,7 +516,7 @@ export const configMap = {
     // Coingecko Prices Fetched
     [WinstonLog.CoingeckoPricesFetched]: {
         name: WinstonLog.CoingeckoPricesFetched,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as CoingeckoPricesFetchedMessage,
@@ -692,7 +692,7 @@ export const configMap = {
     // Pyth Rest Prices Fetched
     [WinstonLog.PythRestPricesFetched]: {
         name: WinstonLog.PythRestPricesFetched,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as PythRestPricesFetchedMessage,
