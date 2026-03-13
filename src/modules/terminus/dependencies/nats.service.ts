@@ -16,9 +16,6 @@ import {
 import {
     DependencyName 
 } from "./config"
-import {
-    tokenAuthenticator 
-} from "nats"
 
 /**
  * Health check service for NATS.
@@ -35,10 +32,7 @@ export class NatsService {
             transport: Transport.NATS,
             options: {
                 servers: cfg.servers.map(server => `nats://${server.host}:${server.port}`),
-                reconnect: cfg.reconnect,
-                maxReconnectAttempts: cfg.maxReconnectAttempts,
-                pingInterval: cfg.pingIntervalMs,
-                authenticator: cfg.auth.enabled ? (tokenAuthenticator(cfg.auth.token)) : undefined,   
+                token: cfg.auth.enabled ? cfg.auth.token : undefined,
             },
             timeout: envConfig().terminus.timeout,
         }

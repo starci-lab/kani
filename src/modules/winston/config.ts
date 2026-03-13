@@ -23,6 +23,7 @@ import {
     ActionJobCompletedMessage,
     ActionJobFailedMessage,
     ActionJobContextLoadFailedMessage,
+    MemoryUsageMessage,
     MetricInitializedMessage,
     ClosePositionTransactionExecutedMessage,
     ClosePositionTransactionFailedMessage,
@@ -2516,5 +2517,13 @@ export const configMap = {
         loki: true,
         messageType: {
         } as SocketIoClientNotFoundMessage,
+    },
+    // Resources Memory Usage
+    [WinstonLog.ResourcesMemoryUsage]: {
+        name: WinstonLog.ResourcesMemoryUsage,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as MemoryUsageMessage,
     },
 }

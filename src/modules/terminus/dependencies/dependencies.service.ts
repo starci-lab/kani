@@ -9,7 +9,9 @@ import {
 import {
     DependencyName 
 } from "./config"
-import { NatsService } from "./nats.service"
+import {
+    NatsService 
+} from "./nats.service"
 import {
     MongodbService 
 } from "./mongodb.service"

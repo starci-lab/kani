@@ -109,6 +109,9 @@ import {
 import {
     DebugLoggersModule
 } from "@modules/debug"
+import {
+    ResourcesModule,
+} from "@modules/resources"
 
 @Module({
     imports: [
@@ -259,6 +262,9 @@ import {
                 port: envConfig().ports.kaniExecutor,
             }
         ),
+        ResourcesModule.register({
+            isGlobal: true,
+        }),
         MathModule.register({
             isGlobal: true,
         }),
@@ -288,7 +294,7 @@ import {
             dependencies: [
                 DependencyName.MongodbPrimary,
                 DependencyName.CacheRedis,
-                DependencyName.Nats,
+                // DependencyName.Nats,
                 DependencyName.LockAuthorityRedis,
                 DependencyName.BullmqRedis,
             ],

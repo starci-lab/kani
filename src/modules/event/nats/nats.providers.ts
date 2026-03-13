@@ -29,7 +29,7 @@ export const createNatsProvider = (): Provider => ({
             reconnect: cfg.reconnect,
             maxReconnectAttempts: cfg.maxReconnectAttempts,
             pingInterval: cfg.pingIntervalMs,
-            authenticator: cfg.auth.enabled ? (tokenAuthenticator(cfg.auth.token)) : undefined,   
+            token: cfg.auth.enabled ? cfg.auth.token : undefined,
         })
     },
 })
