@@ -36,8 +36,7 @@ import {
     TxBuilderModule, 
     BalanceModule, 
     SnapshotsModule,
-    AggregatorsModule,
-    DiagnosticsModule
+    AggregatorsModule
 } from "@modules/blockchains"
 import {
     CacheModule 
@@ -168,9 +167,6 @@ import {
             },
             associate: envConfig().databases.mongoose.primary.associate,
         }),
-        DiagnosticsModule.register({
-            isGlobal: true,
-        }),
         PrivyModule.register({
             isGlobal: true,
         }),
@@ -189,9 +185,6 @@ import {
         DebugLoggersModule.register({
             isGlobal: true,
             logFileName: "kani-executor.log",
-        }),
-        DiagnosticsModule.register({
-            isGlobal: true,
         }),
         MixinModule.register({
             isGlobal: true,

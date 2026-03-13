@@ -23,7 +23,9 @@ import {
     OpenPositionActionService, 
     ClosePositionEnqueueService, 
     OpenPositionEnqueueService, 
-    ReservesWithFeesActionService 
+    ReservesWithFeesActionService,
+    PriceDiagnosticService,
+    DynamicLiquidityPoolInfoDiagnosticService,
 } from "./orchestrator"
 import {
     RaydiumModule 
@@ -153,6 +155,8 @@ export class DexesModule extends ConfigurableModuleClass {
 
         const orchestratorProviders: Array<Provider> = [
             LiquidityPoolStateService,
+            PriceDiagnosticService,
+            DynamicLiquidityPoolInfoDiagnosticService,
         ]
 
         if (isActionEnabled()) {

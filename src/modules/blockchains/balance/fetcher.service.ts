@@ -120,8 +120,8 @@ export class BalanceFetcherService implements IBalanceFetcherService {
         
         // determine gas status based on token types
         const gasStatus = this.gasStatusService.getGasStatus({
-            targetTokenId: targetToken.displayId,
-            quoteTokenId: quoteToken.displayId,
+            targetToken,
+            quoteToken,
         })
         // get gas configuration for chain
         const minOperationalGasAmount = this.mountStorageService.appConfig.gas.gasAmountRequired?.[bot.chainId]?.minOperationalAmount

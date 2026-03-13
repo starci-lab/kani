@@ -32,6 +32,9 @@ import {
 import {
     LiquidityPoolNotFoundException 
 } from "@modules/exceptions"
+import { 
+    LiquidityPoolsSyncedDiagnosticReadinessCacheService 
+} from "@modules/cache"
 
 @Injectable()
 export class DlmmSubscriptionService {
@@ -42,6 +45,7 @@ export class DlmmSubscriptionService {
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly liquidityPoolsSyncedDiagnosticReadinessCacheService: LiquidityPoolsSyncedDiagnosticReadinessCacheService,
     ) { }
 
     /**
@@ -59,7 +63,11 @@ export class DlmmSubscriptionService {
     async handleDlmmLiquidityPoolsSynced(
         event: DlmmLiquidityPoolsSyncedEventPayload
     ) {
-        // Select bots that are currently idle and associated with THIS DLMM pool
+        // mark the liquidity pool as synced
+        await this.liquidityPoolsSyncedDiagnosticReadinessCacheService.set({
+            id: event.id,
+        })
+        // select bots that are currently idle and associated with THIS DLMM pool
         const idleDlmmBots = await this.connection.model<BotSchema>(BotSchema.name).find({
             executor: {
                 $eq: new Types.ObjectId(envConfig().executor.id),

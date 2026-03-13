@@ -63,15 +63,17 @@ import {
     EvalSnapshotService
 } from "../../eval"
 import {
-    DynamicLiquidityPoolInfoDiagnosticService,
-    PriceDiagnosticService
-} from "../../diagnostics"
-import {
     IndicatorStatus,
     CacheKey, 
     CacheService 
 } from "@modules/cache"
 import _ from "lodash"
+import {
+    PriceDiagnosticService
+} from "./price-diagnostic.service"
+import {
+    DynamicLiquidityPoolInfoDiagnosticService
+} from "./dynamic-liquidity-pool-info-diagnostic.service"
 
 /**
  * Service responsible for enqueuing open position jobs.
@@ -96,10 +98,10 @@ export class OpenPositionEnqueueService {
         private readonly winstonService: WinstonService,
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly evalSnapshotService: EvalSnapshotService,
-        private readonly dynamicLiquidityPoolInfoDiagnosticService: DynamicLiquidityPoolInfoDiagnosticService,
-        private readonly priceDiagnosticService: PriceDiagnosticService,
         private readonly asyncService: AsyncService,
         private readonly cacheService: CacheService,
+        private readonly dynamicLiquidityPoolInfoDiagnosticService: DynamicLiquidityPoolInfoDiagnosticService,
+        private readonly priceDiagnosticService: PriceDiagnosticService,
     ) { }
 
     /**
@@ -463,7 +465,7 @@ export class OpenPositionEnqueueService {
     ): Promise<boolean> {
         try {
             await this.asyncService.allMustDone([
-                // Validate if the dynamic liquidity pool info is ready.
+                // Validate if the liquidity pool info is ready.
                 (async () => {
                     const ready = await this.dynamicLiquidityPoolInfoDiagnosticService.ready(liquidityPool.id)
                     if (!ready) {

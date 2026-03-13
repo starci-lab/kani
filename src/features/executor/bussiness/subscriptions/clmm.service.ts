@@ -34,6 +34,9 @@ import {
 import {
     LiquidityPoolNotFoundException
 } from "@modules/exceptions"
+import { 
+    LiquidityPoolsSyncedDiagnosticReadinessCacheService 
+} from "@modules/cache"
 
 @Injectable()
 export class ClmmSubscriptionService {
@@ -44,6 +47,7 @@ export class ClmmSubscriptionService {
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly liquidityPoolsSyncedDiagnosticReadinessCacheService: LiquidityPoolsSyncedDiagnosticReadinessCacheService,
     ) { }
 
     /**
@@ -61,6 +65,11 @@ export class ClmmSubscriptionService {
     async handleClmmLiquidityPoolsSynced(
         event: ClmmLiquidityPoolsSyncedEventPayload,
     ) {
+        // mark the liquidity pool as synced
+        await this.liquidityPoolsSyncedDiagnosticReadinessCacheService.set({
+            id: event.id,
+        })
+        // select bots that are currently idle and associated with THIS CLMM pool
         const idleClmmBots = await this.connection
             .model<BotSchema>(BotSchema.name)
             .find({
@@ -137,18 +146,22 @@ export class ClmmSubscriptionService {
         // Broadcast open-position request to all idle bots on this pool.
         // No round-robin: each bot owns and opens its own position.
         for (const bot of idleClmmBots) {
-            this.eventEmitterService.emit({
-                event: EventName.ClmmPositionOpenRequested,
-                args: [bot.id],
-                payload: event,
-            })
+            this.eventEmitterService.emit(
+                {
+                    event: EventName.ClmmPositionOpenRequested,
+                    args: [bot.id],
+                    payload: event,
+                }
+            )
         }
         for (const bot of activeClmmBots) {
-            this.eventEmitterService.emit({
-                event: EventName.ClmmPositionCloseRequested,
-                args: [bot.id],
-                payload: event,
-            })
+            this.eventEmitterService.emit(
+                {
+                    event: EventName.ClmmPositionCloseRequested,
+                    args: [bot.id],
+                    payload: event,
+                }
+            )
         }
     }
 }

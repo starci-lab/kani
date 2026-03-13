@@ -446,26 +446,6 @@ export const envConfig = () => ({
                 }),
             },
         },
-        diagnose: {
-            price: {
-                interval: parseEnvMs({
-                    key: "EXECUTOR_DIAGNOSE_PRICE_INTERVAL", defaultValue: "1s"
-                }),
-            },
-            dynamicLiquidityPoolInfo: {
-                interval: parseEnvMs({
-                    key: "EXECUTOR_DIAGNOSE_DYNAMIC_LIQUIDITY_POOL_INFO_INTERVAL", defaultValue: "1s"
-                }),
-            },
-            liquidityPoolsSynced: {
-                interval: parseEnvMs({
-                    key: "EXECUTOR_DIAGNOSE_LIQUIDITY_POOLS_SYNCED_INTERVAL", defaultValue: "1s"
-                }),
-                stale: parseEnvMs({
-                    key: "EXECUTOR_DIAGNOSE_LIQUIDITY_POOLS_SYNCED_STALE", defaultValue: "10s"
-                }),
-            },
-        },
         interval: {
             load: parseEnvMs({
                 key: "EXECUTOR_INTERVAL_LOAD", defaultValue: "10s"
@@ -901,6 +881,14 @@ export const envConfig = () => ({
         level: parseEnvString({
             key: "WINSTON_LEVEL", defaultValue: "verbose"
         }),
+    },
+    /** Diagnostics: liquidity pools synced max age. */
+    diagnostics: {
+        dynamicLiquidityPoolInfo: {
+            staleMs: parseEnvMs({
+                key: "DIAGNOSTICS_DYNAMIC_LIQUIDITY_POOL_INFO_STALE_MS", defaultValue: "10s"
+            }),
+        },
     },
     /** Cache: debug flags/TTL, key TTLs (withdraw, session, pool analytics, etc.), stale price max age. */
     cache: {

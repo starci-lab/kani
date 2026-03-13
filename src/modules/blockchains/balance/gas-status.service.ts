@@ -8,9 +8,6 @@ import {
     TokenType,
 } from "@modules/common"
 import {
-    TokenNotFoundException,
-} from "@modules/exceptions"
-import {
     GasStatus,
 } from "../enums"
 import {
@@ -43,32 +40,10 @@ export class GasStatusService {
      */
     public getGasStatus(
         {
-            targetTokenId,
-            quoteTokenId,
+            targetToken,
+            quoteToken,
         }: GetGasStatusParams,
     ): GasStatus {
-        // Lookup target token
-        const targetToken = this.primaryMemoryStorageService.tokenMap.get(targetTokenId)
-
-        if (!targetToken) {
-            throw new TokenNotFoundException(
-                {
-                    displayId: targetTokenId,
-                }
-            )
-        }
-
-        // Lookup quote token
-        const quoteToken = this.primaryMemoryStorageService.tokenMap.get(quoteTokenId)
-
-        if (!quoteToken) {
-            throw new TokenNotFoundException(
-                {
-                    displayId: quoteTokenId,
-                }
-            )
-        }
-
         // Determine gas status based on token types
         if (targetToken.type === TokenType.Native) {
             return GasStatus.IsTarget

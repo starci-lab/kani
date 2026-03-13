@@ -2,9 +2,6 @@ import {
     Injectable,
 } from "@nestjs/common"
 import {
-    HandleNotSyncedState 
-} from "./types"
-import {
     DayjsService 
 } from "@modules/mixin"
 import {
@@ -41,6 +38,9 @@ import {
 import {
     OnEvent 
 } from "@nestjs/event-emitter"
+import {
+    LiquidityPoolsSyncedDiagnosticReadinessCacheService 
+} from "@modules/cache"
 
 /**
  * Handle not synced service.
@@ -50,7 +50,6 @@ import {
  */
 @Injectable()
 export class HandleNotSyncedService {
-    private readonly results: Map<string, HandleNotSyncedState> = new Map()
     constructor(
         private readonly dayjsService: DayjsService,
         private readonly rotationService: RotationService,
@@ -59,6 +58,7 @@ export class HandleNotSyncedService {
         private readonly handleOpenPositionService: HandleOpenPositionService,
         private readonly winstonService: WinstonService,
         private readonly instanceService: InstanceService,
+        private readonly liquidityPoolsSyncedDiagnosticReadinessCacheService: LiquidityPoolsSyncedDiagnosticReadinessCacheService,
     ) {}
  
     /**
@@ -66,18 +66,10 @@ export class HandleNotSyncedService {
      *
      * @param ids - Array of liquidity pool ids
      */
-    markSynced(
+    async markSynced(
         ids: Array<string>
     ) {
-        const snapshotAt = this.dayjsService.now()
-        for (const id of ids) {
-            this.results.set(
-                id,
-                {
-                    snapshotAt,
-                }
-            )
-        }
+        await this.liquidityPoolsSyncedDiagnosticReadinessCacheService.setMany(ids)
     }
 
     /**
@@ -86,15 +78,17 @@ export class HandleNotSyncedService {
      * @param payload - Liquidity pools became ready event payload
      */
     @OnEvent(EventName.LiquidityPoolsBecameReady)
-    handleLiquidityPoolsBecameReady(
+    async handleLiquidityPoolsBecameReady(
         { ids }: LiquidityPoolsBecameReadyEventPayload
     ) {
         // mark the liquidity pools as synced
-        this.markSynced(ids)
+        await this.markSynced(ids)
         // log the liquidity pools became ready
         const liquidityPools = ids
             .map((id) => this.primaryMemoryStorageService.liquidityPoolMap.get(id))
-            .filter((p): p is NonNullable<typeof p> => p != null)
+            .filter(
+                (liquidityPool): liquidityPool is NonNullable<typeof liquidityPool> => liquidityPool != null
+            )
         if (!liquidityPools) {
             return
         }
@@ -113,25 +107,37 @@ export class HandleNotSyncedService {
      * @param id - Liquidity pool id
      * @returns True if the liquidity pool is synced, false otherwise
      */
-    isSynced(id: string) {
-        const result = this.results.get(id)
-        // get the stale period
-        const stale = envConfig().executor.diagnose.liquidityPoolsSynced.stale
-        // if the result is not found, we check if the instance is created within the stale period
-        if (!result) {
-            const createdAt = this.instanceService.getCreatedAt()
-            return this.dayjsService.now().diff(
-                createdAt,
-                "ms"
-            ) <= stale
-        }
-        // if the result is found, we check if the snapshot is within the stale period
-        const { snapshotAt } = result
-        if (!snapshotAt) return false
+    async isSynced(id: string) {
+        const cache = await this.liquidityPoolsSyncedDiagnosticReadinessCacheService.get()
+        const result = cache.results[id]
+        if (!result) return false
         return this.dayjsService.now().diff(
-            snapshotAt,
+            result.snapshotAt,
             "ms"
-        ) <= stale
+        ) <= envConfig().diagnostics.dynamicLiquidityPoolInfo.staleMs
+    }
+
+    /**
+     * Check if many liquidity pools are synced.
+     *
+     * @param ids - Array of liquidity pool ids
+     * @returns True if the liquidity pools are synced, false otherwise
+     */
+    async isSyncedMany(ids: Array<string>) {
+        const cache = await this.liquidityPoolsSyncedDiagnosticReadinessCacheService.get()
+        return ids.map(id => {
+            const result = cache.results[id]
+            if (!result) return {
+                id, isSynced: false 
+            }
+            return {
+                id,
+                isSynced: this.dayjsService.now().diff(
+                    result.snapshotAt,
+                    "ms"
+                ) <= envConfig().diagnostics.dynamicLiquidityPoolInfo.staleMs
+            }
+        })
     }
    
     /**
@@ -156,7 +162,7 @@ export class HandleNotSyncedService {
                 })
             }
             // check the liquidity pool is not synced
-            if (this.isSynced(liquidityPool.id)) {
+            if (await this.isSynced(liquidityPool.id)) {
                 return
             }
             this.winstonService.log(
@@ -174,18 +180,17 @@ export class HandleNotSyncedService {
                 }
             )
             return
-        }
-        if (bot.activePosition) {
-            return
-        }
+        }   
         const botAssignment = this.rotationService.botAssignments.get(bot.id)
         if (!botAssignment) {
             return
         }
         // we filter the liquidity pools that are not synced
-        const notSyncedPools = botAssignment.liquidityPoolIds.filter(id =>
-            !this.isSynced(id)
+        const notSyncedPools = (
+            await this.isSyncedMany(botAssignment.liquidityPoolIds
+            )
         )
+            .filter(liquidityPool => !liquidityPool.isSynced)
         // if there are no not synced liquidity pools, we return
         if (notSyncedPools.length === 0) return   
         // we take a random synced liquidity pool

@@ -3,7 +3,7 @@ import {
     SuiObjectKind
 } from "@modules/blockchains"
 import {
-    PrimaryMemoryStorageService, LiquidityPoolId, DexId, LiquidityPoolSchema 
+    PrimaryMemoryStorageService, DexId, LiquidityPoolSchema 
 } from "@modules/databases"
 import {
     Injectable, OnApplicationBootstrap, OnModuleInit 
@@ -99,13 +99,10 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
                     await this.jitterService.delayWithJitter(
                         envConfig().dexes.turbos.interval.observer.fetch
                     )
-                    await this.fetchPoolInfo({
-                        liquidityPoolId: liquidityPool.displayId
-                    })
+                    await this.fetchPoolInfo(liquidityPool)
                 })()
             )
         }
-        
         // wait for all fetches to complete
         await this.asyncService.allIgnoreError(promises)
     }
@@ -116,17 +113,8 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
      * @param param - Parameters for fetching pool info
      * @param param.liquidityPoolId - Liquidity pool display ID
      */
-    private async fetchPoolInfo({
-        liquidityPoolId
-    }: {
-        liquidityPoolId: LiquidityPoolId
-    }): Promise<void> {
+    private async fetchPoolInfo(liquidityPool: LiquidityPoolSchema): Promise<void> {
         try {
-            // find liquidity pool by display ID
-            const liquidityPool = this.liquidityPoolMap.get(liquidityPoolId)
-            if (!liquidityPool) {
-                return
-            }
             // fetch pool information from on-chain
             const objectInfo = await this.suiFetchService.fetchObject<TurbosSuiObjectPoolFields>({
                 objectId: liquidityPool.poolAddress,
@@ -144,7 +132,7 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
             this.winstonService.log(
                 WinstonLog.LiquidityPoolFetchedError,
                 {
-                    liquidityPoolId,
+                    liquidityPoolId: liquidityPool.displayId,
                     error: error.message,
                 }
             )
@@ -182,7 +170,8 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
             snapshotAt: this.dayjsService.now(),
             rewardLastUpdatedTimeMs: state.rewardLastUpdatedTimeMs,
         }
-        
+        console.log("send message to event emitter",
+            liquidityPool.displayId)
         // cache result and emit event in parallel
         await this.asyncService.allIgnoreError([
             // store in cache

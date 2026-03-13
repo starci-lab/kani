@@ -112,7 +112,7 @@ export class ClosePositionTaskConfirmService {
                 )
             }
             const gasToken = Array.from(this.primaryMemoryStorageService.tokenMap.values()).find(
-                (t) => t.type === TokenType.Native && t.chainId === bot.chainId,
+                (token) => token.type === TokenType.Native && token.chainId === bot.chainId,
             )
             if (!gasToken) {
                 throw new TokenNotFoundException(
@@ -137,7 +137,7 @@ export class ClosePositionTaskConfirmService {
                 ]
             )
             const nonPairRewardTokens = Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
-                (t) => nonPairRewardTokenAddresses.includes(t.tokenAddress),
+                (token) => nonPairRewardTokenAddresses.includes(token.tokenAddress),
             )
             const {
                 targetBalanceAmount,

@@ -85,4 +85,37 @@ export class LiquidityPoolsSyncedDiagnosticReadinessCacheService {
 
         return cachedResult
     }
+    
+    /**
+     * Sets or updates liquidity pools synced diagnostic readiness for many ids.
+     *
+     * @param ids - Array of liquidity pool ids
+     *
+     * @example
+     * await service.setMany([ "pool-1", "pool-2" ])
+     */
+    async setMany(
+        ids: Array<string>
+    ): Promise<void> {
+        let cacheResult = await this.cacheService.get({
+            key: CacheKey.LiquidityPoolsSyncedDiagnosticReadiness,
+        })
+        const snapshotAt = this.dayjsService.now()
+        if (!cacheResult) {
+            cacheResult = {
+                results: {
+                },
+                snapshotAt,
+            }
+        }
+        for (const id of ids) {
+            cacheResult.results[id] = {
+                snapshotAt,
+            }
+        }
+        await this.cacheService.set({
+            key: CacheKey.LiquidityPoolsSyncedDiagnosticReadiness,
+            cacheResult,
+        })
+    }
 }
