@@ -116,9 +116,10 @@ export class CreateBotService {
             )
         }
         // retrieve the liquidity pools from the cache
-        const liquidityPools = liquidityPoolIds
+        const liquidityPools = liquidityPoolIds ? liquidityPoolIds
             .map((id) => this.primaryMemoryStorageService.liquidityPoolMap.get(id))
-            .filter((p): p is NonNullable<typeof p> => p != null)
+            .filter((liquidityPool): liquidityPool is NonNullable<typeof liquidityPool> => liquidityPool != null)
+            : []
         // create embedded wallet for the bot
         const platformId = chainIdToPlatformId(chainId)
         const generatedKeypair = await this.keypairsService.generateKeypair({

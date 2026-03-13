@@ -105,6 +105,9 @@ import {
 import {
     StreamAsyncIteratorModule 
 } from "@modules/stream-async-iterator"
+import {
+    ResourcesModule 
+} from "@modules/resources"
 
 @Module({
     imports: [
@@ -228,6 +231,9 @@ import {
             isGlobal: true,
         }),
         CodeModule.register({
+            isGlobal: true,
+        }),
+        ResourcesModule.register({
             isGlobal: true,
         }),
         TotpModule.register({
