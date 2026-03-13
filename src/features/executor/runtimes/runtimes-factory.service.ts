@@ -8,6 +8,9 @@ import {
     AsyncService 
 } from "@modules/mixin"
 import {
+    JitterService 
+} from "@modules/mixin"
+import {
     BotsLoaderService 
 } from "../loaders"
 import {
@@ -22,6 +25,9 @@ import type {
 import {
     RuntimeContextService,
 } from "./runtime.context-service"
+import {
+    envConfig 
+} from "@modules/env"
 
 /**
  * Factory service responsible for creating and managing runtime instances for executors.
@@ -37,6 +43,7 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
         private readonly moduleRef: ModuleRef,
         private readonly asyncService: AsyncService,
         private readonly botsLoaderService: BotsLoaderService,
+        private readonly jitterService: JitterService,
     ) {}
 
     /**
@@ -106,7 +113,8 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
         await this.asyncService.allMustDone(
             [
                 (async () => {
-                // Create a unique context ID for this bot's runtime
+                    await this.jitterService.delayWithJitter(envConfig().executor.runtime.creation.delay)
+                    // Create a unique context ID for this bot's runtime
                     const contextId = ContextIdFactory.create()
                     // Register a request-scoped context with the bot ID
                     // This allows request-scoped services to access the bot ID

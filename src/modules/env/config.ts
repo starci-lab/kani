@@ -456,6 +456,11 @@ export const envConfig = () => ({
 
         },
         runtime: {
+            creation: {
+                delay: parseEnvMs({
+                    key: "EXECUTOR_RUNTIME_CREATION_DELAY", defaultValue: "1s"
+                }),
+            },
             interval: {
                 refresh: parseEnvMs({
                     key: "EXECUTOR_RUNTIME_INTERVAL_REFRESH", defaultValue: "10s"

@@ -170,8 +170,6 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
             snapshotAt: this.dayjsService.now(),
             rewardLastUpdatedTimeMs: state.rewardLastUpdatedTimeMs,
         }
-        console.log("send message to event emitter",
-            liquidityPool.displayId)
         // cache result and emit event in parallel
         await this.asyncService.allIgnoreError([
             // store in cache
