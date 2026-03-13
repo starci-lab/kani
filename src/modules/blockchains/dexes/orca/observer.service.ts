@@ -82,11 +82,14 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
      * Initializes observer: wait for primary memory storage, build local pool map for Orca pools.
      */
     async onModuleInit(): Promise<void> {
+        // wait until primary memory storage is ready
         await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
+        // fetch all Orca liquidity pools from primary memory storage
         const liquidityPools = Array.from(this.primaryMemoryStorageService.liquidityPoolMap.values()).filter(
-            (p) => p.dex.toString() === createObjectId(DexId.Orca).toString(),
+            (liquidityPool) => liquidityPool.dex.toString() === createObjectId(DexId.Orca).toString(),
         )
-        this.liquidityPoolMap = new Map(liquidityPools.map((p) => [p.id, p]))
+        this.liquidityPoolMap = new Map(liquidityPools.map((liquidityPool) => [liquidityPool.id,
+            liquidityPool]))
     }
 
     /**
@@ -177,7 +180,8 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
                 dexId: DexId.Orca,
                 liquidityPool,
             })
-            const state = Whirlpool.struct.read(Buffer.from(accountInfo.data), 8)
+            const state = Whirlpool.struct.read(Buffer.from(accountInfo.data),
+                8)
             return await this.handlePoolStateUpdate(liquidityPool,
                 state)
         } catch (error) {
@@ -208,7 +212,8 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
             let timeout: NodeJS.Timeout | undefined = undefined
             const resetTimeout = () => {
                 if (timeout) clearTimeout(timeout)
-                timeout = setTimeout(() => abortController.abort(), liquidityPool.wsIdleTimeoutMs)
+                timeout = setTimeout(() => abortController.abort(),
+                    liquidityPool.wsIdleTimeoutMs)
             }
             await this.retryService.retry({
                 action: async () => {
@@ -228,11 +233,13 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
 
                             for await (const accountNotification of accountNotifications) {
                                 const state = Whirlpool.struct.read(
-                                    Buffer.from(accountNotification.value?.data.toString(), "base64"),
+                                    Buffer.from(accountNotification.value?.data.toString(),
+                                        "base64"),
                                     8,
                                 )
                                 resetTimeout()
-                                await this.handlePoolStateUpdate(liquidityPool, state)
+                                await this.handlePoolStateUpdate(liquidityPool,
+                                    state)
                             }
                         },
                         options: {

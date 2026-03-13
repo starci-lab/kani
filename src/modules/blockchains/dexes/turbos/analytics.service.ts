@@ -34,6 +34,9 @@ import {
 import {
     TurbosPool 
 } from "./types"
+import {
+    Decimal 
+} from "decimal.js"
 
 /**
  * Fetches and caches Turbos pool analytics (fees, volume, TVL, APR) from Turbos API.
@@ -68,21 +71,26 @@ export class TurbosAnalyticsService implements OnModuleInit, OnApplicationBootst
      * Initializes Turbos analytics: wait for primary memory storage, create axios client, build local pool map.
      */
     async onModuleInit(): Promise<void> {
+        // wait until primary memory storage is ready
         await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
+        // create axios instance for Turbos API
         const key = "turbos-analytics"
         this.axios = this.axiosService.create({
             key 
         })
+        // fetch all Turbos liquidity pools from primary memory storage
         const liquidityPools = Array.from(
             this.primaryMemoryStorageService.liquidityPoolMap.values())
             .filter(
                 (liquidityPool) => liquidityPool.dex.toString() === createObjectId(DexId.Turbos).toString(),
             )
+        // create local map snapshot for efficient processing
         this.liquidityPoolMap = new Map(
             liquidityPools.map((liquidityPool) => [liquidityPool.id,
                 liquidityPool
             ]
-            ))
+            )
+        )
     }
 
     /**
@@ -111,11 +119,11 @@ export class TurbosAnalyticsService implements OnModuleInit, OnApplicationBootst
                     }
                     const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
                         snapshotAt,
-                        fee24H: String(Number(item.fee_24h_usd)),
-                        volume24H: String(Number(item.volume_24h_usd)),
-                        tvl: String(Number(item.liquidity_usd)),
-                        apr24H: String(Number(item.apr) / Number(item.apr_percent)),
-                        liquidity: String(Number(item.liquidity_usd)),
+                        fee24H: item.fee_24h_usd.toString(),
+                        volume24H: item.volume_24h_usd.toString(),
+                        tvl: item.liquidity_usd.toString(),
+                        apr24H: new Decimal(item.apr).div(item.apr_percent).toString(),
+                        liquidity: item.liquidity_usd.toString(),
                     }
                     await this.cacheService.set(
                         {

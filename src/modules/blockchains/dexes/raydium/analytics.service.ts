@@ -36,6 +36,9 @@ import {
 import {
     PoolResult
 } from "./types"
+import {
+    Decimal 
+} from "decimal.js"
 
 /**
  * Fetches and caches Raydium pool analytics (fees, volume, TVL, APR) from Raydium API.
@@ -70,16 +73,20 @@ export class RaydiumAnalyticsService implements OnModuleInit, OnApplicationBoots
      * Initializes Raydium analytics: wait for primary memory storage, create axios client, build local pool map.
      */
     async onModuleInit(): Promise<void> {
+        // wait until primary memory storage is ready
         await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
+        // create axios instance for Raydium API
         const key = "raydium-analytics"
         this.axios = this.axiosService.create({
             key
         })
+        // fetch all Raydium liquidity pools from primary memory storage
         const liquidityPools = Array.from(
             this.primaryMemoryStorageService.liquidityPoolMap.values())
             .filter(
                 (liquidityPool) => liquidityPool.dex.toString() === createObjectId(DexId.Raydium).toString(),
             )
+        // create local map snapshot for efficient processing
         this.liquidityPoolMap = new Map(
             liquidityPools.map((liquidityPool) => [liquidityPool.id,
                 liquidityPool
@@ -109,12 +116,12 @@ export class RaydiumAnalyticsService implements OnModuleInit, OnApplicationBoots
                     }
                     const { tvl, day } = poolData
                     const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
-                        fee24H: String(Number(day.volume)),
-                        volume24H: String(Number(day.volumeQuote)),
-                        tvl: String(Number(tvl)),
-                        apr24H: String((Number(day.apr) / 365) / 100),
+                        fee24H: day.volume.toString(),
+                        volume24H: day.volumeQuote.toString(),
+                        tvl: tvl.toString(),
+                        apr24H: new Decimal(day.apr).div(365).div(100).toString(),
                         snapshotAt,
-                        liquidity: String(Number(tvl)),
+                        liquidity: tvl.toString(),
                     }
                     await this.cacheService.set(
                         {

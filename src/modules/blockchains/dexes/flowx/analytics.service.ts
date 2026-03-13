@@ -40,6 +40,9 @@ import {
 import {
     GetClmmPoolDetailRootResult
 } from "./types"
+import {
+    Decimal 
+} from "decimal.js"
 
 /**
  * Fetches and caches FlowX pool analytics (fees, volume, TVL, APR) from FlowX GraphQL API.
@@ -174,12 +177,12 @@ export class FlowXAnalyticsService implements OnModuleInit, OnApplicationBootstr
                             key: CacheKey.PoolAnalytics,
                             args: [liquidityPool.id],
                             cacheResult: {
-                                fee24H: String(Number(item.stats.fee24H)),
-                                volume24H: String(Number(item.stats.volume24H)),
-                                tvl: String(Number(item.stats.totalLiquidityInUSD)),
-                                apr24H: String((Number(item.stats.apr) / 365) / 100),
+                                fee24H: item.stats.fee24H.toString(),
+                                volume24H: item.stats.volume24H.toString(),
+                                tvl: item.stats.totalLiquidityInUSD.toString(),
+                                apr24H: new Decimal(item.stats.apr).div(365).div(100).toString(),
                                 snapshotAt,
-                                liquidity: String(Number(item.stats.totalLiquidityInUSD)),
+                                liquidity: item.stats.totalLiquidityInUSD.toString(),
                             },
                         }
                     )

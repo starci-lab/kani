@@ -45,16 +45,14 @@ import {
     LiquidityPoolSchema 
 } from "@modules/databases"
 /**
- * Service responsible for observing Cetus pool state changes.
- * Periodically fetches pool information from on-chain and updates cache.
+ * Observes Cetus CLMM pools: fetches pool state on an interval, updates cache and emits ClmmLiquidityPoolsSynced.
  *
  * @example
- * const service = new CetusObserverService(...)
- * await service.onModuleInit()
+ * await cetusObserverService.onModuleInit()
+ * // then onApplicationBootstrap starts interval
  */
 @Injectable()
 export class CetusObserverService implements OnApplicationBootstrap, OnModuleInit {
-    /** Snapshot map to reduce computational complexity. */
     private liquidityPoolMap: Map<string, LiquidityPoolSchema> = new Map()
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,

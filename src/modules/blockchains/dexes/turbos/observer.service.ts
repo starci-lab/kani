@@ -1,7 +1,4 @@
 import {
-    LiquidityPoolNotFoundException, 
-} from "@modules/exceptions"
-import {
     SuiFetchService, 
     SuiObjectKind
 } from "@modules/blockchains"
@@ -50,7 +47,7 @@ import {
 @Injectable()
 export class TurbosObserverService implements OnApplicationBootstrap, OnModuleInit {
     /** Array of liquidity pools to observe. */
-    private liquidityPools: Array<LiquidityPoolSchema> = []
+    private liquidityPoolMap: Map<string, LiquidityPoolSchema> = new Map()
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
@@ -69,11 +66,14 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
         // wait until primary memory storage is ready
         await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
         // fetch all Turbos liquidity pools from primary memory storage
-        this.liquidityPools = Array.from(
+        const liquidityPools = Array.from(
             this.primaryMemoryStorageService.liquidityPoolMap.values()
         ).filter(
             (liquidityPool) => liquidityPool.dex.toString() === createObjectId(DexId.Turbos).toString(),
         )
+        // create local map snapshot for efficient processing
+        this.liquidityPoolMap = new Map(liquidityPools.map((liquidityPool) => [liquidityPool.id,
+            liquidityPool]))
     }
 
     /**
@@ -91,7 +91,7 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
     private async handlePoolStateUpdateInterval(): Promise<void> {
         // process all pools in parallel
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.liquidityPools) {
+        for (const liquidityPool of this.liquidityPoolMap.values()) {
             promises.push(
                 (async () => {
                     await this.fetchPoolInfo({
@@ -118,15 +118,11 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
     }): Promise<void> {
         try {
             // find liquidity pool by display ID
-            const liquidityPool = this.liquidityPools.find(
-                liquidityPool => liquidityPool.displayId === liquidityPoolId,
-            )
+            const liquidityPool = this.liquidityPoolMap.get(liquidityPoolId)
             if (!liquidityPool) {
-                throw new LiquidityPoolNotFoundException({
-                    displayId: liquidityPoolId,
-                })
+                return
             }
-            
+            // fetch pool information from on-chain
             const objectInfo = await this.suiFetchService.fetchObject<TurbosSuiObjectPoolFields>({
                 objectId: liquidityPool.poolAddress,
                 kind: SuiObjectKind.Pool,

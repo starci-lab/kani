@@ -39,6 +39,9 @@ import {
 import {
     PoolAnalyticsResult
 } from "./types"
+import {
+    Decimal 
+} from "decimal.js"
 
 /**
  * Fetches and caches Meteora pool analytics (fees, volume, TVL, APR) from Meteora API.
@@ -120,11 +123,11 @@ export class MeteoraAnalyticsService implements OnModuleInit, OnApplicationBoots
                                 args: [liquidityPool.id],
                                 cacheResult: {
                                     fee24H: pair.fees_24h.toString(),
-                                    volume24H: String(Number(pair.trade_volume_24h)),
-                                    tvl: String(Number(pair.liquidity)),
-                                    apr24H: String(Number(pair.apr) / 100),
+                                    volume24H: pair.trade_volume_24h.toString(),
+                                    tvl: pair.liquidity.toString(),
+                                    apr24H: new Decimal(pair.apr).div(100).toString(),
                                     snapshotAt,
-                                    liquidity: String(Number(pair.liquidity)),
+                                    liquidity: pair.liquidity.toString(),
                                 },
                             }
                         )

@@ -148,12 +148,12 @@ export class CetusAnalyticsService implements OnModuleInit, OnApplicationBootstr
                     const { fee, vol } = item.stats[0]
                     
                     const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
-                        fee24H: String(Number(fee)),
-                        volume24H: String(Number(vol)),
-                        tvl: String(Number(tvl)),
-                        apr24H: String(Number(apr)),
+                        fee24H: fee.toString(),
+                        volume24H: vol.toString(),
+                        tvl: tvl.toString(),
+                        apr24H: apr.toString(),
                         snapshotAt,
-                        liquidity: String(Number(tvl)),
+                        liquidity: tvl.toString(),
                     }
                     
                     // cache analytics result

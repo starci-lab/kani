@@ -37,6 +37,9 @@ import {
 import {
     LiquidityPoolsApiResult
 } from "./types"
+import {
+    Decimal 
+} from "decimal.js"
 
 /**
  * Fetches and caches Momentum pool analytics (fees, volume, TVL, APR) from Momentum API.
@@ -115,12 +118,12 @@ export class MomentumAnalyticsService implements OnModuleInit, OnApplicationBoot
                         liquidity,
                     } = pool
                     const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
-                        fee24H: String(Number(fees24h)),
-                        volume24H: String(Number(volume24h)),
-                        tvl: String(Number(tvl)),
-                        apr24H: String((Number(total) / 365) / 100),
+                        fee24H: fees24h.toString(),
+                        volume24H: volume24h.toString(),
+                        tvl: tvl.toString(),
+                        apr24H: new Decimal(total).div(365).div(100).toString(),
                         snapshotAt,
-                        liquidity: String(Number(liquidity)),
+                        liquidity: liquidity.toString(),
                     }
                     await this.cacheService.set(
                         {

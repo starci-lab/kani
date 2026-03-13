@@ -79,11 +79,14 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
      * Initializes observer: wait for primary memory storage, build local pool map for Raydium pools.
      */
     async onModuleInit(): Promise<void> {
+        // wait until primary memory storage is ready
         await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
+        // fetch all Raydium liquidity pools from primary memory storage
         const liquidityPools = Array.from(this.primaryMemoryStorageService.liquidityPoolMap.values()).filter(
-            (p) => p.dex.toString() === createObjectId(DexId.Raydium).toString(),
+            (liquidityPool) => liquidityPool.dex.toString() === createObjectId(DexId.Raydium).toString(),
         )
-        this.liquidityPoolMap = new Map(liquidityPools.map((p) => [p.id, p]))
+        this.liquidityPoolMap = new Map(liquidityPools.map((liquidityPool) => [liquidityPool.id,
+            liquidityPool]))
     }
 
     /**
@@ -178,8 +181,10 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
                 dexId: DexId.Raydium,
                 liquidityPool,
             })
-            const state = PoolState.struct.read(Buffer.from(accountInfo.data), 8)
-            await this.handlePoolStateUpdate(liquidityPool, state)
+            const state = PoolState.struct.read(Buffer.from(accountInfo.data),
+                8)
+            await this.handlePoolStateUpdate(liquidityPool,
+                state)
         } catch (error) {
             this.winstonService.log(
                 WinstonLog.LiquidityPoolFetchedError,
@@ -209,7 +214,8 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
             let timeout: NodeJS.Timeout | undefined = undefined
             const resetTimeout = () => {
                 if (timeout) clearTimeout(timeout)
-                timeout = setTimeout(() => abortController.abort(), liquidityPool.wsIdleTimeoutMs)
+                timeout = setTimeout(() => abortController.abort(),
+                    liquidityPool.wsIdleTimeoutMs)
             }
             await this.retryService.retry({
                 action: async () => {

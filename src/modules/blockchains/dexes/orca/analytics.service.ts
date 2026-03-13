@@ -34,6 +34,9 @@ import {
 import {
     WhirlpoolPoolResult
 } from "./types"
+import {
+    Decimal 
+} from "decimal.js"
 
 /**
  * Fetches and caches Orca pool analytics (fees, volume, TVL, APR) from Orca API.
@@ -109,12 +112,12 @@ export class OrcaAnalyticsService implements OnModuleInit, OnApplicationBootstra
                     const { stats, tvlUsdc, liquidity } = item
                     const { fees, volume, yieldOverTvl } = stats["24h"]
                     const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
-                        fee24H: String(Number(fees)),
-                        volume24H: String(Number(volume)),
-                        tvl: String(Number(tvlUsdc)),
-                        apr24H: String(Number(yieldOverTvl) * 365),
+                        fee24H: fees.toString(),
+                        volume24H: volume.toString(),
+                        tvl: tvlUsdc.toString(),
+                        apr24H: new Decimal(yieldOverTvl).mul(365).toString(),
                         snapshotAt,
-                        liquidity: String(Number(liquidity)),
+                        liquidity: liquidity.toString(),
                     }
                     await this.cacheService.set(
                         {
