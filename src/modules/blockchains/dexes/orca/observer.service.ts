@@ -109,13 +109,13 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
      */
     @Interval(envConfig().dexes.orca.interval.observer.fetch)
     private async handlePoolStateUpdateInterval(): Promise<void> {
-        await this.jitterService.delayWithJitter(
-            envConfig().dexes.orca.interval.observer.fetch
-        )
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {
             promises.push(
                 (async () => {
+                    await this.jitterService.delayWithJitter(
+                        envConfig().dexes.orca.interval.observer.fetch
+                    )
                     await this.fetchPoolInfo(liquidityPool)
                 })()
             )
@@ -170,6 +170,12 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
                 },
             ),
         ])
+        this.winstonService.log(
+            WinstonLog.LiquidityPoolUpdated,
+            {
+                liquidityPoolId: liquidityPool.displayId,
+            }
+        )
     }
 
     /**

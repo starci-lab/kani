@@ -23,10 +23,14 @@ import {
     ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
+    WinstonLog,
+    WinstonService
+} from "@modules/winston"
+import {
     envConfig
 } from "@modules/env"
 import {
-    AxiosService 
+    AxiosService
 } from "@modules/axios"
 import {
     AxiosInstance 
@@ -62,6 +66,7 @@ export class MomentumAnalyticsService implements OnModuleInit, OnApplicationBoot
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly jitterService: JitterService,
+        private readonly winstonService: WinstonService,
     ) {}
 
     /**
@@ -131,6 +136,12 @@ export class MomentumAnalyticsService implements OnModuleInit, OnApplicationBoot
                             key: CacheKey.PoolAnalytics,
                             args: [liquidityPool.id],
                             cacheResult: poolAnalyticsCacheResult,
+                        }
+                    )
+                    this.winstonService.log(
+                        WinstonLog.PoolAnalyticsUpdated,
+                        {
+                            liquidityPoolId: liquidityPool.displayId,
                         }
                     )
                 })(),

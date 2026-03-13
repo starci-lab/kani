@@ -15,6 +15,10 @@ import {
     OnApplicationBootstrap, OnModuleInit
 } from "@nestjs/common"
 import {
+    WinstonLog,
+    WinstonService
+} from "@modules/winston"
+import {
     AsyncService,
     JitterService,
     ReadinessWatcherFactoryService,
@@ -30,9 +34,6 @@ import {
     CacheService,
     CacheKey
 } from "@modules/cache"
-import {
-    WinstonService, WinstonLog
-} from "@modules/winston"
 import {
     DayjsService
 } from "@modules/mixin"
@@ -104,15 +105,15 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
      */
     @Interval(envConfig().dexes.momentum.interval.observer.fetch)
     private async handlePoolStateUpdateInterval() {
-        await this.jitterService.delayWithJitter(
-            envConfig().dexes.momentum.interval.observer.fetch
-        )
         const promises: Array<Promise<void>> = []
         // Iterate over each liquidity pool and fetch its info
         for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {
             promises.push(
                 (
                     async () => {
+                        await this.jitterService.delayWithJitter(
+                            envConfig().dexes.momentum.interval.observer.fetch
+                        )
                         await this.fetchPoolInfo(liquidityPool)
                     })()
             )
@@ -202,6 +203,12 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
                     }
                 ),
             ]
+        )
+        this.winstonService.log(
+            WinstonLog.LiquidityPoolUpdated,
+            {
+                liquidityPoolId: liquidityPool.displayId,
+            }
         )
         return parsed
     }

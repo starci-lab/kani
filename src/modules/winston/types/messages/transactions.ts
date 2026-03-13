@@ -26,6 +26,14 @@ export interface LiquidityPoolFetchedErrorMessage {
     error: string
 }
 
+export interface LiquidityPoolUpdatedMessage {
+    liquidityPoolId: LiquidityPoolId
+}
+
+export interface PoolAnalyticsUpdatedMessage {
+    liquidityPoolId: LiquidityPoolId
+}
+
 export interface LiquidityPoolWsErrorMessage {
     liquidityPoolId: LiquidityPoolId
     error: string

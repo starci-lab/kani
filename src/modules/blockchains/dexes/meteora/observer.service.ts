@@ -111,14 +111,14 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
      */
     @Interval(envConfig().dexes.meteora.interval.observer.fetch)
     async handlePoolStateUpdateInterval() {
-        await this.jitterService.delayWithJitter(
-            envConfig().dexes.meteora.interval.observer.fetch
-        )
         const promises: Array<Promise<void>> = []
         // Iterate over each liquidity pool and fetch its info
         for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {
             promises.push(
                 (async () => {
+                    await this.jitterService.delayWithJitter(
+                        envConfig().dexes.meteora.interval.observer.fetch
+                    )
                     await this.fetchPoolInfo(liquidityPool)
                 })(),
             )
@@ -194,6 +194,12 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
                 }
             ),
         ])
+        this.winstonService.log(
+            WinstonLog.LiquidityPoolUpdated,
+            {
+                liquidityPoolId: liquidityPool.displayId,
+            }
+        )
         return state
     }
 

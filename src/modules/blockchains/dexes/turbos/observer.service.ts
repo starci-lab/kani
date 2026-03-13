@@ -25,7 +25,8 @@ import {
     CacheKey,
 } from "@modules/cache"
 import {
-    WinstonLog, WinstonService 
+    WinstonLog,
+    WinstonService
 } from "@modules/winston"
 import {
     EventEmitterService, EventName 
@@ -91,13 +92,13 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
      */
     @Interval(envConfig().dexes.turbos.interval.observer.fetch)
     private async handlePoolStateUpdateInterval(): Promise<void> {
-        await this.jitterService.delayWithJitter(
-            envConfig().dexes.turbos.interval.observer.fetch
-        )
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of this.liquidityPoolMap.values()) {
             promises.push(
                 (async () => {
+                    await this.jitterService.delayWithJitter(
+                        envConfig().dexes.turbos.interval.observer.fetch
+                    )
                     await this.fetchPoolInfo({
                         liquidityPoolId: liquidityPool.displayId
                     })
@@ -199,7 +200,12 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
                 },
             })
         ])
-        
+        this.winstonService.log(
+            WinstonLog.LiquidityPoolUpdated,
+            {
+                liquidityPoolId: liquidityPool.displayId,
+            }
+        )
         return parsed
     }
 }

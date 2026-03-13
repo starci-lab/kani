@@ -35,6 +35,10 @@ import {
     ApolloClient, gql
 } from "@apollo/client"
 import {
+    WinstonLog,
+    WinstonService
+} from "@modules/winston"
+import {
     GraphQLDataNotFoundException
 } from "@modules/exceptions"
 import {
@@ -65,6 +69,7 @@ export class FlowXAnalyticsService implements OnModuleInit, OnApplicationBootstr
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly jitterService: JitterService,
+        private readonly winstonService: WinstonService,
     ) { }
 
     onApplicationBootstrap() {
@@ -173,18 +178,25 @@ export class FlowXAnalyticsService implements OnModuleInit, OnApplicationBootstr
                     if (!liquidityPool || !liquidityPool.displayId) {
                         return
                     }
+                    const poolAnalyticsCacheResult = {
+                        fee24H: item.stats.fee24H.toString(),
+                        volume24H: item.stats.volume24H.toString(),
+                        tvl: item.stats.totalLiquidityInUSD.toString(),
+                        apr24H: new Decimal(item.stats.apr).div(365).div(100).toString(),
+                        snapshotAt,
+                        liquidity: item.stats.totalLiquidityInUSD.toString(),
+                    }
                     await this.cacheService.set(
                         {
                             key: CacheKey.PoolAnalytics,
                             args: [liquidityPool.id],
-                            cacheResult: {
-                                fee24H: item.stats.fee24H.toString(),
-                                volume24H: item.stats.volume24H.toString(),
-                                tvl: item.stats.totalLiquidityInUSD.toString(),
-                                apr24H: new Decimal(item.stats.apr).div(365).div(100).toString(),
-                                snapshotAt,
-                                liquidity: item.stats.totalLiquidityInUSD.toString(),
-                            },
+                            cacheResult: poolAnalyticsCacheResult,
+                        }
+                    )
+                    this.winstonService.log(
+                        WinstonLog.PoolAnalyticsUpdated,
+                        {
+                            liquidityPoolId: liquidityPool.displayId,
                         }
                     )
                 })(),

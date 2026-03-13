@@ -8,6 +8,10 @@ import {
     Injectable, OnApplicationBootstrap, OnModuleInit 
 } from "@nestjs/common"
 import {
+    WinstonLog,
+    WinstonService
+} from "@modules/winston"
+import {
     AsyncService,
     JitterService,
     ReadinessWatcherFactoryService
@@ -24,10 +28,7 @@ import {
     CacheService,
 } from "@modules/cache"
 import {
-    WinstonLog, WinstonService 
-} from "@modules/winston"
-import {
-    DayjsService 
+    DayjsService
 } from "@modules/mixin"
 import {
     EventEmitterService, EventName 
@@ -95,13 +96,13 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
      */
     @Interval(envConfig().dexes.flowx.interval.observer.fetch)
     private async handlePoolStateUpdateInterval(): Promise<void> {
-        await this.jitterService.delayWithJitter(
-            envConfig().dexes.flowx.interval.observer.fetch
-        )
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {
             promises.push(
                 (async () => {
+                    await this.jitterService.delayWithJitter(
+                        envConfig().dexes.flowx.interval.observer.fetch
+                    )
                     await this.fetchPoolInfo(liquidityPool)
                 })(),
             )
@@ -159,7 +160,7 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
                 tokenAddress: `0x${reward.rewardCoinType}`,
                 emissionPerSecond: reward.rewardPerSeconds,
                 growthGlobal: reward.rewardGrowthGlobal,
-                lastUpdateTimeMs: reward.lastUpdateTime,
+                lastUpdateTimeMs: reward.lastUpdateTime,    
             })),
             feeGrowthGlobalA: state.feeGrowthGlobalX,
             feeGrowthGlobalB: state.feeGrowthGlobalY,
@@ -183,7 +184,12 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
                 },
             }),
         ])
-
+        this.winstonService.log(
+            WinstonLog.LiquidityPoolUpdated,
+            {
+                liquidityPoolId: liquidityPool.displayId,
+            }
+        )
         return parsed
     }
 }

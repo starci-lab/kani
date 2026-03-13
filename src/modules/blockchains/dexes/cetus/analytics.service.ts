@@ -35,6 +35,10 @@ import {
     envConfig 
 } from "@modules/env"
 import {
+    WinstonLog,
+    WinstonService
+} from "@modules/winston"
+import {
     CetusPoolListResult
 } from "./types"
 import {
@@ -66,6 +70,7 @@ export class CetusAnalyticsService implements OnModuleInit, OnApplicationBootstr
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly jitterService: JitterService,
+        private readonly winstonService: WinstonService,
     ) {}
 
     /**
@@ -161,13 +166,19 @@ export class CetusAnalyticsService implements OnModuleInit, OnApplicationBootstr
                         snapshotAt,
                         liquidity: tvl.toString(),
                     }
-                    
+                
                     // cache analytics result
                     await this.cacheService.set({
                         key: CacheKey.PoolAnalytics,
                         args: [liquidityPool.id],
                         cacheResult: poolAnalyticsCacheResult,
                     })
+                    this.winstonService.log(
+                        WinstonLog.PoolAnalyticsUpdated,
+                        {
+                            liquidityPoolId: liquidityPool.displayId,
+                        }
+                    )
                 })(),
             )
         }

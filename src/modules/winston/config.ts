@@ -35,7 +35,9 @@ import {
     GoogleDriveFileDownloadErrorMessage,
     GoogleDriveFileUploadedMessage,
     LiquidityPoolFetchedErrorMessage,
+    LiquidityPoolUpdatedMessage,
     LiquidityPoolWsErrorMessage,
+    PoolAnalyticsUpdatedMessage,
     NoAvailableRpcMessage,
     OpenPositionJobEnqueueFailedMessage,
     OpenPositionJobEnqueuedMessage,
@@ -367,6 +369,14 @@ export const configMap = {
         messageType: {
         } as LiquidityPoolFetchedErrorMessage,
     },
+    // Liquidity Pool Updated (observer)
+    [WinstonLog.LiquidityPoolUpdated]: {
+        name: WinstonLog.LiquidityPoolUpdated,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as LiquidityPoolUpdatedMessage,
+    },
     // Open Position Executed
     [WinstonLog.OpenPositionTransactionExecuted]: {
         name: WinstonLog.OpenPositionTransactionExecuted,
@@ -390,6 +400,14 @@ export const configMap = {
         loki: true,
         messageType: {
         } as LiquidityPoolWsErrorMessage,
+    },
+    // Pool Analytics Updated (analytics)
+    [WinstonLog.PoolAnalyticsUpdated]: {
+        name: WinstonLog.PoolAnalyticsUpdated,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as PoolAnalyticsUpdatedMessage,
     },
     // Swap Transaction Executed
     [WinstonLog.SwapTransactionExecuted]: {

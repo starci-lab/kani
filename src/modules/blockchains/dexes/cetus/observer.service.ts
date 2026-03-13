@@ -100,15 +100,14 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
      */
     @Interval(envConfig().dexes.cetus.interval.observer.fetch)
     private async handlePoolStateUpdateInterval(): Promise<void> {
-        // add jitter to the interval
-        await this.jitterService.delayWithJitter(
-            envConfig().dexes.cetus.interval.observer.fetch
-        )
         // process all pools in parallel
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {
             promises.push(
                 (async () => {
+                    await this.jitterService.delayWithJitter(
+                        envConfig().dexes.cetus.interval.observer.fetch
+                    )
                     await this.fetchPoolInfo(liquidityPool)
                 })()
             )
@@ -195,7 +194,12 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
                 },
             })
         ])
-        
+        this.winstonService.log(
+            WinstonLog.LiquidityPoolUpdated,
+            {
+                liquidityPoolId: liquidityPool.displayId,
+            }
+        )
         return parsed
     }
 }

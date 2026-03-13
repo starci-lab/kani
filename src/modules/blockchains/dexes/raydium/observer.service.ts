@@ -106,13 +106,13 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
      */
     @Interval(envConfig().dexes.raydium.interval.observer.fetch)
     private async handlePoolStateUpdateInterval(): Promise<void> {
-        await this.jitterService.delayWithJitter(
-            envConfig().dexes.raydium.interval.observer.fetch
-        )
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {
             promises.push(
                 (async () => {
+                    await this.jitterService.delayWithJitter(
+                        envConfig().dexes.raydium.interval.observer.fetch
+                    )
                     await this.fetchPoolInfo(liquidityPool)
                 })(),
             )
@@ -169,7 +169,12 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
                 }
             ),
         ])
-
+        this.winstonService.log(
+            WinstonLog.LiquidityPoolUpdated,
+            {
+                liquidityPoolId: liquidityPool.displayId,
+            }
+        )
         return parsed
     }
 

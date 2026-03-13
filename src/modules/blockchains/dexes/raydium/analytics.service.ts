@@ -36,10 +36,14 @@ import {
     envConfig
 } from "@modules/env"
 import {
+    WinstonLog,
+    WinstonService
+} from "@modules/winston"
+import {
     PoolResult
 } from "./types"
 import {
-    Decimal 
+    Decimal
 } from "decimal.js"
 
 /**
@@ -63,6 +67,7 @@ export class RaydiumAnalyticsService implements OnModuleInit, OnApplicationBoots
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly jitterService: JitterService,
+        private readonly winstonService: WinstonService,
     ) { }
 
     /**
@@ -131,6 +136,12 @@ export class RaydiumAnalyticsService implements OnModuleInit, OnApplicationBoots
                             key: CacheKey.PoolAnalytics,
                             args: [liquidityPool.id],
                             cacheResult: poolAnalyticsCacheResult,
+                        }
+                    )
+                    this.winstonService.log(
+                        WinstonLog.PoolAnalyticsUpdated,
+                        {
+                            liquidityPoolId: liquidityPool.displayId,
                         }
                     )
                 })(),

@@ -35,10 +35,14 @@ import {
     envConfig
 } from "@modules/env"
 import {
+    WinstonLog,
+    WinstonService
+} from "@modules/winston"
+import {
     PoolAnalyticsResult
 } from "./types"
 import {
-    Decimal 
+    Decimal
 } from "decimal.js"
 
 /**
@@ -62,6 +66,7 @@ export class MeteoraAnalyticsService implements OnModuleInit, OnApplicationBoots
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly jitterService: JitterService,
+        private readonly winstonService: WinstonService,
     ) {}
 
     /**
@@ -116,18 +121,25 @@ export class MeteoraAnalyticsService implements OnModuleInit, OnApplicationBoots
                         if (!liquidityPool || !liquidityPool.displayId) {
                             return
                         }
+                        const poolAnalyticsCacheResult = {
+                            fee24H: pair.fees_24h.toString(),
+                            volume24H: pair.trade_volume_24h.toString(),
+                            tvl: pair.liquidity.toString(),
+                            apr24H: new Decimal(pair.apr).div(100).toString(),
+                            snapshotAt,
+                            liquidity: pair.liquidity.toString(),
+                        }
                         await this.cacheService.set(
                             {
                                 key: CacheKey.PoolAnalytics,
                                 args: [liquidityPool.id],
-                                cacheResult: {
-                                    fee24H: pair.fees_24h.toString(),
-                                    volume24H: pair.trade_volume_24h.toString(),
-                                    tvl: pair.liquidity.toString(),
-                                    apr24H: new Decimal(pair.apr).div(100).toString(),
-                                    snapshotAt,
-                                    liquidity: pair.liquidity.toString(),
-                                },
+                                cacheResult: poolAnalyticsCacheResult,
+                            }
+                        )
+                        this.winstonService.log(
+                            WinstonLog.PoolAnalyticsUpdated,
+                            {
+                                liquidityPoolId: liquidityPool.displayId,
                             }
                         )
                     })(),

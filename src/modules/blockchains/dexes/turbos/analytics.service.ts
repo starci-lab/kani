@@ -33,10 +33,14 @@ import {
     AxiosInstance
 } from "axios"
 import {
+    WinstonLog,
+    WinstonService
+} from "@modules/winston"
+import {
     TurbosPool
 } from "./types"
 import {
-    Decimal 
+    Decimal
 } from "decimal.js"
 
 /**
@@ -60,6 +64,7 @@ export class TurbosAnalyticsService implements OnModuleInit, OnApplicationBootst
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly jitterService: JitterService,
+        private readonly winstonService: WinstonService,
     ) { }
 
     /**
@@ -132,6 +137,12 @@ export class TurbosAnalyticsService implements OnModuleInit, OnApplicationBootst
                             key: CacheKey.PoolAnalytics,
                             args: [liquidityPool.id],
                             cacheResult: poolAnalyticsCacheResult,
+                        }
+                    )
+                    this.winstonService.log(
+                        WinstonLog.PoolAnalyticsUpdated,
+                        {
+                            liquidityPoolId: liquidityPool.displayId,
                         }
                     )
                 })(),
