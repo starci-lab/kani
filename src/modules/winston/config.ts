@@ -404,7 +404,7 @@ export const configMap = {
     // Pool Analytics Updated (analytics)
     [WinstonLog.PoolAnalyticsUpdated]: {
         name: WinstonLog.PoolAnalyticsUpdated,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as PoolAnalyticsUpdatedMessage,
