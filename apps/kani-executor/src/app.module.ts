@@ -230,8 +230,6 @@ import {
         EventModule.register({
             isGlobal: true,
             nats: {
-                queueGroup: `${ServiceName.KaniExecutor}-${envConfig().executor.id}`,
-                createStreamsIfNotExists: true,
                 subjects: [
                     EventName.ReinitializeBalancers,
                     EventName.ClmmLiquidityPoolsSynced,

@@ -5,7 +5,7 @@
  * and stream connection factory for AsyncIterable usage.
  *
  * @example
- * NatsModule.register({ queueGroup: 'my-group', subjects: ['event.1'] })
+ * NatsModule.register({ subjects: ['event.1'] })
  */
 import type {
     Provider 
@@ -20,17 +20,11 @@ import {
     NatsBridgeService 
 } from "./nats-bridge.service"
 import {
-    NatsConsumerService 
-} from "./consumer.service"
-import {
     NatsMessageFactoryService 
 } from "./nats-message-factory.service"
 import {
     NatsProducerService 
 } from "./producer.service"
-import {
-    NatsStreamConnectionService 
-} from "./nats-stream-connection.service"
 import {
     ConfigurableModuleClass,
     OPTIONS_TYPE,
@@ -48,10 +42,8 @@ export class NatsModule extends ConfigurableModuleClass {
         const providers: Array<Provider> = [
             createNatsProvider(),
             NatsProducerService,
-            NatsConsumerService,
             NatsMessageFactoryService,
             NatsBridgeService,
-            NatsStreamConnectionService,
             InstanceService,
         ]
 

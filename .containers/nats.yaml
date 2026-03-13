@@ -1,0 +1,11 @@
+
+# Copyright Broadcom, Inc. All Rights Reserved.
+# SPDX-License-Identifier: APACHE-2.0
+
+services:
+  nats:
+    image: docker.io/bitnamilegacy/nats:latest
+    ports:
+      - '4222:4222'
+      - '6222:6222'
+      - '8222:8222'

@@ -70,8 +70,6 @@ import {
         EventModule.register({
             isGlobal: true,
             nats: {
-                createStreamsIfNotExists: true,
-                queueGroup: ServiceName.KaniCoordinator,
             },
         }),
         WinstonModule.register({

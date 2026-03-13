@@ -64,21 +64,23 @@ export class NatsStreamConnection implements StreamConnection<Msg> {
 
         const iterateAll = async (): Promise<void> => {
             const subs = [...this.subscriptions]
-            const pending = subs.map(async (sub) => {
-                for await (const msg of sub) {
-                    if (this.onDataHandler) {
-                        try {
-                            await this.onDataHandler(msg)
-                        } catch (error) {
-                            if (this.onErrorHandler) {
-                                this.onErrorHandler(
-                                    error instanceof Error ? error : new Error(String(error)),
-                                )
+            const pending = subs.map(
+                async (sub) => {
+                    for await (const msg of sub) {
+                        if (this.onDataHandler) {
+                            try {
+                                this.onDataHandler(msg)
+                            } catch (error) {
+                                if (this.onErrorHandler) {
+                                    this.onErrorHandler(
+                                        error instanceof Error ? error : new Error(String(error)),
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            })
+            )
             await Promise.all(pending)
         }
         void iterateAll()

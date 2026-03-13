@@ -1352,9 +1352,21 @@ export const envConfig = () => ({
     },
     /** NATS: server URL, reconnect, ping; used by coordinator/executor. */
     nats: {
-        servers: parseEnvString({
-            key: "NATS_SERVERS", defaultValue: "nats://localhost:4222"
-        }).split(",").map(s => s.trim()),
+        servers: Array.from({
+            length: parseEnvInt({
+                key: "NATS_SERVERS_COUNT", defaultValue: 1
+            })
+        },
+        (_, i) => ({
+            host: parseEnvString({
+                key: `NATS_SERVER_${i + 1}_HOST`,
+                defaultValue: "localhost"
+            }),
+            port: parseEnvInt({
+                key: `NATS_SERVER_${i + 1}_PORT`,
+                defaultValue: 4222
+            }),
+        })),
         reconnect: parseEnvBoolean({
             key: "NATS_RECONNECT", defaultValue: true
         }),

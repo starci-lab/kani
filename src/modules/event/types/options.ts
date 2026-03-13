@@ -1,4 +1,6 @@
-import type { NatsOptions } from "../nats"
+import type {
+    NatsOptions 
+} from "../nats"
 
 /** Event module registration options. */
 export interface EventOptions {

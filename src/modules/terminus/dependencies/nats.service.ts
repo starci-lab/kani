@@ -1,5 +1,9 @@
-import { envConfig } from "@modules/env"
-import { Injectable } from "@nestjs/common"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     HealthIndicatorResult,
     MicroserviceHealthIndicator,
@@ -9,7 +13,9 @@ import {
     MicroserviceOptions,
     Transport,
 } from "@nestjs/microservices"
-import { DependencyName } from "./config"
+import {
+    DependencyName 
+} from "./config"
 
 /**
  * Health check service for NATS.

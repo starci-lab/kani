@@ -277,4 +277,7 @@ export enum WinstonLog {
     AggregatedTokenPriceArrayNotFound = "Aggregated.Token.Price.Array.Not.Found",
     InfluxDBBootstrappedSuccessfully = "InfluxDB.Bootstrapped.Successfully",
     InfluxDBBootstrappedFailed = "InfluxDB.Bootstrapped.Failed",
+    NatsConsumerOpened = "Nats.Consumer.Opened",
+    NatsConsumerClosed = "Nats.Consumer.Closed",
+    NatsConsumerError = "Nats.Consumer.Error",
 }

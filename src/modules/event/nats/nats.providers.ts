@@ -24,8 +24,8 @@ export const createNatsProvider = (): Provider => ({
     inject: [],
     useFactory: async () => {
         const cfg = envConfig().nats
-        return connect({
-            servers: cfg.servers,
+        return await connect({
+            servers: cfg.servers.map(server => `nats://${server.host}:${server.port}`),
             reconnect: cfg.reconnect,
             maxReconnectAttempts: cfg.maxReconnectAttempts,
             pingInterval: cfg.pingIntervalMs,

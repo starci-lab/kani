@@ -7,10 +7,6 @@ import type {
 
 /** Options for configuring the NATS module. */
 export interface NatsOptions {
-    /** Queue group for the NATS consumer (optional). */
-    queueGroup?: string
-    /** Whether to create streams if they do not exist (JetStream). */
-    createStreamsIfNotExists?: boolean
     /** Subjects to subscribe to. */
     subjects?: Array<string>
 }
@@ -44,8 +40,6 @@ export type NatsSubscribeCallback = (
 export interface NatsStreamConnectionParams {
     /** Subjects to subscribe to. */
     subjects: Array<string>
-    /** Optional queue group (overrides module option for this connection). */
-    queueGroup?: string
 }
 
 /**

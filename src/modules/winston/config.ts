@@ -232,6 +232,9 @@ import {
     WithdrawLockAuthorityReleasedMessage,
     ConsulRegisterFailedMessage,
     ConsulRegisterSuccessfullyMessage,
+    NatsConsumerOpenedMessage,
+    NatsConsumerClosedMessage,
+    NatsConsumerErrorMessage,
     InfluxDBBootstrappedSuccessfullyMessage,
     InfluxDBBootstrappedFailedMessage,
     JobEnqueuedMessage,
@@ -2026,6 +2029,30 @@ export const configMap = {
         loki: true,
         messageType: {
         } as ConsulRegisterSuccessfullyMessage,
+    },
+    // Nats Consumer Opened
+    [WinstonLog.NatsConsumerOpened]: {
+        name: WinstonLog.NatsConsumerOpened,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as NatsConsumerOpenedMessage,
+    },
+    // Nats Consumer Closed
+    [WinstonLog.NatsConsumerClosed]: {
+        name: WinstonLog.NatsConsumerClosed,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as NatsConsumerClosedMessage,
+    },
+    // Nats Consumer Error
+    [WinstonLog.NatsConsumerError]: {
+        name: WinstonLog.NatsConsumerError,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as NatsConsumerErrorMessage,
     },
     // Not Synced Process Open Position
     [WinstonLog.NotSyncedProcessOpenPosition]: {

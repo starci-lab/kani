@@ -158,8 +158,6 @@ import {
         EventModule.register({
             isGlobal: true,
             nats: {
-                createStreamsIfNotExists: true,
-                queueGroup: ServiceName.KaniObserver,
                 subjects: [
                     EventName.ReinitializeBalancers,
                 ],
