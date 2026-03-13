@@ -1,17 +1,21 @@
 import {
-    Injectable, OnApplicationBootstrap 
+    Injectable, OnApplicationBootstrap
 } from "@nestjs/common"
 import {
-    AxiosService 
+    AxiosService
 } from "@modules/axios"
 import {
     MarketListingId,
 } from "@modules/databases"
 import {
-    AsyncService, 
+    sleep
+} from "@modules/common"
+import {
+    AsyncService,
+    JitterService,
 } from "@modules/mixin"
 import {
-    envConfig 
+    envConfig
 } from "@modules/env"
 import {
     CoingeckoTokenRegistryService 
@@ -53,6 +57,7 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
     constructor(
         private readonly axiosService: AxiosService,
         private readonly asyncService: AsyncService,
+        private readonly jitterService: JitterService,
         private readonly coingeckoTokenRegistryService: CoingeckoTokenRegistryService,
         private readonly winstonService: WinstonService,
         private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
@@ -79,7 +84,9 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
      */
     @Interval(envConfig().priceFeeds.coingecko.interval.rest)
     async fetchPricesInterval() {
-        // Fetch prices on scheduled interval
+        await this.jitterService.delayWithJitter(
+            envConfig().priceFeeds.coingecko.interval.rest
+        )
         await this.fetchPrices()
     }
 
@@ -91,35 +98,29 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
         // Get all coin IDs that need price updates
         const symbols = this.coingeckoTokenRegistryService.getSymbols()
         if (!symbols.length) return
-        try {  
-            // Split coin IDs into chunks for batch processing
+        try {
             const chunks = _.chunk(symbols,
                 envConfig().priceFeeds.coingecko.chunks.rest)
-            // Fetch prices for all chunks in parallel
-            const prices = await this.asyncService.allIgnoreError(
-                chunks.map(
-                    async (chunk) => {
-                        // Fetch latest prices from Coingecko API
-                        const response = await this.axios.get<CoingeckoTokenPriceResult>(
-                            "https://api.coingecko.com/api/v3/simple/price",
-                            {
-                                params: {
-                                    ids: chunk.join(","),
-                                    vs_currencies: "usd",
-                                },
-                            }
-                        )
-                        const prices = response.data
-                        // Transform API response to price data format
-                        return Object.entries(prices).map(([coinId,
-                            data]) => ({
-                            coinId,
-                            price: data?.usd ?? 0,
-                        }))
-                    }
-                )
-            )
-            // Map to internal price data format
+            const prices: Array<Array<{ coinId: string, price: number }>> = []
+            for (const chunk of chunks) {
+                await this.asyncService.safeRun(async () => {
+                    const response = await this.axios.get<CoingeckoTokenPriceResult>(
+                        "https://api.coingecko.com/api/v3/simple/price",
+                        {
+                            params: {
+                                ids: chunk.join(","),
+                                vs_currencies: "usd",
+                            },
+                        }
+                    )
+                    const chunkPrices = Object.entries(response.data).map(([coinId, data]) => ({
+                        coinId,
+                        price: data?.usd ?? 0,
+                    }))
+                    prices.push(chunkPrices)
+                })
+                await sleep(envConfig().priceFeeds.coingecko.interval.restRequestDelayMs)
+            }
             const priceData = prices.flat().map<CoingeckoTokenPriceData>(data => ({
                 coinId: data?.coinId ?? "",
                 price: data?.price ?? 0,

@@ -1,18 +1,22 @@
 import {
-    Injectable, OnApplicationBootstrap, OnModuleInit 
+    Injectable, OnApplicationBootstrap, OnModuleInit
 } from "@nestjs/common"
 import {
-    AxiosService 
+    AxiosService
 } from "@modules/axios"
 import {
     MarketListingId,
 } from "@modules/databases"
 import {
-    AsyncService, 
+    sleep
+} from "@modules/common"
+import {
+    AsyncService,
+    JitterService,
     RetryService,
 } from "@modules/mixin"
 import {
-    envConfig 
+    envConfig
 } from "@modules/env"
 import {
     WinstonLog, WinstonService 
@@ -58,6 +62,7 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
         private readonly axiosService: AxiosService,
         private readonly asyncService: AsyncService,
         private readonly retryService: RetryService,
+        private readonly jitterService: JitterService,
         private readonly coinMarketCapTokenRegistryService: CoinMarketCapTokenRegistryService,
         private readonly winstonService: WinstonService,
         private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
@@ -95,7 +100,9 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
      */
     @Interval(envConfig().priceFeeds.coinmarketcap.interval.rest)
     async fetchPricesInterval() {
-        // Fetch prices on scheduled interval
+        await this.jitterService.delayWithJitter(
+            envConfig().priceFeeds.coinmarketcap.interval.rest
+        )
         await this.fetchPrices()
     }
 
@@ -108,41 +115,35 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
         const symbols = this.coinMarketCapTokenRegistryService.getSymbols()
         if (!symbols.length) return
         try {
-            // Split symbols into chunks for batch processing
             const chunks = _.chunk(symbols,
                 envConfig().priceFeeds.coinmarketcap.chunks.rest)
-            // Fetch prices for all chunks in parallel
-            const prices = await this.asyncService.allIgnoreError(
-                chunks.map(
-                    async (chunk) => {
-                        // Retry on failure to ensure reliability
-                        const prices = await this.retryService.retry(
-                            {
-                                action: async () => {
-                                    // Join chunk IDs for API request
-                                    const ids = chunk.join(",")
-                                    // Fetch latest quotes from CoinMarketCap API
-                                    const response = await this.axios.get<CoinMarketCapTokenPriceResult>(
-                                        "/v1/cryptocurrency/quotes/latest",
-                                        {
-                                            params: {
-                                                id: ids,
-                                            },
-                                        }
-                                    )
-                                    return response.data
-                                },
-                            }
-                        )
-                        // Transform API response to price data format
-                        return Object.entries(prices.data || {
-                        }).map(([symbol,
-                            data]) => ({
-                            symbol,
-                            price: data?.quote?.USD?.price ?? 0,
-                        }))
+            const prices: Array<Array<{ symbol: string, price: number }>> = []
+            for (const chunk of chunks) {
+                await this.asyncService.safeRun(async () => {
+                    const result = await this.retryService.retry({
+                        action: async () => {
+                            const ids = chunk.join(",")
+                            const response = await this.axios.get<CoinMarketCapTokenPriceResult>(
+                                "/v1/cryptocurrency/quotes/latest",
+                                {
+                                    params: {
+                                        id: ids 
+                                    } 
+                                }
+                            )
+                            return response.data
+                        },
+                    })
+                    const chunkPrices = Object.entries(result.data || {
+                    }).map(([symbol,
+                        data]) => ({
+                        symbol,
+                        price: data?.quote?.USD?.price ?? 0,
                     }))
-            // Map to internal price data format
+                    prices.push(chunkPrices)
+                })
+                await sleep(envConfig().priceFeeds.coinmarketcap.interval.restRequestDelayMs)
+            }
             const priceData = prices.flat().map<CoinMarketCapTokenPriceData>(data => ({
                 symbol: data?.symbol ?? "",
                 price: data?.price ?? 0,

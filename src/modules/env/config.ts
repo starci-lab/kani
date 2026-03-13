@@ -131,6 +131,9 @@ export const envConfig = () => ({
                 rest: parseEnvMs({
                     key: "PRICE_FEEDS_COINGECKO_INTERVAL_REST", defaultValue: "10s"
                 }),
+                restRequestDelayMs: parseEnvMs({
+                    key: "PRICE_FEEDS_COINGECKO_INTERVAL_REST_REQUEST_DELAY_MS", defaultValue: "1s"
+                }),
             },
             chunks: {
                 rest: parseEnvInt({
@@ -142,6 +145,9 @@ export const envConfig = () => ({
             interval: {
                 rest: parseEnvMs({
                     key: "PRICE_FEEDS_PYTH_INTERVAL_REST", defaultValue: "10s"
+                }),
+                restRequestDelayMs: parseEnvMs({
+                    key: "PRICE_FEEDS_PYTH_INTERVAL_REST_REQUEST_DELAY_MS", defaultValue: "1s"
                 }),
             },
             chunks: {
@@ -157,6 +163,9 @@ export const envConfig = () => ({
             interval: {
                 rest: parseEnvMs({
                     key: "PRICE_FEEDS_COINMARKETCAP_INTERVAL_REST", defaultValue: "5m"
+                }),
+                restRequestDelayMs: parseEnvMs({
+                    key: "PRICE_FEEDS_COINMARKETCAP_INTERVAL_REST_REQUEST_DELAY_MS", defaultValue: "1s"
                 }),
             },
             chunks: {

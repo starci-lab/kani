@@ -15,11 +15,15 @@ import {
     toDecimalAmount 
 } from "@modules/common"
 import {
-    AsyncService, 
+    sleep
+} from "@modules/common"
+import {
+    AsyncService,
+    JitterService,
     RetryService,
 } from "@modules/mixin"
 import {
-    envConfig 
+    envConfig
 } from "@modules/env"
 import {
     PythTokenRegistryService 
@@ -57,6 +61,7 @@ export class PythRestService implements OnApplicationBootstrap {
         @InjectHermesClient() private readonly hermesClient: HermesClient,
         private readonly asyncService: AsyncService,
         private readonly retryService: RetryService,
+        private readonly jitterService: JitterService,
         private readonly pythTokenRegistryService: PythTokenRegistryService,
         private readonly winstonService: WinstonService,
         private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
@@ -77,7 +82,9 @@ export class PythRestService implements OnApplicationBootstrap {
      */
     @Interval(envConfig().priceFeeds.pyth.interval.rest)
     async fetchPricesInterval() {
-        // Fetch prices on scheduled interval
+        await this.jitterService.delayWithJitter(
+            envConfig().priceFeeds.pyth.interval.rest
+        )
         await this.fetchPrices()
     }
 
@@ -90,23 +97,20 @@ export class PythRestService implements OnApplicationBootstrap {
         const symbols = this.pythTokenRegistryService.getSymbols()
         if (!symbols.length) return
         try {
-            // Split symbols into chunks for batch processing
             const chunks = _.chunk(symbols,
                 envConfig().priceFeeds.pyth.chunks.rest)
-            // Fetch prices for all chunks in parallel
-            const prices = await this.asyncService.allIgnoreError(
-                chunks.map(
-                    async (chunk) => {
-                        // Retry on failure to ensure reliability
-                        const prices = await this.retryService.retry(
-                            {
-                                action: () => this.hermesClient.getLatestPriceUpdates(chunk),
-                            }
-                        )
-                        return prices.parsed
-                    }))
-            // Transform API response to internal price data format
-            const priceData = prices.flat().map<PythTokenPriceData>(
+            const parsedChunks: Array<Array<{ id: string, ema_price?: { price: string, expo: number } }>> = []
+            for (const chunk of chunks) {
+                await this.asyncService.safeRun(async () => {
+                    const result = await this.retryService.retry({
+                        action: () => this.hermesClient.getLatestPriceUpdates(chunk),
+                    })
+                    parsedChunks.push(result.parsed ?? [])
+                })
+                await sleep(envConfig().priceFeeds.pyth.interval.restRequestDelayMs)
+            }
+            const prices = parsedChunks.flat()
+            const priceData = prices.map<PythTokenPriceData>(
                 data => {
                     // Convert price from BN with exponent to decimal
                     const price = toDecimalAmount({

@@ -2,11 +2,17 @@ import {
     MarketListingId, PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
-    Injectable 
+    Injectable, OnModuleInit
 } from "@nestjs/common"
 import {
     PythTokenPriceData, PythTokenPrice 
 } from "./types/token-price"
+import {
+    TokenSchema 
+} from "@modules/databases"
+import {
+    ReadinessWatcherFactoryService 
+} from "@modules/mixin"
 
 /**
  * Service for managing Pyth token registry and price resolution.
@@ -18,10 +24,26 @@ import {
  * const prices = service.resolvePythTokenPrices(priceData)
  */
 @Injectable()
-export class PythTokenRegistryService {
+export class PythTokenRegistryService implements OnModuleInit {
+    private tokenMap: Map<string, TokenSchema> = new Map()
     constructor(
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+    private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
+
+    /**
+     * Initializes the token registry by fetching all tokens with Pyth market listings.
+     */
+    async onModuleInit() {
+        // wait until primary memory storage is ready
+        await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
+        this.tokenMap = new Map(Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
+            (token) => token.marketListings?.some(
+                (marketListing) => marketListing.id === MarketListingId.Pyth),
+        ).map((token) => [token.id,
+            token])
+        )
+    }
 
     /**
      * Gets all Pyth feed symbols for tokens with Pyth market listings.

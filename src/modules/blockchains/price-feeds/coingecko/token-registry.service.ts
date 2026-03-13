@@ -1,12 +1,18 @@
 import {
-    Injectable 
+    Injectable, OnModuleInit
 } from "@nestjs/common"
 import {
     MarketListingId, PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
     CoingeckoTokenPrice, CoingeckoTokenPriceData 
-} from "./types/token-price"
+} from "./types"
+import {
+    ReadinessWatcherFactoryService 
+} from "@modules/mixin"
+import {
+    TokenSchema 
+} from "@modules/databases"
 
 /**
  * Service for managing Coingecko token registry and price resolution.
@@ -18,11 +24,23 @@ import {
  * const prices = service.resolveCoingeckoTokenPrices(priceData)
  */
 @Injectable()
-export class CoingeckoTokenRegistryService {
+export class CoingeckoTokenRegistryService implements OnModuleInit {
+    private tokenMap: Map<string, TokenSchema> = new Map()
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
 
+    async onModuleInit() {
+        // wait until primary memory storage is ready
+        await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
+        this.tokenMap = new Map(Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
+            (token) => token.marketListings?.some(
+                (marketListing) => marketListing.id === MarketListingId.Coingecko),
+        ).map((token) => [token.id,
+            token])
+        )
+    }
     /**
      * Gets all Coingecko coin IDs for tokens with Coingecko market listings.
      *
@@ -36,11 +54,8 @@ export class CoingeckoTokenRegistryService {
      */
     getSymbols(): Array<string> {
         // Find all tokens with Coingecko market listings
-        const tokens = Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
-            (t) => t.marketListings?.some((m) => m.id === MarketListingId.Coingecko),
-        )
+        const tokens = Array.from(this.tokenMap.values())
         if (!tokens.length) return []
-
         // Extract unique symbols (coin IDs) from market listings
         return [
             ...new Set(
@@ -66,9 +81,7 @@ export class CoingeckoTokenRegistryService {
         tokenPriceData: Array<CoingeckoTokenPriceData>
     ): Array<CoingeckoTokenPrice> {
         // Find all tokens with Coingecko market listings
-        const tokens = Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
-            (t) => t.marketListings?.some((m) => m.id === MarketListingId.Coingecko),
-        )
+        const tokens = Array.from(this.tokenMap.values())
         if (!tokens.length) return []
         // Map tokens to prices by matching coin IDs
         return tokens
