@@ -26,9 +26,6 @@ import {
     WinstonService 
 } from "@modules/winston"
 import {
-    InstanceService 
-} from "@modules/mixin"
-import {
     LiquidityPoolNotFoundException 
 } from "@modules/exceptions"
 import {
@@ -57,7 +54,6 @@ export class HandleNotSyncedService {
         private readonly handleClosePositionService: HandleClosePositionService,
         private readonly handleOpenPositionService: HandleOpenPositionService,
         private readonly winstonService: WinstonService,
-        private readonly instanceService: InstanceService,
         private readonly liquidityPoolsSyncedDiagnosticReadinessCacheService: LiquidityPoolsSyncedDiagnosticReadinessCacheService,
     ) {}
  
