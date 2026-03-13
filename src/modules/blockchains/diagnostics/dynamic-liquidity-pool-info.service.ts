@@ -79,8 +79,10 @@ implements OnModuleInit, OnApplicationBootstrap
             await this.lokiJSService.createCollection<LiquidityPoolSchema>({
                 name: "dynamic-liquidity-pool-info-diagnostic-pools",
                 options: {
-                    indices: ["displayId",
-                        "id"],
+                    indices: [
+                        "displayId",
+                        "id"
+                    ],
                 },
             })
 

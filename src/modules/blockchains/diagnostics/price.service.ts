@@ -71,8 +71,10 @@ implements OnModuleInit, OnApplicationBootstrap {
             await this.lokiJSService.createCollection<TokenSchema>({
                 name: "price-diagnostic-tokens",
                 options: {
-                    indices: ["displayId",
-                        "id"],
+                    indices: [
+                        "displayId",
+                        "id"
+                    ],
                 },
             })
 

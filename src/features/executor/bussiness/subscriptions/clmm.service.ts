@@ -127,7 +127,6 @@ export class ClmmSubscriptionService {
                     },
                 }
             )
-        console.log(`${liquidityPool?.displayId}: ${activeClmmBots.length}`)
         if (!liquidityPool) {
             throw new LiquidityPoolNotFoundException({
                 id: event.id,

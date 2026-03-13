@@ -197,7 +197,6 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                 }
             }
         }
-
         // stage: simulation (optional)
         if (stimulate) {
             await this.solanaStimulateService.stimulate({
