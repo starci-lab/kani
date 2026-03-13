@@ -82,16 +82,10 @@ export class ClosePositionActionService {
      * @throws {DexNotFoundException} If the DEX is not found in memory storage
      */
     private getDexOrThrow(id: string) {
-        const dex = this.primaryMemoryStorageService.dexCollection.findOne({
-            id: {
-                $eq: id,
-            },
-        })
-
-        // Stage: state validation (DEX must exist)
+        const dex = this.primaryMemoryStorageService.dexMap.get(id)
         if (!dex) {
             throw new DexNotFoundException({
-                id 
+                id: id 
             })
         }
         return dex

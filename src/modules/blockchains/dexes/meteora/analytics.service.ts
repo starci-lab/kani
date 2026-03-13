@@ -28,74 +28,74 @@ import {
     AsyncService 
 } from "@modules/mixin"
 import {
-    envConfig 
-} from "@modules/env"
-import Decimal from "decimal.js"
-import {
-    DayjsService, 
-    LokiJSService
+    ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
-    Collection 
-} from "lokijs"
+    envConfig 
+} from "@modules/env"
+import {
+    DayjsService, 
+} from "@modules/mixin"
 import {
     PoolAnalyticsResult
 } from "./types"
 
 /**
- * Service responsible for fetching and caching Meteora pool analytics data.
- * Uses Meteora API to retrieve pool statistics and metrics.
+ * Fetches and caches Meteora pool analytics (fees, volume, TVL, APR) from Meteora API.
  *
  * @example
- * const service = new MeteoraAnalyticsService(...)
- * await service.onModuleInit()
+ * await meteoraAnalyticsService.onModuleInit()
+ * // then handleAnalyticsUpdateInterval runs on schedule
  */
 @Injectable()
 export class MeteoraAnalyticsService implements OnModuleInit, OnApplicationBootstrap {
     private readonly url = "https://dlmm-api.meteora.ag/pair/all_by_groups"
-    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
+    private liquidityPoolMap: Map<string, LiquidityPoolSchema> = new Map()
     private axios: AxiosInstance
+
     constructor(
     private readonly axiosService: AxiosService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly cacheService: CacheService,
     private readonly asyncService: AsyncService,
     private readonly dayjsService: DayjsService,
-    private readonly lokiJSService: LokiJSService,
+    private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
 
-    onApplicationBootstrap() {
+    /**
+     * Starts the analytics update interval on application bootstrap.
+     */
+    onApplicationBootstrap(): void {
         this.handleAnalyticsUpdateInterval()
     }
 
-    async onModuleInit() {
+    /**
+     * Initializes Meteora analytics: wait for primary memory storage, create axios client, build local pool map.
+     */
+    async onModuleInit(): Promise<void> {
+        await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
         const key = "meteora-analytics"
         this.axios = this.axiosService.create({
             key 
         })
-        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection
-            .chain()
-            .find({
-                dex: {
-                    $eq: createObjectId(DexId.Meteora).toString(),
-                },
-            })
-            .data({
-                removeMeta: true 
-            })
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
-            name: "meteora-analytics-liquidity-pools",
-            options: {
-                indices: ["poolAddress",
-                    "displayId",
-                    "dex"],
-            },
-        })
-        this.liquidityPoolCollection.insert(liquidityPools)
+        const liquidityPools = Array.from(
+            this.primaryMemoryStorageService.liquidityPoolMap.values())
+            .filter(
+                (liquidityPool) => liquidityPool.dex.toString() === createObjectId(DexId.Meteora).toString(),
+            )
+        this.liquidityPoolMap = new Map(
+            liquidityPools.map((liquidityPool) => [liquidityPool.id,
+                liquidityPool
+            ]
+            ))
     }
 
-    private async setBatchPoolAnalytics(liquidityPools: Array<LiquidityPoolSchema>) {
-        // Get the liquidity pool
+    /**
+     * Fetches analytics for a batch of pools from Meteora API and writes to cache.
+     *
+     * @param liquidityPools - Pools to fetch analytics for
+     */
+    private async setBatchPoolAnalytics(liquidityPools: Array<LiquidityPoolSchema>): Promise<void> {
         const baseURL = new URL(this.url)
         for (const liquidityPool of liquidityPools) {
             baseURL.searchParams.append("include_pool_token_pairs",
@@ -119,12 +119,12 @@ export class MeteoraAnalyticsService implements OnModuleInit, OnApplicationBoots
                                 key: CacheKey.PoolAnalytics,
                                 args: [liquidityPool.id],
                                 cacheResult: {
-                                    fee24H: new Decimal(pair.fees_24h).toString(),
-                                    volume24H: new Decimal(pair.trade_volume_24h).toString(),
-                                    tvl: new Decimal(pair.liquidity).toString(),
-                                    apr24H: new Decimal(pair.apr).div(100).toString(),
+                                    fee24H: pair.fees_24h.toString(),
+                                    volume24H: String(Number(pair.trade_volume_24h)),
+                                    tvl: String(Number(pair.liquidity)),
+                                    apr24H: String(Number(pair.apr) / 100),
                                     snapshotAt,
-                                    liquidity: new Decimal(pair.liquidity).toString(),
+                                    liquidity: String(Number(pair.liquidity)),
                                 },
                             }
                         )
@@ -135,12 +135,14 @@ export class MeteoraAnalyticsService implements OnModuleInit, OnApplicationBoots
         await this.asyncService.allIgnoreError(promises)
     }
     
+    /**
+     * Runs on interval: chunks pools by 10, fetches and caches analytics per chunk.
+     */
     @Interval(envConfig().dexes.meteora.interval.analytics)
-    async handleAnalyticsUpdateInterval() {
-        // split into chunks of 10
-        const chunks = this.liquidityPoolCollection.find().reduce(
+    async handleAnalyticsUpdateInterval(): Promise<void> {
+        const chunks = Array.from(this.liquidityPoolMap.values()).reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
-                const chunkIndex = new Decimal(index).div(10).floor().toNumber()
+                const chunkIndex = Math.floor(index / 10)
                 acc[chunkIndex] = [...(acc[chunkIndex] || []),
                     liquidityPool]
                 return acc

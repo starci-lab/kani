@@ -7,7 +7,7 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    Injectable, OnApplicationBootstrap, OnModuleInit
+    Injectable, OnApplicationBootstrap
 } from "@nestjs/common"
 import type {
     GetPointsParams,
@@ -15,10 +15,6 @@ import type {
     InfluxdbPriceCache,
 } from "../types"
 import {
-    Collection,
-} from "lokijs"
-import {
-    LokiJSService,
     AsyncService,
     DayjsService,
 } from "@modules/mixin"
@@ -36,42 +32,35 @@ import {
  * Service for caching price points in InfluxDB.
  */
 @Injectable()
-export class InfluxdbPriceCacheService implements OnModuleInit, OnApplicationBootstrap {
-    private storage: Collection<InfluxdbPriceCache>
+export class InfluxdbPriceCacheService implements OnApplicationBootstrap {
+    private storage = new Map<string, InfluxdbPriceCache>()
     constructor(
         private readonly primaryInfluxdbPriceBucketService: PrimaryInfluxdbPriceBucketService,
-        private readonly lokiJSService: LokiJSService,
         private readonly asyncService: AsyncService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly dayjsService: DayjsService,
         private readonly priceService: PriceService,
     ) {}
-
-    /**
-     * Initialize the price cache storage.
-     */
-    async onModuleInit(): Promise<void> {
-        this.storage = await this.lokiJSService.createCollection<InfluxdbPriceCache>({
-            name: "influxdb-price-cache",
-            options: {
-                indices: [
-                    "tokenId",
-                    "cexId"
-                ],
-            },
-        })
-    }
-
     /**
      * Bootstrap the price cache service.
      */
     async onApplicationBootstrap(): Promise<void> {
         // loop all tokens and store price points
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find()
+        const tokens = Array.from(this.primaryMemoryStorageService.tokenMap.values())
         const promises = tokens.map(async (token) => {
             await this.storePoints(token)
         })
         await this.asyncService.allIgnoreError(promises)
+    }
+
+    /**
+     * Get the key for the storage.
+     * @param tokenId - The token id.
+     * @param cexId - The cex id.
+     * @returns The key.
+     */
+    private getKey(tokenId: string, cexId: string): string {
+        return `${tokenId}-${cexId}`
     }
 
     /**
@@ -88,19 +77,19 @@ export class InfluxdbPriceCacheService implements OnModuleInit, OnApplicationBoo
                 }
             )
             // clear existing price points for this token and cex
-            this.storage.findAndRemove(
-                {
-                    tokenId: token.id,
-                    cexId,
-                }
+            this.storage.delete(
+                this.getKey(token.id,
+                    cexId),
             )
             // insert new price points
-            this.storage.insert(
+            this.storage.set(
+                this.getKey(token.id,
+                    cexId),
                 {
                     tokenId: token.id,
                     cexId,
                     points: pricePoints,
-                }
+                },
             )
         })
         await this.asyncService.allIgnoreError(promises)
@@ -111,7 +100,7 @@ export class InfluxdbPriceCacheService implements OnModuleInit, OnApplicationBoo
      */
     @Interval(envConfig().executor.runtime.influxdbCache.price.storeIntervalMs)
     async storeAllPoints(): Promise<void> {
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find()
+        const tokens = Array.from(this.primaryMemoryStorageService.tokenMap.values())
         const promises = tokens.map( 
             async (token) => {
                 await this.storePoints(token)
@@ -137,26 +126,20 @@ export class InfluxdbPriceCacheService implements OnModuleInit, OnApplicationBoo
             snapshotMs,
         }: GetPointsParams
     ): Promise<GetPricePointsResult> {
-        // get the entries from the storage
-        const entries = this.storage.find({
-            tokenId,
-            cexId,
-        })
         const now = snapshotMs ? this.dayjsService.from(snapshotMs) : this.dayjsService.now()
-        // get the points from the entries
-        const points = entries?.flatMap((entry) => entry.points) || []
-        // filter the points by the time interval
+        const startMs = now.subtract(timeIntervalMs,
+            "millisecond").toDate().getTime()
+        const endMs = now.toDate().getTime()
+
+        const entry = this.storage.get(this.getKey(tokenId,
+            cexId))
+        const points = entry?.points ?? []
         const influxdbPricePoints = points.filter(
-            (point) => now.diff(
-                this.dayjsService.from(point.time),
-                "millisecond"
-            ) <= timeIntervalMs
+            (p) => p.time >= startMs && p.time <= endMs,
         )
-        // if points is empty, we return the price stored in the cache
+
         if (points.length === 0) {
-            const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-                id: tokenId,
-            })
+            const token = this.primaryMemoryStorageService.tokenMap.get(tokenId)
             if (!token) {
                 throw new TokenNotFoundException({
                     id: tokenId,
@@ -170,54 +153,50 @@ export class InfluxdbPriceCacheService implements OnModuleInit, OnApplicationBoo
                     id: token.id,
                     cex_id: cexId,
                     price: price.price.toNumber(),
-                    time: now.subtract(timeIntervalMs,
-                        "millisecond").toDate().getTime(),
+                    time: startMs,
                 },
                 {
                     id: token.id,
                     cex_id: cexId,
                     price: price.price.toNumber(),
-                    time: now.toDate().getTime(),
+                    time: endMs,
                 },
             ]
         }
-        // if no point found, we take the last point of the influxdb price points
         if (influxdbPricePoints.length === 0) {
+            const last = points[points.length - 1]
             return [
                 {
-                    id: points[points.length - 1].id,
-                    cex_id: points[points.length - 1].cex_id,
-                    price: points[points.length - 1].price,
-                    time: now.subtract(timeIntervalMs,
-                        "millisecond").toDate().getTime(),
+                    id: last.id,
+                    cex_id: last.cex_id,
+                    price: last.price,
+                    time: startMs,
                 },
                 {
-                    id: points[points.length - 1].id,
-                    cex_id: points[points.length - 1].cex_id,
-                    price: points[points.length - 1].price,
-                    time: now.toDate().getTime(),
+                    id: last.id,
+                    cex_id: last.cex_id,
+                    price: last.price,
+                    time: endMs,
                 },
             ]
         }
-        // if length is 1, simply return 2 points, one is the first point, the other is the last point
         if (influxdbPricePoints.length === 1) {
+            const p = influxdbPricePoints[0]
             return [
                 {
-                    id: influxdbPricePoints[0].id,
-                    cex_id: influxdbPricePoints[0].cex_id,
-                    price: influxdbPricePoints[0].price,
-                    time: now.subtract(timeIntervalMs,
-                        "millisecond").toDate().getTime(),
+                    id: p.id,
+                    cex_id: p.cex_id,
+                    price: p.price,
+                    time: startMs,
                 },
                 {
-                    id: influxdbPricePoints[0].id,
-                    cex_id: influxdbPricePoints[0].cex_id,
-                    price: influxdbPricePoints[0].price,
-                    time: now.toDate().getTime(),
+                    id: p.id,
+                    cex_id: p.cex_id,
+                    price: p.price,
+                    time: endMs,
                 },
             ]
         }
-        // if length is greater than 1, we move the first point to the end of the array and so do the last point
         const firstPoint = influxdbPricePoints[0]
         const lastPoint = influxdbPricePoints[influxdbPricePoints.length - 1]
         return [
@@ -225,17 +204,18 @@ export class InfluxdbPriceCacheService implements OnModuleInit, OnApplicationBoo
                 id: firstPoint.id,
                 cex_id: firstPoint.cex_id,
                 price: firstPoint.price,
-                time: now.subtract(timeIntervalMs,
-                    "millisecond").toDate().getTime(),
+                time: startMs,
             },
-            ...influxdbPricePoints.slice(1,
-                -1),
+            ...influxdbPricePoints.slice(
+                1,
+                -1,
+            ),
             {
                 id: lastPoint.id,
                 cex_id: lastPoint.cex_id,
                 price: lastPoint.price,
-                time: now.toDate().getTime(),
-            }
+                time: endMs,
+            },
         ]
     }
 }

@@ -114,16 +114,9 @@ export class ActivePositionAssociateService {
                 bot => bot.activePosition.liquidityPool.toString(),
             )
         const liquidityPools: Array<LiquidityPoolSchema> =
-            this.primaryMemoryStorageService.liquidityPoolCollection.chain().find(
-                {
-                    id: {
-                        $in: liquidityPoolIds
-                    },
-                },
-            ).data({
-                removeMeta: true,
-            }
-            )
+            liquidityPoolIds
+                .map((id) => this.primaryMemoryStorageService.liquidityPoolMap.get(id))
+                .filter((p): p is LiquidityPoolSchema => p != null)
         const liquidityPoolMap =
             new Map<string, LiquidityPoolSchema>(
                 liquidityPools.map(liquidityPool => [

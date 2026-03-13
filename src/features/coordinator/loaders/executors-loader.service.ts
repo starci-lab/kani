@@ -20,9 +20,6 @@ import {
     ReadinessWatcherFactoryService, RetryService 
 } from "@modules/mixin"
 import {
-    LokiJSService 
-} from "@modules/mixin"
-import {
     SemaService 
 } from "@modules/lock"
 import {
@@ -44,9 +41,6 @@ import {
     Sema 
 } from "async-sema"
 import {
-    Collection 
-} from "lokijs"
-import {
     AppsV1Api 
 } from "@kubernetes/client-node"
 import {
@@ -67,7 +61,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
     // mutex for loading executors
     private sema!: Sema
     // executors
-    public executorCollection: Collection<ExecutorSchema>
+    public executorMap: Map<string, ExecutorSchema>
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
@@ -77,7 +71,6 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
         private readonly retryService: RetryService,
         private readonly winstonService: WinstonService,
         private readonly semaService: SemaService,
-        private readonly lokiJSService: LokiJSService,
         @InjectKubernetesApi()
         private readonly kubernetesApi: AppsV1Api,
         private readonly dayjsService: DayjsService,
@@ -88,12 +81,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
         // init semaphore before any load/observe work uses it
         this.sema = this.semaService.sema(ExecutorsLoaderService.name,
             1)
-        this.executorCollection = await this.lokiJSService.createCollection<ExecutorSchema>({
-            name: "coordinator-executors",
-            options: {
-                indices: ["id"],
-            },
-        })
+        this.executorMap = new Map()
         // load executors
         await this.load()
         // set readiness
@@ -124,9 +112,9 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                 ).filter(
                     executorId => executorId !== null
                 )
-            const snapshotExecutorIds = this.executorCollection.find().map(
-                executor => executor.id
-            ).filter(Boolean) as Array<string>
+            const snapshotExecutorIds = Array.from(this.executorMap.values())
+                .map((executor) => executor.id)
+                .filter(Boolean) as Array<string>
             // get the old executor ids, will be the intersection of the snapshot and the deployment
             const oldExecutorIds = _.intersection(
                 snapshotExecutorIds,
@@ -148,13 +136,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                     const id = executor.id
                     if (!id) return null
                     if (createdExecutorIds.includes(id) || deletedExecutorIds.includes(id)) return null
-                    const old = this.executorCollection.findOne(
-                        {
-                            id: {
-                                $eq: executor.id
-                            }
-                        }
-                    )
+                    const old = this.executorMap.get(executor.id)
                     if (!old) return null
                     // Compare only the fields we fetched for update detection.
                     const oldSnapshot = _.pick(old,
@@ -231,8 +213,12 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                 }
             }
             // update the executors map snapshot
-            this.executorCollection.clear()
-            this.executorCollection.insert(newExecutors)
+            this.executorMap = new Map(
+                newExecutors.map((executor) => [
+                    executor.id,
+                    executor,
+                ]),
+            )
         } finally {
             if (token) {
                 this.sema.release(token)
@@ -348,14 +334,12 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                                         id: data.id,
                                     }
                                 )
-                                const exists = this.executorCollection.find({
-                                    id: data.id
-                                })
-                                if (exists) {
+                                if (this.executorMap.has(data.id)) {
                                     break
                                 }
-                                this.executorCollection.insert(
-                                    [data]
+                                this.executorMap.set(
+                                    data.id,
+                                    data,
                                 )
                                 this.eventEmitterService.emit({
                                     event: EventName.CoordinatorExecutorCreated,
@@ -371,13 +355,10 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                                         id,
                                     }
                                 )
-                                const exists = this.executorCollection.find({
-                                    id: id
-                                })
-                                if (!exists) {
+                                if (!this.executorMap.has(id)) {
                                     break
                                 }
-                                this.executorCollection.remove(exists)
+                                this.executorMap.delete(id)
                                 this.eventEmitterService.emit({
                                     event: EventName.CoordinatorExecutorDeleted,
                                     payload: {
@@ -394,26 +375,20 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                                         id: data.id,
                                     }
                                 )
-                                const oldSnapshot = _.pick(this.executorCollection.find({
-                                    id: data.id
-                                }),
-                                ["version"])
+                                const oldExecutor = this.executorMap.get(data.id)
+                                const oldSnapshot = _.pick(
+                                    oldExecutor,
+                                    ["version"],
+                                )
                                 const newSnapshot = _.pick(data,
                                     ["version"])
                                 if (_.isEqual(oldSnapshot,
                                     newSnapshot)) {
                                     break
                                 }
-                                const exists = this.executorCollection.find({
-                                    id: {
-                                        $eq: data.id
-                                    }
-                                })
-                                if (exists) {
-                                    this.executorCollection.remove(exists)
-                                }
-                                this.executorCollection.insert(
-                                    [data]
+                                this.executorMap.set(
+                                    data.id,
+                                    data,
                                 )
                                 this.eventEmitterService.emit(
                                     {

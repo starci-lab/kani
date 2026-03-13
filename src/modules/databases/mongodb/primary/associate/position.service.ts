@@ -63,11 +63,7 @@ export class PositionAssociateService {
         params: AssociateLiquidityPoolParams,
     ): Promise<AssociateLiquidityPoolResult> {
         const { position } = params
-        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
-            id: {
-                $eq: position.liquidityPool.toString(),
-            },
-        })
+        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolMap.get(position.liquidityPool.toString())
         if (!liquidityPool) {
             throw new LiquidityPoolNotFoundException({
                 id: position.liquidityPool.toString(),

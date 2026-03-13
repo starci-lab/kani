@@ -126,11 +126,9 @@ export class SolanaWithdrawActionService {
         for (const tokenInput of tokenInputs) {
             if (toUsdc) {
                 // find USDC token
-                const usdcToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-                    displayId: {
-                        $eq: TokenId.SolUsdc,
-                    }
-                })
+                const usdcToken = Array.from(this.primaryMemoryStorageService.tokenMap.values()).find(
+                    (t) => t.displayId === TokenId.SolUsdc,
+                )
                 if (!usdcToken) {
                     throw new TokenNotFoundException({
                         displayId: TokenId.SolUsdc,
@@ -210,11 +208,7 @@ export class SolanaWithdrawActionService {
                 }
             } else {
                 // find target token for conversion
-                const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-                    id: {
-                        $eq: bot.targetToken.toString(),
-                    }
-                })
+                const targetToken = this.primaryMemoryStorageService.tokenMap.get(bot.targetToken.toString())
                 if (!targetToken) {
                     throw new TokenNotFoundException({
                         displayId: tokenInput.token.displayId,
@@ -317,11 +311,7 @@ export class SolanaWithdrawActionService {
         )
         const tokenOutputSnapshots = await this.asyncService.allMustDone(
             tokenOutputs.map(async (tokenOutput) => {
-                const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-                    id: {
-                        $eq: tokenOutput.tokenId,
-                    },
-                })
+                const token = this.primaryMemoryStorageService.tokenMap.get(tokenOutput.tokenId)
                 if (!token) {
                     throw new TokenNotFoundException({
                         id: tokenOutput.tokenId,

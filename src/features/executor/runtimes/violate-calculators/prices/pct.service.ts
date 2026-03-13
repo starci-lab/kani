@@ -87,11 +87,7 @@ export class PctCalculatorService {
          * Load the target token from in-memory storage.
          * This token represents the asset the bot is monitoring.
          */
-        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.targetToken,
-            },
-        })
+        const targetToken = this.primaryMemoryStorageService.tokenMap.get(bot.targetToken.toString())
 
         /**
          * If the token metadata is missing, the bot configuration is invalid.
@@ -105,11 +101,7 @@ export class PctCalculatorService {
         /**
          * Load the quote token (the asset used to measure price against).
          */
-        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.quoteToken,
-            },
-        })
+        const quoteToken = this.primaryMemoryStorageService.tokenMap.get(bot.quoteToken.toString())
 
         /**
          * Quote token must exist for pair calculation.

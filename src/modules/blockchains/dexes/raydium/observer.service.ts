@@ -1,5 +1,5 @@
 import {
-    Injectable, OnApplicationBootstrap, OnModuleInit 
+    Injectable, OnApplicationBootstrap, OnModuleInit
 } from "@nestjs/common"
 import {
     CacheKey,
@@ -13,146 +13,116 @@ import {
     LiquidityPoolSchema,
 } from "@modules/databases"
 import {
-    AsyncService, DayjsService, RetryService, LokiJSService 
+    AsyncService, 
+    DayjsService, 
+    RetryService, 
+    ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
-    LiquidityPoolNoWsIdleTimeoutException, 
+    LiquidityPoolNoWsIdleTimeoutException,
 } from "@modules/exceptions"
 import {
-    WinstonLog, WinstonService 
+    WinstonLog, WinstonService
 } from "@modules/winston"
 import {
-    EventEmitterService, EventName 
+    EventEmitterService, EventName
 } from "@modules/event"
 import {
-    createObjectId 
+    createObjectId
 } from "@modules/common"
 import {
-    Interval 
+    Interval
 } from "@nestjs/schedule"
 import {
-    address 
+    address
 } from "@solana/kit"
 import {
     RpcExecutorService,
     SolanaFetchService,
-    AccountKind 
+    AccountKind
 } from "@modules/blockchains"
 import {
-    RpcAccessType 
+    RpcAccessType
 } from "@modules/filesystem"
 import {
-    envConfig 
+    envConfig
 } from "@modules/env"
 import {
-    PoolState 
+    PoolState
 } from "./beets"
-import {
-    Collection 
-} from "lokijs"
 
 /**
- * Service responsible for observing and updating Raydium liquidity pool states.
- * Fetches pool information at regular intervals and via WebSocket subscriptions, updating cache and emitting events.
+ * Observes Raydium CLMM pools: fetches pool state on an interval and via WebSocket, updates cache and emits ClmmLiquidityPoolsSynced.
  *
  * @example
- * const service = new RaydiumObserverService(...)
- * await service.onModuleInit()
+ * await raydiumObserverService.onModuleInit()
+ * // then onApplicationBootstrap starts interval and WS subscriptions
  */
 @Injectable()
 export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleInit {
-    // Snapshot here to reduce the computational complexity
-    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
+    private liquidityPoolMap: Map<string, LiquidityPoolSchema> = new Map()
 
     constructor(
         private readonly winstonService: WinstonService,
         private readonly cacheManager: CacheService,
         private readonly rpcExecutorService: RpcExecutorService,
-        private readonly memoryStorageService: PrimaryMemoryStorageService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly dayjsService: DayjsService,
         private readonly retryService: RetryService,
-        private readonly lokiJSService: LokiJSService,
         private readonly solanaFetchService: SolanaFetchService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) { }
 
     /**
-     * Initializes the module by creating a snapshot of Raydium liquidity pools.
-     * This reduces computational complexity by working with a local collection.
+     * Initializes observer: wait for primary memory storage, build local pool map for Raydium pools.
      */
-    async onModuleInit() {
-        // Find Raydium liquidity pools from primary memory storage
-        const liquidityPools = this.memoryStorageService.liquidityPoolCollection
-            .chain()
-            .find({
-                dex: {
-                    $eq: createObjectId(DexId.Raydium).toString(),
-                },
-            })
-            .data({
-                removeMeta: true 
-            })
-
-        // Create a new LokiJS collection for Raydium liquidity pools
-        this.liquidityPoolCollection = await this
-            .lokiJSService
-            .createCollection<LiquidityPoolSchema>({
-                name: "raydium-observer-liquidity-pools",
-            }
-            )
-
-        // Insert the found liquidity pools into the new collection
-        this.liquidityPoolCollection.insert(liquidityPools)
+    async onModuleInit(): Promise<void> {
+        await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
+        const liquidityPools = Array.from(this.primaryMemoryStorageService.liquidityPoolMap.values()).filter(
+            (p) => p.dex.toString() === createObjectId(DexId.Raydium).toString(),
+        )
+        this.liquidityPoolMap = new Map(liquidityPools.map((p) => [p.id, p]))
     }
 
     /**
-     * Called once the application has bootstrapped.
-     * Initiates periodic pool state updates and WebSocket subscriptions for all pools.
+     * Starts periodic pool-state fetch and WebSocket subscription per pool.
      */
-    onApplicationBootstrap() {
-        // Start periodic fetching
+    onApplicationBootstrap(): void {
         this.handlePoolStateUpdateInterval()
-
-        // Start WebSocket subscriptions for each pool
-        for (const liquidityPool of this.liquidityPoolCollection.find()) {
+        for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {
             this.observeClmmPool(liquidityPool)
         }
     }
 
     /**
-     * Handles the periodic update of pool states.
-     * Fetches information for all Raydium liquidity pools every configured interval.
-     * This ensures pool state is updated even if WebSocket events are missed.
+     * Runs on interval: fetches pool info for all Raydium pools and updates cache/events.
      */
     @Interval(envConfig().dexes.raydium.interval.observer.fetch)
-    private async handlePoolStateUpdateInterval() {
+    private async handlePoolStateUpdateInterval(): Promise<void> {
         const promises: Array<Promise<void>> = []
-        // Iterate over each liquidity pool and fetch its info
-        for (const liquidityPool of this.liquidityPoolCollection.find()) {
+        for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {
             promises.push(
                 (async () => {
                     await this.fetchPoolInfo(liquidityPool)
                 })(),
             )
         }
-        // Execute all fetch operations concurrently, ignoring individual errors
         await this.asyncService.allIgnoreError(promises)
     }
 
     /**
-     * Handles the update of a liquidity pool's dynamic state.
-     * Stores the updated state in cache and emits a `ClmmLiquidityPoolsSynced` event.
+     * Builds cache result from on-chain state, writes to cache and emits ClmmLiquidityPoolsSynced.
      *
-     * @param liquidityPool - The liquidity pool schema being updated
-     * @param state - The parsed PoolState from on-chain data
-     * @returns The parsed dynamic CLMM liquidity pool information
+     * @param liquidityPool - Pool schema being updated
+     * @param state - Parsed PoolState from chain
+     * @returns Parsed cache result
      */
     private async handlePoolStateUpdate(
         liquidityPool: LiquidityPoolSchema,
-        state: PoolState
-    ) {
-        // Parse dynamic CLMM liquidity pool information
+        state: PoolState,
+    ): Promise<DynamicClmmLiquidityPoolInfoCacheResult> {
         const parsed: DynamicClmmLiquidityPoolInfoCacheResult = {
             tickCurrent: new BN(state.tickCurrent),
             liquidity: new BN(state.liquidity),
@@ -175,17 +145,12 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
             feeGrowthGlobalB: new BN(state.feeGrowthGlobal1X64.toString()),
             snapshotAt: this.dayjsService.now(),
         }
-        // Store in cache and emit event concurrently
         await this.asyncService.allIgnoreError([
-            // Store the parsed information in cache
-            this.cacheManager.set(
-                {
-                    key: CacheKey.DynamicClmmLiquidityPoolInfo,
-                    args: [liquidityPool.id],
-                    cacheResult: parsed,
-                }
-            ),
-            // Emit an event indicating that CLMM liquidity pools have been synced
+            this.cacheManager.set({
+                key: CacheKey.DynamicClmmLiquidityPoolInfo,
+                args: [liquidityPool.id],
+                cacheResult: parsed,
+            }),
             this.eventEmitterService.emit(
                 {
                     event: EventName.ClmmLiquidityPoolsSynced,
@@ -201,13 +166,11 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
     }
 
     /**
-     * Fetches the latest information for a given liquidity pool from the Solana blockchain.
+     * Fetches pool account from chain, parses state and calls handlePoolStateUpdate.
      *
-     * @param liquidityPool - The liquidity pool to fetch information for
+     * @param liquidityPool - Pool to fetch
      */
-    private async fetchPoolInfo(
-        liquidityPool: LiquidityPoolSchema
-    ) { 
+    private async fetchPoolInfo(liquidityPool: LiquidityPoolSchema): Promise<void> {
         try {
             const accountInfo = await this.solanaFetchService.fetchAccount({
                 address: liquidityPool.poolAddress,
@@ -215,13 +178,9 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
                 dexId: DexId.Raydium,
                 liquidityPool,
             })
-            const state = PoolState.struct.read(
-                Buffer.from(accountInfo.data),
-                8)
-            return await this.handlePoolStateUpdate(liquidityPool,
-                state)
+            const state = PoolState.struct.read(Buffer.from(accountInfo.data), 8)
+            await this.handlePoolStateUpdate(liquidityPool, state)
         } catch (error) {
-            // Log any errors encountered during fetching pool info
             this.winstonService.log(
                 WinstonLog.LiquidityPoolFetchedError,
                 {
@@ -233,43 +192,31 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
     }
 
     /**
-     * Observes a CLMM pool via WebSocket subscription.
-     * Subscribes to account changes and updates pool state in real-time.
-     * Includes idle timeout mechanism to reconnect if no updates are received.
+     * Subscribes to pool account via WebSocket; on each update parses state and calls handlePoolStateUpdate.
+     * Uses idle timeout to abort and retry if no updates received.
      *
-     * @param liquidityPool - The liquidity pool schema to observe
+     * @param liquidityPool - Pool to observe
      */
-    private async observeClmmPool(
-        liquidityPool: LiquidityPoolSchema
-    ) {
+    private async observeClmmPool(liquidityPool: LiquidityPoolSchema): Promise<void> {
         try {
-            // Stage: state validation (WebSocket idle timeout must be configured)
             if (!liquidityPool.wsIdleTimeoutMs) {
                 throw new LiquidityPoolNoWsIdleTimeoutException({
                     displayId: liquidityPool.displayId,
                 })
             }
 
-            // Set up abort controller and timeout mechanism for idle detection
             const abortController = new AbortController()
             let timeout: NodeJS.Timeout | undefined = undefined
             const resetTimeout = () => {
-                if (timeout) {
-                    clearTimeout(timeout)
-                }
-                // Set timeout to abort connection if no updates received
-                timeout = setTimeout(() => abortController.abort(),
-                    liquidityPool.wsIdleTimeoutMs)
+                if (timeout) clearTimeout(timeout)
+                timeout = setTimeout(() => abortController.abort(), liquidityPool.wsIdleTimeoutMs)
             }
-
-            // Retry subscription indefinitely on connection failures
             await this.retryService.retry({
                 action: async () => {
                     await this.rpcExecutorService.withSolanaRpc({
                         accessType: RpcAccessType.Ws,
                         callback: async ({ rpcSubscriptions }) => {
                             const controller = new AbortController()
-                            // Subscribe to account notifications
                             const accountNotifications = await rpcSubscriptions.accountNotifications(
                                 address(liquidityPool.poolAddress),
                                 {
@@ -305,7 +252,6 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
                 }
             })
         } catch (error) {
-            // Log any errors encountered during WebSocket observation
             this.winstonService.log(
                 WinstonLog.LiquidityPoolWsError,
                 {

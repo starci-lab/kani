@@ -162,11 +162,9 @@ export class SolanaBalanceFetcherService {
         })
         const tokens: Array<TokenBalance> = tokenAccounts.value.map((tokenAccount) => {
             if (tokenAccount.account.data.parsed.info.tokenAmount.decimals === 0) return undefined
-            const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-                tokenAddress: {
-                    $eq: tokenAccount.account.data.parsed.info.mint.toString(),
-                },
-            })
+            const token = Array.from(this.primaryMemoryStorageService.tokenMap.values()).find(
+                (t) => t.tokenAddress === tokenAccount.account.data.parsed.info.mint.toString(),
+            )
             if (!token) {
                 throw new TokenNotFoundException({
                     tokenAddress: tokenAccount.account.data.parsed.info.mint.toString(),
@@ -183,11 +181,9 @@ export class SolanaBalanceFetcherService {
         }).filter((token) => token !== undefined)
         const token2022Tokens: Array<TokenBalance> = token2022Accounts.value.map((token2022Account) => {
             if (token2022Account.account.data.parsed.info.tokenAmount.decimals === 0) return undefined
-            const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-                tokenAddress: {
-                    $eq: token2022Account.account.data.parsed.info.mint.toString(),
-                },
-            })
+            const token = Array.from(this.primaryMemoryStorageService.tokenMap.values()).find(
+                (t) => t.tokenAddress === token2022Account.account.data.parsed.info.mint.toString(),
+            )
             if (!token) {
                 throw new TokenNotFoundException(
                     {
@@ -211,11 +207,9 @@ export class SolanaBalanceFetcherService {
                 return await rpc.getBalance(address(bot.accountAddress)).send()
             },
         })
-        const nativeSolToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            displayId: {
-                $eq: TokenId.SolNative.toString(),
-            },
-        })
+        const nativeSolToken = Array.from(this.primaryMemoryStorageService.tokenMap.values()).find(
+            (t) => t.displayId === TokenId.SolNative.toString(),
+        )
         if (!nativeSolToken) {
             throw new TokenNotFoundException({
                 displayId: TokenId.SolNative,

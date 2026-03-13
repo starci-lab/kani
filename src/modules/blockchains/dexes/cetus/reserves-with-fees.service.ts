@@ -102,16 +102,8 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
         }
         
         // fetch pool token metadata
-        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: liquidityPool.tokenA.toString(),
-            },
-        })
-        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: liquidityPool.tokenB.toString(),
-            },
-        })
+        const tokenA = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenB.toString())
         
         // validate tokens exist
         if (!tokenA || !tokenB) {

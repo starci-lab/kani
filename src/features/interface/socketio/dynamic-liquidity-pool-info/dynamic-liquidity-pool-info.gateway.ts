@@ -76,13 +76,9 @@ export class DynamicLiquidityPoolInfoGateway implements OnGatewayInit {
         @MessageBody() data: SubscribeDynamicLiquidityPoolsInfoEventPayload
     ) {
         // validate the liquidity pool ids
-        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
-            {
-                id: {
-                    $in: data.ids,
-                },
-            }
-        )
+        const liquidityPools = data.ids
+            .map((id) => this.primaryMemoryStorageService.liquidityPoolMap.get(id))
+            .filter((p): p is NonNullable<typeof p> => p != null)
         if (liquidityPools.length !== data.ids.length) {
             throw new SomeLiquidityPoolsNotFoundException(
                 {

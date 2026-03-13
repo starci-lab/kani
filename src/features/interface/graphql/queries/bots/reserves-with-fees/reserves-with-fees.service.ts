@@ -79,11 +79,7 @@ export class ReservesWithFeesService {
                 botId,
             })
         }
-        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
-            id: {
-                $eq: activePosition.liquidityPool.toString(),
-            },
-        })
+        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolMap.get(activePosition.liquidityPool.toString())
         if (!liquidityPool) {
             throw new LiquidityPoolNotFoundException({
                 id: activePosition.liquidityPool.toString(),

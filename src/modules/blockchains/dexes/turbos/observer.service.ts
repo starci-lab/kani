@@ -12,7 +12,8 @@ import {
     Injectable, OnApplicationBootstrap, OnModuleInit 
 } from "@nestjs/common"
 import {
-    AsyncService, DayjsService 
+    AsyncService, DayjsService, 
+    ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
     Interval 
@@ -51,30 +52,28 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
     /** Array of liquidity pools to observe. */
     private liquidityPools: Array<LiquidityPoolSchema> = []
     constructor(
-        private readonly memoryStorageService: PrimaryMemoryStorageService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly cacheService: CacheService,
         private readonly winstonService: WinstonService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly suiFetchService: SuiFetchService,
         private readonly dayjsService: DayjsService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
 
     /**
      * Initializes the service by fetching all Turbos liquidity pools.
      */
-    onModuleInit(): void {
+    async onModuleInit() {
+        // wait until primary memory storage is ready
+        await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
         // fetch all Turbos liquidity pools from primary memory storage
-        this.liquidityPools = this.memoryStorageService.liquidityPoolCollection
-            .chain()
-            .find({
-                dex: {
-                    $eq: createObjectId(DexId.Turbos).toString(),
-                },
-            })
-            .data({
-                removeMeta: true 
-            })
+        this.liquidityPools = Array.from(
+            this.primaryMemoryStorageService.liquidityPoolMap.values()
+        ).filter(
+            (liquidityPool) => liquidityPool.dex.toString() === createObjectId(DexId.Turbos).toString(),
+        )
     }
 
     /**

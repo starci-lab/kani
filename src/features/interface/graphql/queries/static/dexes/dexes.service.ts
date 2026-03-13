@@ -13,7 +13,7 @@ import {
 @Injectable()
 export class DexesService {
     constructor(
-        private readonly memoryStorageService: PrimaryMemoryStorageService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     /**
@@ -22,9 +22,7 @@ export class DexesService {
      * used for routing and liquidity aggregation.
      */
     dexes(): Array<DexSchema> {
-        return this.memoryStorageService.dexCollection.chain().find().data({
-            removeMeta: true,
-        })
+        return Array.from(this.primaryMemoryStorageService.dexMap.values())
     }
 }
 

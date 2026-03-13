@@ -86,11 +86,7 @@ export class HandleViolateIndicatorsService {
             if (bot.activePosition && bot.activePosition.positionClosed) {
                 return
             }
-            const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
-                id: {
-                    $eq: bot.activePosition.liquidityPool,
-                },
-            })
+            const liquidityPool = this.primaryMemoryStorageService.liquidityPoolMap.get(bot.activePosition.liquidityPool.toString())
             if (!liquidityPool) {
                 throw new LiquidityPoolNotFoundException({
                     id: bot.activePosition.liquidityPool.toString(),

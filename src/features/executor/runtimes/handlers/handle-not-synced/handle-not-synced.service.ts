@@ -92,13 +92,9 @@ export class HandleNotSyncedService {
         // mark the liquidity pools as synced
         this.markSynced(ids)
         // log the liquidity pools became ready
-        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
-            {
-                id: {
-                    $in: ids,
-                },
-            }
-        )
+        const liquidityPools = ids
+            .map((id) => this.primaryMemoryStorageService.liquidityPoolMap.get(id))
+            .filter((p): p is NonNullable<typeof p> => p != null)
         if (!liquidityPools) {
             return
         }
@@ -152,13 +148,7 @@ export class HandleNotSyncedService {
         if (bot.activeJob) return
         // we check the bot have a position
         if (bot.activePosition) {
-            const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
-                {
-                    id: {
-                        $eq: bot.activePosition.liquidityPool.toString(),
-                    },
-                }
-            )
+            const liquidityPool = this.primaryMemoryStorageService.liquidityPoolMap.get(bot.activePosition.liquidityPool.toString())
             // check the liquidity pool is valid
             if (!liquidityPool) {
                 throw new LiquidityPoolNotFoundException({
@@ -202,11 +192,7 @@ export class HandleNotSyncedService {
         const botLiquidityPoolId = _.sample(notSyncedPools)
         if (!botLiquidityPoolId) return
         // we check the bot liquidity pool is valid
-        const botLiquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
-            id: {
-                $eq: botLiquidityPoolId.toString(),
-            },
-        })
+        const botLiquidityPool = this.primaryMemoryStorageService.liquidityPoolMap.get(botLiquidityPoolId.toString())
         if (!botLiquidityPool) return
         this.winstonService.log(
             WinstonLog.NotSyncedProcessOpenPosition,

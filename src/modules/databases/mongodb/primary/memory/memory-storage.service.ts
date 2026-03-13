@@ -11,10 +11,7 @@ import {
     Connection
 } from "mongoose"
 import {
-    Collection
-} from "lokijs"
-import {
-    LokiJSService, ReadinessWatcherFactoryService
+    ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
     MODULE_OPTIONS_TOKEN, OPTIONS_TYPE
@@ -39,10 +36,9 @@ import {
  */
 @Injectable()
 export class PrimaryMemoryStorageService implements OnModuleInit {
-    // collections
-    public tokenCollection: Collection<TokenSchema>
-    public liquidityPoolCollection: Collection<LiquidityPoolSchema>
-    public dexCollection: Collection<DexSchema>
+    public tokenMap: Map<string, TokenSchema>
+    public liquidityPoolMap: Map<string, LiquidityPoolSchema>
+    public dexMap: Map<string, DexSchema>
 
     constructor(
         @Inject(MODULE_OPTIONS_TOKEN)
@@ -50,51 +46,42 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
-        private readonly lokiJSService: LokiJSService,
     ) { }
 
-    /** Load all collections from MongoDB. */
+    /** Load all data from MongoDB into maps. */
     private async process(): Promise<void> {
         await this.readinessWatcherFactoryService.waitUntilReady(SeedersService.name)
-        const tokens = await this.connection
-            .model<TokenSchema>(TokenSchema.name)
-            .find()
-    
-        this.tokenCollection = await this.lokiJSService.createCollection<TokenSchema>({
-            name: "token-collection",
-            options: {
-                indices: [
-                    "displayId",
-                    "id"] 
-            },
-        })
-        this.tokenCollection.insert(tokens.map(token => token.toJSON()))
-        const liquidityPools = await this.connection
-            .model<LiquidityPoolSchema>(LiquidityPoolSchema.name)
-            .find()
-    
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
-            name: "liquidity-pool-collection",
-            options: {
-                indices: ["poolAddress",
-                    "displayId",
-                    "id"] 
-            },
-        })
-        this.liquidityPoolCollection.insert(liquidityPools.map(liquidityPool => liquidityPool.toJSON()))
-    
-        const dexes = await this.connection
-            .model<DexSchema>(DexSchema.name)
-            .find()
-    
-        this.dexCollection = await this.lokiJSService.createCollection<DexSchema>({
-            name: "dex-collection",
-            options: {
-                indices: ["displayId",
-                    "id"] 
-            },
-        })
-        this.dexCollection.insert(dexes.map(d => d.toJSON()))
+        const tokens = (
+            await this.connection
+                .model<TokenSchema>(TokenSchema.name)
+                .find()
+        ).map(token => token.toJSON())
+        this.tokenMap = new Map(
+            tokens.map(token => [
+                token.id,
+                token
+            ]))     
+        const liquidityPools = (
+            await this.connection
+                .model<LiquidityPoolSchema>(LiquidityPoolSchema.name)
+                .find()
+        ).map(liquidityPool => liquidityPool.toJSON())
+        this.liquidityPoolMap = new Map(
+            liquidityPools.map(
+                liquidityPool => [
+                    liquidityPool.id,
+                    liquidityPool
+                ]))     
+        const dexes = (
+            await this.connection
+                .model<DexSchema>(DexSchema.name)
+                .find()
+        ).map(dex => dex.toJSON())
+        this.dexMap = new Map(
+            dexes.map(dex => [
+                dex.id,
+                dex
+            ]))     
     }
 
     /**
@@ -118,30 +105,25 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
 
     /**
      * Get a token by its address.
-     * @param tokenAddress - The address of the token.
-     * @returns The token.
      */
-    getTokenByAddress(
-        tokenAddress: string
-    ): TokenSchema | null {
+    getTokenByAddress(tokenAddress: string): TokenSchema | undefined {
         if (isSuiCoin(tokenAddress)) {
-            return this.tokenCollection.findOne({
-                displayId: {
-                    $eq: TokenId.SuiNative,
-                },
-            })
+            return Array.from(
+                this.tokenMap.values())
+                .find(token => token.displayId === TokenId.SuiNative 
+                )
         } else if (isSolanaWrapped(tokenAddress)) {
-            return this.tokenCollection.findOne({
-                displayId: {
-                    $eq: TokenId.SolNative,
-                },
-            })
+            return Array.from(
+                this.tokenMap.values())
+                .find(
+                    token => token.displayId === TokenId.SolNative
+                )
         } else {
-            return this.tokenCollection.findOne({
-                tokenAddress: {
-                    $eq: tokenAddress,
-                },
-            })
+            return Array.from(
+                this.tokenMap.values()
+            ).find(
+                token => token.tokenAddress === tokenAddress
+            )
         }
     }
 }   

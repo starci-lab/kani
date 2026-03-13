@@ -175,11 +175,7 @@ export class WithdrawTaskConfirmService implements OnModuleInit {
             const tokenOutputSnapshots = prepareResult.tokenOutputSnapshots
             const afterTokenOutputSnapshots = await this.asyncService.allMustDone(
                 tokenOutputSnapshots.map(async (tokenOutputSnapshot) => {
-                    const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-                        id: {
-                            $eq: tokenOutputSnapshot.tokenId,
-                        },
-                    })
+                    const token = this.primaryMemoryStorageService.tokenMap.get(tokenOutputSnapshot.tokenId)
                     if (!token) {
                         throw new TokenNotFoundException({
                             id: tokenOutputSnapshot.tokenId,

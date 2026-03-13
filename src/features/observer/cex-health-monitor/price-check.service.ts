@@ -42,7 +42,7 @@ export class PriceCheckService {
      */
     @Interval(envConfig().cexHealthMonitor.price.checkIntervalMs)
     async checkPrice(): Promise<void> {
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find()
+        const tokens = Array.from(this.primaryMemoryStorageService.tokenMap.values())
         const now = this.dayjsService.now()
         const promises = tokens.map(
             async (token) => {

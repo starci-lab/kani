@@ -36,13 +36,9 @@ export class CoingeckoTokenRegistryService {
      */
     getSymbols(): Array<string> {
         // Find all tokens with Coingecko market listings
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
-            marketListings: {
-                $elemMatch: {
-                    id: MarketListingId.Coingecko,
-                },
-            }
-        })
+        const tokens = Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
+            (t) => t.marketListings?.some((m) => m.id === MarketListingId.Coingecko),
+        )
         if (!tokens.length) return []
 
         // Extract unique symbols (coin IDs) from market listings
@@ -70,13 +66,9 @@ export class CoingeckoTokenRegistryService {
         tokenPriceData: Array<CoingeckoTokenPriceData>
     ): Array<CoingeckoTokenPrice> {
         // Find all tokens with Coingecko market listings
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
-            marketListings: {
-                $elemMatch: {
-                    id: MarketListingId.Coingecko,
-                },
-            }
-        })
+        const tokens = Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
+            (t) => t.marketListings?.some((m) => m.id === MarketListingId.Coingecko),
+        )
         if (!tokens.length) return []
         // Map tokens to prices by matching coin IDs
         return tokens

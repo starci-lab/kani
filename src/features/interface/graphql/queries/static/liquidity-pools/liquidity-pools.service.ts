@@ -33,7 +33,7 @@ import Decimal from "decimal.js"
 @Injectable()
 export class LiquidityPoolsService {
     constructor(
-        private readonly memoryStorageService: PrimaryMemoryStorageService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly positionAssociateService: PositionAssociateService,
         private readonly asyncService: AsyncService,
         private readonly validateService: ValidateService,
@@ -59,15 +59,7 @@ export class LiquidityPoolsService {
         // require paginate
         const isRequiredPaginate = ids?.length || addresses?.length
         // get the liquidity pools
-        let liquidityPools = this.memoryStorageService
-            .liquidityPoolCollection
-            .chain()
-            .find()
-            .data(
-                {
-                    removeMeta: true,
-                }
-            )
+        let liquidityPools = Array.from(this.primaryMemoryStorageService.liquidityPoolMap.values())
         // filter by dex ids
         if (dexIds?.length) {
             liquidityPools = liquidityPools.filter(

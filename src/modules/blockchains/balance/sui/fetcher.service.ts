@@ -94,11 +94,9 @@ export class SuiBalanceFetcherService {
                 return {
                     tokens: coins.map((coin) => {
                         // find token from storage by coin type
-                        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-                            tokenAddress: {
-                                $eq: coin.coinType,
-                            },
-                        })
+                        const token = Array.from(this.primaryMemoryStorageService.tokenMap.values()).find(
+                            (t) => t.tokenAddress === coin.coinType,
+                        )
                         if (!token) {
                             throw new TokenNotFoundException({
                                 id: coin.coinType,

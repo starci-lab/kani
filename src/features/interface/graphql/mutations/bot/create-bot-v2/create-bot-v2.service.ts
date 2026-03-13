@@ -77,21 +77,13 @@ export class CreateBotV2Service {
             withdrawalAddress
         }: CreateBotV2Request,
     ): Promise<CreateBotV2ResponseData> {
-        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: targetTokenId 
-            } 
-        })
+        const targetToken = this.primaryMemoryStorageService.tokenMap.get(targetTokenId)
         if (!targetToken) {
             throw new TokenNotFoundException({
                 id: targetTokenId,
             })
         }
-        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: quoteTokenId 
-            } 
-        })
+        const quoteToken = this.primaryMemoryStorageService.tokenMap.get(quoteTokenId)
         if (!quoteToken) {
             throw new TokenNotFoundException({
                 id: quoteTokenId,
@@ -103,12 +95,10 @@ export class CreateBotV2Service {
         if (!liquidityPoolIds || liquidityPoolIds.length === 0) { 
             liquidityPoolIds = _
                 .chain(
-                    this.primaryMemoryStorageService.liquidityPoolCollection.find({
-                        chainId: {
-                            $eq: chainId 
-                        },
-                    }
-                    ))
+                    Array.from(this.primaryMemoryStorageService.liquidityPoolMap.values()).filter(
+                        (p) => p.chainId === chainId,
+                    ),
+                )
                 .filter(
                     (liquidityPool) => {
                         const tokenA = liquidityPool.tokenA.toString()
@@ -137,14 +127,9 @@ export class CreateBotV2Service {
         }
         // we retrieve t
         // retrieve the liquidity pools from the cache
-        const liquidityPools = this.primaryMemoryStorageService
-            .liquidityPoolCollection.find(
-                {
-                    id: {
-                        $in: liquidityPoolIds 
-                    }
-                }
-            )
+        const liquidityPools = liquidityPoolIds
+            .map((id) => this.primaryMemoryStorageService.liquidityPoolMap.get(id))
+            .filter((p): p is NonNullable<typeof p> => p != null)
             // create the signer
         const { keyPair, keyQuorum } = await this.privyCoreService.createSigner()
         // create the wallet

@@ -162,12 +162,8 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         const snapshotQuoteBalanceAmountBN = new BN(snapshotQuoteBalanceAmount)
 
         // Find token metadata
-        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: liquidityPool.tokenA.toString(),
-        })
-        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: liquidityPool.tokenB.toString(),
-        })
+        const tokenA = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenB.toString())
         // Stage: state validation (pool token metadata must exist)
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({

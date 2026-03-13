@@ -97,16 +97,8 @@ export class MeteoraSdkService {
                 liquidityPoolId: liquidityPool.displayId,
             })
         }
-        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.targetToken.toString(),
-            },
-        })
-        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.quoteToken.toString(),
-            },
-        })
+        const tokenA = this.primaryMemoryStorageService.tokenMap.get(bot.targetToken.toString())
+        const tokenB = this.primaryMemoryStorageService.tokenMap.get(bot.quoteToken.toString())
         if (!tokenA || !tokenB) throw new InvalidPoolTokensException({
             liquidityPoolId: liquidityPool.displayId,
         })

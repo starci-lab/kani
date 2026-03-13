@@ -17,7 +17,6 @@ import {
 import {
     AsyncService,
     DayjsService,
-    LokiJSService,
 } from "@modules/mixin"
 import {
     CacheKey,
@@ -29,9 +28,6 @@ import {
 import {
     envConfig,
 } from "@modules/env"
-import {
-    Collection,
-} from "lokijs"
 import type {
     DynamicLiquidityPoolInfoDiagnosticReadinessResult,
 } from "./types"
@@ -40,15 +36,14 @@ import type {
 export class DynamicLiquidityPoolInfoDiagnosticService
 implements OnModuleInit, OnApplicationBootstrap
 {
-    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
-    private results: Collection<DynamicLiquidityPoolInfoDiagnosticReadinessResult>
+    private liquidityPoolMap: Map<string, LiquidityPoolSchema> = new Map()
+    private results: Map<string, DynamicLiquidityPoolInfoDiagnosticReadinessResult> = new Map()
 
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly winstonService: WinstonService,
         private readonly asyncService: AsyncService,
         private readonly cacheService: CacheService,
-        private readonly lokiJSService: LokiJSService,
         private readonly dayjsService: DayjsService,
     ) {}
 
@@ -67,46 +62,23 @@ implements OnModuleInit, OnApplicationBootstrap
     @Interval(envConfig().executor.diagnose.dynamicLiquidityPoolInfo.interval)
     async diagnoseInterval() {
         const results = await this.diagnose()
-        this.results.clear()
-        this.results.insert(results)
+        this.results = new Map(results.map((result) => [result.id,
+            result]))
     }
 
     /**
      * On module init.
      */
     async onModuleInit() {
-        this.liquidityPoolCollection =
-            await this.lokiJSService.createCollection<LiquidityPoolSchema>({
-                name: "dynamic-liquidity-pool-info-diagnostic-pools",
-                options: {
-                    indices: [
-                        "displayId",
-                        "id"
-                    ],
-                },
-            })
-
-        const liquidityPools =
-            this.primaryMemoryStorageService.liquidityPoolCollection
-                .chain()
-                .find({
-                    isActive: {
-                        $eq: true 
-                    },
-                })
-                .data({
-                    removeMeta: true,
-                })
-
-        this.liquidityPoolCollection.insert(liquidityPools)
-
-        this.results =
-            await this.lokiJSService.createCollection<DynamicLiquidityPoolInfoDiagnosticReadinessResult>({
-                name: "dynamic-liquidity-pool-info-diagnostic-results",
-                options: {
-                    indices: ["id"],
-                },
-            })
+        const liquidityPools = Array.from(this.primaryMemoryStorageService.liquidityPoolMap.values()).filter(
+            (p) => p.isActive === true,
+        )
+        this.liquidityPoolMap = new Map(liquidityPools.map((liquidityPool) => [liquidityPool.id,
+            liquidityPool]))
+        this.results = new Map(liquidityPools.map((liquidityPool) => [liquidityPool.id,
+            {
+                id: liquidityPool.id,
+            }]))
     }
 
     /* ================= CORE ================= */
@@ -133,7 +105,7 @@ implements OnModuleInit, OnApplicationBootstrap
      * @returns Array of dynamic liquidity pool info diagnostic readiness results
      */
     async diagnose(): Promise<Array<DynamicLiquidityPoolInfoDiagnosticReadinessResult>> {
-        const liquidityPools = this.liquidityPoolCollection.find()
+        const liquidityPools = Array.from(this.liquidityPoolMap.values())
 
         const promises: Array<
             Promise<DynamicLiquidityPoolInfoDiagnosticReadinessResult>
@@ -209,18 +181,10 @@ implements OnModuleInit, OnApplicationBootstrap
      * @returns True if the liquidity pool is ready, false otherwise
      */
     async ready(id: string): Promise<boolean> {
-        const result = this.results.findOne({
-            id: {
-                $eq: id 
-            },
-        })
+        const result = this.results.get(id)
         if (!result) return false
 
-        const liquidityPool = this.liquidityPoolCollection.findOne({
-            id: {
-                $eq: id 
-            },
-        })
+        const liquidityPool = this.liquidityPoolMap.get(id)
         if (!liquidityPool) return false
 
         return this.isReady(result,

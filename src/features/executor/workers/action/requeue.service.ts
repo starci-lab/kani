@@ -115,11 +115,7 @@ export class ActionRequeueService implements OnApplicationBootstrap {
                 }
                 switch (bot.activeJob?.jobType) {
                 case JobType.OpenPosition: {
-                    const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
-                        id: {
-                            $eq: bot.activeJob?.liquidityPool.toString() ?? "",
-                        }
-                    })
+                    const liquidityPool = this.primaryMemoryStorageService.liquidityPoolMap.get(bot.activeJob?.liquidityPool.toString() ?? "")
                     if (!liquidityPool) {
                         throw new LiquidityPoolNotFoundException({
                             id: bot.activeJob?.liquidityPool.toString() ?? "",
@@ -136,11 +132,7 @@ export class ActionRequeueService implements OnApplicationBootstrap {
                     break
                 }
                 case JobType.ClosePosition: {
-                    const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
-                        id: {
-                            $eq: bot.activeJob?.liquidityPool.toString() ?? "",
-                        }
-                    })
+                    const liquidityPool = this.primaryMemoryStorageService.liquidityPoolMap.get(bot.activeJob?.liquidityPool.toString() ?? "")
                     if (!liquidityPool) {
                         throw new LiquidityPoolNotFoundException({
                             id: bot.activeJob?.liquidityPool.toString() ?? "",

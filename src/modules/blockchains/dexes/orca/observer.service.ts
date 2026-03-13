@@ -13,7 +13,9 @@ import {
     LiquidityPoolSchema,
 } from "@modules/databases"
 import {
-    AsyncService, RetryService 
+    AsyncService, 
+    RetryService, 
+    ReadinessWatcherFactoryService 
 } from "@modules/mixin"
 import {
     LiquidityPoolNoWsIdleTimeoutException 
@@ -48,24 +50,20 @@ import {
     RpcAccessType 
 } from "@modules/filesystem"
 import {
-    DayjsService, LokiJSService 
+    DayjsService 
 } from "@modules/mixin"
-import {
-    Collection 
-} from "lokijs"
 
 /**
- * Service responsible for observing and updating Orca liquidity pool states.
- * Fetches pool information at regular intervals and via WebSocket subscriptions, updating cache and emitting events.
+ * Observes Orca CLMM pools: fetches pool state on an interval and via WebSocket, updates cache and emits ClmmLiquidityPoolsSynced.
  *
  * @example
- * const service = new OrcaObserverService(...)
- * await service.onModuleInit()
+ * await orcaObserverService.onModuleInit()
+ * // then onApplicationBootstrap starts interval and WS subscriptions
  */
 @Injectable()
 export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit {
     // Snapshot here to reduce the computational complexity
-    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
+    private liquidityPoolMap: Map<string, LiquidityPoolSchema> = new Map()
 
     constructor(
         private readonly winstonService: WinstonService,
@@ -76,65 +74,38 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
         private readonly eventEmitterService: EventEmitterService,
         private readonly dayjsService: DayjsService,
         private readonly retryService: RetryService,
-        private readonly lokiJSService: LokiJSService,
         private readonly solanaFetchService: SolanaFetchService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
 
     /**
-     * Initializes the module by creating a snapshot of Orca liquidity pools.
-     * This reduces computational complexity by working with a local collection.
+     * Initializes observer: wait for primary memory storage, build local pool map for Orca pools.
      */
-    async onModuleInit() {
-        // Find Orca liquidity pools from primary memory storage
-        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection
-            .chain()
-            .find({
-                dex: {
-                    $eq: createObjectId(DexId.Orca).toString(),
-                },
-            })
-            .data({
-                removeMeta: true 
-            })
-
-        // Create a new LokiJS collection for Orca liquidity pools
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
-            name: "orca-observer-liquidity-pools",
-            options: {
-                indices: ["poolAddress",
-                    "displayId",
-                    "id"],
-            },
-        })
-
-        // Insert the found liquidity pools into the new collection
-        this.liquidityPoolCollection.insert(liquidityPools)
+    async onModuleInit(): Promise<void> {
+        await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
+        const liquidityPools = Array.from(this.primaryMemoryStorageService.liquidityPoolMap.values()).filter(
+            (p) => p.dex.toString() === createObjectId(DexId.Orca).toString(),
+        )
+        this.liquidityPoolMap = new Map(liquidityPools.map((p) => [p.id, p]))
     }
 
     /**
-     * Called once the application has bootstrapped.
-     * Initiates periodic pool state updates and WebSocket subscriptions for all pools.
+     * Starts periodic pool-state fetch and WebSocket subscription per pool.
      */
-    onApplicationBootstrap() {
-        // Start periodic fetching
+    onApplicationBootstrap(): void {
         this.handlePoolStateUpdateInterval()
-
-        // Start WebSocket subscriptions for each pool
-        for (const liquidityPool of this.liquidityPoolCollection.find()) {
+        for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {
             this.observeClmmPool(liquidityPool)
         }
     }
 
     /**
-     * Handles the periodic update of pool states.
-     * Fetches information for all Orca liquidity pools every configured interval.
-     * This ensures pool state is updated even if WebSocket events are missed.
+     * Runs on interval: fetches pool info for all Orca pools and updates cache/events.
      */
     @Interval(envConfig().dexes.orca.interval.observer.fetch)
-    private async handlePoolStateUpdateInterval() {
+    private async handlePoolStateUpdateInterval(): Promise<void> {
         const promises: Array<Promise<void>> = []
-        // Iterate over each liquidity pool and fetch its info
-        for (const liquidityPool of this.liquidityPoolCollection.find()) {
+        for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {
             promises.push(
                 (async () => {
                     await this.fetchPoolInfo(liquidityPool)
@@ -146,17 +117,15 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
     }
 
     /**
-     * Handles the update of a liquidity pool's dynamic state.
-     * Stores the updated state in cache and emits a `ClmmLiquidityPoolsSynced` event.
+     * Builds cache result from on-chain state, writes to cache and emits ClmmLiquidityPoolsSynced.
      *
-     * @param liquidityPool - The liquidity pool schema being updated
-     * @param state - The parsed Whirlpool state from on-chain data
+     * @param liquidityPool - Pool schema being updated
+     * @param state - Parsed Whirlpool state from chain
      */
     private async handlePoolStateUpdate(
         liquidityPool: LiquidityPoolSchema,
-        state: ReturnType<typeof Whirlpool.struct["read"]>
-    ) {
-        // Parse dynamic CLMM liquidity pool information
+        state: ReturnType<typeof Whirlpool.struct["read"]>,
+    ): Promise<void> {
         const parsed: DynamicClmmLiquidityPoolInfoCacheResult = {
             tickCurrent: new BN(state.tickCurrentIndex),
             liquidity: new BN(state.liquidity),
@@ -175,9 +144,7 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
             rewardLastUpdatedTimeMs: new BN(state.rewardLastUpdatedTimestamp.toString()),
         }
 
-        // Store in cache and emit event concurrently
         await this.asyncService.allIgnoreError([
-            // Store the parsed information in cache
             this.cacheManager.set(
                 {
                     key: CacheKey.DynamicClmmLiquidityPoolInfo,
@@ -185,7 +152,6 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
                     cacheResult: parsed,
                 }
             ),
-            // Emit an event indicating that CLMM liquidity pools have been synced
             this.eventEmitterService.emit(
                 {
                     event: EventName.ClmmLiquidityPoolsSynced,
@@ -199,27 +165,22 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
     }
 
     /**
-     * Fetches the latest information for a given liquidity pool from the Solana blockchain.
+     * Fetches pool account from chain, parses state and calls handlePoolStateUpdate.
      *
-     * @param liquidityPool - The liquidity pool schema to fetch information for
+     * @param liquidityPool - Pool to fetch
      */
-    private async fetchPoolInfo(
-        liquidityPool: LiquidityPoolSchema
-    ) {
+    private async fetchPoolInfo(liquidityPool: LiquidityPoolSchema): Promise<void> {
         try {
             const accountInfo = await this.solanaFetchService.fetchAccount({
                 address: liquidityPool.poolAddress,
                 kind: AccountKind.Pool,
                 dexId: DexId.Orca,
                 liquidityPool,
-            })  
-            // Parse pool state from account data (skip 8-byte discriminator)
-            const state = Whirlpool.struct.read(Buffer.from(accountInfo.data),
-                8)
+            })
+            const state = Whirlpool.struct.read(Buffer.from(accountInfo.data), 8)
             return await this.handlePoolStateUpdate(liquidityPool,
                 state)
         } catch (error) {
-            // Log any errors encountered during fetching pool info
             this.winstonService.log(
                 WinstonLog.LiquidityPoolFetchedError,
                 {
@@ -230,43 +191,31 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
         }
     }
     /**
-     * Observes a CLMM pool via WebSocket subscription.
-     * Subscribes to account changes and updates pool state in real-time.
-     * Includes idle timeout mechanism to reconnect if no updates are received.
+     * Subscribes to pool account via WebSocket; on each update parses state and calls handlePoolStateUpdate.
+     * Uses idle timeout to abort and retry if no updates received.
      *
-     * @param liquidityPool - The liquidity pool schema to observe
+     * @param liquidityPool - Pool to observe
      */
-    private async observeClmmPool(
-        liquidityPool: LiquidityPoolSchema
-    ) {
+    private async observeClmmPool(liquidityPool: LiquidityPoolSchema): Promise<void> {
         try {
-            // Stage: state validation (WebSocket idle timeout must be configured)
             if (!liquidityPool.wsIdleTimeoutMs) {
                 throw new LiquidityPoolNoWsIdleTimeoutException({
                     displayId: liquidityPool.displayId,
                 })
             }
 
-            // Set up abort controller and timeout mechanism for idle detection
             const abortController = new AbortController()
             let timeout: NodeJS.Timeout | undefined = undefined
             const resetTimeout = () => {
-                if (timeout) {
-                    clearTimeout(timeout)
-                }
-                // Set timeout to abort connection if no updates received
-                timeout = setTimeout(() => abortController.abort(),
-                    liquidityPool.wsIdleTimeoutMs)
+                if (timeout) clearTimeout(timeout)
+                timeout = setTimeout(() => abortController.abort(), liquidityPool.wsIdleTimeoutMs)
             }
-
-            // Retry subscription indefinitely on connection failures
             await this.retryService.retry({
                 action: async () => {
                     await this.rpcExecutorService.withSolanaRpc({
                         accessType: RpcAccessType.Ws,
                         callback: async ({ rpcSubscriptions }) => {
                             const controller = new AbortController()
-                            // Subscribe to account notifications
                             const accountNotifications = await rpcSubscriptions.accountNotifications(
                                 address(liquidityPool.poolAddress),
                                 {
@@ -277,19 +226,13 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
                                 abortSignal: controller.signal,
                             })
 
-                            // Process each account update notification
                             for await (const accountNotification of accountNotifications) {
-                                // Parse pool state from notification data (skip 8-byte discriminator)
                                 const state = Whirlpool.struct.read(
-                                    Buffer.from(accountNotification.value?.data.toString(),
-                                        "base64"),
-                                    8
+                                    Buffer.from(accountNotification.value?.data.toString(), "base64"),
+                                    8,
                                 )
-                                // Reset idle timeout on each update
                                 resetTimeout()
-                                // Handle the pool state update
-                                await this.handlePoolStateUpdate(liquidityPool,
-                                    state)
+                                await this.handlePoolStateUpdate(liquidityPool, state)
                             }
                         },
                         options: {
@@ -299,7 +242,6 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
                 }
             })
         } catch (error) {
-            // Log any errors encountered during WebSocket observation
             this.winstonService.log(
                 WinstonLog.LiquidityPoolWsError,
                 {

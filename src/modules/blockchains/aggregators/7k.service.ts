@@ -10,7 +10,6 @@ import {
 import {
     AggregatorQuoteFailedException,
     AggregatorSwapFailedException,
-    TokenNotFoundException
 } from "@modules/exceptions"
 import {
     Transaction
@@ -21,9 +20,6 @@ import {
 import SevenK, {
     BluefinXTx, QuoteResponse as SevenKQuoteResponse
 } from "@7kprotocol/sdk-ts"
-import {
-    PrimaryMemoryStorageService
-} from "@modules/databases"
 import BN from "bn.js"
 import {
     RpcExecutorService
@@ -55,7 +51,6 @@ import {
 @Injectable()
 export class SevenKAggregatorService implements IAggregatorService {
     constructor(
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly retryService: RetryService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly selectCoinsService: SelectCoinsService,
@@ -130,23 +125,11 @@ export class SevenKAggregatorService implements IAggregatorService {
             const _payload = payload as SevenKQuoteResponse
             const _txb = txb || new Transaction()
 
-            // find token instance from storage
-            const tokenInInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
-                displayId: {
-                    $eq: tokenIn,
-                },
-            })
-            if(!tokenInInstance) {
-                throw new TokenNotFoundException({
-                    displayId: tokenIn.displayId,
-                })
-            }
-
             // fetch and merge input coins
             const { sourceCoin: inputCoin } = await this.selectCoinsService.fetchAndMergeCoins({
                 txb: _txb,
                 owner: accountAddress,
-                coinType: tokenInInstance.tokenAddress,
+                coinType: tokenIn.tokenAddress,
                 requiredAmount: new BN(_payload.swapAmountWithDecimal),
             })
 

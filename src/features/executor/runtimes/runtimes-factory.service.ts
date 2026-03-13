@@ -50,7 +50,7 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
         // Create runtime instances for all executors that were loaded from the database
         // Using allMustDone ensures all runtime creations complete successfully
         this.asyncService.allMustDone(
-            this.botsLoaderService.botCollection.find().map(
+            Array.from(this.botsLoaderService.botMap.values()).map(
                 async (bot) => {
                     await this.createRuntime(bot)
                 }

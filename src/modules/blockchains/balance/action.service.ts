@@ -212,11 +212,7 @@ export class BalanceActionService implements IBalanceActionService {
         gasBalanceAmount: _gasBalanceAmount,
     }: DetermineReconcileBalancePlanParams): Promise<DetermineReconcileBalancePlanResult> {
         // find target token from storage
-        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.targetToken.toString()
-            }
-        })
+        const targetToken = this.primaryMemoryStorageService.tokenMap.get(bot.targetToken.toString())
         if (!targetToken) {
             throw new TokenNotFoundException({
                 id: bot.targetToken.toString(),
@@ -224,11 +220,7 @@ export class BalanceActionService implements IBalanceActionService {
         }
         
         // find quote token from storage
-        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.quoteToken.toString()
-            }
-        })
+        const quoteToken = this.primaryMemoryStorageService.tokenMap.get(bot.quoteToken.toString())
         if (!quoteToken) {
             throw new TokenNotFoundException({
                 id: bot.quoteToken.toString(),
@@ -236,14 +228,9 @@ export class BalanceActionService implements IBalanceActionService {
         }
         
         // find native gas token for chain
-        const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            type: {
-                $eq: TokenType.Native
-            },
-            chainId: {
-                $eq: bot.chainId
-            }
-        })
+        const gasToken = Array.from(this.primaryMemoryStorageService.tokenMap.values()).find(
+            (t) => t.type === TokenType.Native && t.chainId === bot.chainId,
+        )
         if (!gasToken) {
             throw new TokenNotFoundException({
                 conditions: {

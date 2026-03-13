@@ -177,32 +177,19 @@ export class ReconcileBalanceTaskPrepareService {
                 }
             )
             // 4) Resolve tokens
-            const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-                id: {
-                    $eq: bot.targetToken.toString()
-                },
-            })
+            const targetToken = this.primaryMemoryStorageService.tokenMap.get(bot.targetToken.toString())
             if (!targetToken) throw new TokenNotFoundException({
                 id: bot.targetToken.toString()
             })
 
-            const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-                id: {
-                    $eq: bot.quoteToken.toString()
-                },
-            })
+            const quoteToken = this.primaryMemoryStorageService.tokenMap.get(bot.quoteToken.toString())
             if (!quoteToken) throw new TokenNotFoundException({
                 id: bot.quoteToken.toString()
             })
 
-            const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-                type: {
-                    $eq: TokenType.Native
-                },
-                chainId: {
-                    $eq: bot.chainId
-                },
-            })
+            const gasToken = Array.from(this.primaryMemoryStorageService.tokenMap.values()).find(
+                (t) => t.type === TokenType.Native && t.chainId === bot.chainId,
+            )
             if (!gasToken) {
                 throw new TokenNotFoundException({
                     conditions: {

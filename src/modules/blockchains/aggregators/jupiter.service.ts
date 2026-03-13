@@ -78,22 +78,14 @@ export class JupiterService implements IAggregatorService {
         try {
             // execute quote request with retry mechanism
             // find token instances from storage
-            const tokenInInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
-                id: {
-                    $eq: tokenIn.id,
-                },
-            })
+            const tokenInInstance = this.primaryMemoryStorageService.tokenMap.get(tokenIn.id)
             if (!tokenInInstance) {
                 throw new TokenNotFoundException({
                     displayId: tokenIn.displayId,
                 })
             }
                     
-            const tokenOutInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
-                id: {
-                    $eq: tokenOut.id,
-                },
-            })
+            const tokenOutInstance = this.primaryMemoryStorageService.tokenMap.get(tokenOut.id)
             if (!tokenOutInstance) {
                 throw new TokenNotFoundException({
                     displayId: tokenOut.displayId,

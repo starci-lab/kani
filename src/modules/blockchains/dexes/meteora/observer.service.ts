@@ -13,7 +13,7 @@ import {
 import {
     AsyncService, 
     DayjsService,
-    LokiJSService,
+    ReadinessWatcherFactoryService,
 } from "@modules/mixin"
 import {
     LiquidityPoolNoWsIdleTimeoutException
@@ -55,9 +55,6 @@ import {
 import {
     CacheService 
 } from "@modules/cache"
-import {
-    Collection 
-} from "lokijs"
 
 /**
  * Service responsible for observing and updating Meteora liquidity pool states.
@@ -69,7 +66,7 @@ import {
  */
 @Injectable()
 export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleInit {
-    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
+    private liquidityPoolMap: Map<string, LiquidityPoolSchema> = new Map()
 
     constructor(
         private readonly winstonService: WinstonService,
@@ -80,8 +77,8 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
         private readonly dayjsService: DayjsService,
         private readonly retryService: RetryService,
         private readonly cacheService: CacheService,
-        private readonly lokiJSService: LokiJSService,
         private readonly rpcExecutorService: RpcExecutorService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) { }
 
     /**
@@ -89,32 +86,20 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
      * This reduces computational complexity by working with a local collection.
      */
     async onModuleInit() {
+        // wait until primary memory storage is ready
+        await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
         // Find Meteora liquidity pools from primary memory storage
-        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection
-            .chain()
-            .find(
-                {
-                    dex: {
-                        $eq: createObjectId(DexId.Meteora).toString(),
-                    },
-                }
+        const liquidityPools = Array.from(
+            this.primaryMemoryStorageService.liquidityPoolMap.values())
+            .filter(
+                (liquidityPool) => liquidityPool.dex.toString() === createObjectId(DexId.Meteora).toString(),
             )
-            .data({
-                removeMeta: true 
-            })
 
         // Create a new LokiJS collection for Meteora liquidity pools
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
-            name: "meteora-observer-liquidity-pools",
-            options: {
-                indices: ["poolAddress",
-                    "displayId",
-                    "dex"],
-            },
-        })
-
-        // Insert the found liquidity pools into the new collection
-        this.liquidityPoolCollection.insert(liquidityPools)
+        this.liquidityPoolMap = new Map(
+            liquidityPools.map((liquidityPool) => [liquidityPool.id,
+                liquidityPool
+            ]))
     }
 
     /**
@@ -126,7 +111,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
     async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
         // Iterate over each liquidity pool and fetch its info
-        for (const liquidityPool of this.liquidityPoolCollection.find()) {
+        for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {
             promises.push(
                 (async () => {
                     await this.fetchPoolInfo(liquidityPool)
@@ -146,7 +131,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
         this.handlePoolStateUpdateInterval()
 
         // Start WebSocket subscriptions for each pool
-        for (const liquidityPool of this.liquidityPoolCollection.find()) {
+        for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {
             this.observeDlmmPool(liquidityPool)
         }
     }

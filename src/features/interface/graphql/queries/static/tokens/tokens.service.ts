@@ -13,7 +13,7 @@ import {
 @Injectable()
 export class TokensService {
     constructor(
-        private readonly memoryStorageService: PrimaryMemoryStorageService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     /**
@@ -22,9 +22,7 @@ export class TokensService {
      * and typically represent static registry data.
      */
     tokens(): Array<TokenSchema> {
-        return this.memoryStorageService.tokenCollection.chain().find().data({
-            removeMeta: true,
-        })
+        return Array.from(this.primaryMemoryStorageService.tokenMap.values())
     }
 }
 

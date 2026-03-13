@@ -74,21 +74,13 @@ export class SuiTransferFeesService {
             }
         }
 
-        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.targetToken.toString() 
-            },
-        })
+        const targetToken = this.primaryMemoryStorageService.tokenMap.get(bot.targetToken.toString())
         if (!targetToken) {
             throw new TokenNotFoundException({
                 id: bot.targetToken.toString() 
             })
         }
-        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.quoteToken.toString() 
-            },
-        })
+        const quoteToken = this.primaryMemoryStorageService.tokenMap.get(bot.quoteToken.toString())
 
         if (!quoteToken) {
             throw new TokenNotFoundException({

@@ -486,11 +486,7 @@ export class OpenPositionEnqueueService {
                     const tokenAId = liquidityPool.tokenA.toString()
                     const ready = await this.priceDiagnosticService.ready(tokenAId)
                     if (!ready) {
-                        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-                            id: {
-                                $eq: tokenAId
-                            },
-                        })
+                        const token = this.primaryMemoryStorageService.tokenMap.get(tokenAId)
                         if (!token) {
                             throw new TokenNotFoundException({
                                 id: tokenAId
@@ -514,11 +510,7 @@ export class OpenPositionEnqueueService {
                     const tokenBId = liquidityPool.tokenB.toString()
                     const ready = await this.priceDiagnosticService.ready(tokenBId)
                     if (!ready) {
-                        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-                            id: {
-                                $eq: tokenBId
-                            },
-                        })
+                        const token = this.primaryMemoryStorageService.tokenMap.get(tokenBId)
                         if (!token) {
                             throw new TokenNotFoundException(
                                 {
@@ -561,22 +553,14 @@ export class OpenPositionEnqueueService {
         liquidityPool: LiquidityPoolSchema,
         oldJob?: JobSchema,
     ): Promise<boolean> {
-        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.targetToken.toString()
-            },
-        })
+        const targetToken = this.primaryMemoryStorageService.tokenMap.get(bot.targetToken.toString())
         if (!targetToken) {
             throw new TokenNotFoundException({
                 id: bot.targetToken.toString()
             })
         }
 
-        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.quoteToken.toString()
-            },
-        })
+        const quoteToken = this.primaryMemoryStorageService.tokenMap.get(bot.quoteToken.toString())
         if (!quoteToken) {
             throw new TokenNotFoundException({
                 id: bot.quoteToken.toString()

@@ -114,12 +114,8 @@ export class WithdrawTaskPrepareService {
                 (tokenInput) => tokenInput.tokenId,
             )
 
-            const tokens = this.primaryMemoryStorageService.tokenCollection.find(
-                {
-                    id: {
-                        $in: tokenIds 
-                    },
-                }
+            const tokens = Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
+                (t) => tokenIds.includes(t.id),
             )
 
             if (tokens.length !== cacheResult.tokenInputs.length) {

@@ -121,11 +121,9 @@ export class PriceGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
         @MessageBody() data: SubscribePricesEventPayload,
     ) {
         // Validate token ids exist.
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
-            id: {
-                $in: data.ids,
-            },
-        })
+        const tokens = data.ids
+            .map((id) => this.primaryMemoryStorageService.tokenMap.get(id))
+            .filter((t): t is NonNullable<typeof t> => t != null)
         if (tokens.length !== data.ids.length) {
             throw new SomeTokensNotFoundException({
                 actualCount: tokens.length,
@@ -168,11 +166,9 @@ export class PriceGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
         if (ids.length === 0) {
             return
         }
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
-            id: {
-                $in: ids,
-            },
-        })
+        const tokens = ids
+            .map((id) => this.primaryMemoryStorageService.tokenMap.get(id))
+            .filter((t): t is NonNullable<typeof t> => t != null)
         const results: Record<string, PublicationPrice> = {
         }
         const promises: Array<Promise<void>> = tokens.map(

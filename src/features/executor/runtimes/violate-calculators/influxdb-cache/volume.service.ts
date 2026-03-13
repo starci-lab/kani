@@ -9,7 +9,6 @@ import {
 import {
     Injectable,
     OnApplicationBootstrap,
-    OnModuleInit,
 } from "@nestjs/common"
 import type {
     GetPointsParams,
@@ -17,10 +16,6 @@ import type {
     InfluxdbVolumeCache,
 } from "../types"
 import {
-    Collection,
-} from "lokijs"
-import {
-    LokiJSService,
     AsyncService,
     DayjsService,
 } from "@modules/mixin"
@@ -32,37 +27,31 @@ import {
  * Service for caching volume points in InfluxDB.
  */
 @Injectable()
-export class InfluxdbVolumeCacheService implements OnModuleInit, OnApplicationBootstrap {
-    private storage: Collection<InfluxdbVolumeCache>
+export class InfluxdbVolumeCacheService implements OnApplicationBootstrap {
+    private storage = new Map<string, InfluxdbVolumeCache>()
 
     constructor(
         private readonly primaryInfluxdbVolumeBucketService: PrimaryInfluxdbVolumeBucketService,
-        private readonly lokiJSService: LokiJSService,
         private readonly asyncService: AsyncService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly dayjsService: DayjsService,
     ) {}
 
     /**
-     * Initialize the volume cache storage.
+     * Get the key for the storage.
+     * @param tokenId - The token id.
+     * @param cexId - The cex id.
+     * @returns The key.
      */
-    async onModuleInit(): Promise<void> {
-        this.storage = await this.lokiJSService.createCollection<InfluxdbVolumeCache>({
-            name: "influxdb-volume-cache",
-            options: {
-                indices: [
-                    "tokenId",
-                    "cexId",
-                ],
-            },
-        })
+    private getKey(tokenId: string, cexId: string): string {
+        return `${tokenId}-${cexId}`
     }
 
     /**
      * Bootstrap the volume cache service.
      */
     async onApplicationBootstrap(): Promise<void> {
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find()
+        const tokens = Array.from(this.primaryMemoryStorageService.tokenMap.values())
         const promises = tokens.map(async (token) => {
             await this.storePoints(token)
         })
@@ -81,15 +70,19 @@ export class InfluxdbVolumeCacheService implements OnModuleInit, OnApplicationBo
                     intervalMs: envConfig().executor.runtime.influxdbCache.volume.intervalMs,
                     cexId,
                 })
-                this.storage.findAndRemove({
-                    tokenId: token.id,
-                    cexId,
-                })
-                this.storage.insert({
-                    tokenId: token.id,
-                    cexId,
-                    points: volumePoints,
-                })
+                this.storage.delete(
+                    this.getKey(token.id,
+                        cexId),
+                )
+                this.storage.set(
+                    this.getKey(token.id,
+                        cexId),
+                    {
+                        tokenId: token.id,
+                        cexId,
+                        points: volumePoints,
+                    },
+                )
             }
         )
         await this.asyncService.allIgnoreError(promises)
@@ -100,7 +93,7 @@ export class InfluxdbVolumeCacheService implements OnModuleInit, OnApplicationBo
      */
     @Interval(envConfig().executor.runtime.influxdbCache.volume.storeIntervalMs)
     async storeAllPoints(): Promise<void> {
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find()
+        const tokens = Array.from(this.primaryMemoryStorageService.tokenMap.values())
         const promises = tokens.map(async (token) => {
             await this.storePoints(token)
         })
@@ -120,24 +113,22 @@ export class InfluxdbVolumeCacheService implements OnModuleInit, OnApplicationBo
         { 
             tokenId, 
             cexId, 
-            timeIntervalMs 
+            timeIntervalMs,
+            snapshotMs,
         }: GetPointsParams
     ): Promise<GetVolumePointsResult> {
-        const entries = this.storage.find({
-            tokenId,
-            cexId,
-        })
-        if (!entries || entries.length === 0) {
-            return []
-        }
-        // get the points from the entries
-        const points = entries.flatMap((entry) => entry.points)
-        // filter the points by the time interval
-        return points.filter(
-            (point) => this.dayjsService.now().diff(
+        // get the entries from the storage
+        const entries = Array.from(this.storage.values())
+            .filter((entry) => entry.tokenId === tokenId && entry.cexId === cexId)
+        // get the now
+        const now = snapshotMs ? this.dayjsService.from(snapshotMs) : this.dayjsService.now()
+        // get the points from the entries and filter by the time interval
+        return entries.flatMap(
+            (entry) => entry.points)
+            .filter((point) => now.diff(
                 this.dayjsService.from(point.time),
                 "millisecond"
             ) <= timeIntervalMs
-        )
+            )
     }
 }

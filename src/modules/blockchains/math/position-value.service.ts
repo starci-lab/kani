@@ -72,11 +72,7 @@ export class PositionValueService {
                 }
 
                 // Retrieve incentive token metadata from memory storage
-                const incentiveToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-                    id: {
-                        $eq: tokenId
-                    },
-                })
+                const incentiveToken = this.primaryMemoryStorageService.tokenMap.get(tokenId)
 
                 if (!incentiveToken) {
                     return new Decimal(0)

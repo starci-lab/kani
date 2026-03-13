@@ -60,10 +60,6 @@ import {
     ExecutorLoaderService,
 } from "./executor-loader.service"
 import {
-    Collection,
-} from "lokijs"
-import {
-    LokiJSService,
     DayjsService,
 } from "@modules/mixin"
 import {
@@ -81,16 +77,15 @@ export class BotsLoaderService
 implements OnApplicationBootstrap, OnModuleInit {
     /**
      * Binary semaphore - ensures load and change stream updates run sequentially,
-     * preventing race conditions when writing to botCollection concurrently.
+     * preventing race conditions when writing to botMap concurrently.
      */
     private sema!: Sema
 
     /**
-     * In-memory LokiJS collection holding the bot snapshot.
-     * Indexed by `id` for O(1) lookups.
+     * In-memory map holding the bot snapshot by id.
      * Other modules read from here instead of querying MongoDB on each request.
      */
-    public botCollection: Collection<BotSchema>
+    public botMap: Map<string, BotSchema>
 
     constructor(
         @InjectPrimaryMongoose()
@@ -102,13 +97,12 @@ implements OnApplicationBootstrap, OnModuleInit {
         private readonly eventEmitterService: EventEmitterService,
         private readonly semaService: SemaService,
         private readonly winstonService: WinstonService,
-        private readonly lokiJSService: LokiJSService,
         private readonly dayjsService: DayjsService,
     ) { }
 
     /**
      * Initializes the service when the NestJS module is ready.
-     * Order: wait for ExecutorLoaderService -> create watcher -> semaphore -> LokiJS collection -> load data -> mark ready.
+     * Order: wait for ExecutorLoaderService -> create watcher -> semaphore -> init botMap -> load data -> mark ready.
      */
     async onModuleInit() {
         // Wait for ExecutorLoaderService to finish loading (dependency)
@@ -126,14 +120,7 @@ implements OnApplicationBootstrap, OnModuleInit {
             1,
         )
 
-        // Create LokiJS collection, indexed by `id` for fast findOne
-        this.botCollection =
-            await this.lokiJSService.createCollection<BotSchema>({
-                name: "executor-bots",
-                options: {
-                    indices: ["id"],
-                },
-            })
+        this.botMap = new Map()
 
         // Initial load from MongoDB
         await this.load()
@@ -171,6 +158,7 @@ implements OnApplicationBootstrap, OnModuleInit {
                 .findById(envConfig().executor.id)
 
             if (!executor) {
+                this.botMap = new Map()
                 this.botCountMetricService.set(0)
                 return
             }
@@ -198,11 +186,7 @@ implements OnApplicationBootstrap, OnModuleInit {
                     const id = bot.id
                     if (!id) return null
 
-                    const old = this.botCollection.findOne({
-                        id: {
-                            $eq: id
-                        },
-                    })
+                    const old = this.botMap.get(id)
                     if (!old) return null
 
                     const oldSnapshot = _.pick(old,
@@ -249,8 +233,12 @@ implements OnApplicationBootstrap, OnModuleInit {
             }
 
             // Replace entire snapshot with new data
-            this.botCollection.clear()
-            this.botCollection.insert(newBots)
+            this.botMap = new Map(
+                newBots.map((bot) => [
+                    bot.id,
+                    bot,
+                ]),
+            )
             // update prometheus bot count metric
             this.botCountMetricService.set(newBots.length)
         } finally {
@@ -370,12 +358,7 @@ implements OnApplicationBootstrap, OnModuleInit {
                                 "liquidityPools",
                                 "isExitToUsdc",
                             ]
-                            const old =
-                                    this.botCollection.findOne({
-                                        id: {
-                                            $eq: data.id
-                                        },
-                                    })
+                            const old = this.botMap.get(data.id)
                             if (!old) break
 
                             const oldSnapshot = _.pick(old,
@@ -386,11 +369,13 @@ implements OnApplicationBootstrap, OnModuleInit {
                             if (_.isEqual(oldSnapshot,
                                 newSnapshot)) break
 
-                            // Update only business fields (preserve $loki & meta)
                             for (const key of props) {
                                 ; (old)[key] = (data)[key]
                             }
-                            this.botCollection.update(old)
+                            this.botMap.set(
+                                data.id,
+                                old,
+                            )
                             this.winstonService.log(
                                 WinstonLog.ExecutorMongoDbChangeStreamBotUpdated,
                                 {

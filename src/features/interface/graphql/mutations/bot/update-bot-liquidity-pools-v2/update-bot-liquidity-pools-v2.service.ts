@@ -71,11 +71,9 @@ export class UpdateBotLiquidityPoolsV2Service {
                 id,
             })
         }
-        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find({
-            id: {
-                $in: liquidityPoolIds,
-            },
-        })
+        const liquidityPools = liquidityPoolIds
+            .map((id) => this.primaryMemoryStorageService.liquidityPoolMap.get(id))
+            .filter((p): p is NonNullable<typeof p> => p != null)
         if (liquidityPools.length !== liquidityPoolIds.length) {
             throw new SomeLiquidityPoolsNotFoundException(
                 {

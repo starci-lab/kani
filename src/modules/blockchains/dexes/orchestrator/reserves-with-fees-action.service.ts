@@ -79,13 +79,7 @@ export class ReservesWithFeesActionService {
         // Stage: state/config validation (DEX must exist and be enabled)
         const { bot, liquidityPool, state } = params
         const dex =
-            this.primaryMemoryStorageService.dexCollection.findOne(
-                {
-                    id: {
-                        $eq: liquidityPool.dex.toString(),
-                    },
-                }
-            )
+            this.primaryMemoryStorageService.dexMap.get(liquidityPool.dex.toString())
         if (!dex) {
             throw new DexNotFoundException({
                 id: liquidityPool.dex.toString(),

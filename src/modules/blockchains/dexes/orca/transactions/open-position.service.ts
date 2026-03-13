@@ -88,12 +88,8 @@ export class OpenPositionInstructionService {
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         const mintKeyPair = await this.solanaKeypairService.generateKeypair()
-        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: liquidityPool.tokenA.toString(),
-        })
-        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: liquidityPool.tokenB.toString(),
-        })
+        const tokenA = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenB.toString())
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: liquidityPool.displayId,

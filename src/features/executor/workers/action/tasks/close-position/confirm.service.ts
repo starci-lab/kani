@@ -95,11 +95,7 @@ export class ClosePositionTaskConfirmService {
                 job,
                 bullmqJob,
             })
-            const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-                id: {
-                    $eq: liquidityPool.tokenA.toString(),
-                },
-            })
+            const targetToken = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenA.toString())
             if (!targetToken) {
                 throw new TokenNotFoundException(
                     {
@@ -107,11 +103,7 @@ export class ClosePositionTaskConfirmService {
                     }
                 )
             }
-            const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-                id: {
-                    $eq: liquidityPool.tokenB.toString(),
-                },
-            })
+            const quoteToken = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenB.toString())
             if (!quoteToken) {
                 throw new TokenNotFoundException(
                     {
@@ -119,14 +111,9 @@ export class ClosePositionTaskConfirmService {
                     }
                 )
             }
-            const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-                type: {
-                    $eq: TokenType.Native,
-                },
-                chainId: {
-                    $eq: bot.chainId,
-                },
-            })
+            const gasToken = Array.from(this.primaryMemoryStorageService.tokenMap.values()).find(
+                (t) => t.type === TokenType.Native && t.chainId === bot.chainId,
+            )
             if (!gasToken) {
                 throw new TokenNotFoundException(
                     {
@@ -149,12 +136,8 @@ export class ClosePositionTaskConfirmService {
                     quoteToken.tokenAddress
                 ]
             )
-            const nonPairRewardTokens = this.primaryMemoryStorageService.tokenCollection.find(
-                {
-                    tokenAddress: {
-                        $in: nonPairRewardTokenAddresses,
-                    },
-                }
+            const nonPairRewardTokens = Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
+                (t) => nonPairRewardTokenAddresses.includes(t.tokenAddress),
             )
             const {
                 targetBalanceAmount,

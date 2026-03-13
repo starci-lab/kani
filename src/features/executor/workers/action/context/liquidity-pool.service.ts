@@ -35,11 +35,7 @@ export class LiquidityPoolContextService {
         }: LoadLiquidityPoolContextParams
     ): Promise<LoadLiquidityPoolContextResult> {
         // Find the job by id.
-        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
-            id: {
-                $eq: liquidityPoolId,
-            }
-        })
+        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolMap.get(liquidityPoolId)
         if (!liquidityPool) {
             throw new LiquidityPoolNotFoundException({
                 id: liquidityPoolId,

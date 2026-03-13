@@ -111,11 +111,7 @@ export class OpenPositionTaskConfirmService {
                     }
                 )
             }
-            const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-                id: {
-                    $eq: liquidityPool.tokenA.toString(),
-                },
-            })
+            const targetToken = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenA.toString())
             if (!targetToken) {
                 throw new TokenNotFoundException(
                     {
@@ -123,11 +119,7 @@ export class OpenPositionTaskConfirmService {
                     }
                 )
             }
-            const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-                id: {
-                    $eq: liquidityPool.tokenB.toString(),
-                },
-            })
+            const quoteToken = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenB.toString())
             if (!quoteToken) {
                 throw new TokenNotFoundException(
                     {
@@ -135,14 +127,9 @@ export class OpenPositionTaskConfirmService {
                     }
                 )
             }
-            const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-                type: {
-                    $eq: TokenType.Native,
-                },
-                chainId: {
-                    $eq: bot.chainId,
-                },
-            })
+            const gasToken = Array.from(this.primaryMemoryStorageService.tokenMap.values()).find(
+                (t) => t.type === TokenType.Native && t.chainId === bot.chainId,
+            )
             if (!gasToken) {
                 throw new TokenNotFoundException(
                     {

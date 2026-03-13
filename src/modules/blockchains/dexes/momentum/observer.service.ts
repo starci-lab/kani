@@ -2,51 +2,48 @@ import {
     SuiFetchService, SuiObjectKind
 } from "@modules/blockchains"
 import {
-    PrimaryMemoryStorageService, 
+    PrimaryMemoryStorageService,
     DexId
 } from "@modules/databases"
 import {
-    LiquidityPoolSchema 
+    LiquidityPoolSchema
 } from "@modules/databases"
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    OnApplicationBootstrap, OnModuleInit 
+    OnApplicationBootstrap, OnModuleInit
 } from "@nestjs/common"
 import {
-    AsyncService, 
-    LokiJSService,
+    AsyncService,
+    ReadinessWatcherFactoryService,
 } from "@modules/mixin"
 import {
-    Interval 
+    Interval
 } from "@nestjs/schedule"
 import {
-    createObjectId 
+    createObjectId
 } from "@modules/common"
-import { 
-    DynamicClmmLiquidityPoolInfoCacheResult, 
-    CacheService, 
-    CacheKey 
+import {
+    DynamicClmmLiquidityPoolInfoCacheResult,
+    CacheService,
+    CacheKey
 } from "@modules/cache"
 import {
-    WinstonService, WinstonLog 
+    WinstonService, WinstonLog
 } from "@modules/winston"
 import {
-    DayjsService 
+    DayjsService
 } from "@modules/mixin"
 import {
-    EventEmitterService, EventName 
+    EventEmitterService, EventName
 } from "@modules/event"
 import {
-    parseMomentumPool, MomentumPool, MomentumSuiObjectPoolFields 
+    parseMomentumPool, MomentumPool, MomentumSuiObjectPoolFields
 } from "./struct"
 import {
-    envConfig 
+    envConfig
 } from "@modules/env"
-import {
-    Collection 
-} from "lokijs"
 
 /**
  * Service responsible for observing and updating Momentum liquidity pool states.
@@ -58,50 +55,37 @@ import {
  */
 @Injectable()
 export class MomentumObserverService implements OnApplicationBootstrap, OnModuleInit {
-    // Snapshot here to reduce the computational complexity
-    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
+    // Snapshot map to reduce the computational complexity
+    private liquidityPoolMap: Map<string, LiquidityPoolSchema> = new Map()
 
     constructor(
-        private readonly memoryStorageService: PrimaryMemoryStorageService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly cacheService: CacheService,
         private readonly winstonService: WinstonService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly suiFetchService: SuiFetchService,
         private readonly dayjsService: DayjsService,
-        private readonly lokiJSService: LokiJSService,
-    ) {}
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+    ) { }
 
     /**
      * Initializes the module by creating a snapshot of Momentum liquidity pools.
      * This reduces computational complexity by working with a local collection.
      */
     async onModuleInit() {
+        // wait until primary memory storage is ready
+        await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
         // Find Momentum liquidity pools from primary memory storage
-        const liquidityPools = this.memoryStorageService.liquidityPoolCollection
-            .chain()
-            .find(
-                {
-                    dex: {
-                        $eq: createObjectId(DexId.Momentum).toString(),
-                    },
-                })
-            .data({
-                removeMeta: true 
-            })
+        const liquidityPools = Array.from(
+            this.primaryMemoryStorageService.liquidityPoolMap.values())
+            .filter(
+                (liquidityPool) => liquidityPool.dex.toString() === createObjectId(DexId.Momentum).toString(),
+            )
 
         // Create a new LokiJS collection for Momentum liquidity pools
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
-            name: "momentum-observer-liquidity-pools",
-            options: {
-                indices: ["poolAddress",
-                    "displayId",
-                    "id"],
-            },
-        })
-
-        // Insert the found liquidity pools into the new collection
-        this.liquidityPoolCollection.insert(liquidityPools)
+        this.liquidityPoolMap = new Map(liquidityPools.map((liquidityPool) => [liquidityPool.id,
+            liquidityPool]))
     }
 
     /**
@@ -120,7 +104,7 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
         // Iterate over each liquidity pool and fetch its info
-        for (const liquidityPool of this.liquidityPoolCollection.find()) {
+        for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {
             promises.push(
                 (
                     async () => {

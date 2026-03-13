@@ -70,21 +70,13 @@ export class CreateBotService {
             isExitToUsdc,
         }: CreateBotRequest,
     ): Promise<CreateBotResponseData> {
-        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: targetTokenId 
-            } 
-        })
+        const targetToken = this.primaryMemoryStorageService.tokenMap.get(targetTokenId)
         if (!targetToken) {
             throw new TokenNotFoundException({
                 id: targetTokenId,
             })
         }
-        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: quoteTokenId 
-            } 
-        })
+        const quoteToken = this.primaryMemoryStorageService.tokenMap.get(quoteTokenId)
         if (!quoteToken) {
             throw new TokenNotFoundException({
                 id: quoteTokenId,
@@ -95,11 +87,9 @@ export class CreateBotService {
         // TO DO: we will find the most recommended liquidity pools for the user
         if (!liquidityPoolIds || liquidityPoolIds.length === 0) { 
             const selectedPoolIds = _
-                .chain(this.primaryMemoryStorageService.liquidityPoolCollection.find({
-                    chainId: {
-                        $eq: chainId 
-                    },
-                }))
+                .chain(Array.from(this.primaryMemoryStorageService.liquidityPoolMap.values()).filter(
+                    (p) => p.chainId === chainId,
+                ))
                 .filter((liquidityPool) => {
                     const tokenA = liquidityPool.tokenA.toString()
                     const tokenB = liquidityPool.tokenB.toString()
@@ -126,14 +116,9 @@ export class CreateBotService {
             )
         }
         // retrieve the liquidity pools from the cache
-        const liquidityPools = this.primaryMemoryStorageService
-            .liquidityPoolCollection.find(
-                {
-                    id: {
-                        $in: liquidityPoolIds 
-                    }
-                }
-            )
+        const liquidityPools = liquidityPoolIds
+            .map((id) => this.primaryMemoryStorageService.liquidityPoolMap.get(id))
+            .filter((p): p is NonNullable<typeof p> => p != null)
         // create embedded wallet for the bot
         const platformId = chainIdToPlatformId(chainId)
         const generatedKeypair = await this.keypairsService.generateKeypair({

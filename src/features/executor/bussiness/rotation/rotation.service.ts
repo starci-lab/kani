@@ -238,12 +238,9 @@ export class RotationService implements OnModuleInit {
         const assignedPoolIds = Array.from(this.botAssignments.values())
             .flatMap(botAssignment => botAssignment.liquidityPoolIds)
 
-        const liquidityPools =
-        this.primaryMemoryStorageService.liquidityPoolCollection.find({
-            id: {
-                $in: assignedPoolIds 
-            },
-        })
+        const liquidityPools = assignedPoolIds
+            .map((id) => this.primaryMemoryStorageService.liquidityPoolMap.get(id))
+            .filter((p): p is NonNullable<typeof p> => p != null)
 
         // build fast lookup map: poolId -> displayId
         const liquidityPoolIdMap = new Map<string, LiquidityPoolId>()

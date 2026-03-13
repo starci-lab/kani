@@ -39,13 +39,7 @@ export class HandleDlmmPositionCloseRequestedEventService {
         bot: BotSchema,
         event: DlmmPositionCloseRequestedEventPayload,
     ) {
-        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
-            {
-                id: {
-                    $eq: event.id,
-                }
-            }
-        )
+        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolMap.get(event.id)
         if (!liquidityPool) {
             throw new LiquidityPoolNotFoundException({
                 id: event.id,

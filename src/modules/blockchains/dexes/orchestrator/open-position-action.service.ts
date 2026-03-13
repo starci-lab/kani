@@ -80,11 +80,7 @@ export class OpenPositionActionService {
      * @throws {DexNotFoundException} If the DEX is not found in memory storage
      */
     private getDexOrThrow(dexId: string) {
-        const dex = this.primaryMemoryStorageService.dexCollection.findOne({
-            id: {
-                $eq: dexId,
-            },
-        })
+        const dex = this.primaryMemoryStorageService.dexMap.get(dexId)
 
         // Stage: state validation (DEX must exist)
         if (!dex) {

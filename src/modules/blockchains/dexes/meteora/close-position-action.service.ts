@@ -98,12 +98,8 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
             })
         }
         // stage: state validation (pool token metadata must exist)
-        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: liquidityPool.tokenA.toString(),
-        })
-        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: liquidityPool.tokenB.toString(),
-        })
+        const tokenA = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenB.toString())
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: liquidityPool.displayId,

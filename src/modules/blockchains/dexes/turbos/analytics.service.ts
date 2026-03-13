@@ -17,12 +17,11 @@ import {
     Interval
 } from "@nestjs/schedule"
 import {
-    AsyncService, LokiJSService, DayjsService
+    AsyncService, DayjsService, ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
     envConfig
 } from "@modules/env"
-import Decimal from "decimal.js"
 import {
     AxiosService
 } from "@modules/axios"
@@ -33,67 +32,57 @@ import {
     createObjectId
 } from "@modules/common"
 import {
-    Collection 
-} from "lokijs"
-import {
     TurbosPool 
 } from "./types"
 
 /**
- * Service responsible for fetching and caching analytics data for Turbos DEX.
- * Uses the Turbos API to retrieve pool analytics information.
+ * Fetches and caches Turbos pool analytics (fees, volume, TVL, APR) from Turbos API.
+ *
+ * @example
+ * await turbosAnalyticsService.onModuleInit()
+ * // then handleAnalyticsUpdateInterval runs on schedule
  */
 @Injectable()
-export class TurbosAnalyticsService
-implements OnModuleInit, OnApplicationBootstrap {
+export class TurbosAnalyticsService implements OnModuleInit, OnApplicationBootstrap {
     private readonly uri = "https://api2.turbos.finance/pools/ids"
-    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
+    private liquidityPoolMap: Map<string, LiquidityPoolSchema> = new Map()
     private axios: AxiosInstance
+
     constructor(
         private readonly axiosService: AxiosService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly cacheService: CacheService,
         private readonly asyncService: AsyncService,
-        private readonly lokiJSService: LokiJSService,
         private readonly dayjsService: DayjsService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) { }
 
     /**
      * Starts the analytics update interval on application bootstrap.
      */
-    onApplicationBootstrap() {
+    onApplicationBootstrap(): void {
         this.handleAnalyticsUpdateInterval()
     }
 
     /**
-     * Initializes the analytics service by setting up collections and caches.
+     * Initializes Turbos analytics: wait for primary memory storage, create axios client, build local pool map.
      */
-    async onModuleInit() {
+    async onModuleInit(): Promise<void> {
+        await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
         const key = "turbos-analytics"
         this.axios = this.axiosService.create({
             key 
         })
-        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection
-            .chain()
-            .find(
-                {
-                    dex: {
-                        $eq: createObjectId(DexId.Turbos).toString(),
-                    },
-                }
+        const liquidityPools = Array.from(
+            this.primaryMemoryStorageService.liquidityPoolMap.values())
+            .filter(
+                (liquidityPool) => liquidityPool.dex.toString() === createObjectId(DexId.Turbos).toString(),
             )
-            .data({
-                removeMeta: true 
-            })
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
-            name: "turbos-analytics-liquidity-pools",
-            options: {
-                indices: ["poolAddress",
-                    "displayId",
-                    "id"],
-            },
-        })
-        this.liquidityPoolCollection.insert(liquidityPools)
+        this.liquidityPoolMap = new Map(
+            liquidityPools.map((liquidityPool) => [liquidityPool.id,
+                liquidityPool
+            ]
+            ))
     }
 
     /**
@@ -122,11 +111,11 @@ implements OnModuleInit, OnApplicationBootstrap {
                     }
                     const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
                         snapshotAt,
-                        fee24H: new Decimal(item.fee_24h_usd).toString(),
-                        volume24H: new Decimal(item.volume_24h_usd).toString(),
-                        tvl: new Decimal(item.liquidity_usd).toString(),
-                        apr24H: new Decimal(item.apr).div(item.apr_percent).toString(),
-                        liquidity: new Decimal(item.liquidity_usd).toString(),
+                        fee24H: String(Number(item.fee_24h_usd)),
+                        volume24H: String(Number(item.volume_24h_usd)),
+                        tvl: String(Number(item.liquidity_usd)),
+                        apr24H: String(Number(item.apr) / Number(item.apr_percent)),
+                        liquidity: String(Number(item.liquidity_usd)),
                     }
                     await this.cacheService.set(
                         {
@@ -142,15 +131,13 @@ implements OnModuleInit, OnApplicationBootstrap {
     }
 
     /**
-     * Handles the analytics update interval.
-     * Splits pools into chunks and processes them in batches.
+     * Runs on interval: chunks pools by 10, fetches and caches analytics per chunk.
      */
     @Interval(envConfig().dexes.turbos.interval.analytics)
-    async handleAnalyticsUpdateInterval() {
-        // split into chunks of 10
-        const chunks = this.liquidityPoolCollection.find().reduce(
+    async handleAnalyticsUpdateInterval(): Promise<void> {
+        const chunks = Array.from(this.liquidityPoolMap.values()).reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
-                const chunkIndex = new Decimal(index).div(10).floor().toNumber()
+                const chunkIndex = Math.floor(index / 10)
                 acc[chunkIndex] = [...(acc[chunkIndex] || []),
                     liquidityPool]
                 return acc

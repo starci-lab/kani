@@ -1,8 +1,8 @@
 import {
-    Injectable 
+    Injectable, OnModuleInit
 } from "@nestjs/common"
 import {
-    MarketListingId, PrimaryMemoryStorageService 
+    MarketListingId, PrimaryMemoryStorageService, TokenSchema 
 } from "@modules/databases"
 import type {
     BinanceTokenPrice,
@@ -10,6 +10,9 @@ import type {
     GetBinanceTokenPricesParams,
     GetBinanceTokenVolumesParams,
 } from "./types"
+import {
+    ReadinessWatcherFactoryService 
+} from "@modules/mixin"
 
 /**
  * Service responsible for managing Binance token registry and symbol mappings.
@@ -21,11 +24,23 @@ import type {
  * const prices = service.getTokenPrices({ tokenPriceDataArray: binanceData })
  */
 @Injectable()
-export class BinanceTokenRegistryService {
+export class BinanceTokenRegistryService implements OnModuleInit {
+    private tokenMap: Map<string, TokenSchema> = new Map()
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
 
+    async onModuleInit() {
+        // wait until primary memory storage is ready
+        await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
+        this.tokenMap = new Map(
+            Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
+                (token) => token.marketListings?.some((market) => market.id === MarketListingId.Binance),
+            ).map((token) => [token.id,
+                token])
+        )
+    }
     /**
      * Gets Binance symbols for ticker (price) stream.
      *
@@ -52,13 +67,7 @@ export class BinanceTokenRegistryService {
      * @returns Array of raw Binance symbols
      */
     private getRawSymbols(): Array<string> {
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
-            marketListings: {
-                $elemMatch: {
-                    id: MarketListingId.Binance,
-                },
-            },
-        })
+        const tokens = Array.from(this.tokenMap.values())
         if (!tokens.length) return []
         return (
             [...new Set(
@@ -86,18 +95,10 @@ export class BinanceTokenRegistryService {
         tokenPriceDataArray,
     }: GetBinanceTokenPricesParams): Array<BinanceTokenPrice> {
         // find all tokens with Binance market listings
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
-            marketListings: {
-                $elemMatch: {
-                    id: MarketListingId.Binance,
-                },
-            }
-        })
-        
+        const tokens = Array.from(this.tokenMap.values())
         if (!tokens.length) {
             return []
         }
-        
         // map token prices to internal structure
         return tokens.map(
             token => {
@@ -136,13 +137,9 @@ export class BinanceTokenRegistryService {
     getTokenVolumes({
         tokenVolumeDataArray,
     }: GetBinanceTokenVolumesParams): Array<BinanceTokenVolume> {
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
-            marketListings: {
-                $elemMatch: {
-                    id: MarketListingId.Binance,
-                },
-            },
-        })
+        const tokens = Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
+            (t) => t.marketListings?.some((m) => m.id === MarketListingId.Binance),
+        )
         if (!tokens.length) return []
         return tokens.map(
             token => {

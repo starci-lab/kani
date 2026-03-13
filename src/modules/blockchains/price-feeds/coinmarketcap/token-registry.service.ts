@@ -37,13 +37,9 @@ export class CoinMarketCapTokenRegistryService {
      */
     getSymbols(): Array<string> {
         // Find all tokens with CoinMarketCap market listings
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
-            marketListings: {
-                $elemMatch: {
-                    id: MarketListingId.CoinMarketCap,
-                },
-            }
-        })
+        const tokens = Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
+            (t) => t.marketListings?.some((m) => m.id === MarketListingId.CoinMarketCap),
+        )
         if (!tokens.length) return []
         // Extract unique symbols (numeric IDs) from market listings
         return [
@@ -71,13 +67,9 @@ export class CoinMarketCapTokenRegistryService {
         tokenPriceData: Array<CoinMarketCapTokenPriceData>
     ): Array<CoinMarketCapTokenPrice> {
         // Find all tokens with CoinMarketCap market listings
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
-            marketListings: {
-                $elemMatch: {
-                    id: MarketListingId.CoinMarketCap,
-                },
-            }
-        })
+        const tokens = Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
+            (t) => t.marketListings?.some((m) => m.id === MarketListingId.CoinMarketCap),
+        )
         if (!tokens.length) return []
         // Map tokens to prices by matching symbols (numeric IDs)
         return tokens.map(

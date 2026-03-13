@@ -26,71 +26,70 @@ import {
     createObjectId 
 } from "@modules/common"
 import {
-    AsyncService, DayjsService, LokiJSService 
+    AsyncService, DayjsService, ReadinessWatcherFactoryService 
 } from "@modules/mixin"
 import {
     envConfig 
 } from "@modules/env"
-import Decimal from "decimal.js"
-import {
-    Collection 
-} from "lokijs"
 import {
     WhirlpoolPoolResult
 } from "./types"
 
 /**
- * Service responsible for fetching and caching Orca pool analytics data.
- * Uses Orca API to retrieve pool statistics and metrics.
+ * Fetches and caches Orca pool analytics (fees, volume, TVL, APR) from Orca API.
  *
  * @example
- * const service = new OrcaAnalyticsService(...)
- * await service.onModuleInit()
+ * await orcaAnalyticsService.onModuleInit()
+ * // then handleAnalyticsUpdateInterval runs on schedule
  */
 @Injectable()
 export class OrcaAnalyticsService implements OnModuleInit, OnApplicationBootstrap {
     private readonly url = "https://api.orca.so/v2/solana/pools"
-    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
+    private liquidityPoolMap: Map<string, LiquidityPoolSchema> = new Map()
     private axios: AxiosInstance
+
     constructor(
     private readonly axiosService: AxiosService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly cacheService: CacheService,
     private readonly asyncService: AsyncService,
     private readonly dayjsService: DayjsService,
-    private readonly lokiJSService: LokiJSService,
+    private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
 
+    /**
+     * Called once the application has bootstrapped.
+     * Initiates periodic analytics updates.
+     */
     async onApplicationBootstrap() {
         await this.handleAnalyticsUpdateInterval()
     }
-
+    
+    /**
+     * Initializes the analytics service by setting up collections and caches.
+     */
     async onModuleInit() {
+        // wait until primary memory storage is ready
+        await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
         const key = "orca-analytics"
         this.axios = this.axiosService.create({
             key 
         })
-        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection
-            .chain()
-            .find({
-                dex: {
-                    $eq: createObjectId(DexId.Orca).toString(),
-                },
-            })
-            .data({
-                removeMeta: true 
-            })
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
-            name: "orca-analytics-liquidity-pools",
-            options: {
-                indices: ["poolAddress",
-                    "displayId",
-                    "id"],
-            },
-        })
-        this.liquidityPoolCollection.insert(liquidityPools)
+        const liquidityPools = Array.from(
+            this.primaryMemoryStorageService.liquidityPoolMap.values())
+            .filter(
+                (liquidityPool) => liquidityPool.dex.toString() === createObjectId(DexId.Orca).toString(),
+            )
+        this.liquidityPoolMap = new Map(
+            liquidityPools.map((liquidityPool) => [liquidityPool.id,
+                liquidityPool
+            ]))
     }
 
+    /**
+     * Sets the analytics data for a batch of liquidity pools.
+     * @param liquidityPools - Array of liquidity pool schemas
+     */
     private async setBatchPoolAnalytics(liquidityPools: Array<LiquidityPoolSchema>) {
         const poolAddresses = liquidityPools.map(liquidityPool => liquidityPool.poolAddress).join(",")
         const { data } = await this.axios.get<WhirlpoolPoolResult>(
@@ -110,12 +109,12 @@ export class OrcaAnalyticsService implements OnModuleInit, OnApplicationBootstra
                     const { stats, tvlUsdc, liquidity } = item
                     const { fees, volume, yieldOverTvl } = stats["24h"]
                     const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
-                        fee24H: new Decimal(fees).toString(),
-                        volume24H: new Decimal(volume).toString(),
-                        tvl: new Decimal(tvlUsdc).toString(),
-                        apr24H: new Decimal(yieldOverTvl).mul(365).toString(),
+                        fee24H: String(Number(fees)),
+                        volume24H: String(Number(volume)),
+                        tvl: String(Number(tvlUsdc)),
+                        apr24H: String(Number(yieldOverTvl) * 365),
                         snapshotAt,
-                        liquidity: new Decimal(liquidity).toString(),
+                        liquidity: String(Number(liquidity)),
                     }
                     await this.cacheService.set(
                         {
@@ -133,9 +132,9 @@ export class OrcaAnalyticsService implements OnModuleInit, OnApplicationBootstra
     @Interval(envConfig().dexes.orca.interval.analytics)
     async handleAnalyticsUpdateInterval() {
         // split into chunks of 10
-        const chunks = this.liquidityPoolCollection.find().reduce(
+        const chunks = Array.from(this.liquidityPoolMap.values()).reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
-                const chunkIndex = new Decimal(index).div(10).floor().toNumber()
+                const chunkIndex = Math.floor(index / 10)
                 acc[chunkIndex] = [...(acc[chunkIndex] || []),
                     liquidityPool]
                 return acc

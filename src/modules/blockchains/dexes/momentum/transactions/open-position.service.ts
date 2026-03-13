@@ -68,12 +68,8 @@ export class OpenPositionTxbService {
     }: CreateOpenPositionTxbParams): Promise<CreateOpenPositionTxbResult> {
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
-        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: liquidityPool.tokenA.toString(),
-        })
-        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: liquidityPool.tokenB.toString(),
-        })
+        const tokenA = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenB.toString())
         if (!liquidityPool.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
                 liquidityPoolId: liquidityPool.displayId,

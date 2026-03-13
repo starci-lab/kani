@@ -89,6 +89,9 @@ import {
 import {
     PrivyModule 
 } from "@modules/privy"
+import {
+    ResourcesModule 
+} from "@modules/resources"
 
 @Module({
     imports: [
@@ -106,6 +109,9 @@ import {
             level: envConfig().winston.level as WinstonLevel,
         }),
         PrivyModule.register({
+            isGlobal: true,
+        }),
+        ResourcesModule.register({
             isGlobal: true,
         }),
         IoRedisModule.register(

@@ -40,13 +40,7 @@ export class HandleClmmPositionOpenRequestedEventService {
         bot: BotSchema,
         eventPayload: ClmmPositionOpenRequestedEventPayload,
     ) {
-        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
-            {
-                id: {
-                    $eq: eventPayload.id,
-                }
-            }
-        )
+        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolMap.get(eventPayload.id)
         if (!liquidityPool) {
             throw new LiquidityPoolNotFoundException({
                 id: eventPayload.id,

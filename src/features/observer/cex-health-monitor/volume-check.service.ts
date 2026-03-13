@@ -42,7 +42,7 @@ export class VolumeCheckService {
      */
     @Interval(envConfig().cexHealthMonitor.volume.checkIntervalMs)
     async checkVolume(): Promise<void> {
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find()
+        const tokens = Array.from(this.primaryMemoryStorageService.tokenMap.values())
         const now = this.dayjsService.now()
         const promises = tokens.map(
             async (token) => {

@@ -11,7 +11,7 @@ import {
 } from "@nestjs/common"
 import {
     AsyncService, 
-    LokiJSService
+    ReadinessWatcherFactoryService,
 } from "@modules/mixin"
 import {
     Interval 
@@ -44,10 +44,6 @@ import {
 import {
     LiquidityPoolSchema 
 } from "@modules/databases"
-import {
-    Collection 
-} from "lokijs"
-
 /**
  * Service responsible for observing Cetus pool state changes.
  * Periodically fetches pool information from on-chain and updates cache.
@@ -58,47 +54,37 @@ import {
  */
 @Injectable()
 export class CetusObserverService implements OnApplicationBootstrap, OnModuleInit {
-    /** Snapshot collection to reduce computational complexity. */
-    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
+    /** Snapshot map to reduce computational complexity. */
+    private liquidityPoolMap: Map<string, LiquidityPoolSchema> = new Map()
     constructor(
-        private readonly memoryStorageService: PrimaryMemoryStorageService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly cacheService: CacheService,
         private readonly winstonService: WinstonService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly dayjsService: DayjsService,
-        private readonly lokiJSService: LokiJSService,
         private readonly suiFetchService: SuiFetchService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
 
     /**
-     * Initializes the service by creating a snapshot collection of liquidity pools.
+     * Initializes the service by creating a snapshot map of liquidity pools.
      */
     async onModuleInit(): Promise<void> {
+        // wait until primary memory storage is ready
+        await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
         // fetch all Cetus liquidity pools from primary memory storage
-        const liquidityPools = this.memoryStorageService.liquidityPoolCollection
-            .chain()
-            .find({
-                dex: {
-                    $eq: createObjectId(DexId.Cetus).toString(),
-                },
-            })
-            .data({
-                removeMeta: true 
-            })
-        
-        // create local collection snapshot for efficient processing
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
-            name: "cetus-observer-liquidity-pools",
-            options: {
-                indices: ["poolAddress",
-                    "displayId",
-                    "id"],
-            },
-        })
-        
-        // insert pools into snapshot collection
-        this.liquidityPoolCollection.insert(liquidityPools)
+        const liquidityPools = Array.from(this.primaryMemoryStorageService.liquidityPoolMap.values())
+            .filter(
+                (liquidityPool) => liquidityPool.dex.toString() === createObjectId(DexId.Cetus).toString(),
+            )
+        // create local map snapshot for efficient processing
+        this.liquidityPoolMap = new Map(liquidityPools.map(
+            (liquidityPool) => [liquidityPool.id,
+                liquidityPool
+            ]
+        )
+        )
     }
 
     /**
@@ -116,7 +102,7 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
     private async handlePoolStateUpdateInterval(): Promise<void> {
         // process all pools in parallel
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.liquidityPoolCollection.find()) {
+        for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {
             promises.push(
                 (async () => {
                     await this.fetchPoolInfo(liquidityPool)

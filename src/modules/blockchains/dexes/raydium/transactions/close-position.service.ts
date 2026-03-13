@@ -96,16 +96,8 @@ export class ClosePositionInstructionService {
                 botId: bot.id,
             })
         }
-        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: liquidityPool.tokenA.toString()
-            }
-        })
-        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: liquidityPool.tokenB.toString()
-            }
-        })
+        const tokenA = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenB.toString())
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: liquidityPool.displayId,

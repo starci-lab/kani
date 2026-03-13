@@ -223,16 +223,8 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         const snapshotQuoteBalanceAmount = new BN(bot.balanceSnapshots.quoteBalanceAmount)
 
         // Stage: metadata validation (pool token metadata must exist)
-        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: liquidityPool.tokenA.toString() 
-            },
-        })
-        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: liquidityPool.tokenB.toString() 
-            },
-        })
+        const tokenA = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenB.toString())
 
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({

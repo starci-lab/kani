@@ -53,6 +53,9 @@ import {
 import {
     RedisInstanceKey, RedisModule 
 } from "@modules/native"
+import {
+    ResourcesModule 
+} from "@modules/resources"
 
 @Module({
     imports: [
@@ -65,6 +68,9 @@ import {
             instanceKeys: [
                 RedisInstanceKey.Cache,
             ],
+        }),
+        ResourcesModule.register({
+            isGlobal: true,
         }),
         EventEmitterModule.forRoot(),
         EventModule.register({

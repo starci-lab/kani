@@ -48,13 +48,7 @@ export class GasStatusService {
         }: GetGasStatusParams,
     ): GasStatus {
         // Lookup target token
-        const targetToken = this.primaryMemoryStorageService
-            .tokenCollection
-            .findOne({
-                displayId: {
-                    $eq: targetTokenId 
-                },
-            })
+        const targetToken = this.primaryMemoryStorageService.tokenMap.get(targetTokenId)
 
         if (!targetToken) {
             throw new TokenNotFoundException(
@@ -65,13 +59,7 @@ export class GasStatusService {
         }
 
         // Lookup quote token
-        const quoteToken = this.primaryMemoryStorageService
-            .tokenCollection
-            .findOne({
-                displayId: {
-                    $eq: quoteTokenId 
-                },
-            })
+        const quoteToken = this.primaryMemoryStorageService.tokenMap.get(quoteTokenId)
 
         if (!quoteToken) {
             throw new TokenNotFoundException(

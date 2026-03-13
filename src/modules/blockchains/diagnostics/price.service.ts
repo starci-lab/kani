@@ -16,7 +16,7 @@ import {
     WinstonLog, WinstonService
 } from "@modules/winston"
 import {
-    AsyncService, LokiJSService, DayjsService
+    AsyncService, DayjsService
 } from "@modules/mixin"
 import {
     AggregatedTokenPriceNotFoundException,
@@ -27,9 +27,6 @@ import {
 import {
     envConfig
 } from "@modules/env"
-import {
-    Collection
-} from "lokijs"
 import type {
     PriceDiagnosticReadinessResult
 } from "./types"
@@ -37,15 +34,14 @@ import type {
 @Injectable()
 export class PriceDiagnosticService
 implements OnModuleInit, OnApplicationBootstrap {
-    private tokenCollection: Collection<TokenSchema>
-    private results: Collection<PriceDiagnosticReadinessResult>
+    private tokenMap: Map<string, TokenSchema> = new Map()
+    private results: Map<string, PriceDiagnosticReadinessResult> = new Map()
 
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly priceService: PriceService,
         private readonly winstonService: WinstonService,
         private readonly asyncService: AsyncService,
-        private readonly lokiJSService: LokiJSService,
         private readonly dayjsService: DayjsService,
     ) { }
 
@@ -62,43 +58,18 @@ implements OnModuleInit, OnApplicationBootstrap {
     @Interval(envConfig().executor.diagnose.price.interval)
     async diagnoseInterval() {
         const results = await this.diagnose()
-        this.results.clear()
-        this.results.insert(results)
+        this.results = new Map(results.map((result) => [result.id,
+            result]))
     }
 
     async onModuleInit() {
-        this.tokenCollection =
-            await this.lokiJSService.createCollection<TokenSchema>({
-                name: "price-diagnostic-tokens",
-                options: {
-                    indices: [
-                        "displayId",
-                        "id"
-                    ],
-                },
-            })
-
-        const tokens =
-            this.primaryMemoryStorageService.tokenCollection
-                .chain()
-                .find({
-                    selectable: {
-                        $eq: true
-                    },
-                })
-                .data({
-                    removeMeta: true
-                }
-                )
-        this.tokenCollection.insert(tokens)
-        this.results =
-            await this.lokiJSService.createCollection<PriceDiagnosticReadinessResult>({
-                name: "price-diagnostic-results",
-                options: {
-                    indices: ["id"],
-                },
-            }
-            )
+        const tokens = Array.from(
+            this.primaryMemoryStorageService.tokenMap.values()).filter(
+            (t) => t.selectable === true,
+        )
+        this.tokenMap = new Map(tokens.map((token) => [token.id,
+            token
+        ]))
     }
 
     /* ================= CORE ================= */
@@ -116,7 +87,7 @@ implements OnModuleInit, OnApplicationBootstrap {
     }
 
     async diagnose(): Promise<Array<PriceDiagnosticReadinessResult>> {
-        const tokens = this.tokenCollection.find()
+        const tokens = Array.from(this.tokenMap.values())
         const promises: Array<
             Promise<PriceDiagnosticReadinessResult>
         > = tokens.map(async (token) => {
@@ -177,11 +148,7 @@ implements OnModuleInit, OnApplicationBootstrap {
     /* ================= PUBLIC ================= */
 
     async ready(id: string): Promise<boolean> {
-        const result = this.results.findOne({
-            id: {
-                $eq: id
-            },
-        })
+        const result = this.results.get(id)
         if (!result) return false
         return this.isReady(result)
     }

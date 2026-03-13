@@ -1,11 +1,12 @@
 import {
     Injectable,
+    OnModuleInit,
 } from "@nestjs/common"
 import {
     MarketListingId,
-    MarketListingSchema,
     PrimaryMemoryStorageService,
     TokenId,
+    TokenSchema,
 } from "@modules/databases"
 import type {
     BybitTokenPrice,
@@ -14,6 +15,9 @@ import type {
     ResolveBybitTokenPricesParams,
     ResolveBybitTokenVolumesParams,
 } from "./types"
+import {
+    ReadinessWatcherFactoryService 
+} from "@modules/mixin"
 
 /**
  * Service responsible for managing Bybit token registry and symbol mappings.
@@ -25,10 +29,23 @@ import type {
  * const prices = service.getTokenPrices({ tokenPriceDataArray: bybitData })
  */
 @Injectable()
-export class BybitTokenRegistryService {
+export class BybitTokenRegistryService implements OnModuleInit {
+    private tokenMap: Map<string, TokenSchema> = new Map()
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
+
+    async onModuleInit() {
+        // wait until primary memory storage is ready
+        await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
+        this.tokenMap = new Map(
+            Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
+                (token) => token.marketListings?.some((market) => market.id === MarketListingId.Bybit),
+            ).map((token) => [token.id,
+                token])
+        )
+    }
 
     /**
      * Gets Bybit symbols for ticker (price) stream.
@@ -49,13 +66,7 @@ export class BybitTokenRegistryService {
     }
 
     private getSymbols(): Array<string> {
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
-            marketListings: {
-                $elemMatch: {
-                    id: MarketListingId.Bybit,
-                },
-            },
-        })
+        const tokens = Array.from(this.tokenMap.values())
         if (!tokens.length) return []
         return [
             ...new Set(
@@ -83,16 +94,8 @@ export class BybitTokenRegistryService {
      */
     getTokenPrices({ tokenPriceDataArray }: ResolveBybitTokenPricesParams): Array<BybitTokenPrice> {
         // find all tokens with Bybit market listings
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
-            marketListings: {
-                $elemMatch: {
-                    id: MarketListingId.Bybit,
-                },
-            },
-        })
-        
+        const tokens = Array.from(this.tokenMap.values())
         if (!tokens.length) return []
-        
         // map token prices to internal structure
         return tokens.map(token => {
             // find Bybit listing symbol for this token
@@ -127,13 +130,9 @@ export class BybitTokenRegistryService {
      * const volumes = service.getTokenVolumes({ tokenVolumeDataArray: [{ symbol: "BTCUSDT", volume: 100 }] })
      */
     getTokenVolumes({ tokenVolumeDataArray }: ResolveBybitTokenVolumesParams): Array<BybitTokenVolume> {
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
-            marketListings: {
-                $elemMatch: {
-                    id: MarketListingId.Bybit,
-                },
-            },
-        })
+        const tokens = Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
+            (t) => t.marketListings?.some((m) => m.id === MarketListingId.Bybit),
+        )
         if (!tokens.length) return []
         return tokens.map(token => {
             const listingSymbol = token.marketListings.find(
@@ -162,12 +161,11 @@ export class BybitTokenRegistryService {
      */
     getTokenIdBySymbol({ symbol }: GetBybitTokenIdBySymbolParams): TokenId | undefined {
         // find token by Bybit symbol
-        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-            marketListings: {
-                $where: (marketListing: MarketListingSchema) =>
-                    marketListing.id === MarketListingId.Bybit && marketListing.symbol === symbol,
-            },
-        })
+        const token = Array.from(this.primaryMemoryStorageService.tokenMap.values()).find(
+            (t) => t.marketListings?.some(
+                (m) => m.id === MarketListingId.Bybit && m.symbol === symbol,
+            ),
+        )
         
         return token?.displayId
     }

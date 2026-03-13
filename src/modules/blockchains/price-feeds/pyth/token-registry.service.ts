@@ -33,13 +33,9 @@ export class PythTokenRegistryService {
      */
     getSymbols(): Array<string> {
         // Find all tokens with Pyth market listings
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
-            marketListings: {
-                $elemMatch: {
-                    id: MarketListingId.Pyth
-                }
-            }
-        })
+        const tokens = Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
+            (t) => t.marketListings?.some((m) => m.id === MarketListingId.Pyth),
+        )
         if (!tokens.length) return []
         // Extract unique symbols from market listings
         return [
@@ -66,14 +62,8 @@ export class PythTokenRegistryService {
         tokenPriceData: Array<PythTokenPriceData>
     ): Array<PythTokenPrice> {
         // Find all tokens with Pyth market listings
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find(
-            {
-                marketListings: {
-                    $elemMatch: {
-                        id: MarketListingId.Pyth
-                    }
-                }
-            }
+        const tokens = Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
+            (t) => t.marketListings?.some((m) => m.id === MarketListingId.Pyth),
         )
         // Map tokens to prices by matching feed IDs
         return tokens.map(

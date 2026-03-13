@@ -87,12 +87,8 @@ export class ClosePositionInstructionService {
                 botId: bot.id,
             })
         }
-        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: liquidityPool.tokenA.toString(),
-        })
-        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: liquidityPool.tokenB.toString(),
-        })
+        const tokenA = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenB.toString())
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: liquidityPool.displayId,
@@ -336,10 +332,9 @@ export class ClosePositionInstructionService {
             }
             const tokenAddress = rewardInfo.tokenAddress.toString()
             let is2022Token = false
-            const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-                tokenAddress: address(rewardInfo.tokenAddress.toString()),
-                chainId: ChainId.Solana,
-            })
+            const token = Array.from(this.primaryMemoryStorageService.tokenMap.values()).find(
+                (t) => t.tokenAddress === rewardInfo.tokenAddress.toString() && t.chainId === ChainId.Solana,
+            )
             if (token) {
                 is2022Token = token.is2022Token || false
             } else {

@@ -13,7 +13,7 @@ import {
     WinstonLog, WinstonService 
 } from "@modules/winston"
 import {
-    DayjsService, LokiJSService 
+    DayjsService 
 } from "@modules/mixin"
 import {
     LiquidityPoolsSyncedDiagnosticReadinessCacheService,
@@ -32,9 +32,6 @@ import {
 import {
     Interval 
 } from "@nestjs/schedule"
-import {
-    Collection 
-} from "lokijs"
 import _ from "lodash"
 import type {
     LiquidityPoolsSyncedDiagnosticMessage 
@@ -44,45 +41,29 @@ import type {
 export class LiquidityPoolSyncedDiagnosticService
 implements OnModuleInit, OnApplicationBootstrap
 {
-    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
+    private liquidityPoolMap: Map<string, LiquidityPoolSchema> = new Map()
   
     // Map<poolId, { snapshotAt }>
-    private results: Map<string, LiquidityPoolsSyncedDiagnosticMessage> =
-        new Map()
+    private results: Map<string, LiquidityPoolsSyncedDiagnosticMessage> = new Map()
   
     constructor(
       private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
       private readonly winstonService: WinstonService,
-      private readonly lokiJSService: LokiJSService,
       private readonly dayjsService: DayjsService,
       private readonly liquidityPoolsSyncedDiagnosticReadinessCacheService: LiquidityPoolsSyncedDiagnosticReadinessCacheService,
       private readonly eventEmitterService: EventEmitterService,
     ) {}
   
     async onModuleInit() {
-        this.liquidityPoolCollection =
-        await this.lokiJSService.createCollection<LiquidityPoolSchema>({
-            name: "liquidity-pools-synced-diagnostic-pools",
-            options: {
-                indices: ["displayId",
-                    "id"],
-            },
-        })
-  
-        const liquidityPools =
-        this.primaryMemoryStorageService.liquidityPoolCollection
-            .chain()
-            .find({
-                isActive: {
-                    $eq: true 
-                } 
-            })
-            .data({
-                removeMeta: true 
-            })
-  
-        this.liquidityPoolCollection.clear()
-        this.liquidityPoolCollection.insert(liquidityPools)
+        const liquidityPools = Array.from(this.primaryMemoryStorageService.liquidityPoolMap.values()).filter(
+            (p) => p.isActive === true,
+        )
+        this.liquidityPoolMap = new Map(liquidityPools.map((liquidityPool) => [liquidityPool.id,
+            liquidityPool]))
+        this.results = new Map(liquidityPools.map((liquidityPool) => [liquidityPool.id,
+            {
+                snapshotAt: this.dayjsService.now(),
+            }]))
     }
   
     /* ================= EVENTS ================= */
@@ -150,9 +131,7 @@ implements OnModuleInit, OnApplicationBootstrap
         const becameReady = !prevReady && newReady
         const becameNotReady = prevReady && !newReady
   
-        const liquidityPool = this.liquidityPoolCollection.findOne({
-            id 
-        })
+        const liquidityPool = this.liquidityPoolMap.get(id)
         if (!liquidityPool) return
   
         if (becameReady) {
@@ -215,7 +194,7 @@ implements OnModuleInit, OnApplicationBootstrap
         LiquidityPoolsSyncedDiagnosticMessage
       >()
   
-        for (const pool of this.liquidityPoolCollection.find()) {
+        for (const pool of Array.from(this.liquidityPoolMap.values())) {
             const cached = cache.results[pool.id]
             if (!cached) continue
   
@@ -256,11 +235,7 @@ implements OnModuleInit, OnApplicationBootstrap
   
         if (becameReady.length > 0) {
             const pools = _.uniqBy(
-                this.liquidityPoolCollection.find({
-                    id: {
-                        $in: becameReady 
-                    },
-                }),
+                Array.from(this.liquidityPoolMap.values()).filter((p) => becameReady.includes(p.id)),
                 (p) => p.id,
             )
   
@@ -290,11 +265,7 @@ implements OnModuleInit, OnApplicationBootstrap
   
         if (becameNotReady.length > 0) {
             const pools = _.uniqBy(
-                this.liquidityPoolCollection.find({
-                    id: {
-                        $in: becameNotReady 
-                    },
-                }),
+                Array.from(this.liquidityPoolMap.values()).filter((p) => becameNotReady.includes(p.id)),
                 (p) => p.id,
             )
   

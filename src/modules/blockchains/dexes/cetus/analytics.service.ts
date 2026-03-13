@@ -28,18 +28,16 @@ import {
 import {
     AsyncService,
     DayjsService,
-    LokiJSService
 } from "@modules/mixin"
 import {
     envConfig 
 } from "@modules/env"
-import Decimal from "decimal.js"
-import {
-    Collection 
-} from "lokijs"
 import {
     CetusPoolListResult
 } from "./types"
+import {
+    ReadinessWatcherFactoryService
+} from "@modules/mixin"
 
 /**
  * Service responsible for fetching and caching Cetus DEX analytics data.
@@ -51,17 +49,20 @@ import {
  */
 @Injectable()
 export class CetusAnalyticsService implements OnModuleInit, OnApplicationBootstrap {
+    /** Cetus API URI. */
     private readonly uri = "https://api-sui.cetus.zone/v3/sui/clmm/stats_pools"
+    /** Axios instance. */
     private axios: AxiosInstance
-    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
-    constructor(
-    private readonly axiosService: AxiosService,
-    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-    private readonly cacheService: CacheService,
+    /** Liquidity pool map. */
+    private liquidityPoolMap: Map<string, LiquidityPoolSchema> = new Map()
 
-    private readonly asyncService: AsyncService,
-    private readonly dayjsService: DayjsService,
-    private readonly lokiJSService: LokiJSService,
+    constructor(
+        private readonly axiosService: AxiosService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly cacheService: CacheService,
+        private readonly asyncService: AsyncService,
+        private readonly dayjsService: DayjsService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
 
     /**
@@ -72,39 +73,31 @@ export class CetusAnalyticsService implements OnModuleInit, OnApplicationBootstr
     }
 
     /**
-     * Initializes the service by creating axios instance and setting up liquidity pool collection.
+     * Initializes Cetus analytics: wait for primary memory storage, create axios client, build local pool map.
      */
     async onModuleInit(): Promise<void> {
+        // wait until primary memory storage is ready
+        await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
         // create axios instance for Cetus API
         const key = "cetus-analytics"
         this.axios = this.axiosService.create({
             key 
         })
-        
         // fetch all Cetus liquidity pools from primary memory storage
-        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection
-            .chain()
-            .find({
-                dex: {
-                    $eq: createObjectId(DexId.Cetus).toString(),
-                },
-            })
-            .data({
-                removeMeta: true 
-            })
+        const liquidityPools = Array.from(
+            this.primaryMemoryStorageService.liquidityPoolMap.values())
+            .filter(
+                (liquidityPool) => liquidityPool.dex.toString() === createObjectId(DexId.Cetus).toString(),
+            )
         
-        // create local collection for analytics processing
-        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
-            name: "cetus-analytics-liquidity-pools",
-            options: {
-                indices: ["poolAddress",
-                    "displayId",
-                    "id"],
-            },
-        })
-        
-        // insert pools into local collection
-        this.liquidityPoolCollection.insert(liquidityPools)
+        // create local map for analytics processing
+        this.liquidityPoolMap = new Map(
+            liquidityPools.map(
+                (liquidityPool) => [liquidityPool.id,
+                    liquidityPool
+                ]
+            )
+        )
     }
 
     /**
@@ -154,14 +147,13 @@ export class CetusAnalyticsService implements OnModuleInit, OnApplicationBootstr
                     const { tvl, totalApr: apr } = item
                     const { fee, vol } = item.stats[0]
                     
-                    // build cache result
                     const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
-                        fee24H: new Decimal(fee).toString(),
-                        volume24H: new Decimal(vol).toString(),
-                        tvl: new Decimal(tvl).toString(),
-                        apr24H: new Decimal(apr).toString(),
+                        fee24H: String(Number(fee)),
+                        volume24H: String(Number(vol)),
+                        tvl: String(Number(tvl)),
+                        apr24H: String(Number(apr)),
                         snapshotAt,
-                        liquidity: new Decimal(tvl).toString(),
+                        liquidity: String(Number(tvl)),
                     }
                     
                     // cache analytics result
@@ -185,9 +177,9 @@ export class CetusAnalyticsService implements OnModuleInit, OnApplicationBootstr
     @Interval(envConfig().dexes.cetus.interval.analytics)
     async handleAnalyticsUpdateInterval(): Promise<void> {
         // split pools into chunks of 10 for batch processing
-        const chunks = this.liquidityPoolCollection.find().reduce(
+        const chunks = Array.from(this.liquidityPoolMap.values()).reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
-                const chunkIndex = new Decimal(index).div(10).floor().toNumber()
+                const chunkIndex = Math.floor(index / 10)
                 acc[chunkIndex] = [
                     ...(acc[chunkIndex] || []),
                     liquidityPool
