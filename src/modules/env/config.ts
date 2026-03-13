@@ -1386,6 +1386,14 @@ export const envConfig = () => ({
                 key: "NATS_PING_INTERVAL", defaultValue: "10s"
             }),
         },
+        auth: {
+            enabled: parseEnvBoolean({
+                key: "NATS_AUTH_ENABLED", defaultValue: true
+            }),
+            token: parseEnvString({
+                key: "NATS_AUTH_TOKEN", defaultValue: "starci@2026"
+            }),
+        }
     },
     /** Salts for derived keys: JWT signing, AES-CBC encryption. */
     salt: {
