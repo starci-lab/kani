@@ -9,7 +9,8 @@ import {
     Injectable, OnApplicationBootstrap, OnModuleInit 
 } from "@nestjs/common"
 import {
-    AsyncService, DayjsService, 
+    AsyncService, DayjsService,
+    JitterService,
     ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
@@ -57,6 +58,7 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
         private readonly suiFetchService: SuiFetchService,
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly jitterService: JitterService,
     ) {}
 
     /**
@@ -89,7 +91,9 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
      */
     @Interval(envConfig().dexes.turbos.interval.observer.fetch)
     private async handlePoolStateUpdateInterval(): Promise<void> {
-        // process all pools in parallel
+        await this.jitterService.delayWithJitter(
+            envConfig().dexes.turbos.interval.observer.fetch
+        )
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of this.liquidityPoolMap.values()) {
             promises.push(

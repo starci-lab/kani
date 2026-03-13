@@ -37,6 +37,9 @@ import {
 import {
     LokiJSService
 } from "./lokijs.service"
+import {
+    JitterService
+} from "./jitter.service"
 
 /**
  * Module for the Mixin service.
@@ -54,6 +57,7 @@ export class MixinModule extends ConfigurableModuleClass {
         const providers: Array<Provider> = [
             RetryService,
             WaitService,
+            JitterService,
             ReadinessWatcherFactoryService,
             InstanceService,
             DayjsService,

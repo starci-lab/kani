@@ -13,9 +13,10 @@ import {
     LiquidityPoolSchema,
 } from "@modules/databases"
 import {
-    AsyncService, 
-    DayjsService, 
-    RetryService, 
+    AsyncService,
+    DayjsService,
+    JitterService,
+    RetryService,
     ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
@@ -73,6 +74,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
         private readonly retryService: RetryService,
         private readonly solanaFetchService: SolanaFetchService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly jitterService: JitterService,
     ) { }
 
     /**
@@ -104,6 +106,9 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
      */
     @Interval(envConfig().dexes.raydium.interval.observer.fetch)
     private async handlePoolStateUpdateInterval(): Promise<void> {
+        await this.jitterService.delayWithJitter(
+            envConfig().dexes.raydium.interval.observer.fetch
+        )
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {
             promises.push(

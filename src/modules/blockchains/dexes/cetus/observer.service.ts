@@ -12,6 +12,7 @@ import {
 import {
     AsyncService, 
     ReadinessWatcherFactoryService,
+    JitterService,
 } from "@modules/mixin"
 import {
     Interval 
@@ -63,6 +64,7 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
         private readonly dayjsService: DayjsService,
         private readonly suiFetchService: SuiFetchService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly jitterService: JitterService,
     ) {}
 
     /**
@@ -98,6 +100,10 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
      */
     @Interval(envConfig().dexes.cetus.interval.observer.fetch)
     private async handlePoolStateUpdateInterval(): Promise<void> {
+        // add jitter to the interval
+        await this.jitterService.delayWithJitter(
+            envConfig().dexes.cetus.interval.observer.fetch
+        )
         // process all pools in parallel
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {

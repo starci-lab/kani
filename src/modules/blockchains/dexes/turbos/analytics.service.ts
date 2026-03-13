@@ -17,7 +17,11 @@ import {
     Interval
 } from "@nestjs/schedule"
 import {
-    AsyncService, DayjsService, ReadinessWatcherFactoryService
+    createObjectId,
+    sleep
+} from "@modules/common"
+import {
+    AsyncService, DayjsService, JitterService, ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
     envConfig
@@ -29,10 +33,7 @@ import {
     AxiosInstance
 } from "axios"
 import {
-    createObjectId
-} from "@modules/common"
-import {
-    TurbosPool 
+    TurbosPool
 } from "./types"
 import {
     Decimal 
@@ -58,6 +59,7 @@ export class TurbosAnalyticsService implements OnModuleInit, OnApplicationBootst
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly jitterService: JitterService,
     ) { }
 
     /**
@@ -143,6 +145,9 @@ export class TurbosAnalyticsService implements OnModuleInit, OnApplicationBootst
      */
     @Interval(envConfig().dexes.turbos.interval.analytics)
     async handleAnalyticsUpdateInterval(): Promise<void> {
+        await this.jitterService.delayWithJitter(
+            envConfig().dexes.turbos.interval.analytics
+        )
         const chunks = Array.from(this.liquidityPoolMap.values()).reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = Math.floor(index / 10)
@@ -152,14 +157,13 @@ export class TurbosAnalyticsService implements OnModuleInit, OnApplicationBootst
             },
             [] as Array<Array<LiquidityPoolSchema>>,
         )
-        const promises: Array<Promise<void>> = []
         for (const chunk of chunks) {
-            promises.push(
-                this.setBatchPoolAnalytics(
-                    chunk,
-                ),
+            await this.asyncService.safeRun(
+                async () => {
+                    await this.setBatchPoolAnalytics(chunk)
+                }
             )
+            await sleep(envConfig().dexes.turbos.interval.analyticsRequestDelayMs)
         }
-        await this.asyncService.allIgnoreError(promises)
     }
 }

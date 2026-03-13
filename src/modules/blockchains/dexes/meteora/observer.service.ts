@@ -11,8 +11,9 @@ import {
     LiquidityPoolSchema,
 } from "@modules/databases"
 import {
-    AsyncService, 
+    AsyncService,
     DayjsService,
+    JitterService,
     ReadinessWatcherFactoryService,
 } from "@modules/mixin"
 import {
@@ -79,6 +80,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
         private readonly cacheService: CacheService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly jitterService: JitterService,
     ) { }
 
     /**
@@ -109,6 +111,9 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
      */
     @Interval(envConfig().dexes.meteora.interval.observer.fetch)
     async handlePoolStateUpdateInterval() {
+        await this.jitterService.delayWithJitter(
+            envConfig().dexes.meteora.interval.observer.fetch
+        )
         const promises: Array<Promise<void>> = []
         // Iterate over each liquidity pool and fetch its info
         for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {

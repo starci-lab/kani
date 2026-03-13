@@ -17,13 +17,13 @@ import {
     Interval 
 } from "@nestjs/schedule"
 import {
-    AsyncService, DayjsService 
-} from "@modules/mixin"
-import {
+    AsyncService,
+    DayjsService,
+    JitterService,
     ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
-    envConfig 
+    envConfig
 } from "@modules/env"
 import {
     AxiosService 
@@ -55,12 +55,13 @@ export class MomentumAnalyticsService implements OnModuleInit, OnApplicationBoot
     private liquidityPoolMap: Map<string, LiquidityPoolSchema> = new Map()
 
     constructor(
-    private readonly axiosService: AxiosService,
-    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-    private readonly cacheService: CacheService,
-    private readonly asyncService: AsyncService,
-    private readonly dayjsService: DayjsService,
-    private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly axiosService: AxiosService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly cacheService: CacheService,
+        private readonly asyncService: AsyncService,
+        private readonly dayjsService: DayjsService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly jitterService: JitterService,
     ) {}
 
     /**
@@ -143,9 +144,12 @@ export class MomentumAnalyticsService implements OnModuleInit, OnApplicationBoot
      */
     @Interval(envConfig().dexes.momentum.interval.analytics)
     async handleAnalyticsUpdateInterval(): Promise<void> {
-        const promises: Array<Promise<void>> = []
-        promises.push(this.setAllPoolAnalytics())
-        await this.asyncService.allIgnoreError(promises)
+        await this.jitterService.delayWithJitter(
+            envConfig().dexes.momentum.interval.analytics
+        )
+        await this.asyncService.safeRun(async () => {
+            await this.setAllPoolAnalytics()
+        })
     }
 }
 

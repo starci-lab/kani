@@ -22,20 +22,18 @@ import {
     Interval 
 } from "@nestjs/schedule"
 import {
-    createObjectId 
+    createObjectId,
+    sleep
 } from "@modules/common"
 import {
-    AsyncService 
-} from "@modules/mixin"
-import {
+    AsyncService,
+    DayjsService,
+    JitterService,
     ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
-    envConfig 
+    envConfig
 } from "@modules/env"
-import {
-    DayjsService, 
-} from "@modules/mixin"
 import {
     PoolAnalyticsResult
 } from "./types"
@@ -57,12 +55,13 @@ export class MeteoraAnalyticsService implements OnModuleInit, OnApplicationBoots
     private axios: AxiosInstance
 
     constructor(
-    private readonly axiosService: AxiosService,
-    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-    private readonly cacheService: CacheService,
-    private readonly asyncService: AsyncService,
-    private readonly dayjsService: DayjsService,
-    private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly axiosService: AxiosService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly cacheService: CacheService,
+        private readonly asyncService: AsyncService,
+        private readonly dayjsService: DayjsService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly jitterService: JitterService,
     ) {}
 
     /**
@@ -143,6 +142,9 @@ export class MeteoraAnalyticsService implements OnModuleInit, OnApplicationBoots
      */
     @Interval(envConfig().dexes.meteora.interval.analytics)
     async handleAnalyticsUpdateInterval(): Promise<void> {
+        await this.jitterService.delayWithJitter(
+            envConfig().dexes.meteora.interval.analytics
+        )
         const chunks = Array.from(this.liquidityPoolMap.values()).reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = Math.floor(index / 10)
@@ -150,17 +152,16 @@ export class MeteoraAnalyticsService implements OnModuleInit, OnApplicationBoots
                     liquidityPool]
                 return acc
             },
-        [] as Array<Array<LiquidityPoolSchema>>,
+            [] as Array<Array<LiquidityPoolSchema>>,
         )
-        const promises: Array<Promise<void>> = []
         for (const chunk of chunks) {
-            promises.push(
-                this.setBatchPoolAnalytics(
-                    chunk,
-                ),
+            await this.asyncService.safeRun(
+                async () => {
+                    await this.setBatchPoolAnalytics(chunk)
+                }
             )
+            await sleep(envConfig().dexes.meteora.interval.analyticsRequestDelayMs)
         }
-        await this.asyncService.allIgnoreError(promises)
     }
 }
 

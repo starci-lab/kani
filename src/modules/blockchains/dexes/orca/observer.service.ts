@@ -13,9 +13,10 @@ import {
     LiquidityPoolSchema,
 } from "@modules/databases"
 import {
-    AsyncService, 
-    RetryService, 
-    ReadinessWatcherFactoryService 
+    AsyncService,
+    JitterService,
+    RetryService,
+    ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
     LiquidityPoolNoWsIdleTimeoutException 
@@ -70,12 +71,13 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
         private readonly cacheManager: CacheService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly asyncService: AsyncService,    
+        private readonly asyncService: AsyncService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly dayjsService: DayjsService,
         private readonly retryService: RetryService,
         private readonly solanaFetchService: SolanaFetchService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly jitterService: JitterService,
     ) {}
 
     /**
@@ -107,6 +109,9 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
      */
     @Interval(envConfig().dexes.orca.interval.observer.fetch)
     private async handlePoolStateUpdateInterval(): Promise<void> {
+        await this.jitterService.delayWithJitter(
+            envConfig().dexes.orca.interval.observer.fetch
+        )
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {
             promises.push(

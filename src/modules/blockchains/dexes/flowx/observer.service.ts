@@ -8,7 +8,8 @@ import {
     Injectable, OnApplicationBootstrap, OnModuleInit 
 } from "@nestjs/common"
 import {
-    AsyncService, 
+    AsyncService,
+    JitterService,
     ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
@@ -60,6 +61,7 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
         private readonly dayjsService: DayjsService,
         private readonly suiFetchService: SuiFetchService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly jitterService: JitterService,
     ) {}
 
     /**
@@ -93,7 +95,9 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
      */
     @Interval(envConfig().dexes.flowx.interval.observer.fetch)
     private async handlePoolStateUpdateInterval(): Promise<void> {
-        // process all pools in parallel
+        await this.jitterService.delayWithJitter(
+            envConfig().dexes.flowx.interval.observer.fetch
+        )
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {
             promises.push(

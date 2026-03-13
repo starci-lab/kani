@@ -16,11 +16,14 @@ import {
     Interval
 } from "@nestjs/schedule"
 import {
-    AsyncService,
-    ReadinessWatcherFactoryService,
-} from "@modules/mixin"
+    createObjectId,
+    sleep
+} from "@modules/common"
 import {
-    DayjsService
+    AsyncService,
+    DayjsService,
+    JitterService,
+    ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
     envConfig
@@ -31,9 +34,6 @@ import {
 import {
     ApolloClient, gql
 } from "@apollo/client"
-import {
-    createObjectId
-} from "@modules/common"
 import {
     GraphQLDataNotFoundException
 } from "@modules/exceptions"
@@ -64,6 +64,7 @@ export class FlowXAnalyticsService implements OnModuleInit, OnApplicationBootstr
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly jitterService: JitterService,
     ) { }
 
     onApplicationBootstrap() {
@@ -197,6 +198,9 @@ export class FlowXAnalyticsService implements OnModuleInit, OnApplicationBootstr
      */
     @Interval(envConfig().dexes.flowx.interval.analytics)
     async handleAnalyticsUpdateInterval(): Promise<void> {
+        await this.jitterService.delayWithJitter(
+            envConfig().dexes.flowx.interval.analytics
+        )
         const chunks = Array.from(this.liquidityPoolMap.values()).reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = Math.floor(index / 10)
@@ -206,15 +210,14 @@ export class FlowXAnalyticsService implements OnModuleInit, OnApplicationBootstr
             },
             [],
         )
-        const promises: Array<Promise<void>> = []
         for (const chunk of chunks) {
-            promises.push(
-                this.setBatchPoolAnalytics(
-                    chunk,
-                ),
+            await this.asyncService.safeRun(
+                async () => {
+                    await this.setBatchPoolAnalytics(chunk)
+                }
             )
+            await sleep(envConfig().dexes.flowx.interval.analyticsRequestDelayMs)
         }
-        await this.asyncService.allIgnoreError(promises)
     }
 }
 

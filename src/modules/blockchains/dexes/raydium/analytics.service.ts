@@ -23,11 +23,13 @@ import {
     Interval
 } from "@nestjs/schedule"
 import {
-    createObjectId
+    createObjectId,
+    sleep
 } from "@modules/common"
 import {
-    AsyncService, 
-    DayjsService, 
+    AsyncService,
+    DayjsService,
+    JitterService,
     ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
@@ -60,6 +62,7 @@ export class RaydiumAnalyticsService implements OnModuleInit, OnApplicationBoots
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly jitterService: JitterService,
     ) { }
 
     /**
@@ -140,6 +143,9 @@ export class RaydiumAnalyticsService implements OnModuleInit, OnApplicationBoots
      */
     @Interval(envConfig().dexes.raydium.interval.analytics)
     async handleAnalyticsUpdateInterval(): Promise<void> {
+        await this.jitterService.delayWithJitter(
+            envConfig().dexes.raydium.interval.analytics
+        )
         const chunks = Array.from(this.liquidityPoolMap.values()).reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = Math.floor(index / 10)
@@ -149,14 +155,13 @@ export class RaydiumAnalyticsService implements OnModuleInit, OnApplicationBoots
             },
             [] as Array<Array<LiquidityPoolSchema>>,
         )
-        const promises: Array<Promise<void>> = []
         for (const chunk of chunks) {
-            promises.push(
-                this.setBatchPoolAnalytics(
-                    chunk,
-                ),
+            await this.asyncService.safeRun(
+                async () => {
+                    await this.setBatchPoolAnalytics(chunk)
+                }
             )
+            await sleep(envConfig().dexes.raydium.interval.analyticsRequestDelayMs)
         }
-        await this.asyncService.allIgnoreError(promises)
     }
 }

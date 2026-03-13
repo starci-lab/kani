@@ -242,6 +242,12 @@ export const envConfig = () => ({
     dexes: {
         cetus: {
             interval: {
+                analyticsRequestDelayMs: parseEnvMs(
+                    {
+                        key: "DEXES_CETUS_INTERVAL_ANALYTICS_REQUEST_DELAY_MS", 
+                        defaultValue: "1s"
+                    }
+                ),
                 analytics: parseEnvMs({
                     key: "DEXES_CETUS_INTERVAL_ANALYTICS", defaultValue: "1m"
                 }),
@@ -259,6 +265,9 @@ export const envConfig = () => ({
         },
         flowx: {
             interval: {
+                analyticsRequestDelayMs: parseEnvMs({
+                    key: "DEXES_FLOWX_INTERVAL_ANALYTICS_REQUEST_DELAY_MS", defaultValue: "1s"
+                }),
                 analytics: parseEnvMs({
                     key: "DEXES_FLOWX_INTERVAL_ANALYTICS", defaultValue: "1m"
                 }),
@@ -276,6 +285,9 @@ export const envConfig = () => ({
         },
         momentum: {
             interval: {
+                analyticsRequestDelayMs: parseEnvMs({
+                    key: "DEXES_MOMENTUM_INTERVAL_ANALYTICS_REQUEST_DELAY_MS", defaultValue: "1s"
+                }),
                 analytics: parseEnvMs({
                     key: "DEXES_MOMENTUM_INTERVAL_ANALYTICS", defaultValue: "1m"
                 }),
@@ -293,6 +305,9 @@ export const envConfig = () => ({
         },
         turbos: {
             interval: {
+                analyticsRequestDelayMs: parseEnvMs({
+                    key: "DEXES_TURBOS_INTERVAL_ANALYTICS_REQUEST_DELAY_MS", defaultValue: "1s"
+                }),
                 analytics: parseEnvMs({
                     key: "DEXES_TURBOS_INTERVAL_ANALYTICS", defaultValue: "1m"
                 }),
@@ -315,6 +330,9 @@ export const envConfig = () => ({
                 }),
             },
             interval: {
+                analyticsRequestDelayMs: parseEnvMs({
+                    key: "DEXES_METEORA_INTERVAL_ANALYTICS_REQUEST_DELAY_MS", defaultValue: "1s"
+                }),
                 analytics: parseEnvMs({
                     key: "DEXES_METEORA_INTERVAL_ANALYTICS", defaultValue: "1m"
                 }),
@@ -327,6 +345,9 @@ export const envConfig = () => ({
         },
         raydium: {
             interval: {
+                analyticsRequestDelayMs: parseEnvMs({
+                    key: "DEXES_RAYDIUM_INTERVAL_ANALYTICS_REQUEST_DELAY_MS", defaultValue: "1s"
+                }),
                 analytics: parseEnvMs({
                     key: "DEXES_RAYDIUM_INTERVAL_ANALYTICS", defaultValue: "1m"
                 }),
@@ -344,6 +365,9 @@ export const envConfig = () => ({
         },
         orca: {
             interval: {
+                analyticsRequestDelayMs: parseEnvMs({
+                    key: "DEXES_ORCA_INTERVAL_ANALYTICS_REQUEST_DELAY_MS", defaultValue: "1s"
+                }),
                 analytics: parseEnvMs({
                     key: "DEXES_ORCA_INTERVAL_ANALYTICS", defaultValue: "1m"
                 }),

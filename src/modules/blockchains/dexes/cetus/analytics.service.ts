@@ -23,11 +23,13 @@ import {
     Interval 
 } from "@nestjs/schedule"
 import {
-    createObjectId 
+    createObjectId, 
+    sleep
 } from "@modules/common"
 import {
     AsyncService,
     DayjsService,
+    JitterService,
 } from "@modules/mixin"
 import {
     envConfig 
@@ -63,6 +65,7 @@ export class CetusAnalyticsService implements OnModuleInit, OnApplicationBootstr
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly jitterService: JitterService,
     ) {}
 
     /**
@@ -77,7 +80,9 @@ export class CetusAnalyticsService implements OnModuleInit, OnApplicationBootstr
      */
     async onModuleInit(): Promise<void> {
         // wait until primary memory storage is ready
-        await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
+        await this.readinessWatcherFactoryService.waitUntilReady(
+            PrimaryMemoryStorageService.name
+        )
         // create axios instance for Cetus API
         const key = "cetus-analytics"
         this.axios = this.axiosService.create({
@@ -106,12 +111,13 @@ export class CetusAnalyticsService implements OnModuleInit, OnApplicationBootstr
      * @param param - Parameters for setting batch pool analytics
      * @param param.liquidityPools - Array of liquidity pools to process
      */
-    private async setBatchPoolAnalytics({ liquidityPools }: { liquidityPools: Array<LiquidityPoolSchema> }): Promise<void> {
+    private async setBatchPoolAnalytics(
+        liquidityPools: Array<LiquidityPoolSchema>
+    ): Promise<void> {
         // skip if no pools to process
         if (!liquidityPools.length) {
             return
         }
-        
         // fetch pool analytics from Cetus API
         const { data: { data: { list } } } = await this.axios.post<CetusPoolListResult>(
             this.uri,
@@ -176,6 +182,10 @@ export class CetusAnalyticsService implements OnModuleInit, OnApplicationBootstr
      */
     @Interval(envConfig().dexes.cetus.interval.analytics)
     async handleAnalyticsUpdateInterval(): Promise<void> {
+        // add jitter to the interval
+        await this.jitterService.delayWithJitter(
+            envConfig().dexes.cetus.interval.analytics
+        )
         // split pools into chunks of 10 for batch processing
         const chunks = Array.from(this.liquidityPoolMap.values()).reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
@@ -188,18 +198,16 @@ export class CetusAnalyticsService implements OnModuleInit, OnApplicationBootstr
             }, 
             [],
         )
-        
-        // process each chunk in parallel
-        const promises: Array<Promise<void>> = []
+        // process each chunk sequentially with jitter
         for (const chunk of chunks) {
-            promises.push(
-                this.setBatchPoolAnalytics({
-                    liquidityPools: chunk,
-                }),
+            // fetch analytics for chunk
+            await this.asyncService.safeRun(
+                async () => {
+                    await this.setBatchPoolAnalytics(chunk)
+                }
             )
+            // add delay to the next chunk
+            await sleep(envConfig().dexes.cetus.interval.analyticsRequestDelayMs)
         }
-        
-        // wait for all batches to complete
-        await this.asyncService.allIgnoreError(promises)
     }
 }

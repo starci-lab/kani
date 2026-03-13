@@ -16,6 +16,7 @@ import {
 } from "@nestjs/common"
 import {
     AsyncService,
+    JitterService,
     ReadinessWatcherFactoryService,
 } from "@modules/mixin"
 import {
@@ -67,6 +68,7 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
         private readonly suiFetchService: SuiFetchService,
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly jitterService: JitterService,
     ) { }
 
     /**
@@ -102,6 +104,9 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
      */
     @Interval(envConfig().dexes.momentum.interval.observer.fetch)
     private async handlePoolStateUpdateInterval() {
+        await this.jitterService.delayWithJitter(
+            envConfig().dexes.momentum.interval.observer.fetch
+        )
         const promises: Array<Promise<void>> = []
         // Iterate over each liquidity pool and fetch its info
         for (const liquidityPool of Array.from(this.liquidityPoolMap.values())) {
