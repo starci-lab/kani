@@ -73,7 +73,8 @@ export class OpenPositionTaskDispatchService {
             payload,
             bullmqJob,
             taskIndex,
-            isRetry
+            isRetry,
+            jobType,
         }: OpenPositionTaskDispatcherParams
     ) {
         // create the context payload for debug latency
@@ -122,6 +123,7 @@ export class OpenPositionTaskDispatchService {
                         state,
                         taskIndex,
                         isRetry,
+                        jobType,
                     }
                 )
                 continue
@@ -144,6 +146,7 @@ export class OpenPositionTaskDispatchService {
                             bullmqJob,
                             taskIndex,
                             isRetry,
+                            jobType,
                         }
                     )
                     continue
@@ -160,6 +163,7 @@ export class OpenPositionTaskDispatchService {
                             bullmqJob,
                             taskIndex,
                             isRetry,
+                            jobType,
                         }
                     )
                     continue
@@ -177,6 +181,7 @@ export class OpenPositionTaskDispatchService {
                         bullmqJob,
                         taskIndex,
                         isRetry,
+                        jobType,
                     }
                 )
             }

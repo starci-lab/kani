@@ -3,7 +3,6 @@ import {
 } from "@nestjs/common"
 import BN from "bn.js"
 import {
-    JobType,
     TaskType,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
@@ -71,9 +70,9 @@ export class WithdrawTaskPrepareService {
     /**
    * Process the Withdraw Task PREPARE step.
    */
-    async process({ bot, job, taskIndex, bullmqJob }: WithdrawTaskPrepareParams) {
+    async process({ bot, job, taskIndex, bullmqJob, jobType }: WithdrawTaskPrepareParams) {
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.Withdraw,
+            jobType,
             jobId: job.id,
             botId: bot.id,
         })
@@ -243,7 +242,7 @@ export class WithdrawTaskPrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.Withdraw,
+                    type: jobType,
                     txCount: prepareResult.prepareTxs.length,
                     metadata: job.metadata,
                     taskIndex,
@@ -254,7 +253,7 @@ export class WithdrawTaskPrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.Withdraw,
+                    type: jobType,
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.Withdraw,

@@ -10,7 +10,6 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
-    JobType,
     PrimaryMemoryStorageService,
     TaskType
 } from "@modules/databases"
@@ -109,11 +108,12 @@ export class WithdrawTaskConfirmService implements OnModuleInit {
             bot,
             job,
             taskIndex,
-            bullmqJob
+            bullmqJob,
+            jobType,
         }: WithdrawTaskConfirmParams
     ) {
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.Withdraw,
+            jobType,
             jobId: job.id,
             botId: bot.id,
         })
@@ -179,7 +179,7 @@ export class WithdrawTaskConfirmService implements OnModuleInit {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.Withdraw,
+                    type: jobType,
                     metadata: job.metadata,
                     taskIndex,
                     taskType: TaskType.Withdraw,
@@ -252,7 +252,7 @@ export class WithdrawTaskConfirmService implements OnModuleInit {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.Withdraw,
+                    type: jobType,
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.Withdraw,

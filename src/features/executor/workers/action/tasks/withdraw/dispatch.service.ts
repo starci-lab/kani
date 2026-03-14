@@ -6,7 +6,6 @@ import {
 } from "../types"
 import {
     JobSchema,
-    JobType,
     StepType,
 } from "@modules/databases"
 import {
@@ -64,10 +63,11 @@ export class WithdrawTaskDispatchService {
         bullmqJob,
         taskIndex,
         isRetry,
+        jobType,
     }: WithdrawTaskDispatcherParams) {
         // create the context payload for debug latency
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.Withdraw,
+            jobType,
             jobId,
             botId,
         })
@@ -105,6 +105,7 @@ export class WithdrawTaskDispatchService {
                     bullmqJob,
                     taskIndex,
                     isRetry,
+                    jobType,
                 })
                 continue
             }
@@ -125,6 +126,7 @@ export class WithdrawTaskDispatchService {
                         bullmqJob,
                         taskIndex,
                         isRetry,
+                        jobType,
                     })
                     continue
                 }
@@ -137,6 +139,7 @@ export class WithdrawTaskDispatchService {
                         bullmqJob,
                         taskIndex,
                         isRetry,
+                        jobType,
                     })
                     continue
                 }
@@ -151,6 +154,7 @@ export class WithdrawTaskDispatchService {
                     bullmqJob,
                     taskIndex,
                     isRetry,
+                    jobType,
                 })
             }
         } while (!this.isTaskCompleted(context.job,

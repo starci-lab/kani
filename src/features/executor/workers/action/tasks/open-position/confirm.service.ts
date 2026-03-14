@@ -10,7 +10,6 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
-    JobType,
     TaskType,
     PrimaryMemoryStorageService,
     LiquidityPoolType,
@@ -95,10 +94,11 @@ export class OpenPositionTaskConfirmService {
             liquidityPool,
             state,
             bullmqJob,
+            jobType,
         }: OpenPositionTaskConfirmParams
     ) {
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.OpenPosition,
+            jobType,
             jobId: job.id,
             botId: bot.id,
         })
@@ -149,7 +149,7 @@ export class OpenPositionTaskConfirmService {
                 )
             }
             const gasToken = Array.from(this.primaryMemoryStorageService.tokenMap.values()).find(
-                (t) => t.type === TokenType.Native && t.chainId === bot.chainId,
+                (token) => token.type === TokenType.Native && token.chainId === bot.chainId,
             )
             if (!gasToken) {
                 throw new TokenNotFoundException(
@@ -287,7 +287,7 @@ export class OpenPositionTaskConfirmService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.OpenPosition,
+                    type: jobType,
                     metadata: job.metadata,
                     taskIndex,
                     taskType: TaskType.OpenPosition,
@@ -299,7 +299,7 @@ export class OpenPositionTaskConfirmService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.OpenPosition,
+                    type: jobType,
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.OpenPosition,

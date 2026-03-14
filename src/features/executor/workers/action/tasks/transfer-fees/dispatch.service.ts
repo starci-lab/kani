@@ -9,7 +9,6 @@ import {
 } from "../types"
 import {
     JobSchema,
-    JobType,
     StepType,
 } from "@modules/databases"
 import {
@@ -64,10 +63,11 @@ export class TransferFeesTaskDispatchService {
         bullmqJob,
         taskIndex,
         isRetry,
+        jobType,
     }: TransferFeesTaskDispatcherParams) {
         // create the context payload for debug latency
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.TransferFees,
+            jobType,
             jobId,
             botId,
         })
@@ -109,6 +109,7 @@ export class TransferFeesTaskDispatchService {
                     bullmqJob,
                     taskIndex,
                     isRetry,
+                    jobType,
                 })
                 continue
             }
@@ -127,6 +128,7 @@ export class TransferFeesTaskDispatchService {
                         bullmqJob,
                         taskIndex,
                         isRetry,
+                        jobType,
                     })
                     continue
                 }
@@ -138,6 +140,7 @@ export class TransferFeesTaskDispatchService {
                         bullmqJob,
                         taskIndex,
                         isRetry,
+                        jobType,
                     })
                     continue
                 }
@@ -152,6 +155,7 @@ export class TransferFeesTaskDispatchService {
                     bullmqJob,
                     taskIndex,
                     isRetry,
+                    jobType,
                 })
             }
         } while (!this.isTaskCompleted(context.job,

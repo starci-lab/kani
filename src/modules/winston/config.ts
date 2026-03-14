@@ -2540,7 +2540,7 @@ export const configMap = {
     // Resources Memory Usage
     [WinstonLog.ResourcesMemoryUsage]: {
         name: WinstonLog.ResourcesMemoryUsage,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Warn,
         loki: true,
         messageType: {
         } as MemoryUsageMessage,
@@ -2548,7 +2548,7 @@ export const configMap = {
     // Execution Latency
     [WinstonLog.ExecutionLatency]: {
         name: WinstonLog.ExecutionLatency,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Warn,
         loki: true,
         messageType: {
         } as ExecutionLatencyMessage,

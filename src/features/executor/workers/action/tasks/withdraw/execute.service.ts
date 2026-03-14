@@ -7,7 +7,6 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
-    JobType,
     StepType,
     TaskType,
 } from "@modules/databases"
@@ -70,9 +69,9 @@ export class WithdrawTaskExecuteService {
     /**
    * Process the WITHDRAW TASK EXECUTE step.
    */
-    async process({ bot, job, bullmqJob, taskIndex }: WithdrawTaskExecuteParams) {
+    async process({ bot, job, bullmqJob, taskIndex, jobType }: WithdrawTaskExecuteParams) {
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.Withdraw,
+            jobType,
             jobId: job.id,
             botId: bot.id,
         })
@@ -152,7 +151,7 @@ export class WithdrawTaskExecuteService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.Withdraw,
+                    type: jobType,
                     taskIndex,
                     taskType: TaskType.Withdraw,
                     stepIndex,
@@ -163,13 +162,14 @@ export class WithdrawTaskExecuteService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.Withdraw,
+                    type: jobType,
                     taskIndex,
                     taskType: TaskType.Withdraw,
                     stepIndex,
                     error: error.message,
                     metadata: job.metadata,
-                })
+                }
+            )
 
             // Fatal RPC error -> retry ladder (same as ReconcileBalance)
             if (error instanceof RpcClientFatalException) {

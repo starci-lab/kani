@@ -17,7 +17,7 @@ export interface DebugLatencyContext {
     /** The name of the context. */
     name: string
     /** The start time of the context. */
-    startTime: Dayjs
+    snapshotTime: Dayjs
 }
 
 /** Params for creating a debug latency context. */
@@ -73,7 +73,7 @@ export class DebugLatencyService {
             id,
             {
                 name,
-                startTime: this.dayjsService.now(),
+                snapshotTime: this.dayjsService.now(),
             }
         )
     }
@@ -94,15 +94,20 @@ export class DebugLatencyService {
         if (!context) {
             return
         }
-
         // compute duration and clear context
         const endTime = this.dayjsService.now()
         const latency = endTime.diff(
-            context.startTime,
+            context.snapshotTime,
             "millisecond",
         )
-        this.contextMap.delete(id)
-
+        // update context
+        this.contextMap.set(
+            id,
+            {
+                ...context,
+                snapshotTime: endTime,
+            }
+        )
         // log at verbose level
         this.winstonService.log(
             WinstonLog.ExecutionLatency,

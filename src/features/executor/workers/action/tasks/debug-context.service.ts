@@ -2,9 +2,6 @@ import {
     JobType 
 } from "@modules/databases"
 import {
-    DebugLatencyService 
-} from "@modules/debug"
-import {
     Injectable 
 } from "@nestjs/common"
 
@@ -14,7 +11,6 @@ import {
 @Injectable()
 export class DebugContextService {
     constructor(
-        private readonly debugLatencyService: DebugLatencyService,
     ) {}
 
     /**

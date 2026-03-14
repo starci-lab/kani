@@ -10,7 +10,6 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
-    JobType,
     TaskType,
     PrimaryMemoryStorageService,
     TransactionType,
@@ -93,11 +92,12 @@ export class ClosePositionTaskConfirmService {
             state,
             liquidityPool,
             bullmqJob,
-            payload
+            payload,
+            jobType,
         }: ClosePositionTaskConfirmParams
     ) {
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.ClosePosition,
+            jobType,
             jobId: job.id,
             botId: bot.id,
         })
@@ -281,7 +281,7 @@ export class ClosePositionTaskConfirmService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.ClosePosition,
+                    type: jobType,
                     metadata: job.metadata,
                     taskIndex,
                     taskType: TaskType.ClosePosition,
@@ -293,7 +293,7 @@ export class ClosePositionTaskConfirmService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.ClosePosition,
+                    type: jobType,
                     taskIndex,
                     taskType: TaskType.ClosePosition,
                     error: error.message,

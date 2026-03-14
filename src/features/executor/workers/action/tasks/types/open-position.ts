@@ -6,6 +6,7 @@ import {
     LiquidityPoolSchema,
     BotSchema,
     JobSchema,
+    JobType,
 } from "@modules/databases"
 import {
     Job 
@@ -27,6 +28,8 @@ export interface OpenPositionTaskBaseParams {
     bullmqJob: Job<string>
     /** Retry */
     isRetry?: boolean
+    /** Job type */
+    jobType: JobType
 }
 
 /** Params for the CLOSE POSITION PREPARE step. */

@@ -5,7 +5,6 @@ import {
     ClosePositionActionService,
 } from "@modules/blockchains"
 import {
-    JobType,
     TaskType
 } from "@modules/databases"
 import {
@@ -66,10 +65,11 @@ export class ClosePositionTaskPrepareService {
             taskIndex,
             bullmqJob,
             liquidityPool,
+            jobType,
         }: ClosePositionTaskPrepareParams
     ) {
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.ClosePosition,
+            jobType,
             jobId: job.id,
             botId: bot.id,
         })
@@ -125,7 +125,7 @@ export class ClosePositionTaskPrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.ClosePosition,
+                    type: jobType,
                     txCount: prepareResult.prepareTxs.length,
                     metadata: job.metadata,
                     taskIndex,
@@ -139,7 +139,7 @@ export class ClosePositionTaskPrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.ClosePosition,
+                    type: jobType,
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.ClosePosition,

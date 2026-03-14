@@ -6,7 +6,6 @@ import {
 } from "../types"
 import {
     JobSchema,
-    JobType,
     StepType
 } from "@modules/databases"
 import {
@@ -68,11 +67,12 @@ export class ReconcileBalanceTaskDispatchService {
             bullmqJob,
             taskIndex,
             isRetry,
+            jobType,
         }: ReconcileBalanceTaskDispatcherParams
     ) {
         // create the context payload for debug latency
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.ReconcileBalance,
+            jobType,
             jobId: jobId,
             botId: botId,
         })
@@ -117,6 +117,7 @@ export class ReconcileBalanceTaskDispatchService {
                         bullmqJob,
                         taskIndex,
                         isRetry,
+                        jobType,
                     }
                 )
                 continue
@@ -138,6 +139,7 @@ export class ReconcileBalanceTaskDispatchService {
                             bullmqJob,
                             taskIndex,
                             isRetry,
+                            jobType,
                         }
                     )
                     continue
@@ -152,6 +154,7 @@ export class ReconcileBalanceTaskDispatchService {
                             bullmqJob,
                             taskIndex,
                             isRetry,
+                            jobType,
                         }
                     )
                     continue
@@ -168,6 +171,7 @@ export class ReconcileBalanceTaskDispatchService {
                         bullmqJob,
                         taskIndex,
                         isRetry,
+                        jobType,
                     }
                 )
             }

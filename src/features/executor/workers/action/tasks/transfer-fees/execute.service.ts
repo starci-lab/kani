@@ -8,7 +8,6 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
-    JobType,
     StepType,
     TaskType,
 } from "@modules/databases"
@@ -72,10 +71,10 @@ export class TransferFeesTaskExecuteService {
      * Process the Transfer Fees Task EXECUTE step.
      */
     async process(
-        { bot, job, bullmqJob, taskIndex }: TransferFeesTaskExecuteParams
+        { bot, job, bullmqJob, taskIndex, jobType }: TransferFeesTaskExecuteParams
     ) {
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.TransferFees,
+            jobType,
             jobId: job.id,
             botId: bot.id,
         })
@@ -152,7 +151,7 @@ export class TransferFeesTaskExecuteService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: job.type ?? JobType.OpenPosition,
+                    type: jobType,
                     taskIndex,
                     taskType: TaskType.TransferFees,
                     stepIndex,
@@ -163,7 +162,7 @@ export class TransferFeesTaskExecuteService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: job.type ?? JobType.OpenPosition,
+                    type: jobType,
                     taskIndex,
                     taskType: TaskType.TransferFees,
                     stepIndex,

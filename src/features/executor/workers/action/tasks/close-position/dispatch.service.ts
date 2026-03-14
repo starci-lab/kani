@@ -15,7 +15,6 @@ import {
 } from "../types"
 import {
     JobSchema,
-    JobType,
     StepType,
 } from "@modules/databases"
 import {
@@ -74,12 +73,13 @@ export class ClosePositionTaskDispatchService {
             payload,
             bullmqJob,
             taskIndex,
-            isRetry
+            isRetry,
+            jobType,
         }: ClosePositionTaskDispatcherParams
     ) {
         // create the context payload for debug latency
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.ClosePosition,
+            jobType,
             jobId: jobId,
             botId: botId,
         })
@@ -123,6 +123,7 @@ export class ClosePositionTaskDispatchService {
                         state,
                         taskIndex,
                         isRetry,
+                        jobType,
                     }
                 )
                 continue
@@ -145,6 +146,7 @@ export class ClosePositionTaskDispatchService {
                             bullmqJob,
                             taskIndex,
                             isRetry,
+                            jobType,
                         }
                     )
                     continue
@@ -160,6 +162,7 @@ export class ClosePositionTaskDispatchService {
                             bullmqJob,
                             taskIndex,
                             isRetry,
+                            jobType,
                         }
                     )
                     continue
@@ -177,6 +180,7 @@ export class ClosePositionTaskDispatchService {
                         bullmqJob,
                         taskIndex,
                         isRetry,
+                        jobType,
                     }
                 )
             }

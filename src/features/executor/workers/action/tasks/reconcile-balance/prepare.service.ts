@@ -3,7 +3,6 @@ import {
 } from "@nestjs/common"
 import BN from "bn.js"
 import {
-    JobType,
     TaskType,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
@@ -82,11 +81,12 @@ export class ReconcileBalanceTaskPrepareService {
             taskIndex,
             payload,
             bullmqJob,
+            jobType,
         }: ReconcileBalanceTaskPrepareParams
     ) {
         // create the context payload for debug latency
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.ReconcileBalance,
+            jobType,
             jobId: job.id,
             botId: bot.id,
         })
@@ -185,7 +185,7 @@ export class ReconcileBalanceTaskPrepareService {
                     {
                         botId: bot.id,
                         jobId: job.id,
-                        type: JobType.ReconcileBalance,
+                        type: jobType,
                         txCount: 0,
                         metadata: job.metadata,
                         taskIndex,
@@ -315,7 +315,7 @@ export class ReconcileBalanceTaskPrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.ReconcileBalance,
+                    type: jobType,
                     txCount: prepareResult.prepareTxs.length,
                     metadata: job.metadata,
                     taskIndex,
@@ -328,7 +328,7 @@ export class ReconcileBalanceTaskPrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.ReconcileBalance,
+                    type: jobType,
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.ReconcileBalance,

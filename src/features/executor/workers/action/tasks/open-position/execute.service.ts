@@ -9,7 +9,6 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
-    JobType,
     StepType,
     TaskType,
 } from "@modules/databases"
@@ -80,10 +79,11 @@ export class OpenPositionTaskExecuteService {
             state,
             bullmqJob,
             taskIndex,
+            jobType,
         }: OpenPositionTaskExecuteParams
     ) {
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.OpenPosition,
+            jobType,
             jobId: job.id,
             botId: bot.id,
         })
@@ -167,7 +167,7 @@ export class OpenPositionTaskExecuteService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.OpenPosition,
+                    type: jobType,
                     taskIndex,
                     taskType: TaskType.OpenPosition,
                     stepIndex,
@@ -180,7 +180,7 @@ export class OpenPositionTaskExecuteService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.OpenPosition,
+                    type: jobType,
                     taskIndex,
                     taskType: TaskType.OpenPosition,
                     stepIndex,

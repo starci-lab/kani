@@ -8,7 +8,6 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
-    JobType,
     StepType, 
     TaskType,
 } from "@modules/databases"
@@ -69,9 +68,10 @@ export class ClosePositionTaskSignService {
         job,
         bot,
         liquidityPool,
+        jobType,
     }: ClosePositionTaskSignParams) {
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.ClosePosition,
+            jobType,
             jobId: job.id,
             botId: bot.id,
         })
@@ -133,7 +133,7 @@ export class ClosePositionTaskSignService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.ClosePosition,
+                    type: jobType,
                     taskIndex,
                     taskType: TaskType.ClosePosition,
                     stepIndex,
@@ -146,7 +146,7 @@ export class ClosePositionTaskSignService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.ClosePosition,
+                    type: jobType,
                     taskIndex,
                     taskType: TaskType.ClosePosition,
                     stepIndex,

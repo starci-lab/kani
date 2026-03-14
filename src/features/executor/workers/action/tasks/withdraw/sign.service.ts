@@ -7,7 +7,6 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
-    JobType,
     StepType,
     TaskType,
 } from "@modules/databases"
@@ -60,9 +59,10 @@ export class WithdrawTaskSignService {
         job,
         bullmqJob,
         taskIndex,
+        jobType,
     }: WithdrawTaskSignParams) {
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.Withdraw,
+            jobType,
             jobId: job.id,
             botId: bot.id,
         })
@@ -120,7 +120,7 @@ export class WithdrawTaskSignService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.Withdraw,
+                    type: jobType,
                     taskIndex,
                     taskType: TaskType.Withdraw,
                     stepIndex,
@@ -131,7 +131,7 @@ export class WithdrawTaskSignService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.Withdraw,
+                    type: jobType,
                     taskIndex,
                     taskType: TaskType.Withdraw,
                     stepIndex,

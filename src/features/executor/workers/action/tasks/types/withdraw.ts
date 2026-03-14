@@ -7,6 +7,7 @@ import {
 import {
     BotSchema,
     JobSchema,
+    JobType,
 } from "@modules/databases"
 
 /** Base params for the CLOSE POSITION task. */
@@ -21,6 +22,8 @@ export interface WithdrawTaskBaseParams {
     bullmqJob: Job<string>
     /** Retry */
     isRetry?: boolean
+    /** Job type */
+    jobType: JobType
 }
 
 /** Params for the CLOSE POSITION PREPARE step. */

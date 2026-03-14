@@ -5,6 +5,7 @@ import {
 import {
     BotSchema,
     JobSchema,
+    JobType,
     LiquidityPoolSchema 
 } from "@modules/databases"
 import {
@@ -27,6 +28,8 @@ export interface ClosePositionTaskBaseParams {
     bullmqJob: Job<string>
     /** Retry */
     isRetry?: boolean
+    /** Job type */
+    jobType: JobType
 }
 
 /** Params for the CLOSE POSITION PREPARE step. */

@@ -7,6 +7,7 @@ import {
 import {
     BotSchema,
     JobSchema,
+    JobType,
 } from "@modules/databases"
 
 /** Base params for the TRANSFER FEES task. */
@@ -21,6 +22,8 @@ export interface TransferFeesTaskBaseParams {
     bullmqJob: Job<string>
     /** Retry */
     isRetry?: boolean
+    /** Job type */
+    jobType: JobType
 }
 
 /** Params for the TRANSFER FEES PREPARE step. */

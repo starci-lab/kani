@@ -10,7 +10,6 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
-    JobType,
     TaskType
 } from "@modules/databases"
 import {
@@ -67,10 +66,11 @@ export class ReconcileBalanceTaskConfirmService {
             job,
             taskIndex,
             bullmqJob,
+            jobType,
         }: ReconcileBalanceTaskConfirmParams
     ) {
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.ReconcileBalance,
+            jobType,
             jobId: job.id,
             botId: bot.id,
         })
@@ -169,7 +169,7 @@ export class ReconcileBalanceTaskConfirmService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.ReconcileBalance,
+                    type: jobType,
                     metadata: job.metadata,
                     taskIndex,
                     taskType: TaskType.ReconcileBalance,
@@ -181,7 +181,7 @@ export class ReconcileBalanceTaskConfirmService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.ReconcileBalance,
+                    type: jobType,
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.ReconcileBalance,

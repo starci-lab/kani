@@ -140,6 +140,7 @@ export class ActionWorker extends WorkerHost {
                             state,
                             bullmqJob,
                             taskIndex,
+                            jobType: payload.type,
                         }
                     )
                     break
@@ -161,6 +162,7 @@ export class ActionWorker extends WorkerHost {
                             bullmqJob,
                             taskIndex,
                             isRetry,
+                            jobType: payload.type,
                         }
                     )
                     break
@@ -174,6 +176,7 @@ export class ActionWorker extends WorkerHost {
                             isRetry,
                             bullmqJob,
                             taskIndex,
+                            jobType: payload.type,
                         }
                     )
                     break
@@ -186,6 +189,7 @@ export class ActionWorker extends WorkerHost {
                         bullmqJob,
                         taskIndex,
                         isRetry,
+                        jobType: payload.type,
                     })
                     break
                 }
@@ -198,6 +202,7 @@ export class ActionWorker extends WorkerHost {
                             bullmqJob,
                             taskIndex,
                             isRetry,
+                            jobType: payload.type,
                         }
                     )
                     break

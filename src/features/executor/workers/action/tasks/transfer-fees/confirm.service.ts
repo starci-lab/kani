@@ -11,7 +11,6 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
-    JobType,
     TaskType
 } from "@modules/databases"
 import {
@@ -70,9 +69,10 @@ export class TransferFeesTaskConfirmService {
         job,
         taskIndex,
         bullmqJob,
+        jobType,
     }: TransferFeesTaskConfirmParams) {
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.TransferFees,
+            jobType,
             jobId: job.id,
             botId: bot.id,
         })
@@ -173,7 +173,7 @@ export class TransferFeesTaskConfirmService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: job.type ?? JobType.TransferFees,
+                    type: jobType,
                     metadata: job.metadata,
                     taskIndex,
                     taskType: TaskType.TransferFees,
@@ -185,7 +185,7 @@ export class TransferFeesTaskConfirmService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: job.type ?? JobType.TransferFees,
+                    type: jobType,
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.TransferFees,

@@ -5,7 +5,6 @@ import {
     OpenPositionActionService,
 } from "@modules/blockchains"
 import {
-    JobType,
     TaskType
 } from "@modules/databases"
 import {
@@ -66,10 +65,11 @@ export class OpenPositionTaskPrepareService {
             state,
             taskIndex,
             bullmqJob,
+            jobType,
         }: OpenPositionTaskPrepareParams
     ) {
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.OpenPosition,
+            jobType,
             jobId: job.id,
             botId: bot.id,
         })
@@ -125,7 +125,7 @@ export class OpenPositionTaskPrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.OpenPosition,
+                    type: jobType,
                     txCount: prepareResult.prepareTxs.length,
                     metadata: job.metadata,
                     taskIndex,
@@ -138,7 +138,7 @@ export class OpenPositionTaskPrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.OpenPosition,
+                    type: jobType,
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.OpenPosition,

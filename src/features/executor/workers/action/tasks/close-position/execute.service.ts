@@ -7,7 +7,6 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
-    JobType,
     StepType,
     TaskType,
 } from "@modules/databases"
@@ -77,9 +76,10 @@ export class ClosePositionTaskExecuteService {
         state,
         bullmqJob,
         taskIndex,
+        jobType,
     }: ClosePositionTaskExecuteParams) {
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.ClosePosition,
+            jobType,
             jobId: job.id,
             botId: bot.id,
         })
@@ -161,7 +161,7 @@ export class ClosePositionTaskExecuteService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.ClosePosition,
+                    type: jobType,
                     taskIndex,
                     taskType: TaskType.ClosePosition,
                     stepIndex,
@@ -173,7 +173,7 @@ export class ClosePositionTaskExecuteService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: JobType.ClosePosition,
+                    type: jobType,
                     taskIndex,
                     taskType: TaskType.ClosePosition,
                     stepIndex,

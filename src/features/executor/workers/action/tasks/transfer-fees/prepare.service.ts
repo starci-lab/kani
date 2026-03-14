@@ -2,7 +2,6 @@ import {
     Injectable
 } from "@nestjs/common"
 import {
-    JobType,
     TaskType,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
@@ -70,9 +69,10 @@ export class TransferFeesTaskPrepareService {
         taskIndex,
         payload,
         bullmqJob,
+        jobType,
     }: TransferFeesTaskPrepareParams) {
         const contextPayload = this.debugContextService.createContextPayload({
-            jobType: JobType.TransferFees,
+            jobType,
             jobId: job.id,
             botId: bot.id,
         })
@@ -231,7 +231,7 @@ export class TransferFeesTaskPrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: job.type ?? JobType.OpenPosition,
+                    type: jobType,
                     txCount: prepareResult.prepareTxs.length,
                     metadata: job.metadata,
                     taskIndex,
@@ -245,7 +245,7 @@ export class TransferFeesTaskPrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: job.type ?? JobType.OpenPosition,
+                    type: jobType,
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.TransferFees,
