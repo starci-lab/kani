@@ -166,13 +166,34 @@ export class JobTaskService {
         taskIndex,
         session,
     }: UpdatePrepareProcessingRetriesParams): Promise<void> {
+    
         const result = await this.connection
             .model<JobSchema>(JobSchema.name)
             .updateOne(
-                { _id: jobId, "tasks.index": taskIndex },
-                { $inc: { "tasks.$.prepareProcessingRetries": 1 } },
-                { session },
+                {
+                    _id: jobId,
+                    "tasks.index": taskIndex,
+                },
+                [
+                    {
+                        $set: {
+                            "tasks.$.prepareProcessingRetries": {
+                                $add: [
+                                    {
+                                        $ifNull: ["$tasks.$.prepareProcessingRetries",
+                                            0] 
+                                    },
+                                    1
+                                ]
+                            }
+                        }
+                    }
+                ],
+                {
+                    session 
+                }
             )
+    
         assert(result.matchedCount > 0)
     }
 }
