@@ -30,8 +30,12 @@ import {
     WinstonLog,
 } from "@modules/winston"
 import {
-    strict as assert 
-} from "node:assert"
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
+
 /**
  * Service for the Close Position Task SIGN step.
  */
@@ -45,6 +49,8 @@ export class ClosePositionTaskSignService {
         private readonly superJson: SuperJSON,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) { }
     /**
      * Process the Close Position Task SIGN step.
@@ -64,29 +70,39 @@ export class ClosePositionTaskSignService {
         bot,
         liquidityPool,
     }: ClosePositionTaskSignParams) {
-        // active step index
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.ClosePosition,
+            jobId: job.id,
+            botId: bot.id,
+        })
         const stepIndex = job.tasks[taskIndex].activeStep
-        // prepare tx
         const prepareTx = this.superJson.parse<PrepareTx>(
-            job.tasks[taskIndex].steps[stepIndex].prepareTx
+            job.tasks[taskIndex].steps[stepIndex].prepareTx,
         )
         try {
-            // Send heartbeat
             await this.sendHeartbeatService.process(
                 {
                     bot,
                     job,
                     bullmqJob,
-                }
+                },
             )
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Heartbeat sent successfully",
+            })
             const { signedTx } = await this.closePositionActionService.sign(
                 {
                     bot,
                     prepareTx,
                     liquidityPool,
-                }
+                },
             )
-            const updateJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Sign transaction successfully",
+            })
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {
                     _id: job.id 
                 },
@@ -108,7 +124,10 @@ export class ClosePositionTaskSignService {
                     ],
                 },
             )
-            assert(updateJobResult.matchedCount > 0)
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Persist signed transaction successfully",
+            })
             this.winstonService.log(
                 WinstonLog.ActionJobTaskStepSigned,
                 {

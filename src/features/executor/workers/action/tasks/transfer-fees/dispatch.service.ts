@@ -9,7 +9,8 @@ import {
 } from "../types"
 import {
     JobSchema,
-    StepType
+    JobType,
+    StepType,
 } from "@modules/databases"
 import {
     JobContextNotFoundException
@@ -25,11 +26,17 @@ import {
 } from "./execute.service"
 import {
     JobContextService,
-    LoadJobContextResult
+    LoadJobContextResult,
 } from "../../context"
 import {
-    AsyncService
+    AsyncService,
 } from "@modules/mixin"
+import {
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
 
 /**
  * Dispatcher service for the TRANSFER FEES task.
@@ -43,6 +50,8 @@ export class TransferFeesTaskDispatchService {
         private readonly transferFeesTaskConfirmService: TransferFeesTaskConfirmService,
         private readonly asyncService: AsyncService,
         private readonly jobContextService: JobContextService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) {}
 
     /**
@@ -56,31 +65,42 @@ export class TransferFeesTaskDispatchService {
         taskIndex,
         isRetry,
     }: TransferFeesTaskDispatcherParams) {
+        // create the context payload for debug latency
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.TransferFees,
+            jobId,
+            botId,
+        })
+        this.debugLatencyService.createContext(contextPayload)
+        // create the context for debug latency
         let context: LoadJobContextResult | null = null
-
         do {
             const [
                 _context,
-                error
+                error,
             ] = await this.asyncService.resolveTuple(
                 this.jobContextService.load(
                     {
-                        jobId, botId 
-                    }
+                        jobId,
+                        botId,
+                    },
                 ),
             )
             context = _context
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Job context loaded successfully",
+            })
             if (error) {
                 throw error
             }
             if (!context) {
                 throw new JobContextNotFoundException({
-                    jobId, botId 
+                    jobId,
+                    botId,
                 })
             }
-
             const task = context.job.tasks[taskIndex]
-
             if (!task || task.initialized === false) {
                 await this.transferFeesTaskPrepareService.process({
                     bot: context.bot,

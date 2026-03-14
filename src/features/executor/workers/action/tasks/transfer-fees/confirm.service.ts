@@ -37,10 +37,13 @@ import {
     InjectSuperJson
 } from "@modules/mixin"
 import SuperJSON from "superjson"
-import {
-    strict as assert
-} from "node:assert"
 import BN from "bn.js"
+import {
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
 
 /**
  * Service for the Transfer Fees Task CONFIRM step.
@@ -55,6 +58,8 @@ export class TransferFeesTaskConfirmService {
         private readonly transferFeesSnapshotService: TransferFeesSnapshotService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) {}
 
     /**
@@ -66,18 +71,26 @@ export class TransferFeesTaskConfirmService {
         taskIndex,
         bullmqJob,
     }: TransferFeesTaskConfirmParams) {
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.TransferFees,
+            jobId: job.id,
+            botId: bot.id,
+        })
         try {
             await this.sendHeartbeatService.process({
                 bot,
                 job,
                 bullmqJob,
             })
-
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Heartbeat sent successfully",
+            })
             try {
                 const session = await this.connection.startSession()
                 await session.withTransaction(
                     async (clientSession) => {
-                        const updateJobResult = await this.connection
+                        await this.connection
                             .model<JobSchema>(JobSchema.name)
                             .updateOne(
                                 {
@@ -101,9 +114,6 @@ export class TransferFeesTaskConfirmService {
                                     session: clientSession,
                                 },
                             )
-
-                        assert(updateJobResult.matchedCount > 0)
-
                         const task = job.tasks[taskIndex]
                         const positionId = bot.activePosition?.position?.toString()
                         if (!positionId) {
@@ -154,7 +164,10 @@ export class TransferFeesTaskConfirmService {
                     throw error
                 }
             }
-
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Confirm transaction successfully",
+            })
             this.winstonService.log(
                 WinstonLog.ActionJobTaskConfirmed,
                 {

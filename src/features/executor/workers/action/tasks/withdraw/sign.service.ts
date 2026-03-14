@@ -25,11 +25,15 @@ import {
     WithdrawTaskSignParams 
 } from "../types"
 import {
-    WinstonService, WinstonLog 
+    WinstonService,
+    WinstonLog,
 } from "@modules/winston"
 import {
-    strict as assert 
-} from "node:assert"
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
 
 /**
  * Service for the WITHDRAW TASK SIGN step.
@@ -37,13 +41,15 @@ import {
 @Injectable()
 export class WithdrawTaskSignService {
     constructor(
-    private readonly balanceActionService: BalanceActionService,
-    private readonly sendHeartbeatService: SendHeartbeatService,
-    @InjectSuperJson()
-    private readonly superJson: SuperJSON,
-    @InjectPrimaryMongoose()
-    private readonly connection: Connection,
-    private readonly winstonService: WinstonService,
+        private readonly balanceActionService: BalanceActionService,
+        private readonly sendHeartbeatService: SendHeartbeatService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
+        private readonly winstonService: WinstonService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) {}
 
     /**
@@ -55,31 +61,33 @@ export class WithdrawTaskSignService {
         bullmqJob,
         taskIndex,
     }: WithdrawTaskSignParams) {
-    // active step index
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.Withdraw,
+            jobId: job.id,
+            botId: bot.id,
+        })
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
-        // step snapshot (may be undefined)
         const step = job.tasks[taskIndex].steps?.[stepIndex]
-
         try {
-            // send heartbeat
             await this.sendHeartbeatService.process({
                 bot,
                 job,
                 bullmqJob,
             })
-
-            // prepareTx is persisted per-step by prepare service
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Heartbeat sent successfully",
+            })
             const prepareTx = this.superJson.parse<PrepareTx>(step.prepareTx)
-
-            // Sign tx
-            const { signedTx } =
-        await this.balanceActionService.signReconcileBalanceTransaction({
-            bot,
-            prepareTx,
-        })
-
-            // Persist signedTx and advance step type to Execute
-            const updateJobResult = await this.connection
+            const { signedTx } = await this.balanceActionService.signReconcileBalanceTransaction({
+                bot,
+                prepareTx,
+            })
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Sign transaction successfully",
+            })
+            await this.connection
                 .model<JobSchema>(JobSchema.name)
                 .updateOne(
                     {
@@ -104,9 +112,10 @@ export class WithdrawTaskSignService {
                         ],
                     },
                 )
-
-            assert(updateJobResult.matchedCount > 0)
-
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Persist signed transaction successfully",
+            })
             this.winstonService.log(WinstonLog.ActionJobTaskStepSigned,
                 {
                     botId: bot.id,

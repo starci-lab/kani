@@ -30,8 +30,14 @@ import {
     WinstonLog,
 } from "@modules/winston"
 import {
-    strict as assert 
+    strict as assert,
 } from "node:assert"
+import {
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
 
 /**
  * Service for the Open Position Task SIGN step.
@@ -46,6 +52,8 @@ export class OpenPositionTaskSignService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) { }
     /**
      * Process the Open Position Task SIGN step.
@@ -65,28 +73,38 @@ export class OpenPositionTaskSignService {
         bot,
         liquidityPool,
     }: OpenPositionTaskSignParams) {
-        // active step index
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.OpenPosition,
+            jobId: job.id,
+            botId: bot.id,
+        })
         const activeStep = job.tasks[taskIndex].activeStep
-        // prepare tx
         const prepareTx = this.superJson.parse<PrepareTx>(
-            job.tasks[taskIndex].steps[activeStep].prepareTx
+            job.tasks[taskIndex].steps[activeStep].prepareTx,
         )
         try {
-            // Send heartbeat
             await this.sendHeartbeatService.process(
                 {
                     bot,
                     job,
                     bullmqJob,
-                }
+                },
             )
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Heartbeat sent successfully",
+            })
             const { signedTx } = await this.openPositionActionService.sign(
                 {
                     bot,
                     prepareTx,
                     liquidityPool,
-                }
+                },
             )
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Sign transaction successfully",
+            })
             const updateJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {
                     _id: job.id 
@@ -110,6 +128,10 @@ export class OpenPositionTaskSignService {
                 },
             )
             assert(updateJobResult.matchedCount > 0)
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Persist signed transaction successfully",
+            })
             this.winstonService.log(
                 WinstonLog.ActionJobTaskStepSigned,
                 {

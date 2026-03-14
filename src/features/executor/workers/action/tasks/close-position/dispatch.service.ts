@@ -15,21 +15,28 @@ import {
 } from "../types"
 import {
     JobSchema,
-    StepType
+    JobType,
+    StepType,
 } from "@modules/databases"
 import {
-    ClosePositionTaskPrepareService 
+    ClosePositionTaskPrepareService,
 } from "./prepare.service"
 import {
-    AsyncService 
+    AsyncService,
 } from "@modules/mixin"
 import {
     LoadJobContextResult,
-    JobContextService 
+    JobContextService,
 } from "../../context"
 import {
-    JobContextNotFoundException 
+    JobContextNotFoundException,
 } from "@modules/exceptions"
+import {
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
 
 /**
  * Dispatcher service for the CLOSE POSITION task.
@@ -43,6 +50,8 @@ export class ClosePositionTaskDispatchService {
         private readonly closePositionTaskConfirmService: ClosePositionTaskConfirmService,
         private readonly asyncService: AsyncService,
         private readonly jobContextService: JobContextService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) { }
 
     /**
@@ -68,21 +77,32 @@ export class ClosePositionTaskDispatchService {
             isRetry
         }: ClosePositionTaskDispatcherParams
     ) {
-        // context in use
+        // create the context payload for debug latency
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.ClosePosition,
+            jobId: jobId,
+            botId: botId,
+        })
+        this.debugLatencyService.createContext(contextPayload)
+        // create the context for debug latency
         let context: LoadJobContextResult | null = null
         do {
             const [
                 _context,
-                error
+                error,
             ] = await this.asyncService.resolveTuple(
                 this.jobContextService.load(
                     {
-                        jobId, 
-                        botId 
-                    }
-                )
+                        jobId,
+                        botId,
+                    },
+                ),
             )
             context = _context
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Job context loaded successfully",
+            })
             if (error) {
                 throw error
             }
@@ -92,8 +112,6 @@ export class ClosePositionTaskDispatchService {
                     botId,
                 })
             }
-            // we retrieve the latest job snapshot
-            // if we do not find the task persisted in the job snapshot, we have to prepare 
             if (!context.job.tasks[taskIndex] || context.job.tasks[taskIndex].initialized === false) {
                 await this.closePositionTaskPrepareService.process(
                     {
@@ -116,7 +134,6 @@ export class ClosePositionTaskDispatchService {
                 // get the current step type
                 const stepType = context.job.tasks[taskIndex].steps[activeStep].type
                 switch (stepType) {
-                // Sign step
                 case StepType.Sign: {
                     await this.closePositionTaskSignService.process(
                         {
@@ -132,7 +149,6 @@ export class ClosePositionTaskDispatchService {
                     )
                     continue
                 }
-                // Execute step
                 case StepType.Execute: {
                     await this.closePositionTaskExecuteService.process(
                         {
@@ -150,7 +166,6 @@ export class ClosePositionTaskDispatchService {
                 }
                 }
             }
-            // process confirm
             if (!context.job.tasks[taskIndex].confirmed) {
                 await this.closePositionTaskConfirmService.process(
                     {

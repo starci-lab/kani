@@ -46,11 +46,17 @@ import {
     envConfig
 } from "@modules/env"
 import {
-    strict as assert 
+    strict as assert,
 } from "node:assert"
 import {
-    SendHeartbeatService
+    SendHeartbeatService,
 } from "../../send-heartbeat.service"
+import {
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
 
 @Injectable()
 export class ClosePositionTaskConfirmService {
@@ -66,6 +72,8 @@ export class ClosePositionTaskConfirmService {
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         private readonly transactionSnapshotService: TransactionSnapshotService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) { }
 
     /**
@@ -88,12 +96,20 @@ export class ClosePositionTaskConfirmService {
             payload
         }: ClosePositionTaskConfirmParams
     ) {
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.ClosePosition,
+            jobId: job.id,
+            botId: bot.id,
+        })
         try {
-            // send heartbeat
             await this.sendHeartbeatService.process({
                 bot,
                 job,
                 bullmqJob,
+            })
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Heartbeat sent successfully",
             })
             const targetToken = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenA.toString())
             if (!targetToken) {
@@ -148,8 +164,12 @@ export class ClosePositionTaskConfirmService {
                 {
                     bot,
                     incentiveTokens: nonPairRewardTokens,
-                }
+                },
             )
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Fetch balances successfully",
+            })
             const signedTxs = (job.tasks[taskIndex].steps ?? []).map((step) => this.superJson.parse<SignedTx>(step.signedTx ?? ""))
             try {
                 const session = await this.connection.startSession()
@@ -252,6 +272,10 @@ export class ClosePositionTaskConfirmService {
                     throw error
                 }
             }
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Confirm transaction successfully",
+            })
             this.winstonService.log(
                 WinstonLog.ActionJobTaskConfirmed,
                 {

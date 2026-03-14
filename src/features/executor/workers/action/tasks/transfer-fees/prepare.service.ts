@@ -39,8 +39,14 @@ import {
 import BN from "bn.js"
 import Decimal from "decimal.js"
 import {
-    MountStorageService 
+    MountStorageService,
 } from "@modules/filesystem"
+import {
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
 
 @Injectable()
 export class TransferFeesTaskPrepareService {
@@ -54,6 +60,8 @@ export class TransferFeesTaskPrepareService {
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly balanceConvertService: BalanceConvertService,
         private readonly mountStorageService: MountStorageService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) { }
 
     async process({
@@ -63,11 +71,20 @@ export class TransferFeesTaskPrepareService {
         payload,
         bullmqJob,
     }: TransferFeesTaskPrepareParams) {
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.TransferFees,
+            jobId: job.id,
+            botId: bot.id,
+        })
         try {
             await this.sendHeartbeatService.process({
                 bot,
                 job,
                 bullmqJob,
+            })
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Heartbeat sent successfully",
             })
             const retries = job.tasks?.[taskIndex]?.retries ?? 0
             if (retries >= envConfig().executor.workers.job.prepareMaxAttempts) {
@@ -97,7 +114,7 @@ export class TransferFeesTaskPrepareService {
                 })
             }
             const gasToken = Array.from(this.primaryMemoryStorageService.tokenMap.values()).find(
-                (t) => t.type === TokenType.Native && t.chainId === bot.chainId,
+                (token) => token.type === TokenType.Native && token.chainId === bot.chainId,
             )
             if (!gasToken) {
                 throw new TokenNotFoundException({
@@ -123,15 +140,22 @@ export class TransferFeesTaskPrepareService {
                 const fetched = await this.balanceFetcherService.fetchBalances({
                     bot,
                 })
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Fetch balances successfully",
+                })
                 targetBalanceAmount = new BN(fetched.targetBalanceAmount)
                 quoteBalanceAmount = new BN(fetched.quoteBalanceAmount)
                 gasBalanceAmount = new BN(fetched.gasBalanceAmount)
-                // update the balance snapshotsz
                 await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
                     bot,
                     targetBalanceAmount,
                     quoteBalanceAmount,
                     gasBalanceAmount,
+                })
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Update balance snapshots successfully",
                 })
             }
             // we take the position of the bot and calculate the current target token balance amount
@@ -146,8 +170,12 @@ export class TransferFeesTaskPrepareService {
                 await this.balanceConvertService.convertToTarget(
                     {
                         bot,
-                    }
+                    },
                 )
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Convert to target successfully",
+            })
             // we compute the ratio
             const targetRatio = targetAmountInTarget.div(targetAmountInTarget.add(quoteAmountInTarget))
             const quoteRatio = quoteAmountInTarget.div(targetAmountInTarget.add(quoteAmountInTarget))
@@ -163,9 +191,12 @@ export class TransferFeesTaskPrepareService {
                     amount: feeAmountQuoteInTarget,
                     fromToken: targetToken,
                     targetToken: quoteToken,
-                }
+                },
             )
-            // compute percent
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Convert fee amount successfully",
+            })
             const prepareResult =
                 await this.balanceActionService.prepareTransferFeesTransaction(
                     {
@@ -179,16 +210,22 @@ export class TransferFeesTaskPrepareService {
                         feeAmountQuote,
                     }
                 )
-            // we convert the fee amount to quote token
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Prepare transfer fees transaction successfully",
+            })
             await this.jobTaskService.upsertPreparedTask(
                 {
                     jobId: job.id,
                     taskType: TaskType.TransferFees,
                     taskIndex,
                     prepareResult,
-                }
+                },
             )
-            // we log the prepared task
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Upsert prepared task successfully",
+            })
             this.winstonService.log(
                 WinstonLog.ActiveJobTaskPrepared,
                 {
@@ -202,7 +239,6 @@ export class TransferFeesTaskPrepareService {
                 }
             )
         } catch (error) {
-            console.error(error)
             // we log the failed task
             this.winstonService.log(
                 WinstonLog.ActiveJobTaskPreparedFailed,

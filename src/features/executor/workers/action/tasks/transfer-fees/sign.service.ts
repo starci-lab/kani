@@ -30,8 +30,11 @@ import {
     WinstonLog,
 } from "@modules/winston"
 import {
-    strict as assert
-} from "node:assert"
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
 
 /**
  * Service for the Transfer Fees Task SIGN step.
@@ -46,6 +49,8 @@ export class TransferFeesTaskSignService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) {}
 
     /**
@@ -57,24 +62,33 @@ export class TransferFeesTaskSignService {
         bullmqJob,
         taskIndex,
     }: TransferFeesTaskSignParams) {
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.TransferFees,
+            jobId: job.id,
+            botId: bot.id,
+        })
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
         const step = job.tasks[taskIndex].steps?.[stepIndex]
-
         try {
             await this.sendHeartbeatService.process({
                 bot,
                 job,
                 bullmqJob,
             })
-
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Heartbeat sent successfully",
+            })
             const prepareTx = this.superJson.parse<PrepareTx>(step.prepareTx)
-
             const { signedTx } = await this.balanceActionService.signReconcileBalanceTransaction({
                 bot,
                 prepareTx,
             })
-
-            const updateJobResult = await this.connection
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Sign transaction successfully",
+            })
+            await this.connection
                 .model<JobSchema>(JobSchema.name)
                 .updateOne(
                     {
@@ -97,9 +111,10 @@ export class TransferFeesTaskSignService {
                         ],
                     },
                 )
-
-            assert(updateJobResult.matchedCount > 0)
-
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Persist signed transaction successfully",
+            })
             this.winstonService.log(WinstonLog.ActionJobTaskStepSigned,
                 {
                     botId: bot.id,

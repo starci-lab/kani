@@ -5,29 +5,38 @@ import {
     WithdrawTaskDispatcherParams 
 } from "../types"
 import {
-    JobSchema, StepType 
+    JobSchema,
+    JobType,
+    StepType,
 } from "@modules/databases"
 import {
-    JobContextNotFoundException 
+    JobContextNotFoundException,
 } from "@modules/exceptions"
 import {
-    WithdrawTaskPrepareService 
+    WithdrawTaskPrepareService,
 } from "./prepare.service"
 import {
-    WithdrawTaskSignService 
+    WithdrawTaskSignService,
 } from "./sign.service"
 import {
-    WithdrawTaskExecuteService 
+    WithdrawTaskExecuteService,
 } from "./execute.service"
 import {
-    WithdrawTaskConfirmService 
+    WithdrawTaskConfirmService,
 } from "./confirm.service"
 import {
-    LoadJobContextResult, JobContextService 
+    LoadJobContextResult,
+    JobContextService,
 } from "../../context"
 import {
-    AsyncService 
+    AsyncService,
 } from "@modules/mixin"
+import {
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
 
 /**
  * Dispatcher service for the WITHDRAW task.
@@ -35,12 +44,14 @@ import {
 @Injectable()
 export class WithdrawTaskDispatchService {
     constructor(
-    private readonly withdrawTaskPrepareService: WithdrawTaskPrepareService,
-    private readonly withdrawTaskSignService: WithdrawTaskSignService,
-    private readonly withdrawTaskExecuteService: WithdrawTaskExecuteService,
-    private readonly withdrawTaskConfirmService: WithdrawTaskConfirmService,
-    private readonly asyncService: AsyncService,
-    private readonly jobContextService: JobContextService,
+        private readonly withdrawTaskPrepareService: WithdrawTaskPrepareService,
+        private readonly withdrawTaskSignService: WithdrawTaskSignService,
+        private readonly withdrawTaskExecuteService: WithdrawTaskExecuteService,
+        private readonly withdrawTaskConfirmService: WithdrawTaskConfirmService,
+        private readonly asyncService: AsyncService,
+        private readonly jobContextService: JobContextService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) {}
 
     /**
@@ -54,11 +65,16 @@ export class WithdrawTaskDispatchService {
         taskIndex,
         isRetry,
     }: WithdrawTaskDispatcherParams) {
+        // create the context payload for debug latency
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.Withdraw,
+            jobId,
+            botId,
+        })
+        this.debugLatencyService.createContext(contextPayload)
+        // create the context for debug latency
         let context: LoadJobContextResult | null = null
-
-        // loop until task completed
         do {
-            // always load latest job snapshot
             const [_context,
                 error] = await this.asyncService.resolveTuple(
                 this.jobContextService.load({
@@ -66,8 +82,11 @@ export class WithdrawTaskDispatchService {
                     botId,
                 }),
             )
-
             context = _context
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Job context loaded successfully",
+            })
             if (error) {
                 throw error
             }
@@ -77,10 +96,7 @@ export class WithdrawTaskDispatchService {
                     botId,
                 })
             }
-
             const task = context.job.tasks[taskIndex]
-
-            // prepare if task not found or not initialized
             if (!task || task.initialized === false) {
                 await this.withdrawTaskPrepareService.process({
                     bot: context.bot,
@@ -127,7 +143,6 @@ export class WithdrawTaskDispatchService {
                 }
             }
 
-            // confirm after all steps executed
             if (!task.confirmed) {
                 await this.withdrawTaskConfirmService.process({
                     bot: context.bot,

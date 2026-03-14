@@ -8,32 +8,35 @@ import {
     OpenPositionTaskDispatcherParams 
 } from "../types"
 import {
-    InjectPrimaryMongoose, 
     JobSchema,
-    StepType
+    JobType,
+    StepType,
 } from "@modules/databases"
-import {
-    Connection 
-} from "mongoose"
 import {
     JobContextNotFoundException,
 } from "@modules/exceptions"
 import {
-    OpenPositionTaskPrepareService 
+    OpenPositionTaskPrepareService,
 } from "./prepare.service"
 import {
-    OpenPositionTaskSignService 
+    OpenPositionTaskSignService,
 } from "./sign.service"
 import {
-    OpenPositionTaskExecuteService 
+    OpenPositionTaskExecuteService,
 } from "./execute.service"
 import {
     JobContextService,
-    LoadJobContextResult 
+    LoadJobContextResult,
 } from "../../context"
 import {
-    AsyncService 
+    AsyncService,
 } from "@modules/mixin"
+import {
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
 
 /**
  * Dispatcher service for the OPEN POSITION task.
@@ -47,8 +50,8 @@ export class OpenPositionTaskDispatchService {
         private readonly openPositionTaskConfirmService: OpenPositionTaskConfirmService,
         private readonly asyncService: AsyncService,
         private readonly jobContextService: JobContextService,
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) { }
 
     /**
@@ -73,21 +76,32 @@ export class OpenPositionTaskDispatchService {
             isRetry
         }: OpenPositionTaskDispatcherParams
     ) {
+        // create the context payload for debug latency
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.OpenPosition,
+            jobId: jobId,
+            botId: botId,
+        })
+        this.debugLatencyService.createContext(contextPayload)
+        // create the context for debug latency
         let context: LoadJobContextResult | null = null
-        // do the loop until the task is completed
         do {
             const [
                 _context,
-                error
+                error,
             ] = await this.asyncService.resolveTuple(
                 this.jobContextService.load(
                     {
-                        jobId, 
-                        botId 
-                    }
-                )
+                        jobId,
+                        botId,
+                    },
+                ),
             )
             context = _context
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Job context loaded successfully",
+            })
             if (error) {
                 throw error
             }
@@ -97,7 +111,6 @@ export class OpenPositionTaskDispatchService {
                     botId,
                 })
             }
-            // if we do not find the task persisted in the job snapshot, we have to prepare 
             if (!context.job.tasks[taskIndex] || context.job.tasks[taskIndex].initialized === false) {
                 await this.openPositionTaskPrepareService.process(
                     {
@@ -120,7 +133,6 @@ export class OpenPositionTaskDispatchService {
                 // get the current step type
                 const stepType = context.job.tasks[taskIndex].steps[activeStep].type
                 switch (stepType) {
-                // Sign step
                 case StepType.Sign: {
                     await this.openPositionTaskSignService.process(
                         {
@@ -154,7 +166,6 @@ export class OpenPositionTaskDispatchService {
                 }
                 }
             }
-            // process confirm
             if (!context.job.tasks[taskIndex].confirmed) {
                 await this.openPositionTaskConfirmService.process(
                     {

@@ -43,8 +43,11 @@ import {
     JobStepService,
 } from "../../update"
 import {
-    strict as assert 
-} from "node:assert"
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
 
 /**
  * Service for the Close Position Task EXECUTE step.
@@ -52,14 +55,16 @@ import {
 @Injectable()
 export class ClosePositionTaskExecuteService {
     constructor(
-    private readonly closePositionActionService: ClosePositionActionService,
-    @InjectPrimaryMongoose()
-    private readonly connection: Connection,
-    @InjectSuperJson()
-    private readonly superJson: SuperJSON,
-    private readonly sendHeartbeatService: SendHeartbeatService,
-    private readonly winstonService: WinstonService,
-    private readonly jobStepService: JobStepService,
+        private readonly closePositionActionService: ClosePositionActionService,
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
+        private readonly sendHeartbeatService: SendHeartbeatService,
+        private readonly winstonService: WinstonService,
+        private readonly jobStepService: JobStepService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) {}
 
     /**
@@ -73,27 +78,27 @@ export class ClosePositionTaskExecuteService {
         bullmqJob,
         taskIndex,
     }: ClosePositionTaskExecuteParams) {
-        // active step index
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.ClosePosition,
+            jobId: job.id,
+            botId: bot.id,
+        })
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
-        // step snapshot (may be undefined)
         const step = job.tasks[taskIndex].steps?.[stepIndex]
-        // execute retries
         const executeRetries = step?.executeRetries ?? 0
-        // execute max retries
         const executeMaxRetries = envConfig().executor.workers.job.txExecuteMaxRetries
-        // sign retries
         const signRetries = step?.signRetries ?? 0
-        // sign max retries
         const signMaxRetries = envConfig().executor.workers.job.txSignMaxRetries
         try {
-            // heartbeat
             await this.sendHeartbeatService.process({
                 bot,
                 job,
                 bullmqJob,
             })
-
-            // signed tx
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Heartbeat sent successfully",
+            })
             const signedTx = step?.signedTx
             if (!signedTx) {
                 throw new JobFailureException({
@@ -107,7 +112,6 @@ export class ClosePositionTaskExecuteService {
                     strategy: JobFailureStrategy.Fatal,
                 })
             }
-            // execute
             const executeResult = await this.closePositionActionService.execute(
                 {
                     bot,
@@ -116,10 +120,13 @@ export class ClosePositionTaskExecuteService {
                     liquidityPool,
                     signedTx: this.superJson.parse<SignedTx>(signedTx),
                     stimulate: envConfig().executor.runtime.operation.closePosition.stimulate,
-                }
+                },
             )
-            // persist execute result + move next step
-            const updateJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Execute transaction successfully",
+            })
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {
                     _id: job.id 
                 },
@@ -145,7 +152,10 @@ export class ClosePositionTaskExecuteService {
                     ],
                 },
             )
-            assert(updateJobResult.matchedCount > 0)
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Persist execute result successfully",
+            })
             this.winstonService.log(
                 WinstonLog.ActionJobTaskStepExecuted,
                 {
@@ -182,6 +192,10 @@ export class ClosePositionTaskExecuteService {
                             stepIndex,
                         }
                     )
+                    this.debugLatencyService.measure({
+                        id: contextPayload.id,
+                        description: "Execute retries incremented successfully",
+                    })
                     return
                 }
                 // if tx failure index is greater than or equal to max attempts, throw a job failure exception
@@ -195,6 +209,10 @@ export class ClosePositionTaskExecuteService {
                             error,
                         }
                     )
+                    this.debugLatencyService.measure({
+                        id: contextPayload.id,
+                        description: "Rollback to sign successful",
+                    })
                     return
                 }
                 await this.jobStepService.rollbackToPrepared(
@@ -203,6 +221,10 @@ export class ClosePositionTaskExecuteService {
                         taskIndex,
                     }
                 )       
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Rollback to prepared successful",
+                })
                 return
             }
             throw error

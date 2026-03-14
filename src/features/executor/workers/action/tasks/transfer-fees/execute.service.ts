@@ -44,8 +44,11 @@ import {
     WinstonLog
 } from "@modules/winston"
 import {
-    strict as assert
-} from "node:assert"
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
 
 /**
  * Service for the Transfer Fees Task EXECUTE step.
@@ -61,6 +64,8 @@ export class TransferFeesTaskExecuteService {
         private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly jobStepService: JobStepService,
         private readonly winstonService: WinstonService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) {}
 
     /**
@@ -69,20 +74,27 @@ export class TransferFeesTaskExecuteService {
     async process(
         { bot, job, bullmqJob, taskIndex }: TransferFeesTaskExecuteParams
     ) {
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.TransferFees,
+            jobId: job.id,
+            botId: bot.id,
+        })
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
         const step = job.tasks[taskIndex].steps?.[stepIndex]
         const executeRetries = step?.executeRetries ?? 0
         const executeMaxRetries = envConfig().executor.workers.job.txExecuteMaxRetries
         const signRetries = step?.signRetries ?? 0
         const signMaxRetries = envConfig().executor.workers.job.txSignMaxRetries
-
         try {
             await this.sendHeartbeatService.process({
                 bot,
                 job,
                 bullmqJob,
             })
-
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Heartbeat sent successfully",
+            })
             const signedTx = step?.signedTx
             if (!signedTx) {
                 throw new JobFailureException({
@@ -102,8 +114,11 @@ export class TransferFeesTaskExecuteService {
                 stimulate: envConfig().executor.runtime.operation.transferFees.stimulate,
                 signedTx: this.superJson.parse<SignedTx>(signedTx),
             })
-
-            const updateJobResult = await this.connection
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Execute transaction successfully",
+            })
+            await this.connection
                 .model<JobSchema>(JobSchema.name)
                 .updateOne(
                     {
@@ -129,9 +144,10 @@ export class TransferFeesTaskExecuteService {
                         ],
                     },
                 )
-
-            assert(updateJobResult.matchedCount > 0)
-
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Persist execute result successfully",
+            })
             this.winstonService.log(WinstonLog.ActionJobTaskStepExecuted,
                 {
                     botId: bot.id,
@@ -163,6 +179,10 @@ export class TransferFeesTaskExecuteService {
                         taskIndex,
                         stepIndex,
                     })
+                    this.debugLatencyService.measure({
+                        id: contextPayload.id,
+                        description: "Execute retries incremented successfully",
+                    })
                     return
                 }
                 if (signRetries < signMaxRetries - 1) {
@@ -173,15 +193,22 @@ export class TransferFeesTaskExecuteService {
                         stepIndex,
                         error,
                     })
+                    this.debugLatencyService.measure({
+                        id: contextPayload.id,
+                        description: "Rollback to sign successful",
+                    })
                     return
                 }
                 await this.jobStepService.rollbackToPrepared({
                     jobId: job.id,
                     taskIndex,
                 })
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Rollback to prepared successful",
+                })
                 return
             }
-
             throw error
         }
     }

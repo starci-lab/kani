@@ -29,9 +29,6 @@ import {
     WinstonLog,
 } from "@modules/winston"
 import {
-    strict as assert,
-} from "node:assert"
-import {
     DebugContextService,
 } from "../debug-context.service"
 import {
@@ -84,7 +81,6 @@ export class ReconcileBalanceTaskSignService {
                 description: "Heartbeat sent successfully",
             })
             const prepareTx = this.superJson.parse<PrepareTx>(step.prepareTx)
-            await this.debugLatencyService.createContext(contextPayload)
             const { signedTx } = await this.balanceActionService.signReconcileBalanceTransaction(
                 {
                     bot,
@@ -95,8 +91,7 @@ export class ReconcileBalanceTaskSignService {
                 id: contextPayload.id,
                 description: "Reconcile balance transaction signed successfully",
             })
-            await this.debugLatencyService.createContext(contextPayload)
-            const updateJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {
                     _id: job.id 
                 },
@@ -118,7 +113,6 @@ export class ReconcileBalanceTaskSignService {
                     ],
                 },
             )
-            assert(updateJobResult.matchedCount > 0)
             this.debugLatencyService.measure({
                 id: contextPayload.id,
                 description: "Signed transaction persisted successfully",

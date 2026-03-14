@@ -39,11 +39,15 @@ import {
     JobStepService 
 } from "../../update"
 import {
-    WinstonService, WinstonLog 
+    WinstonService,
+    WinstonLog,
 } from "@modules/winston"
 import {
-    strict as assert 
-} from "node:assert"
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
 
 /**
  * Service for the WITHDRAW TASK EXECUTE step.
@@ -51,42 +55,43 @@ import {
 @Injectable()
 export class WithdrawTaskExecuteService {
     constructor(
-    private readonly balanceActionService: BalanceActionService,
-    @InjectPrimaryMongoose()
-    private readonly connection: Connection,
-    @InjectSuperJson()
-    private readonly superJson: SuperJSON,
-    private readonly sendHeartbeatService: SendHeartbeatService,
-    private readonly jobStepService: JobStepService,
-    private readonly winstonService: WinstonService,
+        private readonly balanceActionService: BalanceActionService,
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
+        private readonly sendHeartbeatService: SendHeartbeatService,
+        private readonly jobStepService: JobStepService,
+        private readonly winstonService: WinstonService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) {}
 
     /**
    * Process the WITHDRAW TASK EXECUTE step.
    */
     async process({ bot, job, bullmqJob, taskIndex }: WithdrawTaskExecuteParams) {
-    // active step index
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.Withdraw,
+            jobId: job.id,
+            botId: bot.id,
+        })
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
-        // step snapshot (may be undefined)
         const step = job.tasks[taskIndex].steps?.[stepIndex]
-        // execute retries
         const executeRetries = step?.executeRetries ?? 0
-        // execute max retries
         const executeMaxRetries = envConfig().executor.workers.job.txExecuteMaxRetries
-        // sign retries
         const signRetries = step?.signRetries ?? 0
-        // sign max retries
         const signMaxRetries = envConfig().executor.workers.job.txSignMaxRetries
-
         try {
-            // heartbeat
             await this.sendHeartbeatService.process({
                 bot,
                 job,
                 bullmqJob,
             })
-
-            // signed tx
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Heartbeat sent successfully",
+            })
             const signedTx = step?.signedTx
             if (!signedTx) {
                 throw new JobFailureException({
@@ -101,17 +106,17 @@ export class WithdrawTaskExecuteService {
             }
 
             // execute
-            const executeResult = await this.balanceActionService.executeWithdrawTransaction(
-                {
-                    bot,
-                    txCheck: true,
-                    stimulate: envConfig().executor.runtime.operation.withdraw.stimulate,
-                    signedTx: this.superJson.parse<SignedTx>(signedTx),
-                },
-            )
-
-            // persist execute result + move next step
-            const updateJobResult = await this.connection
+            const executeResult = await this.balanceActionService.executeWithdrawTransaction({
+                bot,
+                txCheck: true,
+                stimulate: envConfig().executor.runtime.operation.withdraw.stimulate,
+                signedTx: this.superJson.parse<SignedTx>(signedTx),
+            })
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Execute transaction successfully",
+            })
+            await this.connection
                 .model<JobSchema>(JobSchema.name)
                 .updateOne(
                     {
@@ -139,9 +144,10 @@ export class WithdrawTaskExecuteService {
                         ],
                     },
                 )
-
-            assert(updateJobResult.matchedCount > 0)
-
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Persist execute result successfully",
+            })
             this.winstonService.log(WinstonLog.ActionJobTaskStepExecuted,
                 {
                     botId: bot.id,
@@ -175,6 +181,10 @@ export class WithdrawTaskExecuteService {
                         taskIndex,
                         stepIndex,
                     })
+                    this.debugLatencyService.measure({
+                        id: contextPayload.id,
+                        description: "Execute retries incremented successfully",
+                    })
                     return
                 }
 
@@ -187,6 +197,10 @@ export class WithdrawTaskExecuteService {
                         stepIndex,
                         error,
                     })
+                    this.debugLatencyService.measure({
+                        id: contextPayload.id,
+                        description: "Rollback to sign successful",
+                    })
                     return
                 }
 
@@ -194,6 +208,10 @@ export class WithdrawTaskExecuteService {
                 await this.jobStepService.rollbackToPrepared({
                     jobId: job.id,
                     taskIndex,
+                })
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Rollback to prepared successful",
                 })
                 return
             }

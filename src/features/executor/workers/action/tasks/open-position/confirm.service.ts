@@ -49,8 +49,14 @@ import {
     SendHeartbeatService
 } from "../../send-heartbeat.service"
 import {
-    strict as assert 
+    strict as assert,
 } from "node:assert"
+import {
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
 
 @Injectable()
 export class OpenPositionTaskConfirmService {
@@ -67,6 +73,8 @@ export class OpenPositionTaskConfirmService {
         private readonly transactionSnapshotService: TransactionSnapshotService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly sendHeartbeatService: SendHeartbeatService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) { }
 
     /**
@@ -89,17 +97,30 @@ export class OpenPositionTaskConfirmService {
             bullmqJob,
         }: OpenPositionTaskConfirmParams
     ) {
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.OpenPosition,
+            jobId: job.id,
+            botId: bot.id,
+        })
         try {
             await this.sendHeartbeatService.process({
                 bot,
                 job,
                 bullmqJob,
             })
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Heartbeat sent successfully",
+            })
             const fetch = await this.balanceFetcherService.fetchBalances(
                 {
                     bot,
-                }
+                },
             )
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Fetch balances successfully",
+            })
             const targetBalanceAmount = new BN(fetch.targetBalanceAmount)
             const quoteBalanceAmount = new BN(fetch.quoteBalanceAmount)
             const gasBalanceAmount = new BN(fetch.gasBalanceAmount)
@@ -152,8 +173,12 @@ export class OpenPositionTaskConfirmService {
                     positionId: executeResult?.positionId ?? "",
                     state,
                     metadata: prepareResult?.metadata,
-                }
+                },
             )
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Confirm open position successfully",
+            })
             try {
                 const session = await this.connection.startSession()
                 await session.withTransaction(
@@ -253,6 +278,10 @@ export class OpenPositionTaskConfirmService {
                     throw error
                 }
             }
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Confirm transaction successfully",
+            })
             this.winstonService.log(
                 WinstonLog.ActionJobTaskConfirmed,
                 {

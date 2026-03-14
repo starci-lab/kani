@@ -74,7 +74,6 @@ export class ClosePositionTaskPrepareService {
             botId: bot.id,
         })
         try {
-            await this.debugLatencyService.createContext(contextPayload)
             await this.sendHeartbeatService.process(
                 {
                     bot,
@@ -84,9 +83,8 @@ export class ClosePositionTaskPrepareService {
             )
             this.debugLatencyService.measure({
                 id: contextPayload.id,
-                description: "heartbeat",
+                description: "Heartbeat sent successfully",
             })
-            // we check if the task has reached the maximum number of attempts
             const retries = job.tasks?.[taskIndex]?.retries ?? 0
             if (retries >= envConfig().executor.workers.job.prepareMaxAttempts) {
                 throw new JobFailureException({
@@ -100,7 +98,6 @@ export class ClosePositionTaskPrepareService {
                     strategy: JobFailureStrategy.Fatal,
                 })
             }
-            await this.debugLatencyService.createContext(contextPayload)
             const prepareResult =
                 await this.closePositionActionService.prepare(
                     {
@@ -111,9 +108,8 @@ export class ClosePositionTaskPrepareService {
                 )
             this.debugLatencyService.measure({
                 id: contextPayload.id,
-                description: "prepare",
+                description: "Prepare close position transaction successfully",
             })
-            await this.debugLatencyService.createContext(contextPayload)
             await this.jobTaskService.upsertPreparedTask({
                 jobId: job.id,
                 taskType: TaskType.ClosePosition,
@@ -122,7 +118,7 @@ export class ClosePositionTaskPrepareService {
             })
             this.debugLatencyService.measure({
                 id: contextPayload.id,
-                description: "upsertPreparedTask",
+                description: "Upsert prepared task successfully",
             })
             this.winstonService.log(
                 WinstonLog.ActiveJobTaskPrepared,

@@ -41,35 +41,52 @@ import {
     JobFailureStrategy 
 } from "@modules/common"
 import {
-    JobTaskService 
+    JobTaskService,
 } from "../../update"
 import {
-    envConfig 
+    envConfig,
 } from "@modules/env"
+import {
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
 
 @Injectable()
 export class WithdrawTaskPrepareService {
     constructor(
-    private readonly balanceActionService: BalanceActionService,
-    private readonly balanceFetcherService: BalanceFetcherService,
-    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-    private readonly asyncService: AsyncService,
-    private readonly sendHeartbeatService: SendHeartbeatService,
-    private readonly winstonService: WinstonService,
-    private readonly cacheService: CacheService,
-    private readonly jobTaskService: JobTaskService,
+        private readonly balanceActionService: BalanceActionService,
+        private readonly balanceFetcherService: BalanceFetcherService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly asyncService: AsyncService,
+        private readonly sendHeartbeatService: SendHeartbeatService,
+        private readonly winstonService: WinstonService,
+        private readonly cacheService: CacheService,
+        private readonly jobTaskService: JobTaskService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) {}
 
     /**
    * Process the Withdraw Task PREPARE step.
    */
     async process({ bot, job, taskIndex, bullmqJob }: WithdrawTaskPrepareParams) {
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.Withdraw,
+            jobId: job.id,
+            botId: bot.id,
+        })
         try {
-            // heartbeat
             await this.sendHeartbeatService.process({
-                bot, job, bullmqJob 
+                bot,
+                job,
+                bullmqJob,
             })
-
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Heartbeat sent successfully",
+            })
             // max-attempt guard
             const retries = job.tasks?.[taskIndex]?.retries ?? 0
             const maxAttempts = envConfig().executor.workers.job.prepareMaxAttempts
@@ -86,10 +103,13 @@ export class WithdrawTaskPrepareService {
                 })
             }
 
-            // cache result
             const cacheResult = await this.cacheService.get({
                 key: CacheKey.Withdraw,
                 args: [bot.id],
+            })
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Get withdraw cache successfully",
             })
             if (!cacheResult) {
                 throw new JobFailureException({
@@ -115,7 +135,7 @@ export class WithdrawTaskPrepareService {
             )
 
             const tokens = Array.from(this.primaryMemoryStorageService.tokenMap.values()).filter(
-                (t) => tokenIds.includes(t.id),
+                (token) => tokenIds.includes(token.id),
             )
 
             if (tokens.length !== cacheResult.tokenInputs.length) {
@@ -131,18 +151,19 @@ export class WithdrawTaskPrepareService {
             // fetch balances for tokens
             const tokenBalances = await this.asyncService.allMustDone(
                 tokens.map(async (token) => {
-                    const tokenBalance = await this.balanceFetcherService.fetchBalance(
-                        {
-                            bot,
-                            token,
-                        }
-                    )
+                    const tokenBalance = await this.balanceFetcherService.fetchBalance({
+                        bot,
+                        token,
+                    })
                     return [token.id,
                         tokenBalance.balanceAmount] as [string, BN]
                 }),
             )
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Fetch token balances successfully",
+            })
             const tokenBalancesMap = new Map<string, BN>(tokenBalances)
-
             // validate balance >= requested withdraw
             for (const tokenInput of cacheResult.tokenInputs) {
                 const tokenBalance = tokenBalancesMap.get(tokenInput.tokenId)
@@ -189,23 +210,12 @@ export class WithdrawTaskPrepareService {
                 }
             })
             // prepare withdraw transactions
-            const [
-                prepareResult,
-                error
-            ] = await this.asyncService.resolveTuple(
-                this.balanceActionService.prepareWithdrawTransaction({
-                    bot,
-                    tokenInputs: withdrawTokenInputs,
-                    toAddress: bot.withdrawalAddress,
-                    toUsdc: cacheResult.toUsdc,
-                }),
-            )
-            if (error) {
-                throw new JobFailureException({
-                    originalError: error,
-                    strategy: JobFailureStrategy.Fatal,
-                })
-            }
+            const prepareResult = await this.balanceActionService.prepareWithdrawTransaction({
+                bot,
+                tokenInputs: withdrawTokenInputs,
+                toAddress: bot.withdrawalAddress,
+                toUsdc: cacheResult.toUsdc,
+            })
             if (!prepareResult) {
                 throw new JobFailureException({
                     originalError: new PrepareWithdrawTransactionResultNotFoundException({
@@ -215,17 +225,20 @@ export class WithdrawTaskPrepareService {
                     strategy: JobFailureStrategy.Fatal,
                 })
             }
-
-            await this.jobTaskService.upsertPreparedTask(
-                {
-                    jobId: job.id,
-                    taskType: TaskType.Withdraw,
-                    taskIndex,
-                    prepareResult,
-                }
-            )
-
-            // log prepared task
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Prepare withdraw transaction successfully",
+            })
+            await this.jobTaskService.upsertPreparedTask({
+                jobId: job.id,
+                taskType: TaskType.Withdraw,
+                taskIndex,
+                prepareResult,
+            })
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Upsert prepared task successfully",
+            })
             this.winstonService.log(WinstonLog.ActiveJobTaskPrepared,
                 {
                     botId: bot.id,

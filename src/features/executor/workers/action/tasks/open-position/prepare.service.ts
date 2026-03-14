@@ -29,8 +29,15 @@ import {
     JobTaskService 
 } from "../../update"
 import {
-    envConfig 
+    envConfig,
 } from "@modules/env"
+import {
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
+
 /**
  * Service for the Open Position Task PREPARE step.
  */
@@ -41,6 +48,8 @@ export class OpenPositionTaskPrepareService {
         private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly winstonService: WinstonService,
         private readonly jobTaskService: JobTaskService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) { }
 
     /**
@@ -59,16 +68,23 @@ export class OpenPositionTaskPrepareService {
             bullmqJob,
         }: OpenPositionTaskPrepareParams
     ) {
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.OpenPosition,
+            jobId: job.id,
+            botId: bot.id,
+        })
         try {
-            // send heartbeat
             await this.sendHeartbeatService.process(
                 {
                     bot,
                     job,
                     bullmqJob,
-                }
+                },
             )
-            // we check if the task has reached the maximum number of attempts
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Heartbeat sent successfully",
+            })
             const retries = job.tasks?.[taskIndex]?.retries ?? 0
             if (retries >= envConfig().executor.workers.job.prepareMaxAttempts) {
                 throw new JobFailureException({
@@ -82,22 +98,27 @@ export class OpenPositionTaskPrepareService {
                     strategy: JobFailureStrategy.Fatal,
                 })
             }
-            // we prepare the open position transaction.
             const prepareResult =
-            await this.openPositionActionService.prepare(
-                {
-                    bot,
-                    liquidityPool,
-                    state,
-                }
-            )
-
-            // We update the database with the prepare result.
+                await this.openPositionActionService.prepare(
+                    {
+                        bot,
+                        liquidityPool,
+                        state,
+                    },
+                )
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Prepare open position transaction successfully",
+            })
             await this.jobTaskService.upsertPreparedTask({
                 jobId: job.id,
                 taskType: TaskType.OpenPosition,
                 taskIndex,
                 prepareResult,
+            })
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Upsert prepared task successfully",
             })
             this.winstonService.log(
                 WinstonLog.ActiveJobTaskPrepared,
