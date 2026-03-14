@@ -49,6 +49,7 @@ import {
     TransferFeesTaskExecuteService,
     TransferFeesTaskConfirmService,
     TransferFeesTaskDispatchService,
+    DebugContextService,
 } from "./tasks"
 import {
     ActionRequeueService 
@@ -74,6 +75,7 @@ import {
             ClosePositionTaskExecuteService,
             ClosePositionTaskConfirmService,
             ClosePositionTaskDispatchService,
+            DebugContextService,
             WithdrawTaskPrepareService,
             WithdrawTaskSignService,
             WithdrawTaskExecuteService,

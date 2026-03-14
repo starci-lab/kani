@@ -30,3 +30,15 @@ export interface NatsConsumerErrorMessage {
     error: string
     stack?: string
 }
+
+/** Payload for execution latency log (id and duration in seconds). */
+export interface ExecutionLatencyMessage {
+    /** The id of the context. */
+    id: string
+    /** The name of the context. */
+    name: string
+    /** The duration of the execution in seconds. */
+    durationSeconds: number
+    /** The description of the execution. */
+    description: string
+}

@@ -31,8 +31,15 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    strict as assert 
+    strict as assert,
 } from "node:assert"
+import {
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
+
 @Injectable()
 export class ReconcileBalanceTaskConfirmService {
     constructor(
@@ -42,6 +49,8 @@ export class ReconcileBalanceTaskConfirmService {
         private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly balanceFetcherService: BalanceFetcherService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) { }
 
     /**
@@ -60,28 +69,37 @@ export class ReconcileBalanceTaskConfirmService {
             bullmqJob,
         }: ReconcileBalanceTaskConfirmParams
     ) {
-        
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.ReconcileBalance,
+            jobId: job.id,
+            botId: bot.id,
+        })
         try {
-            // send heartbeat
             await this.sendHeartbeatService.process(
                 {
                     bot,
                     job,
                     bullmqJob,
-                }
+                },
             )
-            // check tx
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Heartbeat sent successfully",
+            })
             const stepCount = job.tasks[taskIndex].stepCount
             let targetBalanceAmount = new BN(0)
             let quoteBalanceAmount = new BN(0)
             let gasBalanceAmount = new BN(0)
             if (stepCount > 0) {
-            // we need to refresh the balance snapshots
                 const fetched = await this.balanceFetcherService.fetchBalances(
                     {
                         bot,
-                    }
+                    },
                 )
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Balances fetched successfully",
+                })
                 targetBalanceAmount = new BN(fetched.targetBalanceAmount)
                 quoteBalanceAmount = new BN(fetched.quoteBalanceAmount)
                 gasBalanceAmount = new BN(fetched.gasBalanceAmount)
@@ -142,7 +160,10 @@ export class ReconcileBalanceTaskConfirmService {
                     throw error
                 }
             }
-            // log the action job task confirmed
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Transaction confirmed successfully",
+            })
             this.winstonService.log(
                 WinstonLog.ActionJobTaskConfirmed,
                 {

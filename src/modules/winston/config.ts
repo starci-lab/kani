@@ -277,6 +277,7 @@ import {
     ActionJobTaskStepSignedFailedMessage,
     ActionJobTaskStepExecutedFailedMessage,
     JobSkippedBotBalanceSnapshotNotWithinCooldownMessage,
+    ExecutionLatencyMessage,
 } from "./types"
 
 /** Map of Winston log names to level, Loki flag, and message type. */
@@ -2543,5 +2544,13 @@ export const configMap = {
         loki: true,
         messageType: {
         } as MemoryUsageMessage,
+    },
+    // Execution Latency
+    [WinstonLog.ExecutionLatency]: {
+        name: WinstonLog.ExecutionLatency,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ExecutionLatencyMessage,
     },
 }

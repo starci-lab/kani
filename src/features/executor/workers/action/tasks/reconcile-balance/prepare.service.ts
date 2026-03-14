@@ -45,7 +45,12 @@ import {
 import {
     envConfig 
 } from "@modules/env"
-
+import {
+    DebugContextService 
+} from "../debug-context.service"
+import {
+    DebugLatencyService 
+} from "@modules/debug"
 @Injectable()
 export class ReconcileBalanceTaskPrepareService {
     constructor(
@@ -58,6 +63,8 @@ export class ReconcileBalanceTaskPrepareService {
         private readonly winstonService: WinstonService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly jobTaskService: JobTaskService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) { }
 
     /**
@@ -77,6 +84,12 @@ export class ReconcileBalanceTaskPrepareService {
             bullmqJob,
         }: ReconcileBalanceTaskPrepareParams
     ) {
+        // create the context payload for debug latency
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.ReconcileBalance,
+            jobId: job.id,
+            botId: bot.id,
+        })
         try {
             // heartbeat
             await this.sendHeartbeatService.process(
@@ -86,6 +99,11 @@ export class ReconcileBalanceTaskPrepareService {
                     bullmqJob, 
                 }
             )
+            // measure the latency
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Heartbeat sent successfully",
+            })
             // we check if the task has reached the maximum number of attempts
             const retries = job.tasks?.[taskIndex]?.retries ?? 0
             if (retries >= envConfig().executor.workers.job.prepareMaxAttempts) {
@@ -110,6 +128,11 @@ export class ReconcileBalanceTaskPrepareService {
                 const fetched = await this.balanceFetcherService.fetchBalances({
                     bot
                 })
+                // measure the latency
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Balances fetched successfully",
+                })
                 targetBalanceAmount = new BN(fetched.targetBalanceAmount)
                 quoteBalanceAmount = new BN(fetched.quoteBalanceAmount)
                 gasBalanceAmount = new BN(fetched.gasBalanceAmount)
@@ -122,6 +145,11 @@ export class ReconcileBalanceTaskPrepareService {
                         gasBalanceAmount,
                     }
                 )
+                // measure the latency
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Balance snapshots updated successfully",
+                })
             }
             // check eligibility
             const { eligible } = await this.evalSnapshotService.eval(
@@ -129,6 +157,11 @@ export class ReconcileBalanceTaskPrepareService {
                     bot
                 }
             )
+            // measure the latency
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Snapshot evaluated successfully",
+            })
             if (!eligible || !payload.swap) {
                 // Push a "no-op" task (0 steps) so dispatcher can mark it done immediately
                 // upsert the prepared task into the database
@@ -142,6 +175,11 @@ export class ReconcileBalanceTaskPrepareService {
                         },
                     }
                 )
+                // measure the latency
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "No-op task upserted successfully",
+                })
                 this.winstonService.log(
                     WinstonLog.ActiveJobTaskPrepared,
                     {
@@ -166,7 +204,11 @@ export class ReconcileBalanceTaskPrepareService {
                     gasBalanceAmount,
                 }
             )
-
+            // measure the latency
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Reconcile balance plan determined successfully",
+            })
             this.winstonService.log(
                 WinstonLog.ReconcileBalancePlanDetermined,
                 {
@@ -188,7 +230,7 @@ export class ReconcileBalanceTaskPrepareService {
             })
 
             const gasToken = Array.from(this.primaryMemoryStorageService.tokenMap.values()).find(
-                (t) => t.type === TokenType.Native && t.chainId === bot.chainId,
+                (token) => token.type === TokenType.Native && token.chainId === bot.chainId,
             )
             if (!gasToken) {
                 throw new TokenNotFoundException({
@@ -238,6 +280,11 @@ export class ReconcileBalanceTaskPrepareService {
                     }
                 ),
             )
+            // measure the latency
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Reconcile balance transactions prepared successfully",
+            })
             if (error) {
                 throw new JobFailureException({
                     originalError: error,
@@ -256,6 +303,11 @@ export class ReconcileBalanceTaskPrepareService {
                 taskType: TaskType.ReconcileBalance,
                 taskIndex,
                 prepareResult,
+            })
+            // measure the latency
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Prepared task upserted successfully",
             })
             // log the prepared task
             this.winstonService.log(

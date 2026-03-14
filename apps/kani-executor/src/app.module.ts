@@ -106,7 +106,7 @@ import {
     GraphModule 
 } from "@modules/graph"
 import {
-    DebugLoggersModule
+    DebugModule
 } from "@modules/debug"
 import {
     ResourcesModule,
@@ -182,9 +182,8 @@ import {
         LockAuthorityModule.register({
             isGlobal: true,
         }),
-        DebugLoggersModule.register({
+        DebugModule.register({
             isGlobal: true,
-            logFileName: "kani-executor.log",
         }),
         MixinModule.register({
             isGlobal: true,

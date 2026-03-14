@@ -6,6 +6,7 @@ import {
 } from "../types"
 import {
     JobSchema,
+    JobType,
     StepType
 } from "@modules/databases"
 import {
@@ -29,7 +30,12 @@ import {
 import {
     AsyncService
 } from "@modules/mixin"
-
+import {
+    DebugContextService 
+} from "../debug-context.service"
+import {
+    DebugLatencyService 
+} from "@modules/debug"
 /**
  * Dispatcher service for the RECONCILE BALANCE task.
  */
@@ -42,6 +48,8 @@ export class ReconcileBalanceTaskDispatchService {
         private readonly reconcileBalanceTaskConfirmService: ReconcileBalanceTaskConfirmService,
         private readonly asyncService: AsyncService,
         private readonly jobContextService: JobContextService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) { }
 
     /**
@@ -62,6 +70,14 @@ export class ReconcileBalanceTaskDispatchService {
             isRetry,
         }: ReconcileBalanceTaskDispatcherParams
     ) {
+        // create the context payload for debug latency
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.ReconcileBalance,
+            jobId: jobId,
+            botId: botId,
+        })
+        this.debugLatencyService.createContext(contextPayload)
+        // create the context for debug latency
         let context: LoadJobContextResult | null = null
         // do the loop until the task is completed
         do {
@@ -77,6 +93,10 @@ export class ReconcileBalanceTaskDispatchService {
                     }
                 )
             )
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Job context loaded successfully",
+            })
             context = _context
             if (error) {
                 throw error

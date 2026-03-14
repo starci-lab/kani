@@ -283,4 +283,5 @@ export enum WinstonLog {
     NatsConsumerClosed = "Nats.Consumer.Closed",
     NatsConsumerError = "Nats.Consumer.Error",
     ResourcesMemoryUsage = "Resources.Memory.Usage",
+    ExecutionLatency = "Execution.Latency",
 }

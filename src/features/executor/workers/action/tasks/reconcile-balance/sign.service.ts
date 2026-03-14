@@ -29,21 +29,30 @@ import {
     WinstonLog,
 } from "@modules/winston"
 import {
-    strict as assert 
+    strict as assert,
 } from "node:assert"
+import {
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
+
 /**
  * Service for the Reconcile Balance Task SIGN step.
  */
 @Injectable()
 export class ReconcileBalanceTaskSignService {
     constructor(
-    private readonly balanceActionService: BalanceActionService,
-    private readonly sendHeartbeatService: SendHeartbeatService,
-    @InjectSuperJson()
-    private readonly superJson: SuperJSON,
-    @InjectPrimaryMongoose()
-    private readonly connection: Connection,
-    private readonly winstonService: WinstonService,
+        private readonly balanceActionService: BalanceActionService,
+        private readonly sendHeartbeatService: SendHeartbeatService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
+        private readonly winstonService: WinstonService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) {}
 
     /**
@@ -55,29 +64,38 @@ export class ReconcileBalanceTaskSignService {
         bullmqJob,
         taskIndex,
     }: ReconcileBalanceTaskSignParams) {
-        // active step index
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.ReconcileBalance,
+            jobId: job.id,
+            botId: bot.id,
+        })
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
-        // step snapshot (may be undefined)
         const step = job.tasks[taskIndex].steps?.[stepIndex]
-        // if step is undefined, throw an error
         try {
-            // send heartbeat   
             await this.sendHeartbeatService.process(
                 {
-                    bot, job, bullmqJob 
-                }
+                    bot,
+                    job,
+                    bullmqJob,
+                },
             )
-            // prepareTx is persisted per-step by prepare service
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Heartbeat sent successfully",
+            })
             const prepareTx = this.superJson.parse<PrepareTx>(step.prepareTx)
-            // Sign tx
+            await this.debugLatencyService.createContext(contextPayload)
             const { signedTx } = await this.balanceActionService.signReconcileBalanceTransaction(
                 {
                     bot,
                     prepareTx,
-                }
+                },
             )
-
-            // Persist signedTx and advance step type to Execute
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Reconcile balance transaction signed successfully",
+            })
+            await this.debugLatencyService.createContext(contextPayload)
             const updateJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {
                     _id: job.id 
@@ -101,6 +119,10 @@ export class ReconcileBalanceTaskSignService {
                 },
             )
             assert(updateJobResult.matchedCount > 0)
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Signed transaction persisted successfully",
+            })
             this.winstonService.log(
                 WinstonLog.ActionJobTaskStepSigned,
                 {

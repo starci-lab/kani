@@ -43,8 +43,12 @@ import {
     WinstonLog,
 } from "@modules/winston"
 import {
-    strict as assert
-} from "node:assert"
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
+
 /**
  * Service for the Reconcile Balance Task EXECUTE step.
  */
@@ -59,6 +63,8 @@ export class ReconcileBalanceTaskExecuteService {
         private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly jobStepService: JobStepService,
         private readonly winstonService: WinstonService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) { }
 
     /**
@@ -70,17 +76,16 @@ export class ReconcileBalanceTaskExecuteService {
         bullmqJob,
         taskIndex,
     }: ReconcileBalanceTaskExecuteParams) {
-        // active step index
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.ReconcileBalance,
+            jobId: job.id,
+            botId: bot.id,
+        })
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
-        // step snapshot (may be undefined)
         const step = job.tasks[taskIndex].steps?.[stepIndex]
-        // execute retries
         const executeRetries = step?.executeRetries ?? 0
-        // execute max retries
         const executeMaxRetries = envConfig().executor.workers.job.txExecuteMaxRetries
-        // sign retries
         const signRetries = step?.signRetries ?? 0
-        // sign max retries
         const signMaxRetries = envConfig().executor.workers.job.txSignMaxRetries
         try {
             await this.sendHeartbeatService.process({
@@ -88,7 +93,10 @@ export class ReconcileBalanceTaskExecuteService {
                 job,
                 bullmqJob,
             })
-            // signed tx
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Heartbeat sent successfully",
+            })
             const signedTx = step?.signedTx
             if (!signedTx) {
                 throw new JobFailureException({
@@ -101,7 +109,6 @@ export class ReconcileBalanceTaskExecuteService {
                     strategy: JobFailureStrategy.Fatal,
                 })
             }
-            // execute
             const executeResult =
                 await this.balanceActionService.executeReconcileBalanceTransaction({
                     bot,
@@ -110,8 +117,11 @@ export class ReconcileBalanceTaskExecuteService {
                         envConfig().executor.runtime.operation.reconcileBalance.stimulate,
                     signedTx: this.superJson.parse<SignedTx>(signedTx),
                 })
-            // persist execute result + move next step
-            const updateJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Reconcile balance transaction executed successfully",
+            })
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {
                     _id: job.id
                 },
@@ -137,7 +147,10 @@ export class ReconcileBalanceTaskExecuteService {
                     ],
                 },
             )
-            assert(updateJobResult.matchedCount > 0)
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Execute result persisted successfully",
+            })
             this.winstonService.log(
                 WinstonLog.ActionJobTaskStepExecuted,
                 {
@@ -175,6 +188,10 @@ export class ReconcileBalanceTaskExecuteService {
                         taskIndex,
                         stepIndex,
                     })
+                    this.debugLatencyService.measure({
+                        id: contextPayload.id,
+                        description: "Execute retries incremented successfully",
+                    })
                     return
                 }
                 // if tx failure index is greater than or equal to max attempts, throw a job failure exception
@@ -186,10 +203,18 @@ export class ReconcileBalanceTaskExecuteService {
                         stepIndex,
                         error,
                     })
+                    this.debugLatencyService.measure({
+                        id: contextPayload.id,
+                        description: "Rollback to sign successful",
+                    })
                 }
                 await this.jobStepService.rollbackToPrepared({
                     jobId: job.id,
                     taskIndex,
+                })
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Rollback to prepared successful",
                 })
                 return
             }

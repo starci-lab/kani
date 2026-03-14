@@ -29,8 +29,15 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    JobTaskService
+    JobTaskService,
 } from "../../update"
+import {
+    DebugContextService,
+} from "../debug-context.service"
+import {
+    DebugLatencyService,
+} from "@modules/debug"
+
 /**
  * Service for the Close Position Task PREPARE step.
  */
@@ -41,6 +48,8 @@ export class ClosePositionTaskPrepareService {
         private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly winstonService: WinstonService,
         private readonly jobTaskService: JobTaskService,
+        private readonly debugContextService: DebugContextService,
+        private readonly debugLatencyService: DebugLatencyService,
     ) { }
 
     /**
@@ -59,15 +68,24 @@ export class ClosePositionTaskPrepareService {
             liquidityPool,
         }: ClosePositionTaskPrepareParams
     ) {
+        const contextPayload = this.debugContextService.createContextPayload({
+            jobType: JobType.ClosePosition,
+            jobId: job.id,
+            botId: bot.id,
+        })
         try {
-            // send heartbeat
+            await this.debugLatencyService.createContext(contextPayload)
             await this.sendHeartbeatService.process(
                 {
                     bot,
                     job,
                     bullmqJob,
-                }
+                },
             )
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "heartbeat",
+            })
             // we check if the task has reached the maximum number of attempts
             const retries = job.tasks?.[taskIndex]?.retries ?? 0
             if (retries >= envConfig().executor.workers.job.prepareMaxAttempts) {
@@ -82,21 +100,29 @@ export class ClosePositionTaskPrepareService {
                     strategy: JobFailureStrategy.Fatal,
                 })
             }
-            // We prepare the close position transaction.
+            await this.debugLatencyService.createContext(contextPayload)
             const prepareResult =
-            await this.closePositionActionService.prepare(
-                {
-                    bot,
-                    liquidityPool,
-                    state,
-                }
-            )
-            // We update the database with the prepare result.
+                await this.closePositionActionService.prepare(
+                    {
+                        bot,
+                        liquidityPool,
+                        state,
+                    },
+                )
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "prepare",
+            })
+            await this.debugLatencyService.createContext(contextPayload)
             await this.jobTaskService.upsertPreparedTask({
                 jobId: job.id,
                 taskType: TaskType.ClosePosition,
                 taskIndex,
                 prepareResult,
+            })
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "upsertPreparedTask",
             })
             this.winstonService.log(
                 WinstonLog.ActiveJobTaskPrepared,
