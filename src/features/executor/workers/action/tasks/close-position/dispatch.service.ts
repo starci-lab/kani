@@ -113,6 +113,10 @@ export class ClosePositionTaskDispatchService {
                 })
             }
             if (!context.job.tasks[taskIndex] || context.job.tasks[taskIndex].initialized === false) {
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Prepare transaction phase started successfully",
+                })
                 await this.closePositionTaskPrepareService.process(
                     {
                         bot: context.bot,
@@ -136,6 +140,10 @@ export class ClosePositionTaskDispatchService {
                 const stepType = context.job.tasks[taskIndex].steps[activeStep].type
                 switch (stepType) {
                 case StepType.Sign: {
+                    this.debugLatencyService.measure({
+                        id: contextPayload.id,
+                        description: "Sign transaction phase started successfully",
+                    })
                     await this.closePositionTaskSignService.process(
                         {
                             bot: context.bot,
@@ -152,6 +160,10 @@ export class ClosePositionTaskDispatchService {
                     continue
                 }
                 case StepType.Execute: {
+                    this.debugLatencyService.measure({
+                        id: contextPayload.id,
+                        description: "Execute transaction phase started successfully",
+                    })
                     await this.closePositionTaskExecuteService.process(
                         {
                             bot: context.bot,
@@ -170,6 +182,10 @@ export class ClosePositionTaskDispatchService {
                 }
             }
             if (!context.job.tasks[taskIndex].confirmed) {
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Confirm transaction phase started successfully",
+                })
                 await this.closePositionTaskConfirmService.process(
                     {
                         bot: context.bot,

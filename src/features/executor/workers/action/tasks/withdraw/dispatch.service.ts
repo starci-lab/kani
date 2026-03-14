@@ -98,6 +98,10 @@ export class WithdrawTaskDispatchService {
             }
             const task = context.job.tasks[taskIndex]
             if (!task || task.initialized === false) {
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Prepare transaction phase started successfully",
+                })
                 await this.withdrawTaskPrepareService.process({
                     bot: context.bot,
                     job: context.job,
@@ -119,6 +123,10 @@ export class WithdrawTaskDispatchService {
 
                 switch (stepType) {
                 case StepType.Sign: {
+                    this.debugLatencyService.measure({
+                        id: contextPayload.id,
+                        description: "Sign transaction phase started successfully",
+                    })
                     await this.withdrawTaskSignService.process({
                         bot: context.bot,
                         job: context.job,
@@ -132,6 +140,10 @@ export class WithdrawTaskDispatchService {
                 }
 
                 case StepType.Execute: {
+                    this.debugLatencyService.measure({
+                        id: contextPayload.id,
+                        description: "Execute transaction phase started successfully",
+                    })
                     await this.withdrawTaskExecuteService.process({
                         bot: context.bot,
                         job: context.job,
@@ -147,6 +159,10 @@ export class WithdrawTaskDispatchService {
             }
 
             if (!task.confirmed) {
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Confirm transaction phase started successfully",
+                })
                 await this.withdrawTaskConfirmService.process({
                     bot: context.bot,
                     job: context.job,

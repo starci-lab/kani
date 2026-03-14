@@ -155,7 +155,6 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                 }
             }
         }
-
         // Stage: simulation (optional)
         if (stimulate) {
             const result = await this.suiStimulateService.stimulate({

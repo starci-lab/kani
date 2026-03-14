@@ -102,6 +102,10 @@ export class TransferFeesTaskDispatchService {
             }
             const task = context.job.tasks[taskIndex]
             if (!task || task.initialized === false) {
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Prepare transaction phase started successfully",
+                })
                 await this.transferFeesTaskPrepareService.process({
                     bot: context.bot,
                     job: context.job,
@@ -121,6 +125,10 @@ export class TransferFeesTaskDispatchService {
                 const stepType = task.steps[activeStep].type
                 switch (stepType) {
                 case StepType.Sign: {
+                    this.debugLatencyService.measure({
+                        id: contextPayload.id,
+                        description: "Sign transaction phase started successfully",
+                    })
                     await this.transferFeesTaskSignService.process({
                         bot: context.bot,
                         job: context.job,
@@ -133,6 +141,10 @@ export class TransferFeesTaskDispatchService {
                     continue
                 }
                 case StepType.Execute: {
+                    this.debugLatencyService.measure({
+                        id: contextPayload.id,
+                        description: "Execute transaction phase started successfully",
+                    })
                     await this.transferFeesTaskExecuteService.process({
                         bot: context.bot,
                         job: context.job,
@@ -148,6 +160,10 @@ export class TransferFeesTaskDispatchService {
             }
 
             if (!task.confirmed) {
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Confirm transaction phase started successfully",
+                })
                 await this.transferFeesTaskConfirmService.process({
                     bot: context.bot,
                     job: context.job,

@@ -109,6 +109,10 @@ export class ReconcileBalanceTaskDispatchService {
             }
             // if we do not find the task persisted in the job snapshot, we have to prepare 
             if (!context.job.tasks[taskIndex] || context.job.tasks[taskIndex].initialized === false) {
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Prepare transaction phase started successfully",
+                })
                 await this.reconcileBalanceTaskPrepareService.process(
                     {
                         bot: context.bot,
@@ -131,6 +135,10 @@ export class ReconcileBalanceTaskDispatchService {
                 switch (stepType) {
                 // Sign step
                 case StepType.Sign: {
+                    this.debugLatencyService.measure({
+                        id: contextPayload.id,
+                        description: "Sign transaction phase started successfully",
+                    })
                     await this.reconcileBalanceTaskSignService.process(
                         {
                             bot: context.bot,
@@ -146,6 +154,10 @@ export class ReconcileBalanceTaskDispatchService {
                 }
                 // Execute step
                 case StepType.Execute: {
+                    this.debugLatencyService.measure({
+                        id: contextPayload.id,
+                        description: "Execute transaction phase started successfully",
+                    })
                     await this.reconcileBalanceTaskExecuteService.process(
                         {
                             bot: context.bot,
@@ -163,6 +175,10 @@ export class ReconcileBalanceTaskDispatchService {
             }
             // process confirm
             if (!context.job.tasks[taskIndex].confirmed) {
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Confirm transaction phase started successfully",
+                })
                 await this.reconcileBalanceTaskConfirmService.process(
                     {
                         bot: context.bot,

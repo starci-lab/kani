@@ -2221,7 +2221,7 @@ export const configMap = {
     // Action Job Completed
     [WinstonLog.ActionJobCompleted]: {
         name: WinstonLog.ActionJobCompleted,
-        level: WinstonLevel.Verbose,
+        level: WinstonLevel.Info,
         loki: true,
         messageType: {
         } as ActionJobCompletedMessage,
