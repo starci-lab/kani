@@ -9,8 +9,10 @@ import {
 } from "mongoose"
 import {
     RollbackToPreparedParams,
-    RollbackToSignParams, 
-    UpdateExecuteRetriesParams
+    RollbackToSignParams,
+    SetStepExecuteResultAndAdvanceParams,
+    SetStepSignedAndAdvanceToExecuteParams,
+    UpdateExecuteRetriesParams,
 } from "./types"
 import {
     strict as assert 
@@ -158,8 +160,26 @@ export class JobStepService {
             jobId,
             taskIndex,
             session,
+            incrementSignProcessingRetries,
         }: RollbackToPreparedParams
     ): Promise<void> {
+        const stepUpdateFields: Record<string, unknown> = {
+            signRetries: 0,
+            executeRetries: 0,
+        }
+        if (incrementSignProcessingRetries) {
+            stepUpdateFields.signProcessingRetries = {
+                $add: [
+                    {
+                        $ifNull: [
+                            "$$s.signProcessingRetries",
+                            0,
+                        ],
+                    },
+                    1,
+                ],
+            }
+        }
         const updatedJobResult = await this.connection
             .model<JobSchema>(JobSchema.name)
             .updateOne(
@@ -197,7 +217,7 @@ export class JobStepService {
                                                             1],
                                                         },
       
-                                                        // reset ALL step retries
+                                                        // reset step retries; optionally increment signProcessingRetries per step
                                                         steps: {
                                                             $map: {
                                                                 input: {
@@ -208,10 +228,7 @@ export class JobStepService {
                                                                 in: {
                                                                     $mergeObjects: [
                                                                         "$$s",
-                                                                        {
-                                                                            signRetries: 0,
-                                                                            executeRetries: 0,
-                                                                        },
+                                                                        stepUpdateFields,
                                                                     ],
                                                                 },
                                                             },
@@ -267,5 +284,90 @@ export class JobStepService {
             },
         )
         assert(updatedJobResult.matchedCount > 0)
+    }
+
+    /**
+     * Sets the step's signedTx and advances the step type to Execute.
+     * @param params - jobId, taskType, taskIndex, stepIndex, signedTx (serialized).
+     */
+    async setStepSignedAndAdvanceToExecute({
+        jobId,
+        taskType,
+        taskIndex,
+        stepIndex,
+        signedTx,
+    }: SetStepSignedAndAdvanceToExecuteParams): Promise<void> {
+        const result = await this.connection
+            .model<JobSchema>(JobSchema.name)
+            .updateOne(
+                {
+                    _id: jobId,
+                },
+                {
+                    $set: {
+                        "tasks.$[task].steps.$[step].type": StepType.Execute,
+                        "tasks.$[task].steps.$[step].signedTx": signedTx,
+                        "tasks.$[task].steps.$[step].signProcessingRetries": 0,
+                    },
+                },
+                {
+                    arrayFilters: [
+                        {
+                            "task.index": taskIndex,
+                            "task.type": taskType,
+                        },
+                        {
+                            "step.index": stepIndex,
+                        },
+                    ],
+                },
+            )
+        assert(result.matchedCount > 0)
+    }
+
+    /**
+     * Sets the step's executeResult, advances task activeStep by 1, and resets step retries
+     * (executeRetries, signRetries, signProcessingRetries) to 0.
+     */
+    async setStepExecuteResultAndAdvance({
+        jobId,
+        taskType,
+        taskIndex,
+        stepIndex,
+        executeResult,
+    }: SetStepExecuteResultAndAdvanceParams): Promise<void> {
+        const result = await this.connection
+            .model<JobSchema>(JobSchema.name)
+            .updateOne(
+                {
+                    _id: jobId,
+                },
+                {
+                    $set: {
+                        "tasks.$[task].steps.$[step].executeResult": executeResult,
+                        "tasks.$[task].steps.$[step].type": StepType.Execute,
+                        "tasks.$[task].steps.$[step].executeRetries": 0,
+                        "tasks.$[task].steps.$[step].signRetries": 0,
+                        "tasks.$[task].steps.$[step].signProcessingRetries": 0,
+                        "tasks.$[task].prepareProcessingRetries": 0,
+                        "tasks.$[task].retries": 0,
+                    },
+                    $inc: {
+                        "tasks.$[task].activeStep": 1,
+                    },
+                },
+                {
+                    arrayFilters: [
+                        {
+                            "task.index": taskIndex,
+                            "task.type": taskType,
+                        },
+                        {
+                            "step.index": stepIndex,
+                        },
+                    ],
+                },
+            )
+        assert(result.matchedCount > 0)
     }
 }

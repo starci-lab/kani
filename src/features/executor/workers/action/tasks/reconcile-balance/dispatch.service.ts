@@ -109,6 +109,7 @@ export class ReconcileBalanceTaskDispatchService {
             }
             // if we do not find the task persisted in the job snapshot, we have to prepare 
             if (!context.job.tasks[taskIndex] || context.job.tasks[taskIndex].initialized === false) {
+                // check the number of prepare retries
                 this.debugLatencyService.measure({
                     id: contextPayload.id,
                     description: "Prepare transaction phase started successfully",

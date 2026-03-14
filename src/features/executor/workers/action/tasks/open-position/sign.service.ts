@@ -6,14 +6,8 @@ import {
     PrepareTx
 } from "@modules/blockchains"
 import {
-    InjectPrimaryMongoose,
-    JobSchema,
-    StepType, 
     TaskType,
 } from "@modules/databases"
-import {
-    Connection 
-} from "mongoose"
 import {
     InjectSuperJson 
 } from "@modules/mixin"
@@ -29,14 +23,14 @@ import {
     WinstonLog,
 } from "@modules/winston"
 import {
-    strict as assert,
-} from "node:assert"
-import {
     DebugContextService,
 } from "../debug-context.service"
 import {
     DebugLatencyService,
 } from "@modules/debug"
+import {
+    JobStepService,
+} from "../../update"
 
 /**
  * Service for the Open Position Task SIGN step.
@@ -48,11 +42,10 @@ export class OpenPositionTaskSignService {
         private readonly sendHeartbeatService: SendHeartbeatService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
         private readonly winstonService: WinstonService,
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
+        private readonly jobStepService: JobStepService,
     ) { }
     /**
      * Process the Open Position Task SIGN step.
@@ -105,29 +98,13 @@ export class OpenPositionTaskSignService {
                 id: contextPayload.id,
                 description: "Sign transaction successfully",
             })
-            const updateJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                {
-                    _id: job.id 
-                },
-                {
-                    $set: {
-                        "tasks.$[task].steps.$[step].type": StepType.Execute,
-                        "tasks.$[task].steps.$[step].signedTx": this.superJson.stringify(signedTx),
-                    },
-                },
-                {
-                    arrayFilters: [
-                        {
-                            "task.index": taskIndex, 
-                            "task.type": TaskType.OpenPosition 
-                        },
-                        {
-                            "step.index": activeStep 
-                        },
-                    ],
-                },
-            )
-            assert(updateJobResult.matchedCount > 0)
+            await this.jobStepService.setStepSignedAndAdvanceToExecute({
+                jobId: job.id,
+                taskType: TaskType.OpenPosition,
+                taskIndex,
+                stepIndex: activeStep,
+                signedTx: this.superJson.stringify(signedTx),
+            })
             this.debugLatencyService.measure({
                 id: contextPayload.id,
                 description: "Persist signed transaction successfully",

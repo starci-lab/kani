@@ -5,14 +5,8 @@ import {
     SignedTx, BalanceActionService 
 } from "@modules/blockchains"
 import {
-    InjectPrimaryMongoose,
-    JobSchema,
-    StepType,
     TaskType,
 } from "@modules/databases"
-import {
-    Connection 
-} from "mongoose"
 import {
     InjectSuperJson 
 } from "@modules/mixin"
@@ -55,8 +49,6 @@ import {
 export class WithdrawTaskExecuteService {
     constructor(
         private readonly balanceActionService: BalanceActionService,
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         private readonly sendHeartbeatService: SendHeartbeatService,
@@ -115,34 +107,13 @@ export class WithdrawTaskExecuteService {
                 id: contextPayload.id,
                 description: "Execute transaction successfully",
             })
-            await this.connection
-                .model<JobSchema>(JobSchema.name)
-                .updateOne(
-                    {
-                        _id: job.id 
-                    },
-                    {
-                        $set: {
-                            "tasks.$[task].steps.$[step].executeResult":
-                this.superJson.stringify(executeResult),
-                            "tasks.$[task].steps.$[step].type": StepType.Execute,
-                        },
-                        $inc: {
-                            "tasks.$[task].activeStep": 1,
-                        },
-                    },
-                    {
-                        arrayFilters: [
-                            {
-                                "task.index": taskIndex,
-                                "task.type": TaskType.Withdraw,
-                            },
-                            {
-                                "step.index": stepIndex,
-                            },
-                        ],
-                    },
-                )
+            await this.jobStepService.setStepExecuteResultAndAdvance({
+                jobId: job.id,
+                taskType: TaskType.Withdraw,
+                taskIndex,
+                stepIndex,
+                executeResult: this.superJson.stringify(executeResult),
+            })
             this.debugLatencyService.measure({
                 id: contextPayload.id,
                 description: "Persist execute result successfully",

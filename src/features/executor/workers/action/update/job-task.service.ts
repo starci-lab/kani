@@ -12,7 +12,8 @@ import {
 } from "mongoose"
 import {
     UpsertPreparedTaskParams,
-    UpsertPreparedResult, 
+    UpsertPreparedResult,
+    UpdatePrepareProcessingRetriesParams,
 } from "./types"
 import {
     Injectable 
@@ -154,5 +155,24 @@ export class JobTaskService {
 
         // Ensure job exists (and ideally the update is applied)
         assert(updatedJobResult.matchedCount > 0)
+    }
+
+    /**
+     * Increments the prepare processing retries for a task.
+     * @param params - The parameters (jobId, taskIndex, optional session).
+     */
+    async updatePrepareProcessingRetries({
+        jobId,
+        taskIndex,
+        session,
+    }: UpdatePrepareProcessingRetriesParams): Promise<void> {
+        const result = await this.connection
+            .model<JobSchema>(JobSchema.name)
+            .updateOne(
+                { _id: jobId, "tasks.index": taskIndex },
+                { $inc: { "tasks.$.prepareProcessingRetries": 1 } },
+                { session },
+            )
+        assert(result.matchedCount > 0)
     }
 }

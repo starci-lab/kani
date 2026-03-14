@@ -46,6 +46,10 @@ export interface RollbackToPreparedParams {
      * The session to use for the operation.
      */
     session?: ClientSession
+    /**
+     * Whether to increment the sign processing retries.
+     */
+    incrementSignProcessingRetries?: boolean
 }
 
 /**
@@ -68,4 +72,32 @@ export interface UpdateExecuteRetriesParams {
      * The index of the step.
      */
     stepIndex: number
+}
+
+/**
+ * Parameters for setting a step as signed and advancing its type to Execute.
+ */
+export interface SetStepSignedAndAdvanceToExecuteParams {
+    jobId: string
+    taskType: TaskType
+    taskIndex: number
+    stepIndex: number
+    /**
+     * Serialized signed transaction (e.g. SuperJSON string).
+     */
+    signedTx: string
+}
+
+/**
+ * Parameters for setting a step's execute result, advancing activeStep, and resetting step retries.
+ */
+export interface SetStepExecuteResultAndAdvanceParams {
+    jobId: string
+    taskType: TaskType
+    taskIndex: number
+    stepIndex: number
+    /**
+     * Serialized execute result (e.g. SuperJSON string).
+     */
+    executeResult: string
 }

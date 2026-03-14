@@ -7,9 +7,6 @@ import {
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
-    AsyncService
-} from "@modules/mixin"
-import {
     TokenType
 } from "@modules/common"
 import {
@@ -23,7 +20,6 @@ import {
 import {
     ActionJobTaskPrepareMaxAttemptsException,
     JobFailureException,
-    PrepareReconcileBalanceTransactionResultNotFoundException,
     TokenNotFoundException,
 } from "@modules/exceptions"
 import {
@@ -50,6 +46,9 @@ import {
 import {
     DebugLatencyService 
 } from "@modules/debug"
+import {
+    JobStepService
+} from "../../update"
 @Injectable()
 export class ReconcileBalanceTaskPrepareService {
     constructor(
@@ -57,13 +56,13 @@ export class ReconcileBalanceTaskPrepareService {
         private readonly balanceFetcherService: BalanceFetcherService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly evalSnapshotService: EvalSnapshotService,
-        private readonly asyncService: AsyncService,
         private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly winstonService: WinstonService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly jobTaskService: JobTaskService,
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
+        private readonly jobStepService: JobStepService,
     ) { }
 
     /**
@@ -269,34 +268,17 @@ export class ReconcileBalanceTaskPrepareService {
                 }
             }
             // 6) Prepare transactions
-            const [
-                prepareResult,
-                error
-            ] = await this.asyncService.resolveTuple(
-                this.balanceActionService.prepareReconcileBalanceTransaction(
-                    {
-                        bot,
-                        tokenInputs,
-                    }
-                ),
+            const prepareResult = await this.balanceActionService.prepareReconcileBalanceTransaction(
+                {
+                    bot,
+                    tokenInputs,
+                }
             )
             // measure the latency
             this.debugLatencyService.measure({
                 id: contextPayload.id,
                 description: "Reconcile balance transactions prepared successfully",
             })
-            if (error) {
-                throw new JobFailureException({
-                    originalError: error,
-                    strategy: JobFailureStrategy.Fatal,
-                })
-            }
-            if (!prepareResult) {
-                throw new PrepareReconcileBalanceTransactionResultNotFoundException({
-                    botId: bot.id,
-                    jobId: job.id,
-                })
-            }
             // upsert the prepared task into the database
             await this.jobTaskService.upsertPreparedTask({
                 jobId: job.id,
@@ -323,6 +305,7 @@ export class ReconcileBalanceTaskPrepareService {
                 }
             )
         } catch (error) {
+            // we log the failed task
             this.winstonService.log(
                 WinstonLog.ActiveJobTaskPreparedFailed,
                 {
@@ -335,10 +318,20 @@ export class ReconcileBalanceTaskPrepareService {
                     metadata: job.metadata,
                 }
             )
-            throw new JobFailureException({
-                originalError: error,
-                strategy: JobFailureStrategy.Fatal,
-            })
+            // if sign failed, check the number of sign retries
+            const prepareProcessingRetries = job.tasks[taskIndex].prepareProcessingRetries ?? 0
+            if (prepareProcessingRetries >= envConfig().executor.workers.job.txPrepareProcessingMaxRetries) {
+                throw new JobFailureException({
+                    originalError: error,
+                    strategy: JobFailureStrategy.Fatal,
+                })
+            } else {
+                // increment the prepare processing retries
+                await this.jobTaskService.updatePrepareProcessingRetries({
+                    jobId: job.id,
+                    taskIndex,
+                })
+            }
         }
     }
 }

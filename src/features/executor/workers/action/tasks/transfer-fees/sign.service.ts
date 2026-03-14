@@ -6,14 +6,8 @@ import {
     PrepareTx,
 } from "@modules/blockchains"
 import {
-    InjectPrimaryMongoose,
-    JobSchema,
-    StepType,
     TaskType,
 } from "@modules/databases"
-import {
-    Connection
-} from "mongoose"
 import {
     InjectSuperJson
 } from "@modules/mixin"
@@ -34,6 +28,9 @@ import {
 import {
     DebugLatencyService,
 } from "@modules/debug"
+import {
+    JobStepService,
+} from "../../update"
 
 /**
  * Service for the Transfer Fees Task SIGN step.
@@ -45,11 +42,10 @@ export class TransferFeesTaskSignService {
         private readonly sendHeartbeatService: SendHeartbeatService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
         private readonly winstonService: WinstonService,
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
+        private readonly jobStepService: JobStepService,
     ) {}
 
     /**
@@ -88,29 +84,13 @@ export class TransferFeesTaskSignService {
                 id: contextPayload.id,
                 description: "Sign transaction successfully",
             })
-            await this.connection
-                .model<JobSchema>(JobSchema.name)
-                .updateOne(
-                    {
-                        _id: job.id 
-                    },
-                    {
-                        $set: {
-                            "tasks.$[task].steps.$[step].type": StepType.Execute,
-                            "tasks.$[task].steps.$[step].signedTx": this.superJson.stringify(signedTx),
-                        },
-                    },
-                    {
-                        arrayFilters: [
-                            {
-                                "task.index": taskIndex, "task.type": TaskType.TransferFees 
-                            },
-                            {
-                                "step.index": stepIndex 
-                            },
-                        ],
-                    },
-                )
+            await this.jobStepService.setStepSignedAndAdvanceToExecute({
+                jobId: job.id,
+                taskType: TaskType.TransferFees,
+                taskIndex,
+                stepIndex,
+                signedTx: this.superJson.stringify(signedTx),
+            })
             this.debugLatencyService.measure({
                 id: contextPayload.id,
                 description: "Persist signed transaction successfully",

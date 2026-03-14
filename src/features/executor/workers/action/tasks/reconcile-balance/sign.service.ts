@@ -5,14 +5,8 @@ import {
     BalanceActionService, PrepareTx 
 } from "@modules/blockchains"
 import {
-    InjectPrimaryMongoose,
-    JobSchema,
-    StepType,
     TaskType,
 } from "@modules/databases"
-import {
-    Connection 
-} from "mongoose"
 import {
     InjectSuperJson 
 } from "@modules/mixin"
@@ -33,6 +27,18 @@ import {
 import {
     DebugLatencyService,
 } from "@modules/debug"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    JobFailureException 
+} from "@modules/exceptions"
+import {
+    JobFailureStrategy 
+} from "@modules/common"
+import {
+    JobStepService 
+} from "../../update"
 
 /**
  * Service for the Reconcile Balance Task SIGN step.
@@ -44,11 +50,10 @@ export class ReconcileBalanceTaskSignService {
         private readonly sendHeartbeatService: SendHeartbeatService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
         private readonly winstonService: WinstonService,
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
+        private readonly jobStepService: JobStepService,
     ) {}
 
     /**
@@ -91,28 +96,13 @@ export class ReconcileBalanceTaskSignService {
                 id: contextPayload.id,
                 description: "Reconcile balance transaction signed successfully",
             })
-            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                {
-                    _id: job.id 
-                },
-                {
-                    $set: {
-                        "tasks.$[task].steps.$[step].type": StepType.Execute,
-                        "tasks.$[task].steps.$[step].signedTx": this.superJson.stringify(signedTx),
-                    },
-                },
-                {
-                    arrayFilters: [
-                        {
-                            "task.index": taskIndex, 
-                            "task.type": TaskType.ReconcileBalance 
-                        },
-                        {
-                            "step.index": stepIndex 
-                        },
-                    ],
-                },
-            )
+            await this.jobStepService.setStepSignedAndAdvanceToExecute({
+                jobId: job.id,
+                taskType: TaskType.ReconcileBalance,
+                taskIndex,
+                stepIndex,
+                signedTx: this.superJson.stringify(signedTx),
+            })
             this.debugLatencyService.measure({
                 id: contextPayload.id,
                 description: "Signed transaction persisted successfully",
@@ -143,7 +133,21 @@ export class ReconcileBalanceTaskSignService {
                     metadata: job.metadata,
                 }
             )
-            throw error
+            // if sign failed, check the number of sign retries
+            const signProcessingRetries = step?.signProcessingRetries ?? 0
+            if (signProcessingRetries >= envConfig().executor.workers.job.txSignProcessingMaxRetries) {
+                throw new JobFailureException({
+                    originalError: error,
+                    strategy: JobFailureStrategy.Fatal,
+                })
+            } else {
+                // rollback to prepared
+                await this.jobStepService.rollbackToPrepared({
+                    jobId: job.id,
+                    taskIndex,
+                    incrementSignProcessingRetries: true,
+                })
+            } 
         }
     }
 }

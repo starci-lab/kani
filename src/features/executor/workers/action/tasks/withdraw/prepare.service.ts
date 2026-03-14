@@ -259,10 +259,16 @@ export class WithdrawTaskPrepareService {
                     taskType: TaskType.Withdraw,
                     metadata: job.metadata,
                 })
-
-            throw new JobFailureException({
-                originalError: error,
-                strategy: JobFailureStrategy.Fatal,
+            const prepareProcessingRetries = job.tasks[taskIndex].prepareProcessingRetries ?? 0
+            if (prepareProcessingRetries >= envConfig().executor.workers.job.txPrepareProcessingMaxRetries) {
+                throw new JobFailureException({
+                    originalError: error,
+                    strategy: JobFailureStrategy.Fatal,
+                })
+            }
+            await this.jobTaskService.updatePrepareProcessingRetries({
+                jobId: job.id,
+                taskIndex,
             })
         }
     }

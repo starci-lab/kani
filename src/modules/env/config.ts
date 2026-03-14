@@ -621,6 +621,12 @@ export const envConfig = () => ({
                 txSignMaxRetries: parseEnvInt({
                     key: "EXECUTOR_WORKERS_JOB_TX_SIGN_MAX_RETRIES", defaultValue: 2
                 }),
+                txSignProcessingMaxRetries: parseEnvInt({
+                    key: "EXECUTOR_WORKERS_JOB_TX_SIGN_PROCESSING_MAX_RETRIES", defaultValue: 2
+                }),
+                txPrepareProcessingMaxRetries: parseEnvInt({
+                    key: "EXECUTOR_WORKERS_JOB_TX_PREPARE_PROCESSING_MAX_RETRIES", defaultValue: 2
+                }),
                 txExecuteMaxRetries: parseEnvInt({
                     key: "EXECUTOR_WORKERS_JOB_TX_EXECUTE_MAX_RETRIES", defaultValue: 3
                 }),

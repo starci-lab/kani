@@ -22,7 +22,7 @@ import {
 } from "@modules/common"
 import {
     ActionJobTaskPrepareMaxAttemptsException,
-    JobFailureException, 
+    JobFailureException,
 } from "@modules/exceptions"
 import {
     JobTaskService 
@@ -145,12 +145,17 @@ export class OpenPositionTaskPrepareService {
                     metadata: job.metadata,
                 }
             )
-            throw new JobFailureException(
-                {
+            const prepareProcessingRetries = job.tasks[taskIndex].prepareProcessingRetries ?? 0
+            if (prepareProcessingRetries >= envConfig().executor.workers.job.txPrepareProcessingMaxRetries) {
+                throw new JobFailureException({
                     originalError: error,
                     strategy: JobFailureStrategy.Fatal,
-                }
-            )
+                })
+            }
+            await this.jobTaskService.updatePrepareProcessingRetries({
+                jobId: job.id,
+                taskIndex,
+            })
         }
     }
 }

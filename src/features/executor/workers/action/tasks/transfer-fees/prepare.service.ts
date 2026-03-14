@@ -239,7 +239,6 @@ export class TransferFeesTaskPrepareService {
                 }
             )
         } catch (error) {
-            // we log the failed task
             this.winstonService.log(
                 WinstonLog.ActiveJobTaskPreparedFailed,
                 {
@@ -252,10 +251,16 @@ export class TransferFeesTaskPrepareService {
                     metadata: job.metadata,
                 }
             )
-            // we throw an error
-            throw new JobFailureException({
-                originalError: error,
-                strategy: JobFailureStrategy.Fatal,
+            const prepareProcessingRetries = job.tasks[taskIndex].prepareProcessingRetries ?? 0
+            if (prepareProcessingRetries >= envConfig().executor.workers.job.txPrepareProcessingMaxRetries) {
+                throw new JobFailureException({
+                    originalError: error,
+                    strategy: JobFailureStrategy.Fatal,
+                })
+            }
+            await this.jobTaskService.updatePrepareProcessingRetries({
+                jobId: job.id,
+                taskIndex,
             })
         }
     }

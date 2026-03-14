@@ -132,8 +132,7 @@ export class ClosePositionTaskPrepareService {
                     taskType: TaskType.ClosePosition,
                 }
             )
-        } catch (error) 
-        {
+        } catch (error) {
             this.winstonService.log(
                 WinstonLog.ActiveJobTaskPreparedFailed,
                 {
@@ -146,13 +145,17 @@ export class ClosePositionTaskPrepareService {
                     metadata: job.metadata,
                 }
             )
-            // log the error
-            throw new JobFailureException(
-                {
+            const prepareProcessingRetries = job.tasks[taskIndex].prepareProcessingRetries ?? 0
+            if (prepareProcessingRetries >= envConfig().executor.workers.job.txPrepareProcessingMaxRetries) {
+                throw new JobFailureException({
                     originalError: error,
                     strategy: JobFailureStrategy.Fatal,
-                }
-            )
+                })
+            }
+            await this.jobTaskService.updatePrepareProcessingRetries({
+                jobId: job.id,
+                taskIndex,
+            })
         }
     }
 }

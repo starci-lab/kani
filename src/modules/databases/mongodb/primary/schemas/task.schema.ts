@@ -164,6 +164,19 @@ export class TaskSchema extends AbstractSchema {
         type: Number, required: false
     })
         openPositionStepIndex?: number
+
+    /**
+     * The number of retries of the sign processing.
+     */
+    @Field(() => Int,
+        {
+            description: "The number of retries of the prepare processing",
+        }
+    )
+    @Prop({
+        type: Number, required: false
+    })
+        prepareProcessingRetries?: number
 }
 
 

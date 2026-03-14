@@ -127,6 +127,13 @@ export class StepSchema extends AbstractSchema {
     })
         signRetries?: number
 
+    
+    @Prop({
+        type: Number, 
+        required: false 
+    })
+        signProcessingRetries?: number
+
     /** 
      * The number of retries of the execution.
      */

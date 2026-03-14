@@ -5,14 +5,8 @@ import {
     BalanceActionService, PrepareTx 
 } from "@modules/blockchains"
 import {
-    InjectPrimaryMongoose,
-    JobSchema,
-    StepType,
     TaskType,
 } from "@modules/databases"
-import {
-    Connection 
-} from "mongoose"
 import {
     InjectSuperJson 
 } from "@modules/mixin"
@@ -33,6 +27,9 @@ import {
 import {
     DebugLatencyService,
 } from "@modules/debug"
+import {
+    JobStepService,
+} from "../../update"
 
 /**
  * Service for the WITHDRAW TASK SIGN step.
@@ -44,11 +41,10 @@ export class WithdrawTaskSignService {
         private readonly sendHeartbeatService: SendHeartbeatService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
         private readonly winstonService: WinstonService,
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
+        private readonly jobStepService: JobStepService,
     ) {}
 
     /**
@@ -87,31 +83,13 @@ export class WithdrawTaskSignService {
                 id: contextPayload.id,
                 description: "Sign transaction successfully",
             })
-            await this.connection
-                .model<JobSchema>(JobSchema.name)
-                .updateOne(
-                    {
-                        _id: job.id,
-                    },
-                    {
-                        $set: {
-                            "tasks.$[task].steps.$[step].type": StepType.Execute,
-                            "tasks.$[task].steps.$[step].signedTx":
-                this.superJson.stringify(signedTx),
-                        },
-                    },
-                    {
-                        arrayFilters: [
-                            {
-                                "task.index": taskIndex,
-                                "task.type": TaskType.Withdraw,
-                            },
-                            {
-                                "step.index": stepIndex,
-                            },
-                        ],
-                    },
-                )
+            await this.jobStepService.setStepSignedAndAdvanceToExecute({
+                jobId: job.id,
+                taskType: TaskType.Withdraw,
+                taskIndex,
+                stepIndex,
+                signedTx: this.superJson.stringify(signedTx),
+            })
             this.debugLatencyService.measure({
                 id: contextPayload.id,
                 description: "Persist signed transaction successfully",

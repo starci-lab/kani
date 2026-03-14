@@ -39,3 +39,21 @@ export interface UpsertPreparedTaskParams<T extends UpsertPreparedResult> {
      */
     session?: ClientSession
 }
+
+/**
+ * Parameters for incrementing prepare processing retries of a task.
+ */
+export interface UpdatePrepareProcessingRetriesParams {
+    /**
+     * The ID of the job.
+     */
+    jobId: string
+    /**
+     * The index of the task.
+     */
+    taskIndex: number
+    /**
+     * The session to use for the operation.
+     */
+    session?: ClientSession
+}
