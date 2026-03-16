@@ -68,30 +68,28 @@ export class InfluxdbPriceCacheService implements OnApplicationBootstrap {
      * @param token - The token to store price points for.
      */
     async storePoints(token: TokenSchema): Promise<void> {
-        const promises = token.trackedCexIds.map(async (cexId) => {
-            const pricePoints = await this.primaryInfluxdbPriceBucketService.queryPromise(
-                {
-                    id: token.id,
-                    intervalMs: envConfig().executor.runtime.influxdbCache.price.intervalMs,
-                    cexId,
-                }
-            )
-            // clear existing price points for this token and cex
-            this.storage.delete(
-                this.getKey(token.id,
-                    cexId),
-            )
-            // insert new price points
-            this.storage.set(
-                this.getKey(token.id,
-                    cexId),
-                {
-                    tokenId: token.id,
-                    cexId,
-                    points: pricePoints,
-                },
-            )
-        })
+        const promises = token.trackedCexIds.map(
+            async (cexId) => {
+                const pricePoints = await this.primaryInfluxdbPriceBucketService.queryPromise(
+                    {
+                        id: token.id,
+                        intervalMs: envConfig().executor.runtime.influxdbCache.price.intervalMs,
+                        cexId,
+                    }
+                )
+                // insert new price points
+                this.storage.set(
+                    this.getKey(
+                        token.id,
+                        cexId
+                    ),
+                    {
+                        tokenId: token.id,
+                        cexId,
+                        points: pricePoints,
+                    },
+                )
+            })
         await this.asyncService.allIgnoreError(promises)
     }
 
@@ -135,7 +133,7 @@ export class InfluxdbPriceCacheService implements OnApplicationBootstrap {
             cexId))
         const points = entry?.points ?? []
         const influxdbPricePoints = points.filter(
-            (p) => p.time >= startMs && p.time <= endMs,
+            (point) => point.time >= startMs && point.time <= endMs,
         )
 
         if (points.length === 0) {
@@ -181,18 +179,18 @@ export class InfluxdbPriceCacheService implements OnApplicationBootstrap {
             ]
         }
         if (influxdbPricePoints.length === 1) {
-            const p = influxdbPricePoints[0]
+            const point = influxdbPricePoints[0]
             return [
                 {
-                    id: p.id,
-                    cex_id: p.cex_id,
-                    price: p.price,
+                    id: point.id,
+                    cex_id: point.cex_id,
+                    price: point.price,
                     time: startMs,
                 },
                 {
-                    id: p.id,
-                    cex_id: p.cex_id,
-                    price: p.price,
+                    id: point.id,
+                    cex_id: point.cex_id,
+                    price: point.price,
                     time: endMs,
                 },
             ]

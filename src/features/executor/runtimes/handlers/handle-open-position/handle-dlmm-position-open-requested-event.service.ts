@@ -44,7 +44,7 @@ export class HandleDlmmPositionOpenRequestedEventService {
      * @param event - DLMM position open requested event payload
      * @returns void
      */
-    process(
+    async process(
         bot: BotSchema,
         event: DlmmPositionOpenRequestedEventPayload,
     ) {
@@ -54,7 +54,7 @@ export class HandleDlmmPositionOpenRequestedEventService {
                 id: event.id,
             })
         }   
-        this.handleOpenPositionService.process(
+        await this.handleOpenPositionService.process(
             {
                 bot,
                 liquidityPool,

@@ -1,9 +1,6 @@
 import {
-    Injectable, OnApplicationBootstrap, OnApplicationShutdown 
+    Injectable, OnApplicationBootstrap 
 } from "@nestjs/common"
-import {
-    ContextIdFactory, ModuleRef 
-} from "@nestjs/core"
 import {
     AsyncService 
 } from "@modules/mixin"
@@ -19,12 +16,9 @@ import {
 import {
     OnEvent 
 } from "@nestjs/event-emitter"
-import type {
-    RuntimeContext,
-} from "./types"
 import {
     RuntimeContextService,
-} from "./runtime.context-service"
+} from "./runtime-context.service"
 import {
     envConfig 
 } from "@modules/env"
@@ -37,13 +31,12 @@ import {
  * created or detected, this factory creates a new runtime context for it.
  */
 @Injectable()
-export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplicationShutdown {
-    private readonly runtimes: Map<string, RuntimeContextService> = new Map()
+export class RuntimesFactoryService implements OnApplicationBootstrap {
     constructor(
-        private readonly moduleRef: ModuleRef,
         private readonly asyncService: AsyncService,
         private readonly botsLoaderService: BotsLoaderService,
         private readonly jitterService: JitterService,
+        private readonly runtimeContextService: RuntimeContextService,
     ) {}
 
     /**
@@ -57,19 +50,11 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
         // Create runtime instances for all executors that were loaded from the database
         // Using allMustDone ensures all runtime creations complete successfully
         this.asyncService.allMustDone(
-            Array.from(this.botsLoaderService.botMap.values()).map(
+            Array.from(
+                this.botsLoaderService.botMap.values()
+            ).map(
                 async (bot) => {
                     await this.createRuntime(bot)
-                }
-            )
-        )
-    }
-
-    async onApplicationShutdown() {
-        this.asyncService.allMustDone(
-            Array.from(this.runtimes.values()).map(
-                async (runtime) => {
-                    await runtime.dispose()
                 }
             )
         )
@@ -110,34 +95,13 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
     async createRuntime(
         event: ExecutorBotCreatedEventPayload
     ) {
-        await this.asyncService.allMustDone(
-            [
-                (async () => {
-                    await this.jitterService.delayWithJitter(envConfig().executor.runtime.creation.delay)
-                    // Create a unique context ID for this bot's runtime
-                    const contextId = ContextIdFactory.create()
-                    // Register a request-scoped context with the bot ID
-                    // This allows request-scoped services to access the bot ID
-                    this.moduleRef.registerRequestByContextId<RuntimeContext>(
-                        {
-                            id: event.id 
-                        }, 
-                        contextId
-                    )
-                    // Resolve the RuntimeRequestService within the bot's context
-                    // This ensures the service is scoped to this specific bot
-                    const runtimeContextService = await this.moduleRef.resolve(
-                        RuntimeContextService, 
-                        contextId
-                    )
-                    // Initialize the runtime service for this bot
-                    await runtimeContextService.initialize()
-                    this.runtimes.set(
-                        event.id, 
-                        runtimeContextService
-                    )
-                })(),
-            ])
+        await this.asyncService.safeRun(
+            (async () => {
+                await this.jitterService.delayWithJitter(envConfig().executor.runtime.creation.delay)
+                // Initialize the runtime service for this bot
+                await this.runtimeContextService.initialize(event.id)
+            })
+        )
     }
 
     @OnEvent(
@@ -146,14 +110,7 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
     async handleBotDeleted(
         event: ExecutorBotDeletedEventPayload
     ) {
-        const runtime = this.runtimes.get(event.id)
-        if (!runtime) {
-            return
-        }
-        // dispose & destroy the runtime
-        await runtime.dispose()
-        // delete the runtime from the map
-        this.runtimes.delete(event.id)
+        await this.runtimeContextService.dispose(event.id)
     }
 
 }   

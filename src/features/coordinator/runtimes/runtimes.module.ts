@@ -9,7 +9,7 @@ import {
 } from "./runtimes-factory.service"
 import {
     RuntimeContextService 
-} from "./runtime.context-service"
+} from "./runtime-context.service"
 
 @Module({
 })

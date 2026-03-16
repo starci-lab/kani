@@ -5,11 +5,13 @@ import {
     WinstonLog,
     WinstonService,
 } from "@modules/winston"
-import {
-    Cron,
-    CronExpression,
-} from "@nestjs/schedule"
 import bytes from "bytes"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    Interval 
+} from "@nestjs/schedule"
 
 @Injectable()
 export class RamService {
@@ -18,7 +20,7 @@ export class RamService {
     /**
      * Logs current process memory usage (rss, heapTotal, heapUsed, external) via Winston.
      */
-    @Cron(CronExpression.EVERY_10_SECONDS)
+    @Interval(envConfig().resources.ram.intervalMs)
     logMemoryUsage(): void {
         const used = process.memoryUsage()
         this.winstonService.log(

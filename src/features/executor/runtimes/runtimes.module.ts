@@ -9,7 +9,7 @@ import {
 } from "./runtimes-factory.service"
 import {
     RuntimeContextService 
-} from "./runtime.context-service"
+} from "./runtime-context.service"
 import {
     HandleClmmPositionOpenRequestedEventService, 
     HandleDlmmPositionOpenRequestedEventService,
@@ -57,7 +57,6 @@ export class RuntimesModule extends ConfigurableModuleClass {
             providers: [
                 ...dynamicModule.providers || [], 
                 RuntimesFactoryService,
-                RuntimeContextService,
                 HandleClmmPositionOpenRequestedEventService,
                 HandleDlmmPositionOpenRequestedEventService,
                 HandleReconcileBalanceService,
@@ -75,10 +74,10 @@ export class RuntimesModule extends ConfigurableModuleClass {
                 RelativePriceBuilderService,
                 PctCalculatorService,
                 RegressionCalculatorService,
+                RuntimeContextService,
             ],
             exports: [
                 RuntimesFactoryService,
-                RuntimeContextService,
                 InfluxdbPriceCacheService,
                 InfluxdbVolumeCacheService,
             ],

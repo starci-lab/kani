@@ -3,13 +3,13 @@ import {
     Injectable
 } from "@nestjs/common"
 import type {
-    InfluxDBClient, 
+    InfluxDBClient,
 } from "@influxdata/influxdb3-client"
 import {
-    Point 
+    Point
 } from "@influxdata/influxdb3-client"
 import {
-    InjectPrimaryInfluxdb 
+    InjectPrimaryInfluxdb
 } from "../influxdb.decorators"
 import {
     PricePoint,
@@ -18,7 +18,7 @@ import {
     WriteInfluxdbPriceBucketParams,
 } from "../types"
 import {
-    DayjsService 
+    DayjsService
 } from "@modules/mixin"
 import {
     InfluxDBNotInitializedException,
@@ -27,10 +27,10 @@ import {
     envConfig,
 } from "@modules/env"
 import {
-    PrimaryInfluxdbLifecycleService 
+    PrimaryInfluxdbLifecycleService
 } from "../influxdb-lifecycle.service"
 import {
-    from, lastValueFrom, toArray 
+    from, lastValueFrom, toArray
 } from "rxjs"
 
 /**
@@ -59,8 +59,7 @@ export class PrimaryInfluxdbPriceBucketService {
             price,
             cexId,
         }: WriteInfluxdbPriceBucketParams
-    ) 
-    {
+    ) {
         if (!this.influxdbLifecycleService.initialized) {
             throw new InfluxDBNotInitializedException({
                 database: envConfig().databases.influxdb.primary.database,
@@ -107,13 +106,15 @@ export class PrimaryInfluxdbPriceBucketService {
                 database: envConfig().databases.influxdb.primary.database,
             })
         }
+        const time = this.dayjsService.now().subtract(intervalMs,
+            "millisecond").toDate().getTime()
         // build the SQL query
         const sql = `
         SELECT id, cex_id, price, time
         FROM price
         WHERE id = $id
         AND cex_id = $cexId
-        AND time >= now() - interval '${intervalMs} ms'
+        AND time >= $time
         ORDER BY time ASC
       `
         // InfluxDB 3 client supports params in recent versions; if yours doesn't,
@@ -124,7 +125,8 @@ export class PrimaryInfluxdbPriceBucketService {
             {
                 params: {
                     id,
-                    cexId
+                    cexId,
+                    time
                 },
             }
         ) as AsyncIterableIterator<PricePoint>
@@ -169,11 +171,11 @@ export class PrimaryInfluxdbPriceBucketService {
             const prev = typeof pricePoints[i - 1].time === "number"
                 ? pricePoints[i - 1].time
                 : new Date(pricePoints[i - 1].time).getTime()
-      
+
             const curr = typeof pricePoints[i].time === "number"
                 ? pricePoints[i].time
                 : new Date(pricePoints[i].time).getTime()
-      
+
             if (curr - prev > envConfig().inspector.priceWindow.maxGapMs) {
                 return true
             }

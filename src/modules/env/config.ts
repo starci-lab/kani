@@ -253,7 +253,7 @@ export const envConfig = () => ({
             interval: {
                 analyticsRequestDelayMs: parseEnvMs(
                     {
-                        key: "DEXES_CETUS_INTERVAL_ANALYTICS_REQUEST_DELAY_MS", 
+                        key: "DEXES_CETUS_INTERVAL_ANALYTICS_REQUEST_DELAY_MS",
                         defaultValue: "1s"
                     }
                 ),
@@ -890,7 +890,7 @@ export const envConfig = () => ({
     /** Winston log level. */
     winston: {
         level: parseEnvString({
-            key: "WINSTON_LEVEL", defaultValue: "verbose"
+            key: "WINSTON_LEVEL", defaultValue: "warn"
         }),
     },
     /** Diagnostics: liquidity pools synced max age. */
@@ -1439,7 +1439,7 @@ export const envConfig = () => ({
     /** BullMQ: attempts, delay, concurrency, batch size, lock duration, job counts, timeout, stalled handling. */
     bullmq: {
         attempts: parseEnvInt({
-            key: "BULLMQ_ATTEMPTS", defaultValue: 5
+            key: "BULLMQ_ATTEMPTS", defaultValue: 1
         }),
         delay: parseEnvMs({
             key: "BULLMQ_DELAY", defaultValue: "200ms"
@@ -1466,7 +1466,7 @@ export const envConfig = () => ({
             key: "BULLMQ_STALLED_INTERVAL", defaultValue: "10s"
         }),
         maxStalledCount: parseEnvInt({
-            key: "BULLMQ_MAX_STALLED_COUNT", defaultValue: 1
+            key: "BULLMQ_MAX_STALLED_COUNT", defaultValue: 0
         }),
     },
     /** Kubernetes: executor pod (namespace, image, probes, replicas, resources, node pool, env ConfigMap/Secret). */
@@ -1624,6 +1624,9 @@ export const envConfig = () => ({
             threadhold: parseEnvInt({
                 key: "RAM_ALLOCATION_THRESHOLD",
                 defaultValue: bytes("1GB") as number
+            }),
+            intervalMs: parseEnvMs({
+                key: "RESOURCES_RAM_INTERVAL_MS", defaultValue: "1s"
             }),
         },
         disk: {

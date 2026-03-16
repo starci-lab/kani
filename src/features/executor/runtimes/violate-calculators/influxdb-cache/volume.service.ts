@@ -70,10 +70,6 @@ export class InfluxdbVolumeCacheService implements OnApplicationBootstrap {
                     intervalMs: envConfig().executor.runtime.influxdbCache.volume.intervalMs,
                     cexId,
                 })
-                this.storage.delete(
-                    this.getKey(token.id,
-                        cexId),
-                )
                 this.storage.set(
                     this.getKey(token.id,
                         cexId),

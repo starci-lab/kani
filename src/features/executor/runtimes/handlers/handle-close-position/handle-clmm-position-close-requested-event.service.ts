@@ -37,7 +37,7 @@ export class HandleClmmPositionCloseRequestedEventService {
      * @param eventPayload - CLMM position close requested event payload
      * @returns void
      */
-    process(
+    async process(
         bot: BotSchema,
         eventPayload: ClmmPositionCloseRequestedEventPayload,
     ) {
@@ -47,7 +47,7 @@ export class HandleClmmPositionCloseRequestedEventService {
                 id: eventPayload.id,
             })
         }   
-        this.handleClosePositionService.process(
+        await this.handleClosePositionService.process(
             {
                 bot,
                 liquidityPool,
