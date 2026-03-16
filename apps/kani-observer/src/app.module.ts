@@ -107,6 +107,7 @@ import {
             isGlobal: true,
             serviceName: ServiceName.KaniObserver,
             level: envConfig().winston.level as WinstonLevel,
+            useConsole: envConfig().winston.useConsole,
         }),
         PrivyModule.register({
             isGlobal: true,

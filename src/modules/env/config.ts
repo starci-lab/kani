@@ -890,6 +890,9 @@ export const envConfig = () => ({
         level: parseEnvString({
             key: "WINSTON_LEVEL", defaultValue: "verbose"
         }),
+        useConsole: parseEnvBoolean({
+            key: "WINSTON_USE_CONSOLE", defaultValue: false
+        }),
     },
     /** Diagnostics: liquidity pools synced max age. */
     diagnostics: {

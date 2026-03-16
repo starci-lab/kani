@@ -82,6 +82,7 @@ import {
             isGlobal: true,
             serviceName: ServiceName.KaniCoordinator,
             level: envConfig().winston.level as WinstonLevel,
+            useConsole: envConfig().winston.useConsole,
         }),
         ScheduleModule.forRoot(),
         StreamAsyncIteratorModule.register({

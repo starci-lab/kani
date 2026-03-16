@@ -10,4 +10,5 @@ export interface WinstonOptions {
     serviceName: ServiceName
     id?: string
     level: WinstonLevel
+    useConsole?: boolean
 }

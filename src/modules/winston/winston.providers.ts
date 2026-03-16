@@ -82,7 +82,7 @@ export const createConsoleWinstonProvider = () => {
                 {
                     level: options.level,
                     transports: [
-                        createConsoleTransport(options),
+                        ...((options.useConsole ?? true) ? [createConsoleTransport(options)] : []),
                     ],
                 }
             )
@@ -101,7 +101,7 @@ export const createLokiWinstonProvider = () => {
                 {
                     level: options.level,
                     transports: [
-                        createConsoleTransport(options),
+                        ...((options.useConsole ?? true) ? [createConsoleTransport(options)] : []),
                         createLokiTransport(options),
                     ],
                 }
