@@ -26,12 +26,15 @@ import {
 } from "@modules/mixin"
 import type {
     DisposeParams,
-    DisposeResult,
 } from "../types"
 import type {
     RuntimeState,
     RuntimeListener,
 } from "./types"
+import {
+    WinstonLog,
+    WinstonService,
+} from "@modules/winston"
 
 /**
  * Service responsible for managing the runtime context for each executor.
@@ -50,6 +53,7 @@ export class RuntimeContextService {
         private readonly k8sDeploymentService: K8SDeploymentService,
         private readonly k8sServiceService: K8SServiceService,
         private readonly asyncService: AsyncService,
+        private readonly winstonService: WinstonService,
     ) {}
 
     /**
@@ -241,7 +245,7 @@ export class RuntimeContextService {
      *
      * @param id - The id of the executor to initialize the runtime lifecycle for.
      */
-    async initialize(id: string): Promise<void> {
+    initialize(id: string): void {
         const state = this.getOrCreateRuntimeState(id)
 
         if (state.initialized) {
@@ -263,7 +267,14 @@ export class RuntimeContextService {
             },
         )
 
-        await this.refreshExecutor(id)
+        this.refreshExecutor(id)
+
+        this.winstonService.log(
+            WinstonLog.ExecutorRuntimeInitialized,
+            {
+                id,
+            }
+        )
     }
 
     /**
@@ -272,11 +283,11 @@ export class RuntimeContextService {
      * @param id - The id of the executor to dispose the runtime lifecycle for.
      * @param params - Optional params (e.g. withDestroy to delete K8s resources).
      */
-    async dispose(
+    dispose(
         id: string,
         { withDestroy = false }: DisposeParams = {
         },
-    ): Promise<DisposeResult> {
+    ): void {
         const state = this.runtimeMap.get(id)
         if (!state || state.disposing) {
             return
@@ -294,7 +305,7 @@ export class RuntimeContextService {
         state.listeners.length = 0
 
         if (withDestroy && state.executor) {
-            await this.asyncService.allMustDone([
+            this.asyncService.allMustDone([
                 this.k8sDeploymentService.deleteDeployment({
                     executorId: state.executor.id,
                 }),

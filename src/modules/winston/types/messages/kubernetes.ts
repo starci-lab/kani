@@ -124,6 +124,14 @@ export interface ExecutorRuntimeInitializationFailedMessage {
     error: string
 }
 
+export interface ExecutorRuntimeInitializedMessage {
+    id: string
+}
+
+export interface BotRuntimeInitializedMessage {
+    id: string
+}
+
 export interface CoordinatorRuntimeInitializationFailedMessage {
     coordinatorId: string
     error: string

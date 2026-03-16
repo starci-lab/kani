@@ -83,6 +83,8 @@ export enum WinstonLog {
     ExecutorBotsUpdated = "Executor.Bots.Updated",
     ExecutorBotsCreated = "Executor.Bots.Created",
     ExecutorBotsDeleted = "Executor.Bots.Deleted",
+    ExecutorRuntimeInitialized = "Executor.Runtime.Initialized",
+    BotRuntimeInitialized = "Executor.Bot.Runtime.Initialized",
     ExecutorRuntimeInitializationFailed = "Executor.Runtime.Initialization.Failed",
     CoordinatorRuntimeInitializationFailed = "Coordinator.Runtime.Initialization.Failed",
     ExecutorNotFound = "Executor.Not.Found",

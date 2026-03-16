@@ -42,6 +42,10 @@ import type {
     RuntimeState,
     RuntimeListener,
 } from "./types"
+import {
+    WinstonLog,
+    WinstonService 
+} from "@modules/winston"
 
 /**
  * Service responsible for managing the runtime context for a single bot.
@@ -69,6 +73,7 @@ export class RuntimeContextService {
         private readonly handleNotSyncedService: HandleNotSyncedService,
         private readonly handleTransferFeesService: HandleTransferFeesService,
         private readonly asyncService: AsyncService,
+        private readonly winstonService: WinstonService,
     ) {}
 
     /**
@@ -78,16 +83,25 @@ export class RuntimeContextService {
      * @returns The bot.
      */
     async findBot(id: string) {
+        /**
+         * Find the bot by id.
+         */
         const bot = await this.connection
             .model<BotSchema>(BotSchema.name)
             .findById(id)
 
         if (!bot) {
+            /**
+             * If the bot is not found, throw a bot not found exception.
+             */
             throw new BotNotFoundException({
                 id 
             })
         }
 
+        /**
+         * Return the bot.
+         */
         return bot.toJSON()
     }
 
@@ -100,11 +114,17 @@ export class RuntimeContextService {
     private getOrCreateRuntimeState(
         id: string
     ): RuntimeState {
+        /**
+         * Get the existing runtime state for the bot.
+         */
         const existing = this.runtimeMap.get(id)
         if (existing) {
             return existing
         }
 
+        /**
+         * Create a new runtime state for the bot.
+         */
         const state: RuntimeState = {
             initialized: false,
             disposing: false,
@@ -112,6 +132,9 @@ export class RuntimeContextService {
             listeners: [],
         }
 
+        /**
+         * Set the runtime state for the bot.
+         */
         this.runtimeMap.set(id,
             state)
         return state
@@ -129,6 +152,9 @@ export class RuntimeContextService {
         event: EventName,
         listener: (event: unknown) => Promise<void>,
     ): void {
+        /**
+         * Get or create the runtime state for the bot.
+         */
         const state = this.getOrCreateRuntimeState(id)
 
         const runtimeListener: RuntimeListener = {
@@ -137,6 +163,9 @@ export class RuntimeContextService {
             listener,
         }
 
+        /**
+         * Subscribe to the event.
+         */
         this.eventEmitterService.on(runtimeListener)
         state.listeners.push(runtimeListener)
     }
@@ -153,16 +182,27 @@ export class RuntimeContextService {
         interval: number,
         callback: () => Promise<void>,
     ): void {
+        /**
+         * Get or create the runtime state for the bot.
+         */
         const state = this.getOrCreateRuntimeState(id)
 
-        // run once immediately
+        /**
+         * Run the callback once immediately.
+         */
         void this.asyncService.safeRun(callback)
 
+        /**
+         * Set the interval to schedule the callback for.
+         */
         const timer = setInterval(() => {
             void this.asyncService.safeRun(callback)
         },
         interval)
 
+        /**
+         * Add the interval to the runtime state.
+         */
         state.intervals.push(timer)
     }
 
@@ -171,18 +211,30 @@ export class RuntimeContextService {
      *
      * @param id - The id of the bot to initialize the runtime lifecycle for.
      */
-    async initialize(
+    initialize(
         id: string
-    ): Promise<void> {
+    ): void {
+        /**
+         * Get or create the runtime state for the bot.
+         */
         const state = this.getOrCreateRuntimeState(id)
 
+        /**
+         * If the bot is already initialized, return.
+         */
         if (state.initialized) {
             return
         }
 
+        /**
+         * Set the initialized and disposing flags to true.
+         */
         state.initialized = true
         state.disposing = false
 
+        /**
+         * Subscribe to the ClmmPositionOpenRequested event.
+         */
         this.subscribe(
             id,
             EventName.ClmmPositionOpenRequested,
@@ -199,6 +251,9 @@ export class RuntimeContextService {
             },
         )
 
+        /**
+         * Subscribe to the DlmmPositionOpenRequested event.
+         */
         this.subscribe(
             id,
             EventName.DlmmPositionOpenRequested,
@@ -215,6 +270,9 @@ export class RuntimeContextService {
             },
         )
 
+        /**
+         * Subscribe to the ClmmPositionCloseRequested event.
+         */
         this.subscribe(
             id,
             EventName.ClmmPositionCloseRequested,
@@ -231,6 +289,9 @@ export class RuntimeContextService {
             },
         )
 
+        /**
+         * Subscribe to the DlmmPositionCloseRequested event.
+         */
         this.subscribe(
             id,
             EventName.DlmmPositionCloseRequested,
@@ -247,6 +308,9 @@ export class RuntimeContextService {
             },
         )
 
+        /**
+         * Invoke and schedule the handleNotSyncedService.
+         */
         this.invokeAndSchedule(
             id,
             envConfig().executor.runtime.operation.notSynced.interval,
@@ -260,6 +324,9 @@ export class RuntimeContextService {
             },
         )
 
+        /**
+         * Invoke and schedule the handleReconcileBalanceService.
+         */
         this.invokeAndSchedule(
             id,
             envConfig().executor.runtime.operation.reconcileBalance.interval.poll,
@@ -273,6 +340,9 @@ export class RuntimeContextService {
             },
         )
 
+        /**
+         * Invoke and schedule the handleWithdrawService.
+         */
         this.invokeAndSchedule(
             id,
             envConfig().executor.runtime.operation.withdraw.interval.poll,
@@ -286,6 +356,9 @@ export class RuntimeContextService {
             },
         )
 
+        /**
+         * Invoke and schedule the handleTransferFeesService.
+         */
         this.invokeAndSchedule(
             id,
             envConfig().executor.runtime.operation.transferFees.interval.poll,
@@ -297,6 +370,9 @@ export class RuntimeContextService {
             },
         )
 
+        /**
+         * Invoke and schedule the handleViolateIndicatorsService.
+         */
         this.invokeAndSchedule(
             id,
             envConfig().executor.runtime.operation.violateIndicators.interval.poll,
@@ -309,6 +385,13 @@ export class RuntimeContextService {
                 )
             },
         )
+        
+        this.winstonService.log(
+            WinstonLog.BotRuntimeInitialized,
+            {
+                id,
+            }
+        )
     }
 
     /**
@@ -319,18 +402,30 @@ export class RuntimeContextService {
     async dispose(
         id: string
     ): Promise<void> {
+        /**
+         * Get the runtime state for the bot.
+         */
         const state = this.runtimeMap.get(id)
         if (!state || state.disposing) {
             return
         }
 
+        /**
+         * Set the disposing flag to true.
+         */
         state.disposing = true
 
+        /**
+         * Clear all intervals.
+         */
         for (const timer of state.intervals) {
             clearInterval(timer)
         }
         state.intervals.length = 0
 
+        /**
+         * Unsubscribe from all events.
+         */
         for (const runtimeListener of state.listeners) {
             this.eventEmitterService.off({
                 event: runtimeListener.event,
@@ -340,9 +435,15 @@ export class RuntimeContextService {
         }
         state.listeners.length = 0
 
+        /**
+         * Reset the initialized and disposing flags.
+         */
         state.initialized = false
         state.disposing = false
 
+        /**
+         * Delete the runtime state for the bot.
+         */
         this.runtimeMap.delete(id)
     }
 }

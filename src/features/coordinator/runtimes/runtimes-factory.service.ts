@@ -1,7 +1,6 @@
 import {
     Injectable,
     OnApplicationBootstrap,
-    OnApplicationShutdown,
 } from "@nestjs/common"
 import {
     AsyncService,
@@ -31,9 +30,7 @@ import {
  * Uses a singleton RuntimeContextService and calls initialize(id) / dispose(id) per executor.
  */
 @Injectable()
-export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplicationShutdown {
-    private readonly runtimes: Map<string, RuntimeContextService> = new Map()
-
+export class RuntimesFactoryService implements OnApplicationBootstrap {
     constructor(
         private readonly runtimeContextService: RuntimeContextService,
         private readonly asyncService: AsyncService,
@@ -44,29 +41,16 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
      * Lifecycle hook that runs after the application has fully bootstrapped.
      */
     async onApplicationBootstrap() {
-        this.asyncService.allMustDone(
-            Array.from(this.executorsLoaderService.executorMap.values()).map(
-                async (executor) => {
-                    await this.createRuntime({
-                        executor,
-                    })
-                }
-            )
-        )
-    }
-
-    async onApplicationShutdown() {
-        const ids = Array.from(this.runtimes.keys())
-        for (const id of ids) {
-            await this.runtimeContextService.dispose(id,
-                {
-                    withDestroy: true,
-                },
-            )
-            this.runtimes.delete(id)
+        // create the runtime instances for all executors
+        for (const executor of this.executorsLoaderService.executorMap.values()) {
+            // initialize the runtime instance for the executor
+            this.runtimeContextService.initialize(executor.id)
         }
     }
 
+    /**
+     * Event handler that responds to executor creation events.
+     */
     @OnEvent(EventName.CoordinatorExecutorCreated)
     async handleCoordinatorExecutorCreated(
         payload: CoordinatorExecutorCreatedEventPayload
@@ -83,29 +67,18 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
         { executor }: CreateRuntimeParams
     ): Promise<CreateRuntimeResult> {
         const id = executor.id?.toString() ?? ""
-        await this.asyncService.allMustDone([
-            (async () => {
-                await this.runtimeContextService.initialize(id)
-                this.runtimes.set(id,
-                    this.runtimeContextService,
-                )
-            })(),
-        ])
+        this.runtimeContextService.initialize(id)
     }
 
     @OnEvent(EventName.CoordinatorExecutorDeleted)
     async handleExecutorDeleted(
         { id }: CoordinatorExecutorDeletedEventPayload
     ): Promise<void> {
-        const runtime = this.runtimes.get(id)
-        if (!runtime) {
-            return
-        }
-        await runtime.dispose(id,
+        this.runtimeContextService.dispose(
+            id,
             {
                 withDestroy: true,
-            },
+            }
         )
-        this.runtimes.delete(id)
     }
 }

@@ -2,12 +2,6 @@ import {
     Injectable, OnApplicationBootstrap 
 } from "@nestjs/common"
 import {
-    AsyncService 
-} from "@modules/mixin"
-import {
-    JitterService 
-} from "@modules/mixin"
-import {
     BotsLoaderService 
 } from "../loaders"
 import {
@@ -22,6 +16,9 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import {
+    sleep 
+} from "@modules/common"
 
 /**
  * Factory service responsible for creating and managing runtime instances for executors.
@@ -33,9 +30,7 @@ import {
 @Injectable()
 export class RuntimesFactoryService implements OnApplicationBootstrap {
     constructor(
-        private readonly asyncService: AsyncService,
         private readonly botsLoaderService: BotsLoaderService,
-        private readonly jitterService: JitterService,
         private readonly runtimeContextService: RuntimeContextService,
     ) {}
 
@@ -47,17 +42,19 @@ export class RuntimesFactoryService implements OnApplicationBootstrap {
      * complete successfully before proceeding.
      */
     async onApplicationBootstrap() {
-        // Create runtime instances for all executors that were loaded from the database
-        // Using allMustDone ensures all runtime creations complete successfully
-        this.asyncService.allMustDone(
-            Array.from(
-                this.botsLoaderService.botMap.values()
-            ).map(
-                async (bot) => {
-                    await this.createRuntime(bot)
-                }
-            )
-        )
+        // bootstrap the runtime instances for all executors
+        const bootstrapMs = envConfig().executor.runtime.bootstrapMs
+        // get the number of bots
+        const numberOfBots = this.botsLoaderService.botMap.size
+        // calculate the bootstrap time
+        const bootstrapTime = bootstrapMs / numberOfBots
+        // create the runtime instances for all executors
+        for (const bot of this.botsLoaderService.botMap.values()) {
+            // initialize the runtime instance for the bot
+            this.runtimeContextService.initialize(bot.id)
+            // sleep for the bootstrap time
+            await sleep(bootstrapTime)
+        }
     }
 
     /**
@@ -95,13 +92,7 @@ export class RuntimesFactoryService implements OnApplicationBootstrap {
     async createRuntime(
         event: ExecutorBotCreatedEventPayload
     ) {
-        await this.asyncService.safeRun(
-            (async () => {
-                await this.jitterService.delayWithJitter(envConfig().executor.runtime.creation.delay)
-                // Initialize the runtime service for this bot
-                await this.runtimeContextService.initialize(event.id)
-            })
-        )
+        this.runtimeContextService.initialize(event.id)
     }
 
     @OnEvent(

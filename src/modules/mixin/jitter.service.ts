@@ -31,7 +31,7 @@ export class JitterService {
         options?: JitterOptions
     ): number {
         const factor = options?.factor ?? 1
-        const jitter = (Math.random() * factor + 1) * baseDelayMs
+        const jitter = Math.random() * factor * baseDelayMs
         return Math.round(jitter)
     }
 

@@ -99,6 +99,8 @@ import {
     ExecutorMongoDbChangeStreamStartedMessage,
     ExecutorMongoDbChangeStreamBotUpdatedMessage,
     ExecutorRuntimeInitializationFailedMessage,
+    ExecutorRuntimeInitializedMessage,
+    BotRuntimeInitializedMessage,
     CoordinatorRuntimeInitializationFailedMessage,
     ExecutorNotFoundMessage,
     ReconcileBalanceProcessingStartedMessage,
@@ -937,6 +939,22 @@ export const configMap = {
         loki: true,
         messageType: {
         } as ExecutorRuntimeInitializationFailedMessage,
+    },
+    // Executor Runtime Initialized
+    [WinstonLog.ExecutorRuntimeInitialized]: {
+        name: WinstonLog.ExecutorRuntimeInitialized,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as ExecutorRuntimeInitializedMessage,
+    },
+    // Bot Runtime Initialized
+    [WinstonLog.BotRuntimeInitialized]: {
+        name: WinstonLog.BotRuntimeInitialized,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as BotRuntimeInitializedMessage,
     },
     // Coordinator Runtime Initialization Failed
     [WinstonLog.CoordinatorRuntimeInitializationFailed]: {

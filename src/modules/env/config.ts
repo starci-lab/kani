@@ -456,11 +456,9 @@ export const envConfig = () => ({
 
         },
         runtime: {
-            creation: {
-                delay: parseEnvMs({
-                    key: "EXECUTOR_RUNTIME_CREATION_DELAY", defaultValue: "1s"
-                }),
-            },
+            bootstrapMs: parseEnvMs({
+                key: "EXECUTOR_RUNTIME_BOOTSTRAP_MS", defaultValue: "1s"
+            }),
             interval: {
                 refresh: parseEnvMs({
                     key: "EXECUTOR_RUNTIME_INTERVAL_REFRESH", defaultValue: "10s"
@@ -890,7 +888,7 @@ export const envConfig = () => ({
     /** Winston log level. */
     winston: {
         level: parseEnvString({
-            key: "WINSTON_LEVEL", defaultValue: "warn"
+            key: "WINSTON_LEVEL", defaultValue: "verbose"
         }),
     },
     /** Diagnostics: liquidity pools synced max age. */
@@ -1677,6 +1675,11 @@ export const envConfig = () => ({
     },
     /** Coordinator: version, MongoDB change stream timeout, load interval. */
     coordinator: {
+        runtime: {
+            bootstrapMs: parseEnvMs({
+                key: "COORDINATOR_RUNTIME_BOOTSTRAP_MS", defaultValue: "1s"
+            }),
+        },
         version: parseEnvString({
             key: "COORDINATOR_VERSION", defaultValue: "1"
         }),
