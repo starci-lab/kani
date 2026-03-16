@@ -21,6 +21,9 @@ import {
     OnModuleInit,
 } from "@nestjs/common"
 import {
+    OnEvent,
+} from "@nestjs/event-emitter"
+import {
     Connection,
     Types,
 } from "mongoose"
@@ -40,6 +43,7 @@ import {
 import {
     EventEmitterService,
     EventName,
+    ExecutorBotDeletedEventPayload,
 } from "@modules/event"
 import {
     MongoDBChangeStreamConnection,
@@ -399,5 +403,14 @@ implements OnApplicationBootstrap, OnModuleInit {
     @Interval(envConfig().executor.interval.load)
     async handleBotsLoaderInterval() {
         await this.load()
+    }
+
+    /**
+     * Remove bot from in-memory map when it is deleted so GC can reclaim memory.
+     * Without this, botMap keeps deleted bots until the next full load and RAM does not decrease.
+     */
+    @OnEvent(EventName.ExecutorBotDeleted)
+    handleBotDeleted({ id }: ExecutorBotDeletedEventPayload): void {
+        this.botMap.delete(id)
     }
 }

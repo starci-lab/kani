@@ -565,7 +565,7 @@ export const envConfig = () => ({
                     interval: {
                         poll: parseEnvMs({
                             key: "EXECUTOR_OPERATION_VIOLATE_INDICATORS_INTERVAL_POLL",
-                            defaultValue: "250ms",
+                            defaultValue: "1s",
                         }),
                     },
                 },
