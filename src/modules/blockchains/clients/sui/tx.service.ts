@@ -29,7 +29,8 @@ import {
 import {
     EncryptedPrivySignerPrivateKeyNotFoundException, 
     PrivyMetadataNotFoundException, 
-    PrivyPublicKeyNotFoundException 
+    PrivyPublicKeyNotFoundException, 
+    TransactionSignedFailedException
 } from "@modules/exceptions"
 import {
     InjectSuperJson 
@@ -41,6 +42,9 @@ import {
 import {
     WinstonLog, WinstonService
 } from "@modules/winston"
+import {
+    RetryService
+} from "@modules/mixin"
 /**
  * Service for building Sui transactions.
  */
@@ -53,6 +57,7 @@ export class SuiTxService {
         private readonly winstonService: WinstonService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
+        private readonly retryService: RetryService,
     ) {}
     /**
      * Builds a Sui transaction.
@@ -69,38 +74,39 @@ export class SuiTxService {
             transactionType,
         }: SignSuiTxParams
     ): Promise<SignedTx> {
+        try {
         // parse transaction from serialized tx
-        const txb = Transaction.from(prepareTx.serializedTx)
-        // build transaction bytes
-        const bytes = await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Http,
-            callback: async ({ suiClient }) => {
-                return await txb.build(
-                    {
-                        client: suiClient,
-                    }
-                )
-            },
-        })
-        // sign transaction bytes
-        let signedTx: SignedTx
-        // sign with V1 signer
-        if (bot.version === AppVersion.V1) {
-            const signatureWithBytes = await this.signerService.withSuiSigner({
-                bot,
-                action: async (signer) => {
-                    return await signer.signTransaction(bytes)
+            const txb = Transaction.from(prepareTx.serializedTx)
+            // build transaction bytes
+            const bytes = await this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Http,
+                callback: async ({ suiClient }) => {
+                    return await txb.build(
+                        {
+                            client: suiClient,
+                        }
+                    )
                 },
             })
-            const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
-            signedTx = {
-                txHash,
-                signedSerializedTx: this.superJson.stringify(signatureWithBytes),
-                chainId: ChainId.Sui,
-            }
-        } else {
+            // sign transaction bytes
+            let signedTx: SignedTx
+            // sign with V1 signer
+            if (bot.version === AppVersion.V1) {
+                const signatureWithBytes = await this.signerService.withSuiSigner({
+                    bot,
+                    action: async (signer) => {
+                        return await signer.signTransaction(bytes)
+                    },
+                })
+                const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
+                signedTx = {
+                    txHash,
+                    signedSerializedTx: this.superJson.stringify(signatureWithBytes),
+                    chainId: ChainId.Sui,
+                }
+            } else {
             // sign with Privy signer
-            const { txHash, signatureWithBytes } =
+                const { txHash, signatureWithBytes } =
             await this.rpcExecutorService.withSuiClient({
                 accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
@@ -134,23 +140,42 @@ export class SuiTxService {
                     }
                 },
             })
-            signedTx = {
-                txHash,
-                signedSerializedTx: this.superJson.stringify(signatureWithBytes),
-                chainId: ChainId.Sui,
+                signedTx = {
+                    txHash,
+                    signedSerializedTx: this.superJson.stringify(signatureWithBytes),
+                    chainId: ChainId.Sui,
+                }
             }
-        }
-        // stage: logging
-        this.winstonService.log(
-            WinstonLog.TransactionSigned,
-            {
+            // stage: logging
+            this.winstonService.log(
+                WinstonLog.TransactionSigned,
+                {
+                    botId: bot.id,
+                    txHash: signedTx.txHash,
+                    chainId: ChainId.Sui,
+                    liquidityPoolId: liquidityPool?.displayId,
+                    type: transactionType,
+                }
+            )
+            return signedTx
+        } catch (error) {
+            this.winstonService.log(
+                WinstonLog.TransactionSignedFailed,
+                {
+                    botId: bot.id,
+                    error: error.message,
+                    chainId: ChainId.Sui,
+                    liquidityPoolId: liquidityPool?.displayId,
+                    type: transactionType,
+                }
+            )
+            throw new TransactionSignedFailedException({
                 botId: bot.id,
-                txHash: signedTx.txHash,
                 chainId: ChainId.Sui,
                 liquidityPoolId: liquidityPool?.displayId,
                 type: transactionType,
-            }
-        )
-        return signedTx
+                originalError: error,
+            })
+        }
     }
 }

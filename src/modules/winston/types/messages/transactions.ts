@@ -198,3 +198,19 @@ export interface TransactionSignedMessage {
     /** Transaction type. */
     type: TransactionType
 }
+
+/**
+ * Transaction signed failed message.
+ */
+export interface TransactionSignedFailedMessage {
+    /** Bot ID. */
+    botId: string
+    /** Error. */
+    error: string
+    /** Chain ID. */
+    chainId: ChainId
+    /** Liquidity pool ID. */
+    liquidityPoolId?: LiquidityPoolId
+    /** Transaction type. */
+    type: TransactionType
+}

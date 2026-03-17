@@ -37,7 +37,9 @@ import {
 import {
     envConfig 
 } from "@modules/env"
-
+import {
+    TransactionSignedFailedException 
+} from "@modules/exceptions"
 /**
  * Service for the Close Position Task SIGN step.
  */
@@ -167,16 +169,17 @@ export class ClosePositionTaskSignService {
                     metadata: job.metadata,
                 }
             )
-            await this.jobStepService.rollbackToPrepared(
-                {
+            if (error instanceof TransactionSignedFailedException) {
+                await this.jobStepService.rollbackToPrepared({
                     jobId: job.id,
                     taskIndex,
-                }
-            )
-            this.debugLatencyService.measure({
-                id: contextPayload.id,
-                description: "Rollback to prepared successful",
-            })
+                })
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Rollback to prepared successful",
+                })
+                return
+            }
             throw error
         }
     }

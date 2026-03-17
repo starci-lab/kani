@@ -254,6 +254,7 @@ export enum WinstonLog {
     ActiveJobTaskPrepared = "Active.Job.Task.Prepared",
     ActiveJobTaskPreparedFailed = "Active.Job.Task.Prepared.Failed",
     TransactionSigned = "Transaction.Signed",
+    TransactionSignedFailed = "Transaction.Signed.Failed",
     ReconcileBalancePlanDetermined = "Reconcile.Balance.Plan.Determined",
     JobSkippedBotAlreadyHasActivePosition = "Job.Skipped.Bot.Already.Has.Active.Position",
     JobSkippedBotNotHasActivePosition = "Job.Skipped.Bot.Not.Has.Active.Position",

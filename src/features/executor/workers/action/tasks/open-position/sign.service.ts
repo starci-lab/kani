@@ -37,6 +37,9 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import {
+    TransactionSignedFailedException 
+} from "@modules/exceptions"
 
 /**
  * Service for the Open Position Task SIGN step.
@@ -168,20 +171,24 @@ export class OpenPositionTaskSignService {
                     metadata: job.metadata,
                 }
             )
+            if (error instanceof TransactionSignedFailedException) {
             // rollback to prepared
-            await this.jobStepService.rollbackToPrepared(
-                {
-                    jobId: job.id,
-                    taskIndex,
-                }
-            )
-            // measure the latency
-            this.debugLatencyService.measure(
-                {
-                    id: contextPayload.id,
-                    description: "Rollback to prepared successful",
-                }
-            )
+                await this.jobStepService.rollbackToPrepared(
+                    {
+                        jobId: job.id,
+                        taskIndex,
+                    }
+                )
+                // measure the latency
+                this.debugLatencyService.measure(
+                    {
+                        id: contextPayload.id,
+                        description: "Rollback to prepared successful",
+                    }
+                )
+                return
+            }
+            throw error
         }
     }
 }

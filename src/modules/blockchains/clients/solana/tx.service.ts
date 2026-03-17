@@ -51,6 +51,7 @@ import {
 import {
     EncryptedPrivySignerPrivateKeyNotFoundException, 
     PrivyMetadataNotFoundException,
+    TransactionSignedFailedException,
 } from "@modules/exceptions"
 import {
     WinstonLog, WinstonService 
@@ -90,115 +91,135 @@ export class SolanaTxService {
             liquidityPool,
             transactionType,
         }: SignSolanaTxParams): Promise<SignedTx> {
-        const latestBlockhash = await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Write,
-            callback: async ({ rpc }) => {
-                return await rpc.getLatestBlockhash().send()
-            },
-        })
-        // retrieve solana tx from serialized tx
-        const instructions = this.superJson.parse<Array<Instruction>>(prepareTx.serializedTx)
-        let cryptoKeyPairs: Array<CryptoKeyPair> = []
-        let cryptoSigners: Array<TransactionSigner> = []
-        if (prepareTx.privateKeys?.length) {
+        try {
+            const latestBlockhash = await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Write,
+                callback: async ({ rpc }) => {
+                    return await rpc.getLatestBlockhash().send()
+                },
+            })
+            // retrieve solana tx from serialized tx
+            const instructions = this.superJson.parse<Array<Instruction>>(prepareTx.serializedTx)
+            let cryptoKeyPairs: Array<CryptoKeyPair> = []
+            let cryptoSigners: Array<TransactionSigner> = []
+            if (prepareTx.privateKeys?.length) {
             // create keypairs from private keys
-            cryptoKeyPairs = await Promise.all(
-                prepareTx.privateKeys.map((privateKey) => 
-                    createKeyPairFromBytes(bs58.decode(privateKey))
+                cryptoKeyPairs = await Promise.all(
+                    prepareTx.privateKeys.map((privateKey) => 
+                        createKeyPairFromBytes(bs58.decode(privateKey))
+                    )
                 )
-            )
-            cryptoSigners = await Promise.all(
-                cryptoKeyPairs.map((cryptoKeyPair) => createSignerFromKeyPair(cryptoKeyPair))
-            )
-        }
-        let solanaTx = pipe(
-            createTransactionMessage({
-                version: 0,
-            }),
-            (tx) => setTransactionMessageFeePayerSigner(
-                createNoopSigner(address(bot.accountAddress)),
+                cryptoSigners = await Promise.all(
+                    cryptoKeyPairs.map((cryptoKeyPair) => createSignerFromKeyPair(cryptoKeyPair))
+                )
+            }
+            let solanaTx = pipe(
+                createTransactionMessage({
+                    version: 0,
+                }),
+                (tx) => setTransactionMessageFeePayerSigner(
+                    createNoopSigner(address(bot.accountAddress)),
+                    tx,
+                ),
+                (tx) => addSignersToTransactionMessage([
+                    createNoopSigner(address(bot.accountAddress)),
+                    ...cryptoSigners,
+                ],
                 tx,
-            ),
-            (tx) => addSignersToTransactionMessage([
-                createNoopSigner(address(bot.accountAddress)),
-                ...cryptoSigners,
-            ],
-            tx,
-            ),
-            (tx) => appendTransactionMessageInstructions(instructions,
-                tx),
-            (tx) => setTransactionMessageLifetimeUsingBlockhash(
-                latestBlockhash.value,
-                tx),
-            (tx) => compileTransaction(tx),
-        )
-        // partially sign transaction
-        if (cryptoSigners.length) {
-            solanaTx = await partiallySignTransaction(
-                cryptoKeyPairs,
-                solanaTx,
+                ),
+                (tx) => appendTransactionMessageInstructions(instructions,
+                    tx),
+                (tx) => setTransactionMessageLifetimeUsingBlockhash(
+                    latestBlockhash.value,
+                    tx),
+                (tx) => compileTransaction(tx),
             )
-        }
-        // sign transaction bytes
-        let signedTx: SignedTx
-        // sign with V1 signer
-        if (bot.version === AppVersion.V1) {
-            const signedTransaction = await this.signerService.withSolanaSigner(
+            // partially sign transaction
+            if (cryptoSigners.length) {
+                solanaTx = await partiallySignTransaction(
+                    cryptoKeyPairs,
+                    solanaTx,
+                )
+            }
+            // sign transaction bytes
+            let signedTx: SignedTx
+            // sign with V1 signer
+            if (bot.version === AppVersion.V1) {
+                const signedTransaction = await this.signerService.withSolanaSigner(
+                    {
+                        bot,
+                        action: async (signer) => {
+                            return signTransaction(
+                                [signer.keyPair],
+                                solanaTx,
+                            )
+                        },
+                    }
+                )
+                const txHash = getSignatureFromTransaction(signedTransaction)
+                signedTx = {
+                    txHash,
+                    signedSerializedTx: this.superJson.stringify(signedTransaction),
+                    chainId: ChainId.Solana,
+                }
+            } else {
+                if (!bot.privyMetadata?.walletId) {
+                    throw new PrivyMetadataNotFoundException({
+                        botId: bot.id,
+                    })
+                }
+                if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                    throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                        botId: bot.id,
+                    })
+                }
+                const { txHash, signedTransaction } = await this.privySignService.signSolanaTransaction(
+                    {
+                        transaction: solanaTx,
+                        lifetimeConstraint: {
+                            blockhash: latestBlockhash.value.blockhash,
+                            lastValidBlockHeight: latestBlockhash.value.lastValidBlockHeight,
+                        },
+                        walletId: bot.privyMetadata.walletId,
+                        encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
+                    }
+                )
+                signedTx = {
+                    txHash,
+                    signedSerializedTx: this.superJson.stringify(signedTransaction),
+                    chainId: ChainId.Solana,
+                }
+            }
+            // stage: logging
+            this.winstonService.log(
+                WinstonLog.TransactionSigned,
                 {
-                    bot,
-                    action: async (signer) => {
-                        return signTransaction(
-                            [signer.keyPair],
-                            solanaTx,
-                        )
-                    },
+                    botId: bot.id,
+                    txHash: signedTx.txHash,
+                    liquidityPoolId: liquidityPool?.displayId,
+                    type: transactionType,
+                    chainId: ChainId.Solana,
                 }
             )
-            const txHash = getSignatureFromTransaction(signedTransaction)
-            signedTx = {
-                txHash,
-                signedSerializedTx: this.superJson.stringify(signedTransaction),
-                chainId: ChainId.Solana,
-            }
-        } else {
-            if (!bot.privyMetadata?.walletId) {
-                throw new PrivyMetadataNotFoundException({
-                    botId: bot.id,
-                })
-            }
-            if (!bot.encryptedPrivySignerPrivateKeyPayload) {
-                throw new EncryptedPrivySignerPrivateKeyNotFoundException({
-                    botId: bot.id,
-                })
-            }
-            const { txHash, signedTransaction } = await this.privySignService.signSolanaTransaction(
+            return signedTx
+        } catch (error) {
+            this.winstonService.log(
+                WinstonLog.TransactionSignedFailed,
                 {
-                    transaction: solanaTx,
-                    lifetimeConstraint: {
-                        blockhash: latestBlockhash.value.blockhash,
-                        lastValidBlockHeight: latestBlockhash.value.lastValidBlockHeight,
-                    },
-                    walletId: bot.privyMetadata.walletId,
-                    encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
+                    botId: bot.id,
+                    chainId: ChainId.Solana,
+                    liquidityPoolId: liquidityPool?.displayId,
+                    type: transactionType,
+                    error: error.message,
                 }
             )
-            signedTx = {
-                txHash,
-                signedSerializedTx: this.superJson.stringify(signedTransaction),
-                chainId: ChainId.Solana,
-            }
-        }
-        // stage: logging
-        this.winstonService.log(
-            WinstonLog.TransactionSigned,
-            {
+            throw new TransactionSignedFailedException({
                 botId: bot.id,
-                txHash: signedTx.txHash,
+                chainId: ChainId.Solana,
                 liquidityPoolId: liquidityPool?.displayId,
                 type: transactionType,
-                chainId: ChainId.Solana,
-            }
-        )
-        return signedTx
+                originalError: error,
+            })
+        }
     }
 }

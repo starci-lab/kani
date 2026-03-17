@@ -31,12 +31,14 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    JobStepService 
+    JobStepService,
 } from "../../update"
 import {
     RetryService
 } from "@modules/mixin"
-
+import {
+    TransactionSignedFailedException 
+} from "@modules/exceptions"
 /**
  * Service for the Reconcile Balance Task SIGN step.
  */
@@ -159,20 +161,19 @@ export class ReconcileBalanceTaskSignService {
                     metadata: job.metadata,
                 }
             )
-            // rollback to prepared
-            await this.jobStepService.rollbackToPrepared(
-                {
+            if (error instanceof TransactionSignedFailedException) {
+                // rollback to prepared
+                await this.jobStepService.rollbackToPrepared({
                     jobId: job.id,
                     taskIndex,
-                }
-            )
-            // measure the latency
-            this.debugLatencyService.measure(
-                {
+                })
+                this.debugLatencyService.measure({
                     id: contextPayload.id,
                     description: "Rollback to prepared successful",
-                }
-            )
+                })
+                return
+            }
+            throw error
         }
     }
 }

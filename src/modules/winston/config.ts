@@ -246,6 +246,7 @@ import {
     JobEnqueuedMessage,
     JobEnqueueFailedMessage,
     TransactionSignedMessage,
+    TransactionSignedFailedMessage,
     ActionJobTaskConfirmedMessage,
     ActiveJobTaskPreparedMessage,
     ReconcileBalancePlanDeterminedMessage,
@@ -2536,6 +2537,15 @@ export const configMap = {
         console: true,
         messageType: {
         } as TransactionSignedMessage,
+    },
+    // Transaction Signed Failed
+    [WinstonLog.TransactionSignedFailed]: {
+        name: WinstonLog.TransactionSignedFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        console: true,
+        messageType: {
+        } as TransactionSignedFailedMessage,
     },
     // Action Job Confirmed
     [WinstonLog.ActionJobTaskConfirmed]: {
