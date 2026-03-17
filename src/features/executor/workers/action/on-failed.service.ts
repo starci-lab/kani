@@ -73,6 +73,7 @@ export class OnFailedService {
             bot,
             bullmqJob,
             error,
+            jobType,
         }: OnFailedParams
     ): Promise<never> {
         // if typeof error is not the JobFailureException, we transform it to the JobFailureException
@@ -141,7 +142,7 @@ export class OnFailedService {
                 {
                     botId: bot.id,  
                     jobId: job.id,
-                    type: job.type,
+                    jobType,
                     error: _error.getOriginalError().message,
                     metadata: job.metadata,
                     attemptsMade: bullmqJob.attemptsMade,
@@ -161,7 +162,7 @@ export class OnFailedService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: job.type,
+                    jobType,
                     error: _error.getOriginalError().message,
                     metadata: job.metadata,
                     attemptsMade: bullmqJob.attemptsMade,

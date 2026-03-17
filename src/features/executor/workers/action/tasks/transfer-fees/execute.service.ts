@@ -131,6 +131,7 @@ export class TransferFeesTaskExecuteService {
                                 stepIndex,
                                 metadata: job.metadata,
                                 attemptsMade: context.attemptNumber,
+                                error: context.error?.message ?? "unknown",
                             }
                         )
                     },

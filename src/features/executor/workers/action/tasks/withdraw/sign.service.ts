@@ -36,6 +36,9 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import {
+    TransactionSignedFailedException 
+} from "@modules/exceptions"
 
 /**
  * Service for the WITHDRAW TASK SIGN step.
@@ -106,6 +109,7 @@ export class WithdrawTaskSignService {
                                 stepIndex,
                                 metadata: job.metadata,
                                 attemptsMade: context.attemptNumber,
+                                error: context.error?.message ?? "unknown",
                             }
                         )
                     },
@@ -150,6 +154,19 @@ export class WithdrawTaskSignService {
                     metadata: job.metadata,
                 }
             )
+            // If tx signing failed, rollback to prepared
+            if (error instanceof TransactionSignedFailedException) {
+                await this.jobStepService.rollbackToPrepared({
+                    jobId: job.id,
+                    taskIndex,
+                })
+                this.debugLatencyService.measure({
+                    id: contextPayload.id,
+                    description: "Rollback to prepared successful",
+                })
+                return
+            }
+            throw error
         }
     }
 }

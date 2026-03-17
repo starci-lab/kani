@@ -24,7 +24,7 @@ import {
     JobFailureStrategy, TokenType, toRawAmount
 } from "@modules/common"
 import {
-    ActionJobTaskPrepareMaxAttemptsException,
+    ActionJobTaskPrepareMaxRetriesException,
     ActivePositionNotFoundException,
     JobFailureException,
     TokenNotFoundException,
@@ -91,10 +91,11 @@ export class TransferFeesTaskPrepareService {
                 description: "Heartbeat sent successfully",
             })
             const retries = job.tasks?.[taskIndex]?.retries ?? 0
-            if (retries >= envConfig().executor.workers.job.prepare.maxAttempts) {
+            const maxRetries = envConfig().executor.workers.job.prepare.maxRetries
+            if (retries >= maxRetries) {
                 throw new JobFailureException({
-                    originalError: new ActionJobTaskPrepareMaxAttemptsException({
-                        maxAttempts: envConfig().executor.workers.job.prepare.maxAttempts,
+                    originalError: new ActionJobTaskPrepareMaxRetriesException({
+                        maxRetries,
                         botId: bot.id,
                         jobId: job.id,
                         metadata: job.metadata,
@@ -235,6 +236,7 @@ export class TransferFeesTaskPrepareService {
                                     taskType: TaskType.TransferFees,
                                     metadata: job.metadata,
                                     attemptsMade: context.attemptNumber,
+                                    error: context.error?.message ?? "unknown",
                                 }
                             )
                         },

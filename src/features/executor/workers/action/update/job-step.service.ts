@@ -13,7 +13,6 @@ import {
     RollbackToSignParams,
     SetStepExecuteResultAndAdvanceParams,
     SetStepSignedAndAdvanceToExecuteParams,
-    UpdateExecuteRetriesParams,
 } from "./types"
 import {
     strict as assert 
@@ -237,55 +236,6 @@ export class JobStepService {
     }
 
     /**
-     * Updates the execute retries of a step.
-     * @param params The parameters for updating the execute retries.
-     * @returns A promise that resolves when the execute retries are updated.
-     */
-    async updateExecuteRetries({
-        jobId,
-        taskIndex,
-        stepIndex,
-        taskType,
-        session,
-    }: UpdateExecuteRetriesParams): Promise<void> {
-        const query = async (clientSession?: ClientSession) => {
-            const updatedJobResult = await this.connection
-                .model<JobSchema>(JobSchema.name)
-                .updateOne(
-                    {
-                        _id: jobId,
-                    },
-                    {
-                        $inc: {
-                            "tasks.$[task].steps.$[step].executeRetries": 1,
-                        },
-                    },
-                    {
-                        arrayFilters: [
-                            {
-                                "task.index": taskIndex,
-                                "task.type": taskType,
-                            },
-                            {
-                                "step.index": stepIndex,
-                            },
-                        ],
-                        session: clientSession,
-                    },
-                )
-            assert(updatedJobResult.matchedCount > 0)
-        }
-        if (!session) {
-            const clientSession = await this.connection.startSession()
-            await clientSession.withTransaction(async (clientSession) => {
-                await query(clientSession)
-            })
-        } else {
-            await query(session)
-        }
-    }
-
-    /**
      * Sets the step's signedTx and advances the step type to Execute.
      * @param params - jobId, taskType, taskIndex, stepIndex, signedTx (serialized).
      */
@@ -308,7 +258,6 @@ export class JobStepService {
                         $set: {
                             "tasks.$[task].steps.$[step].type": StepType.Execute,
                             "tasks.$[task].steps.$[step].signedTx": signedTx,
-                            "tasks.$[task].steps.$[step].signProcessingRetries": 0,
                         },
                     },
                     {
@@ -359,10 +308,6 @@ export class JobStepService {
                         $set: {
                             "tasks.$[task].steps.$[step].executeResult": executeResult,
                             "tasks.$[task].steps.$[step].type": StepType.Execute,
-                            "tasks.$[task].steps.$[step].executeRetries": 0,
-                            "tasks.$[task].steps.$[step].signRetries": 0,
-                            "tasks.$[task].steps.$[step].signProcessingRetries": 0,
-                            "tasks.$[task].prepareProcessingRetries": 0,
                             "tasks.$[task].retries": 0,
                         },
                         $inc: {

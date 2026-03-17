@@ -223,6 +223,7 @@ export class ActionWorker extends WorkerHost {
                     job: context.job,
                     bot: context.bot,
                     bullmqJob,
+                    jobType: payload.jobType,
                     error,
                 }
             )

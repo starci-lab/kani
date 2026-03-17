@@ -18,7 +18,7 @@ import {
     WinstonService 
 } from "@modules/winston"
 import {
-    ActionJobTaskPrepareMaxAttemptsException,
+    ActionJobTaskPrepareMaxRetriesException,
     JobFailureException, 
 } from "@modules/exceptions"
 import {
@@ -90,11 +90,11 @@ export class ClosePositionTaskPrepareService {
                 description: "Heartbeat sent successfully",
             })
             const retries = job.tasks?.[taskIndex]?.retries ?? 0
-            const maxAttempts = envConfig().executor.workers.job.prepare.maxAttempts
-            if (retries >= maxAttempts) {
+            const maxRetries = envConfig().executor.workers.job.prepare.maxRetries
+            if (retries >= maxRetries) {
                 throw new JobFailureException({
-                    originalError: new ActionJobTaskPrepareMaxAttemptsException({
-                        maxAttempts,
+                    originalError: new ActionJobTaskPrepareMaxRetriesException({
+                        maxRetries,
                         botId: bot.id,
                         jobId: job.id,
                         metadata: job.metadata,
@@ -132,6 +132,7 @@ export class ClosePositionTaskPrepareService {
                                     taskType: TaskType.ClosePosition,
                                     metadata: job.metadata,
                                     attemptsMade: context.attemptNumber,
+                                    error: context.error?.message ?? "unknown",
                                 }
                             )
                         },

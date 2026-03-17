@@ -140,6 +140,7 @@ export class OpenPositionTaskExecuteService {
                                 stepIndex,
                                 metadata: job.metadata,
                                 attemptsMade: context.attemptNumber,
+                                error: context.error?.message ?? "unknown",
                             }
                         )
                     },
@@ -172,7 +173,7 @@ export class OpenPositionTaskExecuteService {
                     metadata: job.metadata,
                 }
             )
-        } catch (error) {
+        } catch (error) {   
             this.winstonService.log(
                 WinstonLog.ActionJobTaskStepExecutedFailed,
                 {

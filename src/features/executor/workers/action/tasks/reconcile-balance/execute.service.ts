@@ -128,6 +128,7 @@ export class ReconcileBalanceTaskExecuteService {
                                     stepIndex,
                                     metadata: job.metadata,
                                     attemptsMade: context.attemptNumber,
+                                    error: context.error?.message ?? "unknown",
                                 }
                             )
                         },

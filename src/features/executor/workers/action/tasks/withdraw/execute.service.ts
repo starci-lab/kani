@@ -123,6 +123,7 @@ export class WithdrawTaskExecuteService {
                                 stepIndex,
                                 metadata: job.metadata,
                                 attemptsMade: context.attemptNumber,
+                                error: context.error?.message ?? "unknown",
                             }
                         )
                     },

@@ -94,3 +94,46 @@ export class ActionJobTaskPrepareMaxAttemptsException extends AbstractException 
         )
     }
 }
+
+/**
+ * Metadata for job prepare max retries exception.
+ */
+export interface ActionJobTaskPrepareMaxRetriesExceptionMetadata extends AbstractExceptionMetadata {
+    maxRetries: number
+    botId: string
+    jobId: string
+    metadata?: unknown
+    jobType: JobType
+    taskType: TaskType
+    taskIndex: number
+}
+
+export class ActionJobTaskPrepareMaxRetriesException extends AbstractException {
+    constructor(
+        {
+            maxRetries,
+            originalError,
+            botId,
+            jobId,
+            metadata,
+            jobType,
+            taskType,
+            taskIndex,
+        }: ActionJobTaskPrepareMaxRetriesExceptionMetadata
+    ) {
+        super(
+            "Action job task prepare max retries exception",
+            "ACTION_JOB_TASK_PREPARE_MAX_RETRIES_EXCEPTION",
+            {
+                maxRetries,
+                botId,
+                jobId,
+                metadata,
+                jobType,
+                taskType,
+                taskIndex,
+                originalError,
+            }
+        )
+    }
+}

@@ -18,7 +18,7 @@ import {
     BalanceSnapshotService
 } from "@modules/blockchains"
 import {
-    ActionJobTaskPrepareMaxAttemptsException,
+    ActionJobTaskPrepareMaxRetriesException,
     JobFailureException,
     TokenNotFoundException,
 } from "@modules/exceptions"
@@ -105,11 +105,11 @@ export class ReconcileBalanceTaskPrepareService {
             })
             // we check if the task has reached the maximum number of attempts
             const retries = job.tasks?.[taskIndex]?.retries ?? 0
-            const maxAttempts = envConfig().executor.workers.job.prepare.maxAttempts
-            if (retries >= maxAttempts) {
+            const maxRetries = envConfig().executor.workers.job.prepare.maxRetries
+            if (retries >= maxRetries) {
                 throw new JobFailureException({
-                    originalError: new ActionJobTaskPrepareMaxAttemptsException({
-                        maxAttempts,
+                    originalError: new ActionJobTaskPrepareMaxRetriesException({
+                        maxRetries, 
                         botId: bot.id,
                         jobId: job.id,
                         metadata: job.metadata,
@@ -298,6 +298,7 @@ export class ReconcileBalanceTaskPrepareService {
                                     taskType: TaskType.ReconcileBalance,
                                     metadata: job.metadata,
                                     attemptsMade: context.attemptNumber,
+                                    error: context.error?.message ?? "unknown",
                                 }
                             )
                         },

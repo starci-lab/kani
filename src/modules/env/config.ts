@@ -625,8 +625,11 @@ export const envConfig = () => ({
                     key: "EXECUTOR_WORKERS_JOB_LEVEL", defaultValue: 0
                 }),
                 prepare: {
+                    maxRetries: parseEnvInt({
+                        key: "EXECUTOR_WORKERS_JOB_PREPARE_MAX_RETRIES", defaultValue: 5
+                    }),
                     maxAttempts: parseEnvInt({
-                        key: "EXECUTOR_WORKERS_JOB_PREPARE_MAX_ATTEMPTS", defaultValue: 5
+                        key: "EXECUTOR_WORKERS_JOB_PREPARE_MAX_ATTEMPTS", defaultValue: 1
                     }),
                     minTimeout: parseEnvMs({
                         key: "EXECUTOR_WORKERS_JOB_PREPARE_MIN_TIMEOUT", defaultValue: "1s"
@@ -637,7 +640,7 @@ export const envConfig = () => ({
                 },
                 sign: {
                     maxAttempts: parseEnvInt({
-                        key: "EXECUTOR_WORKERS_JOB_SIGN_MAX_ATTEMPTS", defaultValue: 3
+                        key: "EXECUTOR_WORKERS_JOB_SIGN_MAX_ATTEMPTS", defaultValue: 1
                     }),
                     minTimeout: parseEnvMs({
                         key: "EXECUTOR_WORKERS_JOB_SIGN_MIN_TIMEOUT", defaultValue: "1s"
@@ -648,7 +651,7 @@ export const envConfig = () => ({
                 },
                 execute: {
                     maxAttempts: parseEnvInt({
-                        key: "EXECUTOR_WORKERS_JOB_EXECUTE_MAX_ATTEMPTS", defaultValue: 3
+                        key: "EXECUTOR_WORKERS_JOB_EXECUTE_MAX_ATTEMPTS", defaultValue: 1
                     }),
                     minTimeout: parseEnvMs({
                         key: "EXECUTOR_WORKERS_JOB_EXECUTE_MIN_TIMEOUT", defaultValue: "1s"

@@ -125,6 +125,7 @@ export class OpenPositionTaskSignService {
                                 stepIndex: activeStep,
                                 metadata: job.metadata,
                                 attemptsMade: context.attemptNumber,
+                                error: context.error?.message ?? "unknown",
                             }
                         )
                     },

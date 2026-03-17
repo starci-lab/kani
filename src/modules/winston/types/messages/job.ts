@@ -110,6 +110,8 @@ export interface ActionJobPrepareFailedAttemptMessage {
     metadata?: unknown
     /** Attempt number. */
     attemptsMade: number
+    /** Error. */
+    error: string
 }
 
 /**
@@ -585,6 +587,8 @@ export interface ActionJobTaskStepSignedFailedAttemptMessage {
     metadata?: unknown
     /** Attempt number. */
     attemptsMade: number
+    /** Error. */
+    error: string
 }
 
 /**
@@ -629,6 +633,8 @@ export interface ActionJobTaskStepExecuteFailedAttemptMessage {
     metadata?: unknown
     /** Attempt number. */
     attemptsMade: number
+    /** Error. */
+    error: string
 }
 
 /**
