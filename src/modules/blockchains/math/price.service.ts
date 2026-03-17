@@ -8,9 +8,6 @@ import {
     AsyncService, DayjsService 
 } from "@modules/mixin"
 import {
-    PriceByMarketPriorityNotResolvedException,
-} from "@modules/exceptions"
-import {
     AggregatedTokenPriceCacheService 
 } from "@modules/cache"
 import {
@@ -22,6 +19,9 @@ import {
 import {
     PriceSelectionService 
 } from "./price-selection.service"
+import { 
+    Decimal 
+} from "decimal.js"
 
 /**
  * Service responsible for resolving token prices.
@@ -74,9 +74,11 @@ export class PriceService {
         })
 
         if (!resolved) {
-            throw new PriceByMarketPriorityNotResolvedException({
-                id: token.id,
-            })
+            return {
+                price: new Decimal(0),
+                isStale: false,
+                ageMs: 0,
+            }
         }
 
         return resolved
