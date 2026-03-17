@@ -6,6 +6,7 @@ import type {
     SuiMoveObjectData,
     SuiObjectKind
 } from "@modules/blockchains"
+import BN from "bn.js"
 
 /** Params for fetching a Sui object (must be Move object). Throws if not found or not move object. */
 export interface FetchSuiObjectParams {
@@ -31,3 +32,11 @@ export interface FetchTransactionBlockParams {
     /** Transaction hash to fetch */
     txHash: string
 }   
+
+/** Result of fetching a Sui object. */
+export interface FetchSuiObjectResponse<T> {
+    /** Object data */
+    data: T
+    /** Storage rebate */
+    storageRebate: BN
+}

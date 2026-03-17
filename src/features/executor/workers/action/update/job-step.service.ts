@@ -5,6 +5,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
+    ClientSession,
     Connection 
 } from "mongoose"
 import {
@@ -38,116 +39,126 @@ export class JobStepService {
         taskIndex,
         stepIndex,
         error,
+        session,
     }: RollbackToSignParams): Promise<void> {
-        const errorMessage =
-          (error as Error)?.message?.toString?.() ?? `${error ?? "Unknown error"}`
-        const stackTrace =
-          (error as Error)?.stack?.toString?.() ?? `${error ?? "Unknown error"}`
-      
-        const updatedJobResult = await this.connection
-            .model<JobSchema>(JobSchema.name)
-            .updateOne(
-                {
-                    _id: jobId 
-                },
-                [
+        const errorMessage = error.message.toString()
+        const stackTrace = error.stack?.toString()
+        const query = async (clientSession?: ClientSession) => {
+            const updatedJobResult = await this.connection
+                .model<JobSchema>(JobSchema.name)
+                .updateOne(
                     {
-                        $set: {
-                            tasks: {
-                                $map: {
-                                    input: {
-                                        $ifNull: ["$tasks",
-                                            []] 
-                                    },
-                                    as: "task",
-                                    in: {
-                                        $cond: [
-                                            {
-                                                $and: [
-                                                    {
-                                                        $eq: ["$$task.index",
-                                                            taskIndex] 
-                                                    },
-                                                    {
-                                                        $eq: ["$$task.type",
-                                                            taskType] 
-                                                    },
-                                                ],
-                                            },
-                                            {
-                                                $mergeObjects: [
-                                                    "$$task",
-                                                    {
-                                                        steps: {
-                                                            $map: {
-                                                                input: {
-                                                                    $ifNull: ["$$task.steps",
-                                                                        []] 
-                                                                },
-                                                                as: "step",
-                                                                in: {
-                                                                    $cond: [
-                                                                        {
-                                                                            $eq: ["$$step.index",
-                                                                                stepIndex] 
-                                                                        },
-                                                                        {
-                                                                            $mergeObjects: [
-                                                                                "$$step",
-                                                                                {
+                        _id: jobId 
+                    },
+                    [
+                        {
+                            $set: {
+                                tasks: {
+                                    $map: {
+                                        input: {
+                                            $ifNull: ["$tasks",
+                                                []] 
+                                        },
+                                        as: "task",
+                                        in: {
+                                            $cond: [
+                                                {
+                                                    $and: [
+                                                        {
+                                                            $eq: ["$$task.index",
+                                                                taskIndex] 
+                                                        },
+                                                        {
+                                                            $eq: ["$$task.type",
+                                                                taskType] 
+                                                        },
+                                                    ],
+                                                },
+                                                {
+                                                    $mergeObjects: [
+                                                        "$$task",
+                                                        {
+                                                            steps: {
+                                                                $map: {
+                                                                    input: {
+                                                                        $ifNull: ["$$task.steps",
+                                                                            []] 
+                                                                    },
+                                                                    as: "step",
+                                                                    in: {
+                                                                        $cond: [
+                                                                            {
+                                                                                $eq: ["$$step.index",
+                                                                                    stepIndex] 
+                                                                            },
+                                                                            {
+                                                                                $mergeObjects: [
+                                                                                    "$$step",
+                                                                                    {
                                                                                     // rollback
-                                                                                    type: StepType.Sign,
+                                                                                        type: StepType.Sign,
       
-                                                                                    // append failure
-                                                                                    txFailures: {
-                                                                                        $concatArrays: [
-                                                                                            {
-                                                                                                $ifNull: ["$$step.txFailures",
-                                                                                                    []] 
-                                                                                            },
-                                                                                            [
+                                                                                        // append failure
+                                                                                        txFailures: {
+                                                                                            $concatArrays: [
                                                                                                 {
-                                                                                                    errorMessage,
-                                                                                                    stackTrace,
-                                                                                                    snapshotAt: "$$NOW", // or this.dayjsService.now().toDate()
+                                                                                                    $ifNull: ["$$step.txFailures",
+                                                                                                        []] 
                                                                                                 },
+                                                                                                [
+                                                                                                    {
+                                                                                                        errorMessage,
+                                                                                                        stackTrace,
+                                                                                                        snapshotAt: "$$NOW", // or this.dayjsService.now().toDate()
+                                                                                                    },
+                                                                                                ],
                                                                                             ],
-                                                                                        ],
-                                                                                    },
-      
-                                                                                    // reset executeRetries
-                                                                                    executeRetries: 0,
-      
-                                                                                    // increment signRetries
-                                                                                    signRetries: {
-                                                                                        $add: [{
-                                                                                            $ifNull: ["$$step.signRetries",
-                                                                                                0] 
                                                                                         },
-                                                                                        1],
+      
+                                                                                        // reset executeRetries
+                                                                                        executeRetries: 0,
+      
+                                                                                        // increment signRetries
+                                                                                        signRetries: {
+                                                                                            $add: [{
+                                                                                                $ifNull: ["$$step.signRetries",
+                                                                                                    0] 
+                                                                                            },
+                                                                                            1],
+                                                                                        },
                                                                                     },
-                                                                                },
-                                                                            ],
-                                                                        },
-                                                                        "$$step",
-                                                                    ],
+                                                                                ],
+                                                                            },
+                                                                            "$$step",
+                                                                        ],
+                                                                    },
                                                                 },
                                                             },
                                                         },
-                                                    },
-                                                ],
-                                            },
-                                            "$$task",
-                                        ],
+                                                    ],
+                                                },
+                                                "$$task",
+                                            ],
+                                        },
                                     },
                                 },
                             },
                         },
+                    ],
+                    {
+                        session: clientSession 
                     },
-                ],
-            )
-      
-        assert(updatedJobResult.modifiedCount > 0)
+                )
+            assert(updatedJobResult.matchedCount > 0)
+        }
+        if (!session) {
+            const clientSession = await this.connection.startSession()
+            await clientSession.withTransaction(async (clientSession) => {
+                await query(clientSession)
+            })
+        } else {
+            await query(session)
+        }
     }
 
     /**
@@ -180,75 +191,85 @@ export class JobStepService {
                 ],
             }
         }
-        const updatedJobResult = await this.connection
-            .model<JobSchema>(JobSchema.name)
-            .updateOne(
-                {
-                    _id: jobId 
-                },
-                [
+        const query = async (clientSession?: ClientSession) => {
+            const updatedJobResult = await this.connection
+                .model<JobSchema>(JobSchema.name)
+                .updateOne(
                     {
-                        $set: {
-                            tasks: {
-                                $map: {
-                                    input: {
-                                        $ifNull: ["$tasks",
-                                            []] 
-                                    },
-                                    as: "t",
-                                    in: {
-                                        $cond: [
-                                            {
-                                                $eq: ["$$t.index",
-                                                    taskIndex] 
-                                            },
-                                            {
-                                                $mergeObjects: [
-                                                    "$$t",
-                                                    {
-                                                        initialized: false,
+                        _id: jobId 
+                    },
+                    [
+                        {
+                            $set: {
+                                tasks: {
+                                    $map: {
+                                        input: {
+                                            $ifNull: ["$tasks",
+                                                []] 
+                                        },
+                                        as: "t",
+                                        in: {
+                                            $cond: [
+                                                {
+                                                    $eq: ["$$t.index",
+                                                        taskIndex] 
+                                                },
+                                                {
+                                                    $mergeObjects: [
+                                                        "$$t",
+                                                        {
+                                                            initialized: false,
       
-                                                        // increment task-level retries
-                                                        retries: {
-                                                            $add: [{
-                                                                $ifNull: ["$$t.retries",
-                                                                    0] 
+                                                            // increment task-level retries
+                                                            retries: {
+                                                                $add: [{
+                                                                    $ifNull: ["$$t.retries",
+                                                                        0] 
+                                                                },
+                                                                1],
                                                             },
-                                                            1],
-                                                        },
       
-                                                        // reset step retries; optionally increment signProcessingRetries per step
-                                                        steps: {
-                                                            $map: {
-                                                                input: {
-                                                                    $ifNull: ["$$t.steps",
-                                                                        []] 
-                                                                },
-                                                                as: "s",
-                                                                in: {
-                                                                    $mergeObjects: [
-                                                                        "$$s",
-                                                                        stepUpdateFields,
-                                                                    ],
+                                                            // reset step retries; optionally increment signProcessingRetries per step
+                                                            steps: {
+                                                                $map: {
+                                                                    input: {
+                                                                        $ifNull: ["$$t.steps",
+                                                                            []] 
+                                                                    },
+                                                                    as: "s",
+                                                                    in: {
+                                                                        $mergeObjects: [
+                                                                            "$$s",
+                                                                            stepUpdateFields,
+                                                                        ],
+                                                                    },
                                                                 },
                                                             },
                                                         },
-                                                    },
-                                                ],
-                                            },
-                                            "$$t",
-                                        ],
+                                                    ],
+                                                },
+                                                "$$t",
+                                            ],
+                                        },
                                     },
                                 },
                             },
                         },
+                    ],
+                    {
+                        session: clientSession,
                     },
-                ],
-                {
-                    session 
-                },
-            )
-        assert(updatedJobResult.matchedCount > 0)
+                )
+            assert(updatedJobResult.matchedCount > 0)
+        }
+        if (!session) {
+            const clientSession = await this.connection.startSession()
+            await clientSession.withTransaction(async (clientSession) => {
+                await query(clientSession)
+            })
+        } else {
+            await query(session)
+        }
     }
 
     /**
@@ -260,30 +281,44 @@ export class JobStepService {
         jobId,
         taskIndex,
         stepIndex,
-        taskType  
+        taskType,
+        session,
     }: UpdateExecuteRetriesParams): Promise<void> {
-        const updatedJobResult = await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-            {
-                _id: jobId,
-            },
-            {
-                $inc: {
-                    "tasks.$[task].steps.$[step].executeRetries": 1,
-                },
-            },
-            {
-                arrayFilters: [
+        const query = async (clientSession?: ClientSession) => {
+            const updatedJobResult = await this.connection
+                .model<JobSchema>(JobSchema.name)
+                .updateOne(
                     {
-                        "task.index": taskIndex,
-                        "task.type": taskType,
+                        _id: jobId,
                     },
                     {
-                        "step.index": stepIndex,
+                        $inc: {
+                            "tasks.$[task].steps.$[step].executeRetries": 1,
+                        },
                     },
-                ],
-            },
-        )
-        assert(updatedJobResult.matchedCount > 0)
+                    {
+                        arrayFilters: [
+                            {
+                                "task.index": taskIndex,
+                                "task.type": taskType,
+                            },
+                            {
+                                "step.index": stepIndex,
+                            },
+                        ],
+                        session: clientSession,
+                    },
+                )
+            assert(updatedJobResult.matchedCount > 0)
+        }
+        if (!session) {
+            const clientSession = await this.connection.startSession()
+            await clientSession.withTransaction(async (clientSession) => {
+                await query(clientSession)
+            })
+        } else {
+            await query(session)
+        }
     }
 
     /**
@@ -296,33 +331,45 @@ export class JobStepService {
         taskIndex,
         stepIndex,
         signedTx,
+        session,
     }: SetStepSignedAndAdvanceToExecuteParams): Promise<void> {
-        const result = await this.connection
-            .model<JobSchema>(JobSchema.name)
-            .updateOne(
-                {
-                    _id: jobId,
-                },
-                {
-                    $set: {
-                        "tasks.$[task].steps.$[step].type": StepType.Execute,
-                        "tasks.$[task].steps.$[step].signedTx": signedTx,
-                        "tasks.$[task].steps.$[step].signProcessingRetries": 0,
+        const query = async (clientSession?: ClientSession) => {
+            const updatedJobResult = await this.connection
+                .model<JobSchema>(JobSchema.name)
+                .updateOne(
+                    {
+                        _id: jobId,
                     },
-                },
-                {
-                    arrayFilters: [
-                        {
-                            "task.index": taskIndex,
-                            "task.type": taskType,
+                    {
+                        $set: {
+                            "tasks.$[task].steps.$[step].type": StepType.Execute,
+                            "tasks.$[task].steps.$[step].signedTx": signedTx,
+                            "tasks.$[task].steps.$[step].signProcessingRetries": 0,
                         },
-                        {
-                            "step.index": stepIndex,
-                        },
-                    ],
-                },
-            )
-        assert(result.matchedCount > 0)
+                    },
+                    {
+                        arrayFilters: [
+                            {
+                                "task.index": taskIndex,
+                                "task.type": taskType,
+                            },
+                            {
+                                "step.index": stepIndex,
+                            },
+                        ],
+                        session: clientSession,
+                    },
+                )
+            assert(updatedJobResult.matchedCount > 0)
+        }
+        if (!session) {
+            const clientSession = await this.connection.startSession()
+            await clientSession.withTransaction(async (clientSession) => {
+                await query(clientSession)
+            })
+        } else {
+            await query(session)
+        }
     }
 
     /**
@@ -335,39 +382,51 @@ export class JobStepService {
         taskIndex,
         stepIndex,
         executeResult,
+        session,
     }: SetStepExecuteResultAndAdvanceParams): Promise<void> {
-        const result = await this.connection
-            .model<JobSchema>(JobSchema.name)
-            .updateOne(
-                {
-                    _id: jobId,
-                },
-                {
-                    $set: {
-                        "tasks.$[task].steps.$[step].executeResult": executeResult,
-                        "tasks.$[task].steps.$[step].type": StepType.Execute,
-                        "tasks.$[task].steps.$[step].executeRetries": 0,
-                        "tasks.$[task].steps.$[step].signRetries": 0,
-                        "tasks.$[task].steps.$[step].signProcessingRetries": 0,
-                        "tasks.$[task].prepareProcessingRetries": 0,
-                        "tasks.$[task].retries": 0,
+        const query = async (clientSession?: ClientSession) => {
+            const result = await this.connection
+                .model<JobSchema>(JobSchema.name)
+                .updateOne(
+                    {
+                        _id: jobId,
                     },
-                    $inc: {
-                        "tasks.$[task].activeStep": 1,
+                    {
+                        $set: {
+                            "tasks.$[task].steps.$[step].executeResult": executeResult,
+                            "tasks.$[task].steps.$[step].type": StepType.Execute,
+                            "tasks.$[task].steps.$[step].executeRetries": 0,
+                            "tasks.$[task].steps.$[step].signRetries": 0,
+                            "tasks.$[task].steps.$[step].signProcessingRetries": 0,
+                            "tasks.$[task].prepareProcessingRetries": 0,
+                            "tasks.$[task].retries": 0,
+                        },
+                        $inc: {
+                            "tasks.$[task].activeStep": 1,
+                        },
                     },
-                },
-                {
-                    arrayFilters: [
-                        {
-                            "task.index": taskIndex,
-                            "task.type": taskType,
-                        },
-                        {
-                            "step.index": stepIndex,
-                        },
-                    ],
-                },
-            )
-        assert(result.matchedCount > 0)
+                    {
+                        arrayFilters: [
+                            {
+                                "task.index": taskIndex,
+                                "task.type": taskType,
+                            },
+                            {
+                                "step.index": stepIndex,
+                            },
+                        ],
+                        session: clientSession,
+                    },
+                )
+            assert(result.matchedCount > 0)
+        }
+        if (!session) {
+            const clientSession = await this.connection.startSession()
+            await clientSession.withTransaction(async (clientSession) => {
+                await query(clientSession)
+            })
+        } else {
+            await query(session)
+        }
     }
 }

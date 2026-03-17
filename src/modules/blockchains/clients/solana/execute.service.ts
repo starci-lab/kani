@@ -77,6 +77,7 @@ export class SolanaExecuteService {
                             solanaTx,
                             {
                                 commitment: "confirmed",
+                                maxRetries: BigInt(1),
                             },
                         )
                     },

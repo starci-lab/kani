@@ -118,15 +118,17 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
             }
         }
         // fetch the position
-        const { liquidity } = await this.suiFetchService.fetchObject<FlowXClmmPosition>({
+        const { data: position, storageRebate } = await this.suiFetchService.fetchObject<FlowXClmmPosition>({
             objectId: positionId,
             kind: SuiObjectKind.Position,
             dexId: DexId.FlowX,
             liquidityPool,
         })
         // return the position liquidity
+        const rentAmount = storageRebate
         return {
-            liquidity: new BN(liquidity),
+            rentAmount,
+            liquidity: new BN(position.liquidity),
         }
     }
 

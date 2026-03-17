@@ -105,7 +105,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
     async confirm(
         { positionId, liquidityPool }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
-        const { liquidity } = await this.suiFetchService.fetchObject<MomentumPool>(
+        const { data: liquidityPosition, storageRebate } = await this.suiFetchService.fetchObject<MomentumPool>(
             {
                 objectId: positionId,
                 kind: SuiObjectKind.Position,
@@ -113,8 +113,10 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                 liquidityPool,
             }
         )
+        const rentAmount = storageRebate
         return {
-            liquidity: new BN(liquidity),
+            rentAmount,
+            liquidity: new BN(liquidityPosition.liquidity),
         }
     }
 

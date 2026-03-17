@@ -8,6 +8,7 @@ import {
 } from "@modules/mixin"
 import SuperJSON from "superjson"
 import {
+    ClientSession,
     Connection 
 } from "mongoose"
 import {
@@ -63,98 +64,107 @@ export class JobTaskService {
         }
 
         // upsert the task into the database
-        const updatedJobResult = await this.connection
-            .model<JobSchema>(JobSchema.name)
-            .updateOne(
-                {
-                    _id: jobId 
-                },
-                [
+        const query = async (clientSession?: ClientSession) => {
+            const result = await this.connection
+                .model<JobSchema>(JobSchema.name)
+                .updateOne(
                     {
-                        $set: {
-                            tasks: {
-                                $let: {
-                                    vars: {
-                                        tasksSafe: {
-                                            $ifNull: ["$tasks",
-                                                []] 
-                                        },
-                                        exists: {
-                                            $in: [
-                                                taskIndex,
-                                                {
-                                                    $map: {
-                                                        input: {
-                                                            $ifNull: ["$tasks",
-                                                                []] 
+                        _id: jobId 
+                    },
+                    [
+                        {
+                            $set: {
+                                tasks: {
+                                    $let: {
+                                        vars: {
+                                            tasksSafe: {
+                                                $ifNull: ["$tasks",
+                                                    []] 
+                                            },
+                                            exists: {
+                                                $in: [
+                                                    taskIndex,
+                                                    {
+                                                        $map: {
+                                                            input: {
+                                                                $ifNull: ["$tasks",
+                                                                    []] 
+                                                            },
+                                                            as: "t",
+                                                            in: "$$t.index",
                                                         },
-                                                        as: "t",
-                                                        in: "$$t.index",
                                                     },
+                                                ],
+                                            },
+                                        },
+                                        in: {
+                                            $cond: [
+                                                "$$exists",
+                                                {
+                                                // update existing task
+                                                    $map: {
+                                                        input: "$$tasksSafe",
+                                                        as: "t",
+                                                        in: {
+                                                            $cond: [
+                                                                {
+                                                                    $eq: ["$$t.index",
+                                                                        taskIndex] 
+                                                                },
+                                                                {
+                                                                    $mergeObjects: [
+                                                                        "$$t",
+                                                                        taskDoc,
+                                                                        {
+                                                                        // refresh prepared snapshot and mark it as initialized again
+                                                                            initialized: true,
+                                                                            // bump retries because we are re-preparing/retrying the task
+                                                                            retries: {
+                                                                                $add: [
+                                                                                    {
+                                                                                        $ifNull: ["$$t.retries",
+                                                                                            0] 
+                                                                                    },
+                                                                                    1,
+                                                                                ],
+                                                                            },
+                                                                        },
+                                                                    ],
+                                                                },
+                                                                "$$t",
+                                                            ],
+                                                        },
+                                                    },
+                                                },
+                                                {
+                                                // append new task
+                                                    $concatArrays: [
+                                                        "$$tasksSafe",
+                                                        [taskDoc]
+                                                    ],
                                                 },
                                             ],
                                         },
                                     },
-                                    in: {
-                                        $cond: [
-                                            "$$exists",
-                                            {
-                                                // update existing task
-                                                $map: {
-                                                    input: "$$tasksSafe",
-                                                    as: "t",
-                                                    in: {
-                                                        $cond: [
-                                                            {
-                                                                $eq: ["$$t.index",
-                                                                    taskIndex] 
-                                                            },
-                                                            {
-                                                                $mergeObjects: [
-                                                                    "$$t",
-                                                                    taskDoc,
-                                                                    {
-                                                                        // refresh prepared snapshot and mark it as initialized again
-                                                                        initialized: true,
-                                                                        // bump retries because we are re-preparing/retrying the task
-                                                                        retries: {
-                                                                            $add: [
-                                                                                {
-                                                                                    $ifNull: ["$$t.retries",
-                                                                                        0] 
-                                                                                },
-                                                                                1,
-                                                                            ],
-                                                                        },
-                                                                    },
-                                                                ],
-                                                            },
-                                                            "$$t",
-                                                        ],
-                                                    },
-                                                },
-                                            },
-                                            {
-                                                // append new task
-                                                $concatArrays: [
-                                                    "$$tasksSafe",
-                                                    [taskDoc]
-                                                ],
-                                            },
-                                        ],
-                                    },
                                 },
                             },
                         },
+                    ],
+                    {
+                        session: clientSession 
                     },
-                ],
-                {
-                    session 
-                },
-            )
-
-        // Ensure job exists (and ideally the update is applied)
-        assert(updatedJobResult.matchedCount > 0)
+                )
+            // Ensure job exists (and ideally the update is applied)
+            assert(result.matchedCount > 0)
+        }
+        if (!session) {
+            const clientSession = await this.connection.startSession()
+            await clientSession.withTransaction(async (clientSession) => {
+                await query(clientSession)
+            })
+        } else {
+            await query(session)
+        }
     }
 
     /**
@@ -166,34 +176,72 @@ export class JobTaskService {
         taskIndex,
         session,
     }: UpdatePrepareProcessingRetriesParams): Promise<void> {
-    
-        const result = await this.connection
-            .model<JobSchema>(JobSchema.name)
-            .updateOne(
-                {
-                    _id: jobId,
-                    "tasks.index": taskIndex,
-                },
-                [
+        const query = async (clientSession?: ClientSession): Promise<void> => {
+            const result = await this.connection
+                .model<JobSchema>(JobSchema.name)
+                .updateOne(
                     {
-                        $set: {
-                            "tasks.$.prepareProcessingRetries": {
-                                $add: [
-                                    {
-                                        $ifNull: ["$tasks.$.prepareProcessingRetries",
-                                            0] 
+                        _id: jobId,
+                        "tasks.index": taskIndex,
+                    },
+                    [
+                        {
+                            $set: {
+                                tasks: {
+                                    $map: {
+                                        input: {
+                                            $ifNull: ["$tasks",
+                                                []] 
+                                        },
+                                        as: "t",
+                                        in: {
+                                            $cond: [
+                                                {
+                                                    $eq: ["$$t.index",
+                                                        taskIndex] 
+                                                },
+                                                {
+                                                    $mergeObjects: [
+                                                        "$$t",
+                                                        {
+                                                            prepareProcessingRetries: {
+                                                                $add: [
+                                                                    {
+                                                                        $ifNull: [
+                                                                            "$$t.prepareProcessingRetries",
+                                                                            0,
+                                                                        ],
+                                                                    },
+                                                                    1,
+                                                                ],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                                "$$t",
+                                            ],
+                                        },
                                     },
-                                    1
-                                ]
-                            }
-                        }
-                    }
-                ],
-                {
-                    session 
-                }
-            )
+                                },
+                            },
+                        },
+                    ],
+                    {
+                        session: clientSession,
+                    },
+                )
     
-        assert(result.matchedCount > 0)
+            assert(result.matchedCount > 0)
+        }
+    
+        if (!session) {
+            const clientSession = await this.connection.startSession()
+            await clientSession.withTransaction(async () => {
+                await query(clientSession)
+            })
+            return
+        }
+    
+        await query(session)
     }
 }

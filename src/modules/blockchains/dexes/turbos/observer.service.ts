@@ -116,13 +116,13 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
     private async fetchPoolInfo(liquidityPool: LiquidityPoolSchema): Promise<void> {
         try {
             // fetch pool information from on-chain
-            const objectInfo = await this.suiFetchService.fetchObject<TurbosSuiObjectPoolFields>({
+            const { data: poolRaw } = await this.suiFetchService.fetchObject<TurbosSuiObjectPoolFields>({
                 objectId: liquidityPool.poolAddress,
                 kind: SuiObjectKind.Pool,
                 dexId: DexId.Turbos,
                 liquidityPool,
             })
-            const pool = parseTurbosPool(objectInfo)
+            const pool = parseTurbosPool(poolRaw)
             await this.handlePoolStateUpdate({
                 liquidityPool,
                 state: pool

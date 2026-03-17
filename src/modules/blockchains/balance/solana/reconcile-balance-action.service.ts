@@ -76,7 +76,9 @@ export class SolanaReconcileBalanceActionService {
      * @example
      * const prepareTxs = await service.prepare({ bot, tokenInputs })
      */
-    public async prepare({ bot, tokenInputs }: PrepareReconcileBalanceTransactionParams): Promise<PrepareReconcileBalanceTransactionResult> {
+    public async prepare(
+        { bot, tokenInputs }: PrepareReconcileBalanceTransactionParams
+    ): Promise<PrepareReconcileBalanceTransactionResult> {
         const prepareTxs: Array<PrepareTx> = []
         for (const tokenInput of tokenInputs) {
             // skip swap if tokenIn and tokenOut are the same

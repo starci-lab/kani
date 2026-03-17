@@ -337,6 +337,9 @@ export const envConfig = () => ({
                 slippage: parseEnvFloat({
                     key: "DEXES_METEORA_OPEN_POSITION_SLIPPAGE", defaultValue: 0.2
                 }),
+                maxActiveBinSlippage: parseEnvInt({
+                    key: "DEXES_METEORA_OPEN_POSITION_MAX_ACTIVE_BIN_SLIPPAGE", defaultValue: 0
+                }),
             },
             interval: {
                 analyticsRequestDelayMs: parseEnvMs({

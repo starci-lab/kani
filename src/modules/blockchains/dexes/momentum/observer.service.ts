@@ -132,13 +132,13 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
     ) {
         try {
             // Fetch object info from Sui client
-            const objectInfo = await this.suiFetchService.fetchObject<MomentumSuiObjectPoolFields>({
+            const { data: poolRaw } = await this.suiFetchService.fetchObject<MomentumSuiObjectPoolFields>({
                 objectId: liquidityPool.poolAddress,
                 kind: SuiObjectKind.Pool,
                 dexId: DexId.Momentum,
                 liquidityPool,
             })
-            const pool = parseMomentumPool(objectInfo)
+            const pool = parseMomentumPool(poolRaw)
             return await this.handlePoolStateUpdate(liquidityPool,
                 pool)
         } catch (error) {

@@ -46,3 +46,17 @@ export interface GeneratePubKeyResult {
     publicKey: Address
     seed: string
 }
+
+/** Params for creating idempotent ATA instructions. */
+export interface CreateIdempotentAtaInstructionsParams {
+    tokenMint?: Address
+    ownerAddress: Address
+    is2022Token?: boolean
+    amount?: BN
+}
+
+/** Result of create idempotent ATA instructions: instructions and ATA address. */
+export interface CreateIdempotentAtaInstructionsResult {
+    instructions: Array<Instruction>
+    ataAddress: Address
+}

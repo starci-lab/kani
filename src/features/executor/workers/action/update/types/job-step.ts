@@ -28,6 +28,10 @@ export interface RollbackToSignParams {
      * The error that occurred.
      */
     error: Error
+    /**
+     * Optional session for atomic transaction.
+     */
+    session?: ClientSession
 }
 
 /**
@@ -72,6 +76,10 @@ export interface UpdateExecuteRetriesParams {
      * The index of the step.
      */
     stepIndex: number
+    /**
+     * Optional session for atomic transaction.
+     */
+    session?: ClientSession
 }
 
 /**
@@ -86,6 +94,10 @@ export interface SetStepSignedAndAdvanceToExecuteParams {
      * Serialized signed transaction (e.g. SuperJSON string).
      */
     signedTx: string
+    /**
+     * Optional session for atomic transaction.
+     */
+    session?: ClientSession
 }
 
 /**
@@ -100,4 +112,8 @@ export interface SetStepExecuteResultAndAdvanceParams {
      * Serialized execute result (e.g. SuperJSON string).
      */
     executeResult: string
+    /**
+     * Optional session for atomic transaction.
+     */
+    session?: ClientSession
 }

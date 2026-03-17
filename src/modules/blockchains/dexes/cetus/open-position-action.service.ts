@@ -114,7 +114,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         { positionId, liquidityPool }
         : ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
-        const { liquidity } = await this
+        const { data: liquidityPosition, storageRebate } = await this
             .suiFetchService
             .fetchObject<CetusLiquidityPosition>(
                 {
@@ -124,8 +124,10 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     liquidityPool,
                 }
             )
+        const rentAmount = storageRebate
         return {
-            liquidity: new BN(liquidity),
+            rentAmount,
+            liquidity: new BN(liquidityPosition.liquidity),
         }
     }
 

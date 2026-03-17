@@ -16,6 +16,7 @@ import {
     getCloseAccountInstruction as getToken2022CloseAccountInstruction,
     getCreateAssociatedTokenInstruction as getToken2022CreateAssociatedTokenInstruction,
     findAssociatedTokenPda as findToken2022AssociatedTokenPda,
+    getCreateAssociatedTokenIdempotentInstruction as getToken2022CreateAssociatedTokenIdempotentInstruction,
 } from "@solana-program/token-2022"
 import {
     TOKEN_PROGRAM_ADDRESS,
@@ -24,6 +25,7 @@ import {
     getTokenSize,
     getInitializeAccountInstruction,
     getCloseAccountInstruction,
+    getCreateAssociatedTokenIdempotentInstruction,
 } from "@solana-program/token"
 import {
     getCreateAccountWithSeedInstruction
@@ -47,7 +49,9 @@ import {
     GeneratePubKeyParams,
     GeneratePubKeyResult,
     GetOrCreateAtaInstructionsParams,
-    GetOrCreateAtaInstructionsResult
+    GetOrCreateAtaInstructionsResult,
+    CreateIdempotentAtaInstructionsParams,
+    CreateIdempotentAtaInstructionsResult
 } from "../types"
 import {
     WSOL_MINT_ADDRESS 
@@ -139,6 +143,57 @@ export class AtaInstructionService {
             ataAddress,
             instructions: [createInstruction],
             endInstructions: [],
+        }
+    }
+
+    /**
+     * Creates idempotent ATA instructions.
+     *
+     * @param param - Token mint, owner address, token program variant, amount
+     * @returns Instructions and ATA address
+     *
+     * @example
+     * const { instructions, ataAddress } = await service.createIdempotentAtaInstructions({ tokenMint, ownerAddress, amount })
+     */
+    async createIdempotentAtaInstructions({
+        tokenMint,
+        ownerAddress,
+        is2022Token = false,
+        amount = new BN(0),
+    }: CreateIdempotentAtaInstructionsParams): Promise<CreateIdempotentAtaInstructionsResult> {
+        if (!tokenMint) {
+            return await this.createWSolAccountInstructions({
+                ownerAddress,
+                is2022Token,
+                amount,
+                pdaOnly: false,
+            })
+        }
+        const tokenProgram = is2022Token
+            ? TOKEN_2022_PROGRAM_ADDRESS
+            : TOKEN_PROGRAM_ADDRESS
+        const _findAssociatedTokenPda = is2022Token
+            ? findToken2022AssociatedTokenPda
+            : findAssociatedTokenPda
+        const [ataAddress] = await _findAssociatedTokenPda({
+            mint: tokenMint,
+            owner: ownerAddress,
+            tokenProgram,
+        })
+        const _getCreateAssociatedTokenIdempotentInstruction = is2022Token
+            ? getToken2022CreateAssociatedTokenIdempotentInstruction
+            : getCreateAssociatedTokenIdempotentInstruction
+        return {
+            instructions: [
+                _getCreateAssociatedTokenIdempotentInstruction({
+                    ata: ataAddress,
+                    payer: createNoopSigner(ownerAddress),
+                    owner: ownerAddress,
+                    mint: tokenMint,
+                    tokenProgram,
+                }),
+            ],
+            ataAddress,
         }
     }
 

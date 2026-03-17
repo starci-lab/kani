@@ -98,8 +98,6 @@ export class OpenPositionInstructionService {
                 liquidityPoolId: liquidityPool.displayId,
             })
         }
-        const remainingAmountA = amountA
-        const remainingAmountB = amountB
         const metadata = liquidityPool.metadata as MeteoraLiquidityPoolMetadata
         const tokenA = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenA.toString())
         const tokenB = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenB.toString())
@@ -131,8 +129,8 @@ export class OpenPositionInstructionService {
         }
         const positionKeyPair = await this.solanaKeypairService.generateKeypair()
         const liquidityStrategyParameters = buildLiquidityStrategyParameters(
-            remainingAmountA,
-            remainingAmountB,
+            amountA,
+            amountB,
             minBinId.sub(state.activeId),
             maxBinId.sub(state.activeId),
             new BN(liquidityPool.dlmmState.binStep),
@@ -140,18 +138,30 @@ export class OpenPositionInstructionService {
             state.activeId,
             getLiquidityStrategyParameterBuilder(StrategyType.Curve)
         )
-        const { ataAddress: ataAAddress } = await this.ataInstructionService.getOrCreateAtaInstructions({
+        const { 
+            ataAddress: ataAAddress, 
+            instructions: createAtaAInstructions 
+        } = await this.ataInstructionService.createIdempotentAtaInstructions({
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            pdaOnly: true,
+            amount: amountA,
         })
-        const { ataAddress: ataBAddress } = await this.ataInstructionService.getOrCreateAtaInstructions({
+        if (createAtaAInstructions?.length) {
+            instructions.push(...createAtaAInstructions)
+        }
+        const { 
+            ataAddress: ataBAddress, 
+            instructions: createAtaBInstructions 
+        } = await this.ataInstructionService.createIdempotentAtaInstructions({
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            pdaOnly: true,
+            amount: amountB,
         })
+        if (createAtaBInstructions?.length) {
+            instructions.push(...createAtaBInstructions)
+        }
         const { pda: eventAuthorityPda } = await this.eventAuthorityService.getPda({
             programAddress: address(metadata.programAddress),
         })
@@ -226,7 +236,7 @@ export class OpenPositionInstructionService {
                 singleSidedX: false,
             },
             slippagePercentage: slippagePercentage.toNumber(),
-            maxActiveBinSlippage: slippagePercentage.toNumber(),
+            maxActiveBinSlippage: envConfig().dexes.meteora.openPosition.maxActiveBinSlippage,
             positionAddress: address(positionKeyPair.publicKey.toBase58()),
             positionMinBinId: minBinId.toNumber(),
             positionMaxBinId: maxBinId.toNumber(),

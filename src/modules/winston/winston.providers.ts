@@ -2,17 +2,19 @@ import winston, {
     format, transports, createLogger
 } from "winston"
 import {
-    CONSOLE_WINSTON, LOKI_WINSTON 
+    CONSOLE_WINSTON,
+    LOKI_WINSTON,
+    WINSTON_AND_CONSOLE,
 } from "./constants"
 import {
-    utilities 
+    utilities
 } from "nest-winston"
 import {
-    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE
 } from "./winston.module-definition"
 import LokiTransport from "winston-loki"
 import {
-    envConfig 
+    envConfig
 } from "@modules/env"
 import {
     buildAppName,
@@ -24,8 +26,10 @@ import {
 export const createConsoleTransport = (
     options: typeof OPTIONS_TYPE
 ) => {
-    const appName = buildAppName(options.serviceName,
-        options.id)
+    const appName = buildAppName(
+        options.serviceName,
+        options.id
+    )
     return new transports.Console({
         format: format.combine(
             format.timestamp(),
@@ -37,7 +41,7 @@ export const createConsoleTransport = (
                     prettyPrint: true,
                     appName: true,
                     processId: true
-                }
+                },
             ),
         ),
     })
@@ -71,41 +75,57 @@ export const createLokiTransport = (
     )
 }
 
-export const createConsoleWinstonProvider = () => {
+/**
+ * Provider: logger with console transport only.
+ */
+export const createConsoleOnlyWinstonProvider = () => {
     return {
         provide: CONSOLE_WINSTON,
         inject: [MODULE_OPTIONS_TOKEN],
-        useFactory: (
-            options: typeof OPTIONS_TYPE
-        ) => {
-            return createLogger(
-                {
-                    level: options.level,
-                    transports: [
-                        ...((options.useConsole ?? true) ? [createConsoleTransport(options)] : []),
-                    ],
-                }
-            )
+        useFactory: (options: typeof OPTIONS_TYPE) => {
+            return createLogger({
+                level: options.level,
+                transports: [
+                    ...((options.useConsole ?? true) ? [createConsoleTransport(options)] : []),
+                ]
+            })
         },
     }
 }
 
-export const createLokiWinstonProvider = () => {
+/**
+ * Provider: logger with Loki transport only.
+ */
+export const createLokiOnlyWinstonProvider = () => {
     return {
         provide: LOKI_WINSTON,
         inject: [MODULE_OPTIONS_TOKEN],
-        useFactory: (
-            options: typeof OPTIONS_TYPE
-        ) => {
-            return createLogger(
-                {
-                    level: options.level,
-                    transports: [
-                        ...((options.useConsole ?? true) ? [createConsoleTransport(options)] : []),
-                        createLokiTransport(options),
-                    ],
-                }
-            )
-        }
+        useFactory: (options: typeof OPTIONS_TYPE) => {
+            return createLogger({
+                level: options.level,
+                transports: [
+                    createLokiTransport(options)
+                ],
+            })
+        },
     }
-}   
+}
+
+/**
+ * Provider: logger with both console and Loki transports (winston + console).
+ */
+export const createWinstonAndConsoleProvider = () => {
+    return {
+        provide: WINSTON_AND_CONSOLE,
+        inject: [MODULE_OPTIONS_TOKEN],
+        useFactory: (options: typeof OPTIONS_TYPE) => {
+            return createLogger({
+                level: options.level,
+                transports: [
+                    ...((options.useConsole ?? true) ? [createConsoleTransport(options)] : []),
+                    createLokiTransport(options),
+                ],
+            })
+        },
+    }
+}

@@ -99,8 +99,16 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
             dexId: DexId.Meteora,
             liquidityPool,
         })
+        const accountInfo = await this.solanaFetchService.fetchAccount({
+            address: positionId,
+            kind: AccountKind.PersonalPosition,
+            dexId: DexId.Meteora,
+            liquidityPool,
+        })
+        const rentAmount = 
+            new BN(accountInfo.lamports.valueOf().toString())
         return {
-            // Temporary empty, will need other logic to get liquidity
+            rentAmount,
         }
     }
 
@@ -140,7 +148,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
             })
         }
         // stage: state validation (pool token metadata must exist)
-const tokenA = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenA.toString())
+        const tokenA = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenA.toString())
         const tokenB = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.tokenB.toString())
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
@@ -293,6 +301,7 @@ const tokenA = this.primaryMemoryStorageService.tokenMap.get(liquidityPool.token
             transactionType: TransactionType.OpenPosition,
             liquidityPoolId: liquidityPool.displayId,
         })
+        
         return {
             positionId,
             txHash,

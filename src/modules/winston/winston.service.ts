@@ -1,8 +1,10 @@
 import {
-    Injectable
+    Injectable,
 } from "@nestjs/common"
 import {
-    InjectConsoleWinston, InjectLokiWinston 
+    InjectConsoleWinston,
+    InjectLokiWinston,
+    InjectWinstonAndConsole,
 } from "./winston.decorators"
 import {
     configMap,
@@ -14,7 +16,7 @@ import {
     WinstonLevel,
 } from "./types"
 import {
-    Logger 
+    Logger,
 } from "winston"
 import _ from "lodash"
 
@@ -28,100 +30,77 @@ export class WinstonService {
         private readonly consoleLogger: Logger,
         @InjectLokiWinston()
         private readonly lokiLogger: Logger,
+        @InjectWinstonAndConsole()
+        private readonly winstonAndConsoleLogger: Logger,
     ) {}
 
     /**
      * Log a message.
+     * Chooses logger from config: console only, loki only, or both (winston + console).
+     *
      * @param name - The name of the log.
      * @param message - The message to log.
-     * @returns void.
      */
     public log<TName extends WinstonLog>(
         name: TName,
         message: (typeof configMap)[TName]["messageType"],
-    ) {
-        // remove undefined values from the message
+    ): void {
         const _message = _.omitBy(message,
             _.isUndefined)
         const config = configMap[name]
-        if (config.loki) {
-            switch (config.level) {
-            case WinstonLevel.Error: {
-                this.lokiLogger.error(
-                    config.name,
-                    _message)
-                break
-            }
-            case WinstonLevel.Verbose: {
-                this.lokiLogger.verbose(
-                    config.name,
-                    _message)
-                break
-            }
-            case WinstonLevel.Debug: {
-                this.lokiLogger.debug(
-                    config.name,
-                    _message)
-                break
-            }
-            case WinstonLevel.Fatal: {
-                this.lokiLogger.error(
-                    config.name,
-                    _message)
-                break
-            }
-            case WinstonLevel.Warn: {
-                this.lokiLogger.warn(
-                    config.name,
-                    _message)
-                break
-            }
-            default: {
-                this.lokiLogger.info(
-                    config.name,
-                    message)
-                break
-            }
-            }
-        } else {
-            switch (config.level) {
-            case WinstonLevel.Error: {
-                this.consoleLogger.error(
-                    config.name,
-                    _message)
-                break
-            }
-            case WinstonLevel.Verbose: {
-                this.consoleLogger.verbose(
-                    config.name,
-                    _message)
-                break
-            }
-            case WinstonLevel.Debug: {
-                this.consoleLogger.debug(
-                    config.name,
-                    _message)
-                break
-            }
-            case WinstonLevel.Fatal: {
-                this.consoleLogger.error(
-                    config.name,
-                    _message)
-                break
-            }
-            case WinstonLevel.Warn: {
-                this.consoleLogger.warn(
-                    config.name,
-                    _message)
-                break
-            }
-            default: {
-                this.consoleLogger.info(
-                    config.name,
-                    _message)
-                break
-            }
-            }
+        const logger = this.getLogger(config)
+        if (!logger) {
+            return
         }
+        switch (config.level) {
+        case WinstonLevel.Error: {
+            logger.error(config.name,
+                _message)
+            break
+        }
+        case WinstonLevel.Verbose: {
+            logger.verbose(config.name,
+                _message)
+            break
+        }
+        case WinstonLevel.Debug: {
+            logger.debug(config.name,
+                _message)
+            break
+        }
+        case WinstonLevel.Fatal: {
+            logger.error(config.name,
+                _message)
+            break
+        }
+        case WinstonLevel.Warn: {
+            logger.warn(config.name,
+                _message)
+            break
+        }
+        default: {
+            logger.info(config.name,
+                _message)
+            break
+        }
+        }
+    }
+
+    /**
+     * Resolve which logger to use from config.console and config.loki.
+     */
+    private getLogger(config: { console?: boolean; loki?: boolean }): Logger | null {
+        const useConsole = config.console !== false
+        const useLoki = config.loki === true
+        if (useConsole && useLoki) {
+            return this.winstonAndConsoleLogger
+        }
+        if (useConsole) {
+            return this.consoleLogger
+        }
+        if (useLoki) {
+            return this.lokiLogger
+        }
+        return null
     }
 }

@@ -13,6 +13,7 @@ import {
 } from "@modules/exceptions"
 import type {
     FetchSuiObjectParams,
+    FetchSuiObjectResponse,
     FetchTransactionBlockParams,
 } from "./types"
 import {
@@ -21,6 +22,7 @@ import {
 import {
     SuiTransactionBlockResponse 
 } from "@mysten/sui/client"
+import BN from "bn.js"
 
 /**
  * Service for fetching a Sui object by ID.
@@ -50,7 +52,7 @@ export class SuiFetchService {
         kind,
         dexId,
         liquidityPool,
-    }: FetchSuiObjectParams): Promise<T> {
+    }: FetchSuiObjectParams): Promise<FetchSuiObjectResponse<T>> {
         const objectInfo = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -82,7 +84,10 @@ export class SuiFetchService {
         }
         // return object fields
         const object = objectInfo.data.content.fields as T
-        return object
+        return {
+            data: object,
+            storageRebate: new BN(objectInfo.data.storageRebate ?? "0"),
+        }
     }
 
     /**

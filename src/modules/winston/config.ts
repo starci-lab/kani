@@ -289,6 +289,7 @@ export const configMap = {
         name: WinstonLog.TransactionStimulated,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as TransactionStimulatedMessage,
     },
@@ -297,6 +298,7 @@ export const configMap = {
         name: WinstonLog.TransactionExecuted,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as TransactionExecutedMessage,
     },
@@ -305,6 +307,7 @@ export const configMap = {
         name: WinstonLog.WithdrawTransactionExecuted,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawTransactionExecutedMessage,
     },
@@ -313,6 +316,7 @@ export const configMap = {
         name: WinstonLog.WithdrawTransactionStimulated,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawTransactionStimulatedMessage,
     },
@@ -321,6 +325,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceTransactionExecuted,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceTransactionExecutedMessage,
     },
@@ -329,6 +334,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceTransactionStimulated,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceTransactionStimulatedMessage,
     },
@@ -337,6 +343,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceJobPrepared,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceJobPreparedMessage,
     },
@@ -345,6 +352,7 @@ export const configMap = {
         name: WinstonLog.WithdrawTransactionPrepared,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawTransactionPreparedMessage,
     },
@@ -353,6 +361,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionTransactionExecuted,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionTransactionExecutedMessage,
     },
@@ -361,6 +370,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionTransactionFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionTransactionFailedMessage,
     },
@@ -369,6 +379,7 @@ export const configMap = {
         name: WinstonLog.LiquidityPoolFetchedError,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as LiquidityPoolFetchedErrorMessage,
     },
@@ -377,6 +388,7 @@ export const configMap = {
         name: WinstonLog.LiquidityPoolUpdated,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as LiquidityPoolUpdatedMessage,
     },
@@ -385,6 +397,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionTransactionExecuted,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionTransactionExecutedMessage,
     },
@@ -393,6 +406,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionTransactionFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionTransactionFailedMessage,
     },
@@ -401,6 +415,7 @@ export const configMap = {
         name: WinstonLog.LiquidityPoolWsError,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as LiquidityPoolWsErrorMessage,
     },
@@ -409,6 +424,7 @@ export const configMap = {
         name: WinstonLog.PoolAnalyticsUpdated,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as PoolAnalyticsUpdatedMessage,
     },
@@ -417,6 +433,7 @@ export const configMap = {
         name: WinstonLog.SwapTransactionExecuted,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as SwapTransactionExecutedMessage,
     },
@@ -425,6 +442,7 @@ export const configMap = {
         name: WinstonLog.SwapTransactionFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as SwapTransactionFailedMessage,
     },
@@ -433,6 +451,7 @@ export const configMap = {
         name: WinstonLog.GoogleDriveFileUploaded,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as GoogleDriveFileUploadedMessage,
     },
@@ -441,6 +460,7 @@ export const configMap = {
         name: WinstonLog.GoogleDriveFileDownloaded,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as GoogleDriveFileDownloadedMessage,
     },
@@ -449,6 +469,7 @@ export const configMap = {
         name: WinstonLog.GoogleDriveFileDownloadError,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as GoogleDriveFileDownloadErrorMessage,
     },
@@ -457,6 +478,7 @@ export const configMap = {
         name: WinstonLog.PythPricesFetched,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as PythPricesFetchedMessage,
     },
@@ -465,6 +487,7 @@ export const configMap = {
         name: WinstonLog.PythPricesFetchFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as PythPricesFetchFailedMessage,
     },
@@ -473,6 +496,7 @@ export const configMap = {
         name: WinstonLog.PythSubscriptionOpened,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as PythSubscriptionsOpenedMessage,
     },
@@ -481,6 +505,7 @@ export const configMap = {
         name: WinstonLog.PythSubscriptionClosed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as PythSubscriptionsClosedMessage,
     },
@@ -489,6 +514,7 @@ export const configMap = {
         name: WinstonLog.PythSubscriptionResolved,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as PythSubscriptionResolvedMessage,
     },
@@ -497,6 +523,7 @@ export const configMap = {
         name: WinstonLog.PythSubscriptionError,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as PythSubscriptionErrorMessage,
     },
@@ -505,6 +532,7 @@ export const configMap = {
         name: WinstonLog.CoinMarketCapPricesFetched,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as CoinMarketCapPricesFetchedMessage,
     },
@@ -513,6 +541,7 @@ export const configMap = {
         name: WinstonLog.CoinMarketCapPricesFetchFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as CoinMarketCapPricesFetchFailedMessage,
     },
@@ -521,6 +550,7 @@ export const configMap = {
         name: WinstonLog.CoingeckoPricesFetched,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as CoingeckoPricesFetchedMessage,
     },
@@ -529,6 +559,7 @@ export const configMap = {
         name: WinstonLog.CoingeckoPricesFetchFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as CoingeckoPricesFetchFailedMessage,
     },
@@ -537,6 +568,7 @@ export const configMap = {
         name: WinstonLog.NoAvailableRpc,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as NoAvailableRpcMessage,
     },
@@ -545,6 +577,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionJobEnqueued,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionJobEnqueuedMessage,
     },
@@ -553,6 +586,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionJobEnqueueFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionJobEnqueueFailedMessage,
     },
@@ -561,6 +595,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionJobRequeued,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionJobRequeuedMessage,
     },
@@ -569,6 +604,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionJobRequeueFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionJobRequeueFailedMessage,
     },
@@ -577,6 +613,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionSkippedDynamicLiquidityPoolInfoNotReady,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionSkippedDynamicLiquidityPoolInfoNotReadyMessage,
     },
@@ -585,6 +622,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionSkippedPriceNotReady,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionSkippedPriceNotReadyMessage,
     },
@@ -593,6 +631,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionJobEnqueued,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {  
         } as ClosePositionJobEnqueuedMessage,
     },
@@ -601,6 +640,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionJobEnqueueFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionJobEnqueueFailedMessage,
     },
@@ -609,6 +649,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionJobRequeued,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionJobRequeuedMessage,
     },
@@ -617,6 +658,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionJobRequeueFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionJobRequeueFailedMessage,
     },
@@ -625,6 +667,7 @@ export const configMap = {
         name: WinstonLog.ErrorDecryptingJwtSecretKey,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ErrorDecryptingJwtSecretKeyMessage,
     },
@@ -633,6 +676,7 @@ export const configMap = {
         name: WinstonLog.ErrorDecryptingAesKey,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ErrorDecryptingAesKeyMessage,
     },
@@ -641,6 +685,7 @@ export const configMap = {
         name: WinstonLog.WebsocketSubscriptionOpened,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as WebsocketSubscriptionOpenedMessage,
     },
@@ -649,6 +694,7 @@ export const configMap = {
         name: WinstonLog.WebsocketSubscriptionClosed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as WebsocketSubscriptionClosedMessage,
     },
@@ -657,6 +703,7 @@ export const configMap = {
         name: WinstonLog.WebsocketSubscriptionError,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as WebsocketSubscriptionErrorMessage,
     },
@@ -665,6 +712,7 @@ export const configMap = {
         name: WinstonLog.WebsocketSubscriptionResolved,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as WebsocketSubscriptionResolvedMessage,
     },
@@ -673,6 +721,7 @@ export const configMap = {
         name: WinstonLog.EjectRpcFatalError,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as EjectRpcFatalErrorMessage,
     },
@@ -681,6 +730,7 @@ export const configMap = {
         name: WinstonLog.EjectRpcRetryableError,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as EjectRpcRetryableErrorMessage,
     },
@@ -689,6 +739,7 @@ export const configMap = {
         name: WinstonLog.EjectRpcIgnorableError,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as EjectRpcIgnorableErrorMessage,
     },
@@ -697,6 +748,7 @@ export const configMap = {
         name: WinstonLog.PythRestPricesFetched,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as PythRestPricesFetchedMessage,
     },
@@ -705,6 +757,7 @@ export const configMap = {
         name: WinstonLog.PythRestPricesFetchFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as PythRestPricesFetchFailedMessage,
     },
@@ -713,6 +766,7 @@ export const configMap = {
         name: WinstonLog.CleanupDeploymentsError,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as CleanupDeploymentsErrorMessage,
     },
@@ -721,6 +775,7 @@ export const configMap = {
         name: WinstonLog.CleanupServicesError,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as CleanupServicesErrorMessage,
     },
@@ -729,6 +784,7 @@ export const configMap = {
         name: WinstonLog.DeploymentCreated,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as DeploymentCreatedMessage,
     },
@@ -737,6 +793,7 @@ export const configMap = {
         name: WinstonLog.DeploymentDeleted,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as DeploymentDeletedMessage,
     },
@@ -745,6 +802,7 @@ export const configMap = {
         name: WinstonLog.DeploymentPatched,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as DeploymentPatchedMessage,
     },
@@ -753,6 +811,7 @@ export const configMap = {
         name: WinstonLog.DeploymentPatchFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as DeploymentPatchFailedMessage,
     },  
@@ -761,6 +820,7 @@ export const configMap = {
         name: WinstonLog.DeploymentCreateFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as DeploymentCreateFailedMessage,
     },
@@ -769,6 +829,7 @@ export const configMap = {
         name: WinstonLog.DeploymentDeleteFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as DeploymentDeleteFailedMessage,
     },
@@ -777,6 +838,7 @@ export const configMap = {
         name: WinstonLog.ServiceCreated,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ServiceCreatedMessage,
     },
@@ -785,6 +847,7 @@ export const configMap = {
         name: WinstonLog.ServiceDeleted,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ServiceDeletedMessage,
     },
@@ -793,6 +856,7 @@ export const configMap = {
         name: WinstonLog.ServiceCreateFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ServiceCreateFailedMessage,
     },
@@ -801,6 +865,7 @@ export const configMap = {
         name: WinstonLog.ServiceDeleteFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ServiceDeleteFailedMessage,
     },
@@ -809,6 +874,7 @@ export const configMap = {
         name: WinstonLog.CoordinatorExecutorsCreated,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as CoordinatorExecutorsCreatedMessage,
     },
@@ -817,6 +883,7 @@ export const configMap = {
         name: WinstonLog.CoordinatorExecutorsDeleted,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as CoordinatorExecutorsDeletedMessage,
     },
@@ -825,6 +892,7 @@ export const configMap = {
         name: WinstonLog.CoordinatorExecutorsUpdated,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as CoordinatorExecutorsUpdatedMessage,
     },
@@ -833,6 +901,7 @@ export const configMap = {
         name: WinstonLog.CoordinatorPrimaryMongoDbChangeStreamError,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as CoordinatorPrimaryMongoDbChangeStreamErrorMessage,
     },
@@ -841,6 +910,7 @@ export const configMap = {
         name: WinstonLog.CoordinatorPrimaryMongoDbChangeStreamClose,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as CoordinatorPrimaryMongoDbChangeStreamCloseMessage,
     },
@@ -849,6 +919,7 @@ export const configMap = {
         name: WinstonLog.CoordinatorPrimaryMongoDbChangeStreamStarted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as CoordinatorPrimaryMongoDbChangeStreamStartedMessage,
     },
@@ -857,6 +928,7 @@ export const configMap = {
         name: WinstonLog.CoordinatorPrimaryMongoDbChangeStreamExecutorCreated,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as CoordinatorPrimaryMongoDbChangeStreamExecutorCreatedMessage,
     },
@@ -865,6 +937,7 @@ export const configMap = {
         name: WinstonLog.CoordinatorPrimaryMongoDbChangeStreamExecutorDeleted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as CoordinatorPrimaryMongoDbChangeStreamExecutorDeletedMessage,
     },
@@ -873,6 +946,7 @@ export const configMap = {
         name: WinstonLog.CoordinatorPrimaryMongoDbChangeStreamExecutorUpdated,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as CoordinatorPrimaryMongoDbChangeStreamExecutorUpdatedMessage,
     },
@@ -881,6 +955,7 @@ export const configMap = {
         name: WinstonLog.ExecutorBotsUpdated,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ExecutorBotsUpdatedMessage,
     },
@@ -889,6 +964,7 @@ export const configMap = {
         name: WinstonLog.ExecutorBotsCreated,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ExecutorBotsCreatedMessage,
     },
@@ -897,6 +973,7 @@ export const configMap = {
         name: WinstonLog.ExecutorBotsDeleted,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ExecutorBotsDeletedMessage,
     },
@@ -905,6 +982,7 @@ export const configMap = {
         name: WinstonLog.ExecutorMongoDbChangeStreamError,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ExecutorMongoDbChangeStreamErrorMessage,
     },
@@ -913,6 +991,7 @@ export const configMap = {
         name: WinstonLog.ExecutorMongoDbChangeStreamClose,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ExecutorMongoDbChangeStreamCloseMessage,
     },
@@ -921,6 +1000,7 @@ export const configMap = {
         name: WinstonLog.ExecutorMongoDbChangeStreamStarted,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ExecutorMongoDbChangeStreamStartedMessage,
     },
@@ -929,6 +1009,7 @@ export const configMap = {
         name: WinstonLog.ExecutorMongoDbChangeStreamBotUpdated,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ExecutorMongoDbChangeStreamBotUpdatedMessage,
     },
@@ -937,6 +1018,7 @@ export const configMap = {
         name: WinstonLog.ExecutorRuntimeInitializationFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ExecutorRuntimeInitializationFailedMessage,
     },
@@ -945,6 +1027,7 @@ export const configMap = {
         name: WinstonLog.ExecutorRuntimeInitialized,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as ExecutorRuntimeInitializedMessage,
     },
@@ -953,6 +1036,7 @@ export const configMap = {
         name: WinstonLog.BotRuntimeInitialized,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as BotRuntimeInitializedMessage,
     },
@@ -961,6 +1045,7 @@ export const configMap = {
         name: WinstonLog.CoordinatorRuntimeInitializationFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as CoordinatorRuntimeInitializationFailedMessage,
     },
@@ -969,6 +1054,7 @@ export const configMap = {
         name: WinstonLog.ExecutorNotFound,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ExecutorNotFoundMessage,
     },
@@ -977,6 +1063,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceJobEnqueueFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceJobEnqueueFailedMessage,
     },
@@ -985,6 +1072,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceJobEnqueued,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceJobEnqueuedMessage,
     },
@@ -993,6 +1081,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceJobRequeueFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceJobRequeueFailedMessage,
     },
@@ -1001,6 +1090,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceJobRequeued,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceJobRequeuedMessage,
     },
@@ -1009,6 +1099,7 @@ export const configMap = {
         name: WinstonLog.WithdrawJobScheduled,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawJobScheduledMessage,
     },
@@ -1017,6 +1108,7 @@ export const configMap = {
         name: WinstonLog.WithdrawJobEnqueueFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawJobEnqueueFailedMessage,
     },
@@ -1025,6 +1117,7 @@ export const configMap = {
         name: WinstonLog.WithdrawJobEnqueued,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawJobEnqueuedMessage,
     },
@@ -1033,6 +1126,7 @@ export const configMap = {
         name: WinstonLog.WithdrawJobRequeued,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawJobRequeuedMessage,
     },
@@ -1041,6 +1135,7 @@ export const configMap = {
         name: WinstonLog.WithdrawJobRequeueFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawJobRequeueFailedMessage,
     },
@@ -1049,6 +1144,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceJobCompleted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceJobCompletedMessage,
     },
@@ -1057,6 +1153,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceProcessingStarted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceProcessingStartedMessage,
     },
@@ -1065,6 +1162,7 @@ export const configMap = {
         name: WinstonLog.WithdrawJobCompleted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawJobCompletedMessage,
     },
@@ -1073,6 +1171,7 @@ export const configMap = {
         name: WinstonLog.WithdrawJobStarted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawJobStartedMessage,
     },
@@ -1081,6 +1180,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceJobFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as JobFailedMessage,
     },
@@ -1089,6 +1189,7 @@ export const configMap = {
         name: WinstonLog.WithdrawJobFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as JobFailedMessage,
     },
@@ -1097,6 +1198,7 @@ export const configMap = {
         name: WinstonLog.PriceDiagnosticFailed,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as PriceDiagnosticFailedMessage,
     },
@@ -1105,6 +1207,7 @@ export const configMap = {
         name: WinstonLog.PriceDiagnosticSuccess,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as PriceDiagnosticSuccessMessage,
     },
@@ -1113,6 +1216,7 @@ export const configMap = {
         name: WinstonLog.PriceDiagnosticFailedStale,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as PriceDiagnosticFailedStaleMessage,
     },
@@ -1121,6 +1225,7 @@ export const configMap = {
         name: WinstonLog.PriceDiagnosticFailedNotFound,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as PriceDiagnosticFailedNotFoundMessage,
     },
@@ -1129,6 +1234,7 @@ export const configMap = {
         name: WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailed,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as DynamicLiquidityPoolInfoDiagnosticFailedMessage,
     },
@@ -1137,6 +1243,7 @@ export const configMap = {
         name: WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailedNotFound,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as DynamicLiquidityPoolInfoDiagnosticFailedNotFoundMessage,
     },
@@ -1145,6 +1252,7 @@ export const configMap = {
         name: WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailedStale,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as DynamicLiquidityPoolInfoDiagnosticFailedStaleMessage,
     },
@@ -1153,6 +1261,7 @@ export const configMap = {
         name: WinstonLog.DynamicLiquidityPoolInfoDiagnosticSuccess,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as DynamicLiquidityPoolInfoDiagnosticSuccessMessage,
     },
@@ -1161,6 +1270,7 @@ export const configMap = {
         name: WinstonLog.SwapTransactionStimulated,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as SwapTransactionStimulatedMessage,
     },
@@ -1169,6 +1279,7 @@ export const configMap = {
         name: WinstonLog.SwapTransactionPrepared,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as SwapTransactionPreparedMessage,
     },
@@ -1177,6 +1288,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalancePrepared,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalancePreparedMessage,
     },
@@ -1185,6 +1297,7 @@ export const configMap = {
         name: WinstonLog.WithdrawPrepared,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawPreparedMessage,
     },
@@ -1193,6 +1306,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceRequeueFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceRequeueFailedMessage,
     },
@@ -1201,6 +1315,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceJobAlreadyPrepared,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceJobAlreadyPreparedMessage,
     },
@@ -1209,6 +1324,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceJobAlreadyExecuted,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceJobAlreadyExecutedMessage,
     },
@@ -1217,6 +1333,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceJobAlreadyConfirmed,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceJobAlreadyConfirmedMessage,
     },
@@ -1225,6 +1342,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceJobConfirmed,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceJobConfirmedMessage,
     },
@@ -1233,6 +1351,7 @@ export const configMap = {
         name: WinstonLog.WithdrawRequeueFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawRequeueFailedMessage,
     },
@@ -1241,6 +1360,7 @@ export const configMap = {
         name: WinstonLog.WithdrawJobPrepared,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawJobPreparedMessage,
     },
@@ -1249,6 +1369,7 @@ export const configMap = {
         name: WinstonLog.WithdrawJobConfirmed,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawJobConfirmedMessage,
     },
@@ -1257,6 +1378,7 @@ export const configMap = {
         name: WinstonLog.WithdrawJobAlreadyPrepared,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawJobAlreadyPreparedMessage,
     },
@@ -1265,6 +1387,7 @@ export const configMap = {
         name: WinstonLog.WithdrawJobAlreadyExecuted,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawJobAlreadyExecutedMessage,
     },
@@ -1273,6 +1396,7 @@ export const configMap = {
         name: WinstonLog.WithdrawJobAlreadyConfirmed,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawJobAlreadyConfirmedMessage,
     },
@@ -1281,6 +1405,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionJobAlreadyPrepared,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionJobAlreadyPreparedMessage,
     },
@@ -1289,6 +1414,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionJobAlreadyExecuted,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionJobAlreadyExecutedMessage,
     },
@@ -1297,6 +1423,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionJobAlreadyConfirmed,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionJobAlreadyConfirmedMessage,
     },
@@ -1305,6 +1432,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionJobPrepared,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionJobPreparedMessage,
     },
@@ -1313,6 +1441,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionJobAlreadyPrepared,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionJobAlreadyPreparedMessage,
     },
@@ -1321,6 +1450,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionJobAlreadyExecuted,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionJobAlreadyExecutedMessage,
     },
@@ -1329,6 +1459,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionJobAlreadyConfirmed,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionJobAlreadyConfirmedMessage,
     },
@@ -1337,6 +1468,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionJobConfirmed,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionJobConfirmedMessage,
     },
@@ -1345,6 +1477,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionJobFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as JobFailedMessage,
     },
@@ -1353,6 +1486,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionJobCompleted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionJobCompletedMessage,
     },
@@ -1361,6 +1495,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionJobFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as JobFailedMessage,
     },
@@ -1369,6 +1504,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionJobCompleted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionJobCompletedMessage,
     },
@@ -1377,6 +1513,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionJobStarted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionJobStartedMessage,
     },
@@ -1385,6 +1522,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionRequeueFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionRequeueFailedMessage,
     },
@@ -1393,6 +1531,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionRequeueFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionRequeueFailedMessage,
     },
@@ -1401,6 +1540,7 @@ export const configMap = {
         name: WinstonLog.DiagnosticsReady,
         level: WinstonLevel.Info,
         loki: false,
+        console: true,
         messageType: {
         } as DiagnosticsReadyMessage,
     },
@@ -1409,6 +1549,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionTransactionStimulated,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionTransactionStimulatedMessage,
     },
@@ -1417,6 +1558,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionTransactionStimulated,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionTransactionStimulatedMessage,
     },
@@ -1425,6 +1567,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionJobPrepared,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionJobPreparedMessage,
     },
@@ -1433,6 +1576,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionTransactionFound,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionTransactionFoundMessage,
     },
@@ -1441,6 +1585,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionTransactionFound,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionTransactionFoundMessage,
     },
@@ -1449,6 +1594,7 @@ export const configMap = {
         name: WinstonLog.SwapTransactionFound,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as SwapTransactionFoundMessage,
     },
@@ -1457,6 +1603,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionBootstrappingFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionBootstrappingFailedMessage,
     },
@@ -1465,6 +1612,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionBootstrappingFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionBootstrappingFailedMessage,
     },
@@ -1473,6 +1621,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceBootstrappingFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceBootstrappingFailedMessage,
     },
@@ -1481,6 +1630,7 @@ export const configMap = {
         name: WinstonLog.WithdrawBootstrappingFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawBootstrappingFailedMessage,
     },
@@ -1489,6 +1639,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionJobAlreadyEnqueued,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionJobAlreadyEnqueuedMessage,
     },
@@ -1497,6 +1648,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionJobAlreadyEnqueued,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionJobAlreadyEnqueuedMessage,
     },
@@ -1505,6 +1657,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceJobAlreadyEnqueued,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceJobAlreadyEnqueuedMessage,
     },
@@ -1513,6 +1666,7 @@ export const configMap = {
         name: WinstonLog.WithdrawJobAlreadyEnqueued,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawJobAlreadyEnqueuedMessage,
     },
@@ -1521,6 +1675,7 @@ export const configMap = {
         name: WinstonLog.CannotSettlePosition,
         level: WinstonLevel.Verbose,
         loki: false,
+        console: true,
         messageType: {
         } as CannotSettlePositionMessage,
     },
@@ -1529,6 +1684,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionTransactionPrepared,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionTransactionPreparedMessage,
     },
@@ -1537,6 +1693,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionJobConfirmed,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionJobConfirmedMessage,
     },
@@ -1545,6 +1702,7 @@ export const configMap = {
         name: WinstonLog.ClmmLiquidityPoolsSyncedDiagnostic,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as ClmmLiquidityPoolsSyncedDiagnosticMessage,
     },
@@ -1553,6 +1711,7 @@ export const configMap = {
         name: WinstonLog.DlmmLiquidityPoolsSyncedDiagnostic,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as DlmmLiquidityPoolsSyncedDiagnosticMessage,
     },
@@ -1561,6 +1720,7 @@ export const configMap = {
         name: WinstonLog.LiquidityPoolsBecameReady,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as LiquidityPoolsBecameReadyMessage,
     },
@@ -1569,6 +1729,7 @@ export const configMap = {
         name: WinstonLog.LiquidityPoolsBecameNotReady,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as LiquidityPoolsBecameNotReadyMessage,
     },
@@ -1577,6 +1738,7 @@ export const configMap = {
         name: WinstonLog.SocketIoClientConnected,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as SocketIoClientConnectedMessage,
     },
@@ -1585,6 +1747,7 @@ export const configMap = {
         name: WinstonLog.SocketIoClientDisconnected,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as SocketIoClientDisconnectedMessage,
     },
@@ -1593,6 +1756,7 @@ export const configMap = {
         name: WinstonLog.MongoDumpCompleted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as MongoDumpCompletedMessage,
     },
@@ -1601,6 +1765,7 @@ export const configMap = {
         name: WinstonLog.SevenZCompressionCompleted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as SevenZCompressionCompletedMessage,
     },
@@ -1609,6 +1774,7 @@ export const configMap = {
         name: WinstonLog.BackupCompleted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as BackupCompletedMessage,
     },
@@ -1617,6 +1783,7 @@ export const configMap = {
         name: WinstonLog.BackupFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as BackupFailedMessage,
     },
@@ -1625,6 +1792,7 @@ export const configMap = {
         name: WinstonLog.SevenZExtractionCompleted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as SevenZExtractionCompletedMessage,
     },
@@ -1633,6 +1801,7 @@ export const configMap = {
         name: WinstonLog.MongoDBRestoreCompleted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as MongoDBRestoreCompletedMessage,
     },
@@ -1641,6 +1810,7 @@ export const configMap = {
         name: WinstonLog.RestoreCompleted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as RestoreCompletedMessage,
     },
@@ -1649,6 +1819,7 @@ export const configMap = {
         name: WinstonLog.RestoreFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as RestoreFailedMessage,
     },
@@ -1657,6 +1828,7 @@ export const configMap = {
         name: WinstonLog.SeedCompleted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         }
     },
@@ -1665,6 +1837,7 @@ export const configMap = {
         name: WinstonLog.SeedFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         }
     },
@@ -1673,6 +1846,7 @@ export const configMap = {
         name: WinstonLog.MigrationStarted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         }
     },
@@ -1681,6 +1855,7 @@ export const configMap = {
         name: WinstonLog.MigrationOpenSnapshotsUpdated,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as MigrationOpenSnapshotsUpdatedMessage,
     },
@@ -1689,6 +1864,7 @@ export const configMap = {
         name: WinstonLog.MigrationCloseSnapshotsUpdated,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as MigrationCloseSnapshotsUpdatedMessage,
     },
@@ -1697,6 +1873,7 @@ export const configMap = {
         name: WinstonLog.MigrationCompleted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as MigrationCompletedMessage,
     },
@@ -1705,6 +1882,7 @@ export const configMap = {
         name: WinstonLog.MigrationFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as MigrationFailedMessage,
     },
@@ -1713,6 +1891,7 @@ export const configMap = {
         name: WinstonLog.MigrationAvatarsCompleted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as MigrationAvatarsCompletedMessage,
     },
@@ -1721,6 +1900,7 @@ export const configMap = {
         name: WinstonLog.MigrationAvatarsFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as MigrationAvatarsFailedMessage,
     },
@@ -1729,6 +1909,7 @@ export const configMap = {
         name: WinstonLog.MigrationUserTotpCompleted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as MigrationUserTotpCompletedMessage,
     },
@@ -1737,6 +1918,7 @@ export const configMap = {
         name: WinstonLog.MigrationUserTotpFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as MigrationUserTotpFailedMessage,
     },
@@ -1745,6 +1927,7 @@ export const configMap = {
         name: WinstonLog.MigrationBotExecutorCompleted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as MigrationBotExecutorCompletedMessage,
     },
@@ -1753,6 +1936,7 @@ export const configMap = {
         name: WinstonLog.MigrationBotExecutorFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as MigrationBotExecutorFailedMessage,
     },
@@ -1761,6 +1945,7 @@ export const configMap = {
         name: WinstonLog.MigrationIndicatorsCompleted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as MigrationIndicatorsCompletedMessage,
     },
@@ -1769,6 +1954,7 @@ export const configMap = {
         name: WinstonLog.MigrationIndicatorsFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as MigrationIndicatorsFailedMessage,
     },
@@ -1777,6 +1963,7 @@ export const configMap = {
         name: WinstonLog.KeyGeneratedSuccess,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         }
     },
@@ -1785,6 +1972,7 @@ export const configMap = {
         name: WinstonLog.KeyGenerationFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as KeyGenerationFailedMessage,
     },
@@ -1793,6 +1981,7 @@ export const configMap = {
         name: WinstonLog.KeyEncryptedSuccess,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         }
     },
@@ -1801,6 +1990,7 @@ export const configMap = {
         name: WinstonLog.KeyDecryptionCheckFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as KeyDecryptionCheckFailedMessage,
     },
@@ -1809,6 +1999,7 @@ export const configMap = {
         name: WinstonLog.KeyDecryptionCheckSuccess,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         }
     },
@@ -1817,6 +2008,7 @@ export const configMap = {
         name: WinstonLog.KeyWrittenSuccess,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as KeyWrittenSuccessMessage,
     },
@@ -1825,6 +2017,7 @@ export const configMap = {
         name: WinstonLog.CommandError,
         level: WinstonLevel.Error,
         loki: false,
+        console: true,
         messageType: {
         } as CommandErrorMessage,
     },
@@ -1833,6 +2026,7 @@ export const configMap = {
         name: WinstonLog.EvalSnapshotsChecked,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as EvalSnapshotMessage,
     },
@@ -1841,6 +2035,7 @@ export const configMap = {
         name: WinstonLog.ErrorGettingCache,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ErrorGettingCacheMessage,
     },
@@ -1849,6 +2044,7 @@ export const configMap = {
         name: WinstonLog.ErrorSettingCache,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ErrorSettingCacheMessage,
     },
@@ -1857,6 +2053,7 @@ export const configMap = {
         name: WinstonLog.ErrorDeletingCache,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ErrorDeletingCacheMessage,
     },
@@ -1865,6 +2062,7 @@ export const configMap = {
         name: WinstonLog.AggregatedTokenPriceArrayNotFound,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as AggregatedTokenPriceArrayNotFoundMessage,
     },
@@ -1873,6 +2071,7 @@ export const configMap = {
         name: WinstonLog.InfluxDBBootstrappedSuccessfully,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as InfluxDBBootstrappedSuccessfullyMessage,
     },
@@ -1881,6 +2080,7 @@ export const configMap = {
         name: WinstonLog.InfluxDBBootstrappedFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as InfluxDBBootstrappedFailedMessage,
     },
@@ -1889,6 +2089,7 @@ export const configMap = {
         name: WinstonLog.CacheDebugOkRedis,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as CacheDebugOkRedisMessage,
     },
@@ -1897,6 +2098,7 @@ export const configMap = {
         name: WinstonLog.CacheDebugOkMemory,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as CacheDebugOkMemoryMessage,
     },
@@ -1905,6 +2107,7 @@ export const configMap = {
         name: WinstonLog.LockAuthorityNotifyExpiredLocksFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as LockAuthorityNotifyExpiredLocksFailedMessage,
     },
@@ -1913,6 +2116,7 @@ export const configMap = {
         name: WinstonLog.LockAuthorityAcquired,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as LockAuthorityAcquiredMessage,
     },
@@ -1921,6 +2125,7 @@ export const configMap = {
         name: WinstonLog.LockAuthorityAcquireFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as LockAuthorityAcquireFailedMessage,
     },
@@ -1929,6 +2134,7 @@ export const configMap = {
         name: WinstonLog.LockAuthorityReleaseFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as LockAuthorityReleaseFailedMessage,
     },
@@ -1937,6 +2143,7 @@ export const configMap = {
         name: WinstonLog.LockAuthoritySendHeartbeatFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as LockAuthoritySendHeartbeatFailedMessage,
     },
@@ -1945,6 +2152,7 @@ export const configMap = {
         name: WinstonLog.WithdrawTransactionFound,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawTransactionFoundMessage,
     },
@@ -1953,6 +2161,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceTransactionFound,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceTransactionFoundMessage,
     },
@@ -1961,6 +2170,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceSkippedBotNotRunning,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceSkippedBotNotRunningMessage,
     },
@@ -1969,6 +2179,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActivePosition,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceSkippedBotAlreadyHasActivePositionMessage,
     },
@@ -1977,6 +2188,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceSkippedBotAlreadyHasActiveJob,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceSkippedBotAlreadyHasActiveJobMessage,
     },
@@ -1985,6 +2197,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceSkippedActiveJobFoundInQueue,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceSkippedActiveJobFoundInQueueMessage,
     },
@@ -1993,6 +2206,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceLockAuthorityNotAcquired,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceLockAuthorityNotAcquiredMessage,
     },
@@ -2001,6 +2215,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalanceLockAuthorityReleased,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalanceLockAuthorityReleasedMessage,
     },
@@ -2009,6 +2224,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionLockAuthorityNotAcquired,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionLockAuthorityNotAcquiredMessage,
     },
@@ -2017,6 +2233,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionLockAuthorityReleased,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionLockAuthorityReleasedMessage,
     },
@@ -2025,6 +2242,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionLockAuthorityNotAcquired,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionLockAuthorityNotAcquiredMessage,
     },
@@ -2033,6 +2251,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionLockAuthorityReleased,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionLockAuthorityReleasedMessage,
     },
@@ -2041,6 +2260,7 @@ export const configMap = {
         name: WinstonLog.WithdrawLockAuthorityReleased,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as WithdrawLockAuthorityReleasedMessage,
     },
@@ -2049,6 +2269,7 @@ export const configMap = {
         name: WinstonLog.MetricInitialized,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as MetricInitializedMessage,
     },
@@ -2057,6 +2278,7 @@ export const configMap = {
         name: WinstonLog.ConsulRegisterFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ConsulRegisterFailedMessage,
     },
@@ -2065,6 +2287,7 @@ export const configMap = {
         name: WinstonLog.ConsulRegisterSuccessfully,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ConsulRegisterSuccessfullyMessage,
     },
@@ -2073,6 +2296,7 @@ export const configMap = {
         name: WinstonLog.NatsConsumerOpened,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as NatsConsumerOpenedMessage,
     },
@@ -2081,6 +2305,7 @@ export const configMap = {
         name: WinstonLog.NatsConsumerClosed,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as NatsConsumerClosedMessage,
     },
@@ -2089,6 +2314,7 @@ export const configMap = {
         name: WinstonLog.NatsConsumerError,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as NatsConsumerErrorMessage,
     },
@@ -2097,6 +2323,7 @@ export const configMap = {
         name: WinstonLog.NotSyncedProcessOpenPosition,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as NotSyncedProcessOpenPositionMessage,
     },
@@ -2105,6 +2332,7 @@ export const configMap = {
         name: WinstonLog.NotSyncedProcessClosePosition,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as NotSyncedProcessClosePositionMessage,
     },
@@ -2113,6 +2341,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionSkippedBotHasNoActivePosition,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionSkippedBotHasNoActivePositionMessage,
     },
@@ -2121,6 +2350,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionSkippedBotAlreadyHasActiveJob,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionSkippedBotAlreadyHasActiveJobMessage,
     },
@@ -2129,6 +2359,7 @@ export const configMap = {
         name: WinstonLog.ClosePositionSkippedActiveJobFoundInQueue,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as ClosePositionSkippedActiveJobFoundInQueueMessage,
     },
@@ -2137,6 +2368,7 @@ export const configMap = {
         name: WinstonLog.RotationBotAssignments,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as RotationBotAssignmentsMessage,
     },
@@ -2145,6 +2377,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionSkippedBotNotRunning,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionSkippedBotNotRunningMessage,
     },
@@ -2153,6 +2386,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionSkippedBotAlreadyHasActivePosition,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionSkippedBotAlreadyHasActivePositionMessage,
     },
@@ -2161,6 +2395,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionSkippedBotAlreadyHasActiveJob,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionSkippedBotAlreadyHasActiveJobMessage,
     },
@@ -2169,6 +2404,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionSkippedNotEligible,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionSkippedNotEligibleMessage,
     },
@@ -2177,6 +2413,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionSkippedNoBalanceSnapshot,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionSkippedNoBalanceSnapshotMessage,
     },
@@ -2185,6 +2422,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionSkippedBalanceSnapshotTooOld,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionSkippedBalanceSnapshotTooOldMessage,
     },
@@ -2193,6 +2431,7 @@ export const configMap = {
         name: WinstonLog.OpenPositionSkippedActiveJobFoundInQueue,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as OpenPositionSkippedActiveJobFoundInQueueMessage,
     },
@@ -2201,6 +2440,7 @@ export const configMap = {
         name: WinstonLog.LiquidityPoolsSyncedMarkedAsReady,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as LiquidityPoolsSyncedMarkedAsReadyMessage,
     },
@@ -2209,6 +2449,7 @@ export const configMap = {
         name: WinstonLog.ClmmLiquidityPoolsSynced,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as ClmmLiquidityPoolsSyncedMessage,
     },
@@ -2217,6 +2458,7 @@ export const configMap = {
         name: WinstonLog.DlmmLiquidityPoolsSynced,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as DlmmLiquidityPoolsSyncedMessage,
     },
@@ -2225,6 +2467,7 @@ export const configMap = {
         name: WinstonLog.JobEnqueued,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as JobEnqueuedMessage,
     },
@@ -2233,6 +2476,7 @@ export const configMap = {
         name: WinstonLog.JobEnqueueFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as JobEnqueueFailedMessage,
     },
@@ -2241,6 +2485,7 @@ export const configMap = {
         name: WinstonLog.ActionJobCompleted,
         level: WinstonLevel.Info,
         loki: true,
+        console: true,
         messageType: {
         } as ActionJobCompletedMessage,
     },
@@ -2249,6 +2494,7 @@ export const configMap = {
         name: WinstonLog.ActionJobFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ActionJobFailedMessage,
     },
@@ -2257,6 +2503,7 @@ export const configMap = {
         name: WinstonLog.ActionJobContextLoadFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ActionJobContextLoadFailedMessage,
     },
@@ -2265,6 +2512,7 @@ export const configMap = {
         name: WinstonLog.ActiveJobTaskPrepared,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ActiveJobTaskPreparedMessage,
     },
@@ -2273,6 +2521,7 @@ export const configMap = {
         name: WinstonLog.TransactionSigned,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as TransactionSignedMessage,
     },
@@ -2281,6 +2530,7 @@ export const configMap = {
         name: WinstonLog.ActionJobTaskConfirmed,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ActionJobTaskConfirmedMessage,
     },
@@ -2289,6 +2539,7 @@ export const configMap = {
         name: WinstonLog.ReconcileBalancePlanDetermined,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ReconcileBalancePlanDeterminedMessage,
     },
@@ -2297,6 +2548,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedFoundInQueue,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedFoundInQueueMessage,
     },
@@ -2305,6 +2557,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedNotFoundInDatabase,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedNotFoundInDatabaseMessage,
     },
@@ -2313,6 +2566,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedBotAuthorityNotAcquired,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedBotAuthorityNotAcquiredMessage,
     },
@@ -2321,6 +2575,7 @@ export const configMap = {
         name: WinstonLog.JobRequeued,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as JobRequeuedMessage,
     },
@@ -2329,6 +2584,7 @@ export const configMap = {
         name: WinstonLog.JobRequeueFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as JobRequeueFailedMessage,
     },
@@ -2337,6 +2593,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedContextLoadFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedContextLoadFailedMessage,
     },
@@ -2345,6 +2602,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedBotAlreadyHasActivePosition,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedBotAlreadyHasActivePositionMessage,
     },
@@ -2353,6 +2611,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedBotNotHasActivePosition,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedBotNotHasActivePositionMessage,
     },
@@ -2361,6 +2620,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedBotPositionNotClosed,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedBotPositionNotClosedMessage,
     },
@@ -2369,6 +2629,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedBotPositionClosed,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedBotPositionClosedMessage,
     },
@@ -2377,6 +2638,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedBotNotRunning,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedBotNotRunningMessage,
     },
@@ -2385,6 +2647,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedLiquidityPoolContextLoadFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedLiquidityPoolContextLoadFailedMessage,
     },
@@ -2393,6 +2656,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedBotBalanceSnapshotWithinCooldown,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedBotBalanceSnapshotWithinCooldownMessage,
     },
@@ -2400,6 +2664,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedBotBalanceSnapshotNotWithinCooldown,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedBotBalanceSnapshotNotWithinCooldownMessage,
     },
@@ -2408,6 +2673,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedCannotSettlePosition,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedCannotSettlePositionMessage,
     },
@@ -2416,6 +2682,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedBotNoBalanceSnapshot,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedBotNoBalanceSnapshotMessage,
     },
@@ -2424,6 +2691,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedBotAlreadyHasActiveJob,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedBotAlreadyHasActiveJobMessage,
     },
@@ -2432,6 +2700,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedBotNotEligible,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedBotNotEligibleMessage,
     },
@@ -2440,6 +2709,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedLiquidityPoolInfoNotReady,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedLiquidityPoolInfoNotReadyMessage,
     },
@@ -2448,6 +2718,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedTokenPriceNotReady,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedTokenPriceNotReadyMessage,
     },
@@ -2456,6 +2727,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedNoPayload,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedNoPayloadMessage,
     },
@@ -2464,6 +2736,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedBotRunning,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedBotRunningMessage,
     },
@@ -2472,6 +2745,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedLiquidityPoolNotOwnedByBot,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedLiquidityPoolNotOwnedByBotMessage,
     },
@@ -2480,6 +2754,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedQuoteRatioNotGood,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedQuoteRatioNotGoodMessage,
     },
@@ -2488,6 +2763,7 @@ export const configMap = {
         name: WinstonLog.JobSkippedBotCacheResultFound,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as JobSkippedBotCacheResultFoundMessage,
     },
@@ -2496,6 +2772,7 @@ export const configMap = {
         name: WinstonLog.ActionJobTaskStepSigned,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ActionJobTaskStepSignedMessage,
     },
@@ -2504,6 +2781,7 @@ export const configMap = {
         name: WinstonLog.ActionJobTaskStepExecuted,
         level: WinstonLevel.Verbose,
         loki: true,
+        console: true,
         messageType: {
         } as ActionJobTaskStepExecutedMessage,
     },
@@ -2512,6 +2790,7 @@ export const configMap = {
         name: WinstonLog.ActionJobTaskStepSignedFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ActionJobTaskStepSignedFailedMessage,
     },
@@ -2520,6 +2799,7 @@ export const configMap = {
         name: WinstonLog.ActionJobTaskStepExecutedFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ActionJobTaskStepExecutedFailedMessage,
     },
@@ -2528,6 +2808,7 @@ export const configMap = {
         name: WinstonLog.ActiveJobTaskPreparedFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {
         } as ActiveJobTaskPreparedFailedMessage,
     },
@@ -2536,6 +2817,7 @@ export const configMap = {
         name: WinstonLog.ActionJobTaskConfirmedFailed,
         level: WinstonLevel.Error,
         loki: true,
+        console: true,
         messageType: {  
         } as ActionJobTaskConfirmedFailedMessage,
     },  
@@ -2544,6 +2826,7 @@ export const configMap = {
         name: WinstonLog.SocketIoClientIdNotFound,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as SocketIoClientIdNotFoundMessage,
     },
@@ -2552,6 +2835,7 @@ export const configMap = {
         name: WinstonLog.SocketIoClientNotFound,
         level: WinstonLevel.Debug,
         loki: true,
+        console: true,
         messageType: {
         } as SocketIoClientNotFoundMessage,
     },
@@ -2560,6 +2844,7 @@ export const configMap = {
         name: WinstonLog.ResourcesMemoryUsage,
         level: WinstonLevel.Warn,
         loki: true,
+        console: false,
         messageType: {
         } as MemoryUsageMessage,
     },
@@ -2568,6 +2853,7 @@ export const configMap = {
         name: WinstonLog.ExecutionLatency,
         level: WinstonLevel.Warn,
         loki: true,
+        console: false,
         messageType: {
         } as ExecutionLatencyMessage,
     },

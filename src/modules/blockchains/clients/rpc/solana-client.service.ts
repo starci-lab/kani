@@ -126,27 +126,27 @@ export class SolanaClientService {
                             if (result !== null) {
                                 return result
                             }
-    
                             // handle Solana-specific errors
                             if (isSolanaError(error)) {
+                                const message = error.context?.["logs"] ?? error.message
                                 const errorType = this.solanaGetErrorTypesService.getErrorType({
                                     error 
                                 })
                                 switch (errorType) {
                                 case RpcErrorType.TransactionSubmitFailed:
                                     throw new AbortError(new RpcClientFatalException({
-                                        message: error?.message, originalError: error 
+                                        message, originalError: error 
                                     }))
                                 case RpcErrorType.Fatal:
-                                    throw new AbortError(new SolanaRpcFatalException(error?.message))
+                                    throw new AbortError(new SolanaRpcFatalException(message))
                                 case RpcErrorType.Retryable:
-                                    throw new SolanaRpcRetryableException(error?.message)
+                                    throw new SolanaRpcRetryableException(message)
                                 case RpcErrorType.Ignorable:
-                                    throw new AbortError(new SolanaRpcIgnorableException(error?.message))
+                                    throw new AbortError(new SolanaRpcIgnorableException(message))
                                 }
                             } 
                             // handle non-Solana errors
-                            throw new AbortError(new SolanaRpcIgnorableException(error?.message))
+                            throw new AbortError(new SolanaRpcIgnorableException(error?.message ?? "Unknown error"))
                         },
                     })
                 } catch (error) {

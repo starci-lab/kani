@@ -5,7 +5,9 @@ import {
     OPTIONS_TYPE, ConfigurableModuleClass 
 } from "./winston.module-definition"
 import {
-    createConsoleWinstonProvider, createLokiWinstonProvider 
+    createConsoleOnlyWinstonProvider,
+    createLokiOnlyWinstonProvider,
+    createWinstonAndConsoleProvider,
 } from "./winston.providers"
 import {
     WinstonService 
@@ -17,8 +19,9 @@ export class WinstonModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
-            createConsoleWinstonProvider(),
-            createLokiWinstonProvider(),
+            createConsoleOnlyWinstonProvider(),
+            createLokiOnlyWinstonProvider(),
+            createWinstonAndConsoleProvider(),
         ]
         return {
             ...dynamicModule,

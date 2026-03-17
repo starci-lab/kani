@@ -99,7 +99,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             }
         }
         // Stage: on-chain fetch (position NFT must exist)
-        const positionNftRaw = await this.suiFetchService.fetchObject<TurbosSuiObjectPositionNFTFields>(
+        const { data: positionNftRaw, storageRebate: positionNftStorageRebate } = await this.suiFetchService.fetchObject<TurbosSuiObjectPositionNFTFields>(
             {
                 objectId: positionId,
                 kind: SuiObjectKind.PositionNFT,
@@ -109,7 +109,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         )
         const positionNft = parseTurbosSuiObjectPositionNFT(positionNftRaw)
         // Stage: on-chain fetch (position must exist)
-        const positionRaw = await this.suiFetchService.fetchObject<TurbosSuiObjectPositionFields>(
+        const { data: positionRaw, storageRebate: positionStorageRebate } = await this.suiFetchService.fetchObject<TurbosSuiObjectPositionFields>(
             {
                 objectId: positionNft.positionId,
                 kind: SuiObjectKind.Position,
@@ -118,8 +118,10 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             }
         )
         const position = parseTurbosPosition(positionRaw)
+        const rentAmount = positionNftStorageRebate.add(positionStorageRebate)
         // Stage: return position liquidity
         return {
+            rentAmount,
             liquidity: new BN(position.liquidity),
         }
     }
