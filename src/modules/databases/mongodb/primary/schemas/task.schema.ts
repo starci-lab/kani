@@ -161,7 +161,8 @@ export class TaskSchema extends AbstractSchema {
         }
     )
     @Prop({
-        type: Number, required: false
+        type: Number, 
+        required: false
     })
         openPositionStepIndex?: number
 
@@ -171,10 +172,12 @@ export class TaskSchema extends AbstractSchema {
     @Field(() => Int,
         {
             description: "The number of retries of the prepare processing",
+            nullable: true,
         }
     )
     @Prop({
-        type: Number, required: false
+        type: Number, 
+        default: 0
     })
         prepareProcessingRetries?: number
 }

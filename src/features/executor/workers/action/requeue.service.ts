@@ -191,7 +191,7 @@ export class ActionRequeueService implements OnApplicationBootstrap {
     /**
      * Handle the interval for the requeue.
      */
-    @Interval(envConfig().executor.runtime.operation.openPosition.requeue.interval)
+    @Interval(envConfig().executor.runtime.operation.requeue.interval)
     handleInterval() {
         this.process()
     }

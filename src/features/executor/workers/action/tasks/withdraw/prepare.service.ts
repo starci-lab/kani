@@ -1,5 +1,5 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import BN from "bn.js"
 import {
@@ -7,7 +7,7 @@ import {
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
-    AsyncService 
+    AsyncService
 } from "@modules/mixin"
 import {
     BalanceFetcherService,
@@ -25,19 +25,19 @@ import {
     WithdrawCacheResultNotFoundException,
 } from "@modules/exceptions"
 import {
-    SendHeartbeatService 
+    SendHeartbeatService
 } from "../../send-heartbeat.service"
 import {
-    WinstonLog, WinstonService 
+    WinstonLog, WinstonService
 } from "@modules/winston"
 import {
-    WithdrawTaskPrepareParams 
+    WithdrawTaskPrepareParams
 } from "../types"
 import {
-    CacheKey, CacheService 
+    CacheKey, CacheService
 } from "@modules/cache"
 import {
-    JobFailureStrategy 
+    JobFailureStrategy
 } from "@modules/common"
 import {
     JobTaskService,
@@ -51,6 +51,9 @@ import {
 import {
     DebugLatencyService,
 } from "@modules/debug"
+import {
+    RetryService
+} from "@modules/mixin"
 
 @Injectable()
 export class WithdrawTaskPrepareService {
@@ -65,7 +68,8 @@ export class WithdrawTaskPrepareService {
         private readonly jobTaskService: JobTaskService,
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
-    ) {}
+        private readonly retryService: RetryService,
+    ) { }
 
     /**
    * Process the Withdraw Task PREPARE step.
@@ -88,7 +92,7 @@ export class WithdrawTaskPrepareService {
             })
             // max-attempt guard
             const retries = job.tasks?.[taskIndex]?.retries ?? 0
-            const maxAttempts = envConfig().executor.workers.job.prepareMaxAttempts
+            const maxAttempts = envConfig().executor.workers.job.prepare.maxAttempts
             if (retries >= maxAttempts) {
                 throw new JobFailureException({
                     originalError: new ActionJobTaskPrepareMaxAttemptsException({
@@ -96,7 +100,9 @@ export class WithdrawTaskPrepareService {
                         botId: bot.id,
                         jobId: job.id,
                         metadata: job.metadata,
-                        type: TaskType.Withdraw,
+                        jobType,
+                        taskType: TaskType.Withdraw,
+                        taskIndex,
                     }),
                     strategy: JobFailureStrategy.Fatal,
                 })
@@ -209,12 +215,37 @@ export class WithdrawTaskPrepareService {
                 }
             })
             // prepare withdraw transactions
-            const prepareResult = await this.balanceActionService.prepareWithdrawTransaction({
-                bot,
-                tokenInputs: withdrawTokenInputs,
-                toAddress: bot.withdrawalAddress,
-                toUsdc: cacheResult.toUsdc,
-            })
+            const prepareResult = await this.retryService.retry({
+                action: async () => {
+                    return await this.balanceActionService.prepareWithdrawTransaction({
+                        bot,
+                        tokenInputs: withdrawTokenInputs,
+                        toAddress: bot.withdrawalAddress ?? "",
+                        toUsdc: cacheResult.toUsdc,
+                    })
+                },
+                options: {
+                    retries: envConfig().executor.workers.job.prepare.maxAttempts,
+                    minTimeout: envConfig().executor.workers.job.prepare.minTimeout,
+                    maxTimeout: envConfig().executor.workers.job.prepare.maxTimeout,
+                    onFailedAttempt: async (context) => {
+                        // log the failed attempt
+                        this.winstonService.log(
+                            WinstonLog.ActionJobPrepareFailedAttempt,
+                            {
+                                botId: bot.id,
+                                jobId: job.id,
+                                jobType,
+                                taskIndex,
+                                taskType: TaskType.Withdraw,
+                                metadata: job.metadata,
+                                attemptsMade: context.attemptNumber,
+                            }
+                        )
+                    },
+                },
+            }
+            )
             if (!prepareResult) {
                 throw new JobFailureException({
                     originalError: new PrepareWithdrawTransactionResultNotFoundException({
@@ -238,38 +269,36 @@ export class WithdrawTaskPrepareService {
                 id: contextPayload.id,
                 description: "Upsert prepared task successfully",
             })
-            this.winstonService.log(WinstonLog.ActiveJobTaskPrepared,
+            this.winstonService.log(
+                WinstonLog.ActiveJobTaskPrepared,
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     txCount: prepareResult.prepareTxs.length,
                     metadata: job.metadata,
                     taskIndex,
                     taskType: TaskType.Withdraw,
                 })
         } catch (error) {
-            this.winstonService.log(WinstonLog.ActiveJobTaskPreparedFailed,
+            this.winstonService.log(
+                WinstonLog.ActiveJobTaskPreparedFailed,
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.Withdraw,
                     metadata: job.metadata,
-                })
-            const prepareProcessingRetries = job.tasks[taskIndex].prepareProcessingRetries ?? 0
-            if (prepareProcessingRetries >= envConfig().executor.workers.job.txPrepareProcessingMaxRetries) {
-                throw new JobFailureException({
+                }
+            )
+            throw new JobFailureException(
+                {
                     originalError: error,
                     strategy: JobFailureStrategy.Fatal,
-                })
-            }
-            await this.jobTaskService.updatePrepareProcessingRetries({
-                jobId: job.id,
-                taskIndex,
-            })
+                }
+            )
         }
     }
 }

@@ -97,53 +97,69 @@ export class TransferFeesEnqueueService implements ITransferFeesEnqueueService {
                 jobId = new Types.ObjectId().toString()
                 const session = await this.connection.startSession()
                 await session.withTransaction(
-                    async () => {
+                    async (clientSession) => {
+                        if (!isRetry) {
                         // persist job record in database
-                        const [jobRaw] = await this.connection.model<JobSchema>(
-                            JobSchema.name
-                        ).create(
-                            [
+                            const [jobRaw] = await this.connection.model<JobSchema>(
+                                JobSchema.name
+                            ).create(
+                                [
+                                    {
+                                        _id: jobId,
+                                        bot: bot.id,
+                                        type: JobType.TransferFees,
+                                        status: JobStatus.Running,
+                                        executor: envConfig().executor.id,
+                                        startedAt: this.dayjsService.now().toDate(),
+                                        tasks: [
+                                        ],
+                                    }
+                                ],
                                 {
-                                    _id: jobId,
-                                    bot: bot.id,
-                                    type: JobType.TransferFees,
-                                    status: JobStatus.Running,
-                                    executor: envConfig().executor.id,
-                                    startedAt: this.dayjsService.now().toDate(),
-                                    tasks: [
-                                    ],
-                                }
-                            ],
-                            {
-                                session
-                            })
-                        const job = jobRaw.toJSON<JobSchema>()
-                        // update bot with active job reference
-                        await this.connection.model<BotSchema>(BotSchema.name)
-                            .updateOne(
+                                    session: clientSession
+                                })
+                            const job = jobRaw.toJSON<JobSchema>()
+                            // update bot with active job reference
+                            await this.connection.model<BotSchema>(BotSchema.name)
+                                .updateOne(
+                                    {
+                                        _id: bot.id
+                                    },
+                                    {
+                                        $set: {
+                                            activeJob: {
+                                                job: job.id,
+                                                queuedAt: this.dayjsService.now().toDate(),
+                                                jobType: JobType.TransferFees,
+                                            },
+                                        }
+                                    },
+                                    {
+                                        session: clientSession
+                                    }
+                                )
+                        } else {
+                            await this.connection.model<BotSchema>(BotSchema.name).updateOne(
                                 {
                                     _id: bot.id
                                 },
                                 {
                                     $set: {
-                                        activeJob: {
-                                            job: job.id,
-                                            queuedAt: this.dayjsService.now().toDate(),
-                                            jobType: JobType.TransferFees,
-                                        },
-                                    }
+                                        "activeJob.queuedAt": this.dayjsService.now().toDate(),
+                                    } 
                                 },
                                 {
-                                    session
+                                    session: clientSession
                                 }
                             )
+                        }
                     }
                 )
             }
         
             // build payload and enqueue job
             const payload: ActionPayload = {
-                type: JobType.TransferFees,
+                jobType: JobType.TransferFees,
                 jobId: jobId ?? "",
                 botId: bot.id,
                 isRetry,
@@ -171,7 +187,7 @@ export class TransferFeesEnqueueService implements ITransferFeesEnqueueService {
                     {
                         botId: bot.id,
                         jobId: jobId ?? "",
-                        type: JobType.TransferFees,
+                        jobType: JobType.TransferFees,
                     }
                 )
             } else {
@@ -180,7 +196,7 @@ export class TransferFeesEnqueueService implements ITransferFeesEnqueueService {
                     {
                         botId: bot.id,
                         jobId: jobId ?? "",
-                        type: JobType.TransferFees,
+                        jobType: JobType.TransferFees,
                     }
                 )
             }
@@ -190,7 +206,7 @@ export class TransferFeesEnqueueService implements ITransferFeesEnqueueService {
                     WinstonLog.JobEnqueueFailed,
                     {
                         botId: bot.id,
-                        type: JobType.TransferFees,
+                        jobType: JobType.TransferFees,
                         error: error.message,
                     }
                 )
@@ -200,7 +216,7 @@ export class TransferFeesEnqueueService implements ITransferFeesEnqueueService {
                     {
                         botId: bot.id,
                         jobId: oldJob?.id ?? "",
-                        type: JobType.TransferFees,
+                        jobType: JobType.TransferFees,
                         error: error.message,
                     }
                 )
@@ -232,7 +248,7 @@ export class TransferFeesEnqueueService implements ITransferFeesEnqueueService {
                 WinstonLog.JobSkippedBotNotHasActivePosition,
                 {
                     botId: bot.id,
-                    type: JobType.TransferFees,
+                    jobType: JobType.TransferFees,
                 }
             )
             return false
@@ -243,7 +259,7 @@ export class TransferFeesEnqueueService implements ITransferFeesEnqueueService {
                 WinstonLog.JobSkippedBotPositionNotClosed,
                 {
                     botId: bot.id,
-                    type: JobType.TransferFees,
+                    jobType: JobType.TransferFees,
                 }
             )
             return false
@@ -259,7 +275,7 @@ export class TransferFeesEnqueueService implements ITransferFeesEnqueueService {
                     WinstonLog.JobSkippedBotBalanceSnapshotNotWithinCooldown,
                     {
                         botId: bot.id,
-                        type: JobType.TransferFees,
+                        jobType: JobType.TransferFees,
                         jobId: oldJob?.id,
                     }
                 )
@@ -274,7 +290,7 @@ export class TransferFeesEnqueueService implements ITransferFeesEnqueueService {
                 {
                     botId: bot.id,
                     jobId: bot.activeJob.job.toString(),
-                    type: JobType.TransferFees,
+                    jobType: JobType.TransferFees,
                 }
             )
             return false
@@ -286,7 +302,7 @@ export class TransferFeesEnqueueService implements ITransferFeesEnqueueService {
                 WinstonLog.JobSkippedFoundInQueue,
                 {
                     botId: bot.id,
-                    type: JobType.TransferFees,
+                    jobType: JobType.TransferFees,
                     bullmqJobId: bullmqJob.id ?? "",
                     jobId: oldJob?.id,
                 }
@@ -304,7 +320,7 @@ export class TransferFeesEnqueueService implements ITransferFeesEnqueueService {
                 WinstonLog.JobSkippedBotAuthorityNotAcquired,
                 {
                     botId: bot.id,
-                    type: JobType.TransferFees,
+                    jobType: JobType.TransferFees,
                     jobId: oldJob?.id,
                 }
             )

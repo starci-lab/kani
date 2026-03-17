@@ -21,7 +21,7 @@ export interface JobEnqueuedMessage {
     /** Job ID. */
     jobId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
 }
@@ -35,7 +35,7 @@ export interface JobEnqueueFailedMessage {
     /** Job ID. */
     jobId?: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
     /** Error. */
@@ -51,7 +51,7 @@ export interface ActionJobCompletedMessage {
     /** Job ID. */
     jobId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
     /** Metadata. */
@@ -67,7 +67,7 @@ export interface ActionJobFailedMessage {
     /** Job ID. */
     jobId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Metadata. */
     metadata?: unknown
     /** Error. */
@@ -89,9 +89,28 @@ export interface ActionJobContextLoadFailedMessage {
     /** Error. */
     error: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
 }
 
+/**
+ * Action job prepare failed attempt message.
+ */
+export interface ActionJobPrepareFailedAttemptMessage {
+    /** Bot ID. */
+    botId: string
+    /** Job ID. */
+    jobId: string
+    /** Job type. */
+    jobType: JobType
+    /** Task index. */
+    taskIndex: number
+    /** Task type. */
+    taskType: TaskType
+    /** Metadata. */
+    metadata?: unknown
+    /** Attempt number. */
+    attemptsMade: number
+}
 
 /**
  * Active job prepared message.
@@ -102,7 +121,7 @@ export interface ActiveJobTaskPreparedMessage {
     /** Job ID. */
     jobId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Tx count. */
     txCount: number
     /** Metadata. */
@@ -122,7 +141,7 @@ export interface ActionJobTaskConfirmedMessage {
     /** Job ID. */
     jobId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Metadata. */
     metadata?: unknown
     /** Task index. */
@@ -140,7 +159,7 @@ export interface JobSkippedFoundInQueueMessage {
     /** Job ID. */
     jobId?: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** BullMQ job ID. */
     bullmqJobId: string
     /** Liquidity pool ID. */
@@ -156,7 +175,7 @@ export interface JobSkippedBotAuthorityNotAcquiredMessage {
     /** Job ID. */
     jobId?: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
 }
 
 /**
@@ -168,7 +187,7 @@ export interface JobRequeuedMessage {
     /** Bot ID. */
     botId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Metadata. */
     metadata?: unknown
     /** BullMQ job ID. */
@@ -186,7 +205,7 @@ export interface JobRequeueFailedMessage {
     /** Bot ID. */
     botId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Error. */
     error: string
     /** Liquidity pool ID. */
@@ -202,7 +221,7 @@ export interface JobSkippedNotFoundInDatabaseMessage {
     /** Bot ID. */
     botId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
 }
 
 /**
@@ -216,7 +235,7 @@ export interface JobSkippedContextLoadFailedMessage {
     /** Error. */
     error: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
 }
 
 /**
@@ -228,7 +247,7 @@ export interface JobSkippedBotAlreadyHasActivePositionMessage {
     /** Job ID. */
     jobId?: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
 }
@@ -242,7 +261,7 @@ export interface JobSkippedBotNotHasActivePositionMessage {
     /** Job ID. */
     jobId?: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
 }
@@ -256,7 +275,7 @@ export interface JobSkippedBotPositionNotClosedMessage {
     /** Job ID. */
     jobId?: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
 }
@@ -268,7 +287,7 @@ export interface JobSkippedBotPositionClosedMessage {
     /** Bot ID. */
     botId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
 }
@@ -282,7 +301,7 @@ export interface JobSkippedBotNotRunningMessage {
     /** Job ID. */
     jobId?: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
 }
@@ -298,7 +317,7 @@ export interface JobSkippedLiquidityPoolContextLoadFailedMessage {
     /** Error. */
     error: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
 }
 
 /**
@@ -310,7 +329,7 @@ export interface JobSkippedBotBalanceSnapshotWithinCooldownMessage {
     /** Bot ID. */
     botId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
 }
@@ -324,7 +343,7 @@ export interface JobSkippedBotBalanceSnapshotNotWithinCooldownMessage {
     /** Bot ID. */
     botId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
 }
@@ -337,7 +356,7 @@ export interface JobSkippedCannotSettlePositionMessage {
     /** Bot ID. */
     botId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
     /** Strategy results. */
@@ -353,7 +372,7 @@ export interface JobSkippedBotNoBalanceSnapshotMessage {
     /** Bot ID. */
     botId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
 }
@@ -367,7 +386,7 @@ export interface JobSkippedBotAlreadyHasActiveJobMessage {
     /** Bot ID. */
     botId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
 }
@@ -381,7 +400,7 @@ export interface JobSkippedBotNotEligibleMessage {
     /** Bot ID. */
     botId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
 }
@@ -395,7 +414,7 @@ export interface JobSkippedLiquidityPoolInfoNotReadyMessage {
     /** Bot ID. */
     botId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
 }
@@ -409,7 +428,7 @@ export interface JobSkippedTokenPriceNotReadyMessage {
     /** Bot ID. */
     botId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
     /** Token ID. */
@@ -425,7 +444,7 @@ export interface JobSkippedNoPayloadMessage {
     /** Bot ID. */
     botId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
 }
 
 /**
@@ -437,7 +456,7 @@ export interface JobSkippedBotRunningMessage {
     /** Bot ID. */
     botId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
 }
 
 /**
@@ -449,7 +468,7 @@ export interface JobSkippedLiquidityPoolNotOwnedByBotMessage {
     /** Bot ID. */
     botId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
 }
@@ -463,7 +482,7 @@ export interface JobSkippedQuoteRatioNotGoodMessage {
     /** Bot ID. */
     botId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Liquidity pool ID. */
     liquidityPoolId?: LiquidityPoolId
     /** Quote ratio. */
@@ -481,7 +500,7 @@ export interface JobSkippedBotCacheResultFoundMessage {
     /** Bot ID. */
     botId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
 }
 
 /**
@@ -493,7 +512,7 @@ export interface ActionJobTaskStepSignedMessage {
     /** Job ID. */
     jobId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Task index. */
     taskIndex: number
     /** Task type. */
@@ -513,7 +532,7 @@ export interface ActionJobTaskStepExecutedMessage {
     /** Job ID. */
     jobId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Task index. */
     taskIndex: number
     /** Task type. */
@@ -533,7 +552,7 @@ export interface ActionJobTaskStepSignedFailedMessage {
     /** Job ID. */
     jobId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Task index. */
     taskIndex: number
     /** Task type. */
@@ -544,6 +563,28 @@ export interface ActionJobTaskStepSignedFailedMessage {
     error: string
     /** Metadata. */
     metadata?: unknown
+}
+
+/**
+ * Action job task step signed failed attempt message.
+ */
+export interface ActionJobTaskStepSignedFailedAttemptMessage {
+    /** Bot ID. */
+    botId: string
+    /** Job ID. */
+    jobId: string
+    /** Job type. */
+    jobType: JobType
+    /** Task index. */
+    taskIndex: number
+    /** Task type. */
+    taskType: TaskType
+    /** Step index. */
+    stepIndex: number
+    /** Metadata. */
+    metadata?: unknown
+    /** Attempt number. */
+    attemptsMade: number
 }
 
 /**
@@ -555,7 +596,7 @@ export interface ActionJobTaskStepExecutedFailedMessage {
     /** Job ID. */
     jobId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Task index. */
     taskIndex: number
     /** Task type. */
@@ -569,6 +610,28 @@ export interface ActionJobTaskStepExecutedFailedMessage {
 }
 
 /**
+ * Action job task step executed failed attempt message.
+ */
+export interface ActionJobTaskStepExecuteFailedAttemptMessage {
+    /** Bot ID. */
+    botId: string
+    /** Job ID. */
+    jobId: string
+    /** Job type. */
+    jobType: JobType
+    /** Task index. */
+    taskIndex: number
+    /** Task type. */
+    taskType: TaskType
+    /** Step index. */
+    stepIndex: number
+    /** Metadata. */
+    metadata?: unknown
+    /** Attempt number. */
+    attemptsMade: number
+}
+
+/**
  * Active job task prepared failed message.
  */
 export interface ActiveJobTaskPreparedFailedMessage {
@@ -577,7 +640,7 @@ export interface ActiveJobTaskPreparedFailedMessage {
     /** Job ID. */
     jobId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Error. */
     error: string
     /** Task index. */
@@ -597,7 +660,7 @@ export interface ActionJobTaskConfirmedFailedMessage {
     /** Job ID. */
     jobId: string
     /** Job type. */
-    type: JobType
+    jobType: JobType
     /** Error. */
     error: string
     /** Task index. */

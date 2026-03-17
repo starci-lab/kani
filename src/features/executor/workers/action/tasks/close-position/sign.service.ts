@@ -1,22 +1,22 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    ClosePositionActionService, 
+    ClosePositionActionService,
     PrepareTx,
 } from "@modules/blockchains"
 import {
     TaskType,
 } from "@modules/databases"
 import {
-    InjectSuperJson 
+    InjectSuperJson
 } from "@modules/mixin"
 import SuperJSON from "superjson"
 import {
-    SendHeartbeatService 
+    SendHeartbeatService
 } from "../../send-heartbeat.service"
 import {
-    ClosePositionTaskSignParams 
+    ClosePositionTaskSignParams
 } from "../types"
 import {
     WinstonService,
@@ -31,6 +31,12 @@ import {
 import {
     JobStepService,
 } from "../../update"
+import {
+    RetryService
+} from "@modules/mixin"
+import {
+    envConfig 
+} from "@modules/env"
 
 /**
  * Service for the Close Position Task SIGN step.
@@ -46,6 +52,7 @@ export class ClosePositionTaskSignService {
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
         private readonly jobStepService: JobStepService,
+        private readonly retryService: RetryService,
     ) { }
     /**
      * Process the Close Position Task SIGN step.
@@ -87,13 +94,38 @@ export class ClosePositionTaskSignService {
                 id: contextPayload.id,
                 description: "Heartbeat sent successfully",
             })
-            const { signedTx } = await this.closePositionActionService.sign(
-                {
-                    bot,
-                    prepareTx,
-                    liquidityPool,
+            const { signedTx } = await this.retryService.retry({
+                action: async () => {
+                    return await this.closePositionActionService.sign(
+                        {
+                            bot,
+                            prepareTx,
+                            liquidityPool,
+                        },  
+                    )
                 },
-            )
+                options: {
+                    retries: envConfig().executor.workers.job.sign.maxAttempts,
+                    minTimeout: envConfig().executor.workers.job.sign.minTimeout,
+                    maxTimeout: envConfig().executor.workers.job.sign.maxTimeout,
+                    onFailedAttempt: async (context) => {
+                        // log the failed attempt
+                        this.winstonService.log(
+                            WinstonLog.ActionJobTaskStepSignedFailedAttempt,
+                            {
+                                botId: bot.id,
+                                jobId: job.id,
+                                jobType,
+                                taskIndex,
+                                taskType: TaskType.ClosePosition,
+                                stepIndex,
+                                metadata: job.metadata,
+                                attemptsMade: context.attemptNumber,
+                            }
+                        )
+                    },
+                },
+            })
             this.debugLatencyService.measure({
                 id: contextPayload.id,
                 description: "Sign transaction successfully",
@@ -114,7 +146,7 @@ export class ClosePositionTaskSignService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     taskIndex,
                     taskType: TaskType.ClosePosition,
                     stepIndex,
@@ -127,7 +159,7 @@ export class ClosePositionTaskSignService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     taskIndex,
                     taskType: TaskType.ClosePosition,
                     stepIndex,
@@ -135,7 +167,16 @@ export class ClosePositionTaskSignService {
                     metadata: job.metadata,
                 }
             )
-            // log the error
+            await this.jobStepService.rollbackToPrepared(
+                {
+                    jobId: job.id,
+                    taskIndex,
+                }
+            )
+            this.debugLatencyService.measure({
+                id: contextPayload.id,
+                description: "Rollback to prepared successful",
+            })
             throw error
         }
     }

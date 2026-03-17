@@ -43,6 +43,9 @@ import {
 import {
     DebugLatencyService,
 } from "@modules/debug"
+import {
+    RetryService 
+} from "@modules/mixin"
 
 /**
  * Service for the Open Position Task EXECUTE step.
@@ -58,6 +61,7 @@ export class OpenPositionTaskExecuteService {
         private readonly winstonService: WinstonService,
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
+        private readonly retryService: RetryService,
     ) {}
 
     /**
@@ -81,10 +85,6 @@ export class OpenPositionTaskExecuteService {
         })
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
         const step = job.tasks[taskIndex].steps?.[stepIndex]
-        const executeRetries = step?.executeRetries ?? 0
-        const executeMaxRetries = envConfig().executor.workers.job.txExecuteMaxRetries
-        const signRetries = step?.signRetries ?? 0
-        const signMaxRetries = envConfig().executor.workers.job.txSignMaxRetries
         try {
             await this.sendHeartbeatService.process({
                 bot,
@@ -111,14 +111,39 @@ export class OpenPositionTaskExecuteService {
                 })
             }
             const prepareResult = this.superJson.parse<PrepareOpenPositionResult>(job.tasks[taskIndex].prepareResult ?? "")
-            const executeResult = await this.openPositionActionService.execute({
-                positionId: prepareResult?.positionId ?? "",
-                bot,
-                state,
-                txCheck: true,
-                liquidityPool,
-                signedTx: this.superJson.parse<SignedTx>(signedTx),
-                stimulate: envConfig().executor.runtime.operation.openPosition.stimulate,
+            const executeResult = await this.retryService.retry({
+                action: async () => {
+                    return await this.openPositionActionService.execute({
+                        positionId: prepareResult?.positionId ?? "",
+                        bot,
+                        state,
+                        txCheck: true,
+                        liquidityPool,
+                        signedTx: this.superJson.parse<SignedTx>(signedTx),
+                        stimulate: envConfig().executor.runtime.operation.openPosition.stimulate,
+                    })
+                },
+                options: {
+                    retries: envConfig().executor.workers.job.execute.maxAttempts,
+                    minTimeout: envConfig().executor.workers.job.execute.minTimeout,
+                    maxTimeout: envConfig().executor.workers.job.execute.maxTimeout,
+                    onFailedAttempt: async (context) => {
+                        // log the failed attempt
+                        this.winstonService.log(
+                            WinstonLog.ActionJobTaskStepExecuteFailedAttempt,
+                            {
+                                botId: bot.id,
+                                jobId: job.id,
+                                jobType,
+                                taskIndex,
+                                taskType: TaskType.OpenPosition,
+                                stepIndex,
+                                metadata: job.metadata,
+                                attemptsMade: context.attemptNumber,
+                            }
+                        )
+                    },
+                },
             })
             this.debugLatencyService.measure({
                 id: contextPayload.id,
@@ -140,7 +165,7 @@ export class OpenPositionTaskExecuteService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     taskIndex,
                     taskType: TaskType.OpenPosition,
                     stepIndex,
@@ -153,7 +178,7 @@ export class OpenPositionTaskExecuteService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     taskIndex,
                     taskType: TaskType.OpenPosition,
                     stepIndex,
@@ -163,40 +188,6 @@ export class OpenPositionTaskExecuteService {
             )
             // If tx execution failed with a fatal RPC error, rollback to Sign and record failure atomically.
             if (error instanceof RpcClientFatalException) {
-                // if execute retries is less than execute max retries, increment the execute retries
-                if (executeRetries < (executeMaxRetries - 1)) {
-                    // update execute retries
-                    await this.jobStepService.updateExecuteRetries(
-                        {
-                            jobId: job.id,
-                            taskType: TaskType.OpenPosition,
-                            taskIndex,
-                            stepIndex,
-                        }
-                    )
-                    this.debugLatencyService.measure({
-                        id: contextPayload.id,
-                        description: "Execute retries incremented successfully",
-                    })
-                    return
-                }
-                // if tx failure index is greater than or equal to max attempts, throw a job failure exception
-                if (signRetries < (signMaxRetries - 1)) {
-                    await this.jobStepService.rollbackToSign(
-                        {
-                            jobId: job.id,
-                            taskType: TaskType.OpenPosition,
-                            taskIndex,
-                            stepIndex,
-                            error,
-                        }
-                    )
-                    this.debugLatencyService.measure({
-                        id: contextPayload.id,
-                        description: "Rollback to sign successful",
-                    })
-                    return
-                }
                 await this.jobStepService.rollbackToPrepared(
                     {
                         jobId: job.id,

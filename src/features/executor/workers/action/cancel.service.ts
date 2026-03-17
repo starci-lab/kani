@@ -82,7 +82,7 @@ export class CancelService {
                         },
                         {
                             $set: {
-                                status: JobStatus.Completed,
+                                status: JobStatus.Cancelled,
                                 processedAt: this.dayjsService.now().toDate(),
                                 ...(envConfig().executor.workers.job.level === 1 ? {
                                     $unset: {

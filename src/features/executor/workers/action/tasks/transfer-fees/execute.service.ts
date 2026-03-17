@@ -42,6 +42,9 @@ import {
 import {
     DebugLatencyService,
 } from "@modules/debug"
+import {
+    RetryService
+} from "@modules/mixin"
 
 /**
  * Service for the Transfer Fees Task EXECUTE step.
@@ -57,13 +60,20 @@ export class TransferFeesTaskExecuteService {
         private readonly winstonService: WinstonService,
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
+        private readonly retryService: RetryService,
     ) {}
 
     /**
      * Process the Transfer Fees Task EXECUTE step.
      */
     async process(
-        { bot, job, bullmqJob, taskIndex, jobType }: TransferFeesTaskExecuteParams
+        { 
+            bot, 
+            job, 
+            bullmqJob, 
+            taskIndex, 
+            jobType 
+        }: TransferFeesTaskExecuteParams
     ) {
         const contextPayload = this.debugContextService.createContextPayload({
             jobType,
@@ -71,11 +81,7 @@ export class TransferFeesTaskExecuteService {
             botId: bot.id,
         })
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
-        const step = job.tasks[taskIndex].steps?.[stepIndex]
-        const executeRetries = step?.executeRetries ?? 0
-        const executeMaxRetries = envConfig().executor.workers.job.txExecuteMaxRetries
-        const signRetries = step?.signRetries ?? 0
-        const signMaxRetries = envConfig().executor.workers.job.txSignMaxRetries
+        const step = job.tasks[taskIndex].steps?.[stepIndex]    
         try {
             await this.sendHeartbeatService.process({
                 bot,
@@ -99,11 +105,36 @@ export class TransferFeesTaskExecuteService {
                 })
             }
 
-            const executeResult = await this.balanceActionService.executeWithdrawTransaction({
-                bot,
-                txCheck: true,
-                stimulate: envConfig().executor.runtime.operation.transferFees.stimulate,
-                signedTx: this.superJson.parse<SignedTx>(signedTx),
+            const executeResult = await this.retryService.retry({
+                action: async () => {
+                    return await this.balanceActionService.executeWithdrawTransaction({
+                        bot,
+                        txCheck: true,
+                        stimulate: envConfig().executor.runtime.operation.transferFees.stimulate,
+                        signedTx: this.superJson.parse<SignedTx>(signedTx),
+                    })
+                },
+                options: {
+                    retries: envConfig().executor.workers.job.execute.maxAttempts,
+                    minTimeout: envConfig().executor.workers.job.execute.minTimeout,
+                    maxTimeout: envConfig().executor.workers.job.execute.maxTimeout,
+                    onFailedAttempt: async (context) => {
+                        // log the failed attempt
+                        this.winstonService.log(
+                            WinstonLog.ActionJobTaskStepExecuteFailedAttempt,
+                            {
+                                botId: bot.id,
+                                jobId: job.id,
+                                jobType,
+                                taskIndex,
+                                taskType: TaskType.TransferFees,
+                                stepIndex,
+                                metadata: job.metadata,
+                                attemptsMade: context.attemptNumber,
+                            }
+                        )
+                    },
+                },
             })
             this.debugLatencyService.measure({
                 id: contextPayload.id,
@@ -124,7 +155,7 @@ export class TransferFeesTaskExecuteService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     taskIndex,
                     taskType: TaskType.TransferFees,
                     stepIndex,
@@ -135,7 +166,7 @@ export class TransferFeesTaskExecuteService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     taskIndex,
                     taskType: TaskType.TransferFees,
                     stepIndex,
@@ -144,33 +175,6 @@ export class TransferFeesTaskExecuteService {
                 })
 
             if (error instanceof RpcClientFatalException) {
-                if (executeRetries < executeMaxRetries - 1) {
-                    await this.jobStepService.updateExecuteRetries({
-                        jobId: job.id,
-                        taskType: TaskType.TransferFees,
-                        taskIndex,
-                        stepIndex,
-                    })
-                    this.debugLatencyService.measure({
-                        id: contextPayload.id,
-                        description: "Execute retries incremented successfully",
-                    })
-                    return
-                }
-                if (signRetries < signMaxRetries - 1) {
-                    await this.jobStepService.rollbackToSign({
-                        jobId: job.id,
-                        taskType: TaskType.TransferFees,
-                        taskIndex,
-                        stepIndex,
-                        error,
-                    })
-                    this.debugLatencyService.measure({
-                        id: contextPayload.id,
-                        description: "Rollback to sign successful",
-                    })
-                    return
-                }
                 await this.jobStepService.rollbackToPrepared({
                     jobId: job.id,
                     taskIndex,

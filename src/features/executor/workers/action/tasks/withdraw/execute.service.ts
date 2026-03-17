@@ -41,6 +41,9 @@ import {
 import {
     DebugLatencyService,
 } from "@modules/debug"
+import {
+    RetryService
+} from "@modules/mixin"
 
 /**
  * Service for the WITHDRAW TASK EXECUTE step.
@@ -56,6 +59,7 @@ export class WithdrawTaskExecuteService {
         private readonly winstonService: WinstonService,
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
+        private readonly retryService: RetryService,
     ) {}
 
     /**
@@ -69,10 +73,6 @@ export class WithdrawTaskExecuteService {
         })
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
         const step = job.tasks[taskIndex].steps?.[stepIndex]
-        const executeRetries = step?.executeRetries ?? 0
-        const executeMaxRetries = envConfig().executor.workers.job.txExecuteMaxRetries
-        const signRetries = step?.signRetries ?? 0
-        const signMaxRetries = envConfig().executor.workers.job.txSignMaxRetries
         try {
             await this.sendHeartbeatService.process({
                 bot,
@@ -97,11 +97,36 @@ export class WithdrawTaskExecuteService {
             }
 
             // execute
-            const executeResult = await this.balanceActionService.executeWithdrawTransaction({
-                bot,
-                txCheck: true,
-                stimulate: envConfig().executor.runtime.operation.withdraw.stimulate,
-                signedTx: this.superJson.parse<SignedTx>(signedTx),
+            const executeResult = await this.retryService.retry({
+                action: async () => {
+                    return await this.balanceActionService.executeWithdrawTransaction({
+                        bot,
+                        txCheck: true,
+                        stimulate: envConfig().executor.runtime.operation.withdraw.stimulate,
+                        signedTx: this.superJson.parse<SignedTx>(signedTx),
+                    })
+                },
+                options: {
+                    retries: envConfig().executor.workers.job.execute.maxAttempts,
+                    minTimeout: envConfig().executor.workers.job.execute.minTimeout,
+                    maxTimeout: envConfig().executor.workers.job.execute.maxTimeout,
+                    onFailedAttempt: async (context) => {
+                        // log the failed attempt
+                        this.winstonService.log(
+                            WinstonLog.ActionJobTaskStepExecuteFailedAttempt,
+                            {
+                                botId: bot.id,
+                                jobId: job.id,
+                                jobType,
+                                taskIndex,
+                                taskType: TaskType.Withdraw,
+                                stepIndex,
+                                metadata: job.metadata,
+                                attemptsMade: context.attemptNumber,
+                            }
+                        )
+                    },
+                },
             })
             this.debugLatencyService.measure({
                 id: contextPayload.id,
@@ -122,7 +147,7 @@ export class WithdrawTaskExecuteService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     taskIndex,
                     taskType: TaskType.Withdraw,
                     stepIndex,
@@ -133,7 +158,7 @@ export class WithdrawTaskExecuteService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     taskIndex,
                     taskType: TaskType.Withdraw,
                     stepIndex,
@@ -144,38 +169,6 @@ export class WithdrawTaskExecuteService {
 
             // Fatal RPC error -> retry ladder (same as ReconcileBalance)
             if (error instanceof RpcClientFatalException) {
-                // 1) bump executeRetries until max-1
-                if (executeRetries < executeMaxRetries - 1) {
-                    await this.jobStepService.updateExecuteRetries({
-                        jobId: job.id,
-                        taskType: TaskType.Withdraw,
-                        taskIndex,
-                        stepIndex,
-                    })
-                    this.debugLatencyService.measure({
-                        id: contextPayload.id,
-                        description: "Execute retries incremented successfully",
-                    })
-                    return
-                }
-
-                // 2) rollback to Sign if we still can retry signing
-                if (signRetries < signMaxRetries - 1) {
-                    await this.jobStepService.rollbackToSign({
-                        jobId: job.id,
-                        taskType: TaskType.Withdraw,
-                        taskIndex,
-                        stepIndex,
-                        error,
-                    })
-                    this.debugLatencyService.measure({
-                        id: contextPayload.id,
-                        description: "Rollback to sign successful",
-                    })
-                    return
-                }
-
-                // 3) otherwise rollback whole task to Prepared
                 await this.jobStepService.rollbackToPrepared({
                     jobId: job.id,
                     taskIndex,

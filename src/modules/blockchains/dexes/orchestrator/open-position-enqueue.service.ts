@@ -64,8 +64,8 @@ import {
 } from "../../eval"
 import {
     IndicatorStatus,
-    CacheKey, 
-    CacheService 
+    CacheKey,
+    CacheService
 } from "@modules/cache"
 import _ from "lodash"
 import {
@@ -131,15 +131,13 @@ export class OpenPositionEnqueueService {
         }
         try {
             let jobId = oldJob?.id
+            const session = await this.connection.startSession()
             if (!isRetry) {
                 jobId = new Types.ObjectId().toString()
-                // start a session
-                const session = await this.connection.startSession()
-                await session.withTransaction(
-                    async () => {
-                        /**
-                    * Persist job record.
-                    */
+            }
+            await session.withTransaction(
+                async (clientSession) => {
+                    if (!isRetry) {
                         const [jobRaw] = await this.connection.model<JobSchema>(
                             JobSchema.name
                         ).create(
@@ -159,16 +157,10 @@ export class OpenPositionEnqueueService {
                                 }
                             ],
                             {
-                                session,
+                                session: clientSession,
                             }
                         )
                         const job = jobRaw.toJSON()
-                        /**
-                    * Update the balance snapshots snapshotAt
-                    */
-                        /**
-                    * Update the bot with the active job id.
-                    */
                         await this.connection.model<BotSchema>(BotSchema.name)
                             .updateOne(
                                 {
@@ -185,16 +177,30 @@ export class OpenPositionEnqueueService {
                                     }
                                 },
                                 {
-                                    session
+                                    session: clientSession
                                 }
                             )
+                    } else {
+                        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                            {
+                                _id: jobId
+                            },
+                            {
+                                $set: {
+                                    "activeJob.queuedAt": this.dayjsService.now().toDate(),
+                                }
+                            },
+                            {
+                                session: clientSession
+                            }
+                        )
                     }
-                )
-            }
+                }
+            )
             const payload: ActionPayload = {
                 jobId: jobId ?? "",
                 botId: bot.id,
-                type: JobType.OpenPosition,
+                jobType: JobType.OpenPosition,
                 isRetry,
                 tasks: [
                     {
@@ -222,7 +228,7 @@ export class OpenPositionEnqueueService {
                     {
                         jobId: jobId ?? "",
                         botId: bot.id,
-                        type: JobType.OpenPosition,
+                        jobType: JobType.OpenPosition,
                         liquidityPoolId: liquidityPool.displayId,
                     }
                 )
@@ -232,7 +238,7 @@ export class OpenPositionEnqueueService {
                     {
                         jobId: jobId ?? "",
                         botId: bot.id,
-                        type: JobType.OpenPosition,
+                        jobType: JobType.OpenPosition,
                         liquidityPoolId: liquidityPool.displayId,
                     }
                 )
@@ -243,7 +249,7 @@ export class OpenPositionEnqueueService {
                     WinstonLog.JobEnqueueFailed,
                     {
                         botId: bot.id,
-                        type: JobType.OpenPosition,
+                        jobType: JobType.OpenPosition,
                         liquidityPoolId: liquidityPool.displayId,
                         error: error.message,
                     })
@@ -253,7 +259,7 @@ export class OpenPositionEnqueueService {
                     {
                         jobId: oldJob?.id ?? "",
                         botId: bot.id,
-                        type: JobType.OpenPosition,
+                        jobType: JobType.OpenPosition,
                         liquidityPoolId: liquidityPool.displayId,
                         error: error.message,
                     }
@@ -288,7 +294,7 @@ export class OpenPositionEnqueueService {
                 WinstonLog.JobSkippedBotNotRunning,
                 {
                     botId: bot.id,
-                    type: JobType.OpenPosition,
+                    jobType: JobType.OpenPosition,
                     liquidityPoolId: liquidityPool.displayId,
                     jobId: oldJob?.id,
                 })
@@ -302,7 +308,7 @@ export class OpenPositionEnqueueService {
                 {
                     botId: bot.id,
                     liquidityPoolId: liquidityPool.displayId,
-                    type: JobType.OpenPosition,
+                    jobType: JobType.OpenPosition,
                     jobId: oldJob?.id,
                 })
             return false
@@ -316,7 +322,7 @@ export class OpenPositionEnqueueService {
                     botId: bot.id,
                     jobId: bot.activeJob.job.toString(),
                     liquidityPoolId: liquidityPool.displayId,
-                    type: JobType.OpenPosition,
+                    jobType: JobType.OpenPosition,
                 }
             )
             return false
@@ -329,7 +335,7 @@ export class OpenPositionEnqueueService {
                 {
                     botId: bot.id,
                     liquidityPoolId: liquidityPool.displayId,
-                    type: JobType.OpenPosition,
+                    jobType: JobType.OpenPosition,
                 })
             return false
         }
@@ -348,13 +354,13 @@ export class OpenPositionEnqueueService {
                 {
                     botId: bot.id,
                     liquidityPoolId: liquidityPool.displayId,
-                    type: JobType.OpenPosition,
+                    jobType: JobType.OpenPosition,
                     jobId: oldJob?.id,
                 })
             return false
         }
         if (!isRetry) {
-        // Skip if the balance snapshot is outside the rescan cooldown window
+            // Skip if the balance snapshot is outside the rescan cooldown window
             const diffMs = this.dayjsService.now().diff(
                 this.dayjsService.from(bot.balanceSnapshots.snapshotAt),
                 "millisecond",
@@ -364,7 +370,7 @@ export class OpenPositionEnqueueService {
                     WinstonLog.JobSkippedBotBalanceSnapshotNotWithinCooldown,
                     {
                         botId: bot.id,
-                        type: JobType.OpenPosition,
+                        jobType: JobType.OpenPosition,
                         liquidityPoolId: liquidityPool.displayId,
                         jobId: oldJob?.id,
                     }
@@ -373,7 +379,7 @@ export class OpenPositionEnqueueService {
             }
         }
         if (!isRetry) {
-        // Skip if the bot is not eligible based on snapshot evaluation
+            // Skip if the bot is not eligible based on snapshot evaluation
             const { eligible } = await this.evalSnapshotService.eval({
                 bot
             })
@@ -382,7 +388,7 @@ export class OpenPositionEnqueueService {
                     {
                         botId: bot.id,
                         liquidityPoolId: liquidityPool.displayId,
-                        type: JobType.OpenPosition,
+                        jobType: JobType.OpenPosition,
                         jobId: oldJob?.id,
                     })
                 return false
@@ -397,8 +403,7 @@ export class OpenPositionEnqueueService {
                 oldJob
             )
         ) && !isRetry
-        )
-        {
+        ) {
             return false
         }
 
@@ -429,7 +434,7 @@ export class OpenPositionEnqueueService {
                 {
                     botId: bot.id,
                     bullmqJobId: existingJob.id ?? "",
-                    type: JobType.OpenPosition,
+                    jobType: JobType.OpenPosition,
                     liquidityPoolId: liquidityPool.displayId,
                     jobId: oldJob?.id,
                 })
@@ -473,7 +478,7 @@ export class OpenPositionEnqueueService {
                             {
                                 botId: bot.id,
                                 liquidityPoolId: liquidityPool.displayId,
-                                type: JobType.OpenPosition,
+                                jobType: JobType.OpenPosition,
                                 jobId: oldJob?.id,
                             })
                         throw new DynamicLiquidityPoolInfoDiagnosticNotReadyException(
@@ -499,7 +504,7 @@ export class OpenPositionEnqueueService {
                                 botId: bot.id,
                                 liquidityPoolId: liquidityPool.displayId,
                                 tokenId: token.displayId,
-                                type: JobType.OpenPosition,
+                                jobType: JobType.OpenPosition,
                                 jobId: oldJob?.id,
                             })
                         throw new PriceDiagnosticNotReadyException({
@@ -525,7 +530,7 @@ export class OpenPositionEnqueueService {
                                 botId: bot.id,
                                 liquidityPoolId: liquidityPool.displayId,
                                 tokenId: token.displayId,
-                                type: JobType.OpenPosition,
+                                jobType: JobType.OpenPosition,
                                 jobId: oldJob?.id,
                             })
                         throw new PriceDiagnosticNotReadyException(
@@ -590,7 +595,7 @@ export class OpenPositionEnqueueService {
                 {
                     botId: bot.id,
                     liquidityPoolId: liquidityPool.displayId,
-                    type: JobType.OpenPosition,
+                    jobType: JobType.OpenPosition,
                     quoteRatio: quoteRatio.toNumber(),
                     quoteRatioStatus: status,
                     jobId: oldJob?.id,

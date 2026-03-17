@@ -30,6 +30,12 @@ import {
 import {
     JobStepService,
 } from "../../update"
+import {
+    RetryService
+} from "@modules/mixin"
+import {
+    envConfig 
+} from "@modules/env"
 
 /**
  * Service for the WITHDRAW TASK SIGN step.
@@ -45,6 +51,7 @@ export class WithdrawTaskSignService {
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
         private readonly jobStepService: JobStepService,
+        private readonly retryService: RetryService,
     ) {}
 
     /**
@@ -75,9 +82,34 @@ export class WithdrawTaskSignService {
                 description: "Heartbeat sent successfully",
             })
             const prepareTx = this.superJson.parse<PrepareTx>(step.prepareTx)
-            const { signedTx } = await this.balanceActionService.signReconcileBalanceTransaction({
-                bot,
-                prepareTx,
+            const { signedTx } = await this.retryService.retry({
+                action: async () => {
+                    return await this.balanceActionService.signReconcileBalanceTransaction({
+                        bot,
+                        prepareTx,
+                    })
+                },
+                options: {
+                    retries: envConfig().executor.workers.job.sign.maxAttempts,
+                    minTimeout: envConfig().executor.workers.job.sign.minTimeout,
+                    maxTimeout: envConfig().executor.workers.job.sign.maxTimeout,
+                    onFailedAttempt: async (context) => {
+                    // log the failed attempt
+                        this.winstonService.log(
+                            WinstonLog.ActionJobTaskStepSignedFailedAttempt,
+                            {
+                                botId: bot.id,
+                                jobId: job.id,
+                                jobType,
+                                taskIndex,
+                                taskType: TaskType.Withdraw,
+                                stepIndex,
+                                metadata: job.metadata,
+                                attemptsMade: context.attemptNumber,
+                            }
+                        )
+                    },
+                }
             })
             this.debugLatencyService.measure({
                 id: contextPayload.id,
@@ -98,26 +130,26 @@ export class WithdrawTaskSignService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     taskIndex,
                     taskType: TaskType.Withdraw,
                     stepIndex,
                     metadata: job.metadata,
                 })
         } catch (error) {
-            this.winstonService.log(WinstonLog.ActionJobTaskStepSignedFailed,
+            this.winstonService.log(
+                WinstonLog.ActionJobTaskStepSignedFailed,
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     taskIndex,
                     taskType: TaskType.Withdraw,
                     stepIndex,
                     error: error.message,
                     metadata: job.metadata,
-                })
-
-            throw error
+                }
+            )
         }
     }
 }

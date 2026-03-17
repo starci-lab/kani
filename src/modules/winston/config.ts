@@ -23,6 +23,7 @@ import {
     ActionJobCompletedMessage,
     ActionJobFailedMessage,
     ActionJobContextLoadFailedMessage,
+    ActionJobPrepareFailedAttemptMessage,
     MemoryUsageMessage,
     MetricInitializedMessage,
     ClosePositionTransactionExecutedMessage,
@@ -277,7 +278,9 @@ import {
     ActiveJobTaskPreparedFailedMessage,
     ActionJobTaskConfirmedFailedMessage,
     ActionJobTaskStepSignedFailedMessage,
+    ActionJobTaskStepSignedFailedAttemptMessage,
     ActionJobTaskStepExecutedFailedMessage,
+    ActionJobTaskStepExecuteFailedAttemptMessage,
     JobSkippedBotBalanceSnapshotNotWithinCooldownMessage,
     ExecutionLatencyMessage,
 } from "./types"
@@ -2507,6 +2510,15 @@ export const configMap = {
         messageType: {
         } as ActionJobContextLoadFailedMessage,
     },
+    // Action Job Prepare Failed Attempt
+    [WinstonLog.ActionJobPrepareFailedAttempt]: {
+        name: WinstonLog.ActionJobPrepareFailedAttempt,
+        level: WinstonLevel.Error,
+        loki: true,
+        console: true,
+        messageType: {
+        } as ActionJobPrepareFailedAttemptMessage,
+    },
     // Active Job Prepared
     [WinstonLog.ActiveJobTaskPrepared]: {
         name: WinstonLog.ActiveJobTaskPrepared,
@@ -2794,6 +2806,15 @@ export const configMap = {
         messageType: {
         } as ActionJobTaskStepSignedFailedMessage,
     },
+    // Action Job Task Step Signed Failed Attempt
+    [WinstonLog.ActionJobTaskStepSignedFailedAttempt]: {
+        name: WinstonLog.ActionJobTaskStepSignedFailedAttempt,
+        level: WinstonLevel.Error,
+        loki: true,
+        console: true,
+        messageType: {
+        } as ActionJobTaskStepSignedFailedAttemptMessage,
+    },
     // Action Job Task Step Executed Failed
     [WinstonLog.ActionJobTaskStepExecutedFailed]: {
         name: WinstonLog.ActionJobTaskStepExecutedFailed,
@@ -2802,6 +2823,15 @@ export const configMap = {
         console: true,
         messageType: {
         } as ActionJobTaskStepExecutedFailedMessage,
+    },
+    // Action Job Task Step Execute Failed Attempt
+    [WinstonLog.ActionJobTaskStepExecuteFailedAttempt]: {
+        name: WinstonLog.ActionJobTaskStepExecuteFailedAttempt,
+        level: WinstonLevel.Error,
+        loki: true,
+        console: true,
+        messageType: {
+        } as ActionJobTaskStepExecuteFailedAttemptMessage,
     },
     // Active Job Task Prepared Failed
     [WinstonLog.ActiveJobTaskPreparedFailed]: {

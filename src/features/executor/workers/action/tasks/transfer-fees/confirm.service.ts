@@ -173,7 +173,7 @@ export class TransferFeesTaskConfirmService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     metadata: job.metadata,
                     taskIndex,
                     taskType: TaskType.TransferFees,
@@ -185,7 +185,7 @@ export class TransferFeesTaskConfirmService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.TransferFees,

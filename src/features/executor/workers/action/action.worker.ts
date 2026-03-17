@@ -107,7 +107,7 @@ export class ActionWorker extends WorkerHost {
                 {
                     jobId,
                     botId,
-                    type: payload.type,
+                    jobType: payload.jobType,
                     error: error.message,
                 }
             )
@@ -140,7 +140,7 @@ export class ActionWorker extends WorkerHost {
                             state,
                             bullmqJob,
                             taskIndex,
-                            jobType: payload.type,
+                            jobType: payload.jobType,
                         }
                     )
                     break
@@ -162,7 +162,7 @@ export class ActionWorker extends WorkerHost {
                             bullmqJob,
                             taskIndex,
                             isRetry,
-                            jobType: payload.type,
+                            jobType: payload.jobType,
                         }
                     )
                     break
@@ -176,7 +176,7 @@ export class ActionWorker extends WorkerHost {
                             isRetry,
                             bullmqJob,
                             taskIndex,
-                            jobType: payload.type,
+                            jobType: payload.jobType,
                         }
                     )
                     break
@@ -189,7 +189,7 @@ export class ActionWorker extends WorkerHost {
                         bullmqJob,
                         taskIndex,
                         isRetry,
-                        jobType: payload.type,
+                        jobType: payload.jobType,
                     })
                     break
                 }
@@ -202,7 +202,7 @@ export class ActionWorker extends WorkerHost {
                             bullmqJob,
                             taskIndex,
                             isRetry,
-                            jobType: payload.type,
+                            jobType: payload.jobType,
                         }
                     )
                     break

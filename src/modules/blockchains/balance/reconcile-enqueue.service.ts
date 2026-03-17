@@ -95,9 +95,11 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
         try {
             if (!isRetry) {
                 jobId = new Types.ObjectId().toString()
-                const session = await this.connection.startSession()
-                await session.withTransaction(
-                    async () => {
+            }
+            const session = await this.connection.startSession()
+            await session.withTransaction(
+                async (clientSession) => {
+                    if (!isRetry) {
                     // persist job record in database
                         const [jobRaw] = await this.connection.model<JobSchema>(
                             JobSchema.name
@@ -115,7 +117,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                                 }
                             ],
                             {
-                                session
+                                session: clientSession
                             })
                         const job = jobRaw.toJSON<JobSchema>()
                         // update bot with active job reference
@@ -134,16 +136,30 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                                     }
                                 },
                                 {
-                                    session
+                                    session: clientSession
                                 }
                             )
+                    } else {
+                        await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+                            {
+                                _id: bot.id
+                            },
+                            {   
+                                $set: {
+                                    "activeJob.queuedAt": this.dayjsService.now().toDate(),
+                                } 
+                            },
+                            {
+                                session: clientSession
+                            }
+                        )
                     }
-                )
-            }
+                }
+            )
         
             // build payload and enqueue job
             const payload: ActionPayload = {
-                type: JobType.ReconcileBalance,
+                jobType: JobType.ReconcileBalance,
                 jobId: jobId ?? "",
                 botId: bot.id,
                 isRetry,
@@ -172,7 +188,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                     {
                         botId: bot.id,
                         jobId: jobId ?? "",
-                        type: JobType.ReconcileBalance,
+                        jobType: JobType.ReconcileBalance,
                     }
                 )
             } else {
@@ -181,7 +197,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                     {
                         botId: bot.id,
                         jobId: jobId ?? "",
-                        type: JobType.ReconcileBalance,
+                        jobType: JobType.ReconcileBalance,
                     }
                 )
             }
@@ -191,7 +207,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                     WinstonLog.JobEnqueueFailed,
                     {
                         botId: bot.id,
-                        type: JobType.ReconcileBalance,
+                        jobType: JobType.ReconcileBalance,
                         error: error.message,
                     }
                 )
@@ -201,7 +217,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                     {
                         botId: bot.id,
                         jobId: oldJob?.id ?? "",
-                        type: JobType.ReconcileBalance,
+                        jobType: JobType.ReconcileBalance,
                         error: error.message,
                     }
                 )
@@ -234,7 +250,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                 WinstonLog.JobSkippedBotNotRunning,
                 {
                     botId: bot.id,
-                    type: JobType.ReconcileBalance,
+                    jobType: JobType.ReconcileBalance,
                     jobId: oldJob?.id,
                 }
             )
@@ -246,7 +262,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                 WinstonLog.JobSkippedBotAlreadyHasActivePosition,
                 {
                     botId: bot.id,
-                    type: JobType.ReconcileBalance,
+                    jobType: JobType.ReconcileBalance,
                     jobId: oldJob?.id,
                 }
             )
@@ -259,7 +275,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                 {
                     botId: bot.id,
                     jobId: bot.activeJob.job.toString(),
-                    type: JobType.ReconcileBalance,
+                    jobType: JobType.ReconcileBalance,
                 }
             )
             return false
@@ -275,7 +291,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                     WinstonLog.JobSkippedBotBalanceSnapshotWithinCooldown,
                     {
                         botId: bot.id,
-                        type: JobType.ReconcileBalance,
+                        jobType: JobType.ReconcileBalance,
                         jobId: oldJob?.id,
                     }
                 )
@@ -289,7 +305,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                 WinstonLog.JobSkippedFoundInQueue,
                 {
                     botId: bot.id,
-                    type: JobType.ReconcileBalance,
+                    jobType: JobType.ReconcileBalance,
                     bullmqJobId: bullmqJob.id ?? "",
                     jobId: oldJob?.id,
                 }
@@ -307,7 +323,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                 WinstonLog.JobSkippedBotAuthorityNotAcquired,
                 {
                     botId: bot.id,
-                    type: JobType.ReconcileBalance,
+                    jobType: JobType.ReconcileBalance,
                     jobId: oldJob?.id,
                 }
             )

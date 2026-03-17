@@ -46,6 +46,9 @@ import {
 import {
     DebugLatencyService,
 } from "@modules/debug"
+import {
+    RetryService
+} from "@modules/mixin"
 
 @Injectable()
 export class TransferFeesTaskPrepareService {
@@ -61,6 +64,7 @@ export class TransferFeesTaskPrepareService {
         private readonly mountStorageService: MountStorageService,
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
+        private readonly retryService: RetryService,
     ) { }
 
     async process({
@@ -87,14 +91,16 @@ export class TransferFeesTaskPrepareService {
                 description: "Heartbeat sent successfully",
             })
             const retries = job.tasks?.[taskIndex]?.retries ?? 0
-            if (retries >= envConfig().executor.workers.job.prepareMaxAttempts) {
+            if (retries >= envConfig().executor.workers.job.prepare.maxAttempts) {
                 throw new JobFailureException({
                     originalError: new ActionJobTaskPrepareMaxAttemptsException({
-                        maxAttempts: envConfig().executor.workers.job.prepareMaxAttempts,
+                        maxAttempts: envConfig().executor.workers.job.prepare.maxAttempts,
                         botId: bot.id,
                         jobId: job.id,
                         metadata: job.metadata,
-                        type: TaskType.TransferFees,
+                        jobType,
+                        taskType: TaskType.TransferFees,
+                        taskIndex,
                     }),
                     strategy: JobFailureStrategy.Fatal,
                 })
@@ -197,18 +203,43 @@ export class TransferFeesTaskPrepareService {
                 id: contextPayload.id,
                 description: "Convert fee amount successfully",
             })
-            const prepareResult =
-                await this.balanceActionService.prepareTransferFeesTransaction(
-                    {
-                        bot,
-                        feeAmountTarget: toRawAmount(
+            const prepareResult = 
+                await this.retryService.retry({
+                    action: async () => {
+                        return await this.balanceActionService.prepareTransferFeesTransaction(
                             {
-                                amount: feeAmountTarget,
-                                decimals: new Decimal(targetToken.decimals),
+                                bot,
+                                feeAmountTarget: toRawAmount(
+                                    {
+                                        amount: feeAmountTarget,
+                                        decimals: new Decimal(targetToken.decimals),
+                                    }
+                                ),
+                                feeAmountQuote,
                             }
-                        ),
-                        feeAmountQuote,
-                    }
+                        )
+                    },
+                    options: {
+                        retries: envConfig().executor.workers.job.prepare.maxAttempts,
+                        minTimeout: envConfig().executor.workers.job.prepare.minTimeout,
+                        maxTimeout: envConfig().executor.workers.job.prepare.maxTimeout,
+                        onFailedAttempt: async (context) => {
+                            // log the failed attempt
+                            this.winstonService.log(
+                                WinstonLog.ActionJobPrepareFailedAttempt,
+                                {
+                                    botId: bot.id,
+                                    jobId: job.id,
+                                    jobType,
+                                    taskIndex,
+                                    taskType: TaskType.TransferFees,
+                                    metadata: job.metadata,
+                                    attemptsMade: context.attemptNumber,
+                                }
+                            )
+                        },
+                    },
+                }
                 )
             this.debugLatencyService.measure({
                 id: contextPayload.id,
@@ -231,7 +262,7 @@ export class TransferFeesTaskPrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     txCount: prepareResult.prepareTxs.length,
                     metadata: job.metadata,
                     taskIndex,
@@ -244,24 +275,19 @@ export class TransferFeesTaskPrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.TransferFees,
                     metadata: job.metadata,
                 }
             )
-            const prepareProcessingRetries = job.tasks[taskIndex].prepareProcessingRetries ?? 0
-            if (prepareProcessingRetries >= envConfig().executor.workers.job.txPrepareProcessingMaxRetries) {
-                throw new JobFailureException({
+            throw new JobFailureException(
+                {
                     originalError: error,
                     strategy: JobFailureStrategy.Fatal,
-                })
-            }
-            await this.jobTaskService.updatePrepareProcessingRetries({
-                jobId: job.id,
-                taskIndex,
-            })
+                }
+            )
         }
     }
 }

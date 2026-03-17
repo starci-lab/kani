@@ -97,7 +97,7 @@ export type ActionTask =
 export interface ActionPayload extends BasePayload {
   /** Tasks to execute. */
   tasks: Array<ActionTask>
-  /** Liquidity pool to use. */
-  type: JobType
+  /** Job type. */
+  jobType: JobType
 }
 

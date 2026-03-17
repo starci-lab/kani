@@ -468,6 +468,11 @@ export const envConfig = () => ({
                 }),
             },
             operation: {
+                requeue: {
+                    interval: parseEnvMs({
+                        key: "EXECUTOR_OPERATION_REQUEUE_INTERVAL", defaultValue: "1s"
+                    }),
+                },
                 notSynced: {
                     interval: parseEnvMs({
                         key: "EXECUTOR_OPERATION_NOT_SYNCED_INTERVAL", defaultValue: "10s"
@@ -476,7 +481,7 @@ export const envConfig = () => ({
                 openPosition: {
                     requeue: {
                         interval: parseEnvMs({
-                            key: "EXECUTOR_OPERATION_OPEN_POSITION_REQUEUE_INTERVAL", defaultValue: "10s"
+                            key: "EXECUTOR_OPERATION_OPEN_POSITION_REQUEUE_INTERVAL", defaultValue: "1s"
                         }),
                     },
                     stimulate: parseEnvBoolean({
@@ -631,9 +636,39 @@ export const envConfig = () => ({
                 txExecuteMaxRetries: parseEnvInt({
                     key: "EXECUTOR_WORKERS_JOB_TX_EXECUTE_MAX_RETRIES", defaultValue: 3
                 }),
-                prepareMaxAttempts: parseEnvInt({
-                    key: "EXECUTOR_WORKERS_JOB_PREPARE_MAX_ATTEMPTS", defaultValue: 3
-                }),
+                prepare: {
+                    maxAttempts: parseEnvInt({
+                        key: "EXECUTOR_WORKERS_JOB_PREPARE_MAX_ATTEMPTS", defaultValue: 3
+                    }),
+                    minTimeout: parseEnvMs({
+                        key: "EXECUTOR_WORKERS_JOB_PREPARE_MIN_TIMEOUT", defaultValue: "1s"
+                    }),
+                    maxTimeout: parseEnvMs({
+                        key: "EXECUTOR_WORKERS_JOB_PREPARE_MAX_TIMEOUT", defaultValue: "5s"
+                    }),
+                },
+                sign: {
+                    maxAttempts: parseEnvInt({
+                        key: "EXECUTOR_WORKERS_JOB_SIGN_MAX_ATTEMPTS", defaultValue: 3
+                    }),
+                    minTimeout: parseEnvMs({
+                        key: "EXECUTOR_WORKERS_JOB_SIGN_MIN_TIMEOUT", defaultValue: "1s"
+                    }),
+                    maxTimeout: parseEnvMs({
+                        key: "EXECUTOR_WORKERS_JOB_SIGN_MAX_TIMEOUT", defaultValue: "5s"
+                    }),
+                },
+                execute: {
+                    maxAttempts: parseEnvInt({
+                        key: "EXECUTOR_WORKERS_JOB_EXECUTE_MAX_ATTEMPTS", defaultValue: 3
+                    }),
+                    minTimeout: parseEnvMs({
+                        key: "EXECUTOR_WORKERS_JOB_EXECUTE_MIN_TIMEOUT", defaultValue: "1s"
+                    }),
+                    maxTimeout: parseEnvMs({
+                        key: "EXECUTOR_WORKERS_JOB_EXECUTE_MAX_TIMEOUT", defaultValue: "5s"
+                    }),
+                },
             },
         },
     },

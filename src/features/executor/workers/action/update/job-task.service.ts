@@ -182,66 +182,32 @@ export class JobTaskService {
                 .updateOne(
                     {
                         _id: jobId,
-                        "tasks.index": taskIndex,
                     },
-                    [
-                        {
-                            $set: {
-                                tasks: {
-                                    $map: {
-                                        input: {
-                                            $ifNull: ["$tasks",
-                                                []] 
-                                        },
-                                        as: "t",
-                                        in: {
-                                            $cond: [
-                                                {
-                                                    $eq: ["$$t.index",
-                                                        taskIndex] 
-                                                },
-                                                {
-                                                    $mergeObjects: [
-                                                        "$$t",
-                                                        {
-                                                            prepareProcessingRetries: {
-                                                                $add: [
-                                                                    {
-                                                                        $ifNull: [
-                                                                            "$$t.prepareProcessingRetries",
-                                                                            0,
-                                                                        ],
-                                                                    },
-                                                                    1,
-                                                                ],
-                                                            },
-                                                        },
-                                                    ],
-                                                },
-                                                "$$t",
-                                            ],
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    ],
                     {
+                        $inc: {
+                            "tasks.$[task].prepareProcessingRetries": 1,
+                        },
+                    },
+                    {
+                        arrayFilters: [
+                            {
+                                "task.index": taskIndex,
+                            },
+                        ],
                         session: clientSession,
                     },
                 )
-    
-            assert(result.matchedCount > 0)
+            assert(result.modifiedCount > 0)
         }
-    
         if (!session) {
             const clientSession = await this.connection.startSession()
-            await clientSession.withTransaction(async () => {
-                await query(clientSession)
-            })
+            await clientSession.withTransaction(
+                async (session) => {
+                    await query(session)
+                }
+            )
             return
         }
-    
         await query(session)
     }
 }

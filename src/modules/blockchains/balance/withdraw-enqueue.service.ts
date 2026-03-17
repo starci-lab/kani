@@ -97,9 +97,11 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
             // create job record if not a retry
             if (!isRetry) {
                 jobId = new Types.ObjectId().toString()
-                const session = await this.connection.startSession()
-                await session.withTransaction(
-                    async () => {
+            }
+            const session = await this.connection.startSession()
+            await session.withTransaction(
+                async (clientSession) => {
+                    if (!isRetry) {
                     // persist job record in database
                         const [jobRaw] = await this.connection.model<JobSchema>(
                             JobSchema.name
@@ -117,7 +119,7 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                                 }
                             ],
                             {
-                                session
+                                session: clientSession
                             })
                         const job = jobRaw.toJSON<JobSchema>()
                     
@@ -137,15 +139,29 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                                     }
                                 },
                                 {
-                                    session
+                                    session: clientSession
                                 }
                             )
+                    } else {
+                        await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+                            {
+                                _id: bot.id
+                            },
+                            {
+                                $set: {
+                                    "activeJob.queuedAt": this.dayjsService.now().toDate(),
+                                } 
+                            },
+                            {
+                                session: clientSession
+                            }
+                        )
                     }
-                )
-            }
+                }
+            )
             // build withdraw payload
             const payload: ActionPayload = {
-                type: JobType.Withdraw,
+                jobType: JobType.Withdraw,
                 jobId: jobId ?? "",
                 botId: bot.id,
                 isRetry,
@@ -173,7 +189,7 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                     {
                         botId: bot.id,
                         jobId: jobId ?? "",
-                        type: JobType.Withdraw,
+                        jobType: JobType.Withdraw,
                     }
                 )
             } else {
@@ -182,7 +198,7 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                     {
                         botId: bot.id,
                         jobId: jobId ?? "",
-                        type: JobType.Withdraw,
+                        jobType: JobType.Withdraw,
                     }
                 )
             }
@@ -193,7 +209,7 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                     {
                         botId: bot.id,
                         error: error.message,
-                        type: JobType.Withdraw,
+                        jobType: JobType.Withdraw,
                     }
                 )
             } else {
@@ -202,7 +218,7 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                     {
                         botId: bot.id,
                         jobId: oldJob?.id ?? "",
-                        type: JobType.Withdraw,
+                        jobType: JobType.Withdraw,
                         error: error.message,
                     }
                 )
@@ -237,27 +253,29 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                 WinstonLog.JobSkippedBotCacheResultFound,
                 {
                     botId: bot.id,
-                    type: JobType.Withdraw,
+                    jobType: JobType.Withdraw,
                 }
             )
             return false
         }
         // Skip if bot is not running
         if (bot.running) {
-            this.winstonService.log(WinstonLog.JobSkippedBotRunning,
+            this.winstonService.log(
+                WinstonLog.JobSkippedBotRunning,
                 {
                     botId: bot.id,
-                    type: JobType.Withdraw,
+                    jobType: JobType.Withdraw,
                 })
             return false
         }
       
         // Skip if bot has an active position
         if (bot.activePosition) {
-            this.winstonService.log(WinstonLog.JobSkippedBotAlreadyHasActivePosition,
+            this.winstonService.log(
+                WinstonLog.JobSkippedBotAlreadyHasActivePosition,
                 {
                     botId: bot.id,
-                    type: JobType.Withdraw,
+                    jobType: JobType.Withdraw,
                 })
             return false
         }
@@ -268,7 +286,7 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                 {
                     botId: bot.id,
                     jobId: bot.activeJob.job.toString(),
-                    type: JobType.Withdraw,
+                    jobType: JobType.Withdraw,
                 })
             return false
         }
@@ -281,7 +299,7 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                 {
                     botId: bot.id,
                     bullmqJobId: existingBullJob.id ?? "",
-                    type: JobType.Withdraw,
+                    jobType: JobType.Withdraw,
                 }
             )
             return false
@@ -296,7 +314,7 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                 WinstonLog.JobSkippedBotAuthorityNotAcquired,
                 {
                     botId: bot.id,
-                    type: JobType.Withdraw,
+                    jobType: JobType.Withdraw,
                 }
             )
             return false

@@ -287,7 +287,7 @@ export class OpenPositionTaskConfirmService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     metadata: job.metadata,
                     taskIndex,
                     taskType: TaskType.OpenPosition,
@@ -299,7 +299,7 @@ export class OpenPositionTaskConfirmService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.OpenPosition,

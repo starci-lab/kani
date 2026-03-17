@@ -125,10 +125,12 @@ export class ClosePositionEnqueueService {
             let jobId = oldJob?.id
             if (!isRetry) {
                 jobId = new Types.ObjectId().toString()
-                // Persist job record + set bot activeJob + enqueue in one transaction (same pattern as open-position).
-                const session = await this.connection.startSession()
-                await session.withTransaction(
-                    async () => {
+            }
+            // Persist job record + set bot activeJob + enqueue in one transaction (same pattern as open-position).
+            const session = await this.connection.startSession()
+            await session.withTransaction(
+                async (clientSession) => {
+                    if (!isRetry) {
                         const [jobRaw] = await this.connection.model<JobSchema>(
                             JobSchema.name
                         ).create(
@@ -167,16 +169,30 @@ export class ClosePositionEnqueueService {
                                 },
                             },
                             {
-                                session,
+                                session: clientSession,
+                            }
+                        )
+                    } else {
+                        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                            {
+                                _id: jobId
+                            },
+                            {
+                                $set: {
+                                    "activeJob.queuedAt": this.dayjsService.now().toDate(),
+                                } 
+                            },
+                            {
+                                session: clientSession,
                             }
                         )
                     }
-                )
-            }
+                }
+            )
             const payload: ActionPayload = {
                 jobId: jobId ?? "",
                 botId: bot.id,
-                type: JobType.ClosePosition,
+                jobType: JobType.ClosePosition,
                 isRetry,
                 tasks: [
                     {
@@ -220,7 +236,7 @@ export class ClosePositionEnqueueService {
                     {
                         jobId: jobId ?? "",
                         botId: bot.id,
-                        type: JobType.ClosePosition,
+                        jobType: JobType.ClosePosition,
                         liquidityPoolId: liquidityPool.displayId,
                     }
                 )
@@ -230,7 +246,7 @@ export class ClosePositionEnqueueService {
                     {
                         jobId: jobId ?? "",
                         botId: bot.id,
-                        type: JobType.ClosePosition,
+                        jobType: JobType.ClosePosition,
                         liquidityPoolId: liquidityPool.displayId,
                     }
                 )
@@ -241,7 +257,7 @@ export class ClosePositionEnqueueService {
                     WinstonLog.JobEnqueueFailed,
                     {
                         botId: bot.id,
-                        type: JobType.ClosePosition,
+                        jobType: JobType.ClosePosition,
                         liquidityPoolId: liquidityPool.displayId,
                         error: error.message,
                     }
@@ -252,7 +268,7 @@ export class ClosePositionEnqueueService {
                     {
                         jobId: oldJob?.id ?? "",
                         botId: bot.id,
-                        type: JobType.ClosePosition,
+                        jobType: JobType.ClosePosition,
                         liquidityPoolId: liquidityPool.displayId,
                         error: error.message,
                     }
@@ -285,7 +301,7 @@ export class ClosePositionEnqueueService {
                 WinstonLog.JobSkippedBotNotHasActivePosition,
                 {
                     botId: bot.id,
-                    type: JobType.ClosePosition,
+                    jobType: JobType.ClosePosition,
                     liquidityPoolId: liquidityPool.displayId,
                     jobId: oldJob?.id,
                 }
@@ -300,7 +316,7 @@ export class ClosePositionEnqueueService {
                 WinstonLog.JobSkippedBotPositionClosed,
                 {
                     botId: bot.id,
-                    type: JobType.ClosePosition,
+                    jobType: JobType.ClosePosition,
                     liquidityPoolId: liquidityPool.displayId,
                 }
             )
@@ -315,7 +331,7 @@ export class ClosePositionEnqueueService {
                 {
                     botId: bot.id,
                     jobId: bot.activeJob.job.toString(),
-                    type: JobType.ClosePosition,
+                    jobType: JobType.ClosePosition,
                     liquidityPoolId: liquidityPool.displayId,
                 }
             )
@@ -357,7 +373,7 @@ export class ClosePositionEnqueueService {
                     {
                         botId: bot.id,
                         liquidityPoolId: liquidityPool.displayId,
-                        type: JobType.ClosePosition,
+                        jobType: JobType.ClosePosition,
                         jobId: oldJob?.id,
                     }
                 )
@@ -373,7 +389,7 @@ export class ClosePositionEnqueueService {
                 WinstonLog.JobSkippedFoundInQueue,
                 {
                     botId: bot.id,
-                    type: JobType.ClosePosition,
+                    jobType: JobType.ClosePosition,
                     liquidityPoolId: liquidityPool.displayId,
                     bullmqJobId: bullmqJob.id ?? "",
                     jobId: oldJob?.id,
@@ -393,7 +409,7 @@ export class ClosePositionEnqueueService {
                 {
                     botId: bot.id,
                     jobId: oldJob?.id,
-                    type: JobType.ClosePosition,
+                    jobType: JobType.ClosePosition,
                 }
             )
             return {

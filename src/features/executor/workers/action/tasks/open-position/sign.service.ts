@@ -31,6 +31,12 @@ import {
 import {
     JobStepService,
 } from "../../update"
+import {
+    RetryService 
+} from "@modules/mixin"
+import {
+    envConfig 
+} from "@modules/env"
 
 /**
  * Service for the Open Position Task SIGN step.
@@ -46,6 +52,7 @@ export class OpenPositionTaskSignService {
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
         private readonly jobStepService: JobStepService,
+        private readonly retryService: RetryService,
     ) { }
     /**
      * Process the Open Position Task SIGN step.
@@ -87,13 +94,39 @@ export class OpenPositionTaskSignService {
                 id: contextPayload.id,
                 description: "Heartbeat sent successfully",
             })
-            const { signedTx } = await this.openPositionActionService.sign(
-                {
-                    bot,
-                    prepareTx,
-                    liquidityPool,
+            
+            const { signedTx } = await this.retryService.retry({
+                action: async () => {
+                    return await this.openPositionActionService.sign(
+                        {
+                            bot,
+                            prepareTx,
+                            liquidityPool,
+                        },
+                    )
                 },
-            )
+                options: {
+                    retries: envConfig().executor.workers.job.sign.maxAttempts,
+                    minTimeout: envConfig().executor.workers.job.sign.minTimeout,
+                    maxTimeout: envConfig().executor.workers.job.sign.maxTimeout,
+                    onFailedAttempt: async (context) => {
+                        // log the failed attempt
+                        this.winstonService.log(
+                            WinstonLog.ActionJobTaskStepSignedFailedAttempt,
+                            {
+                                botId: bot.id,
+                                jobId: job.id,
+                                jobType,
+                                taskIndex,
+                                taskType: TaskType.OpenPosition,
+                                stepIndex: activeStep,
+                                metadata: job.metadata,
+                                attemptsMade: context.attemptNumber,
+                            }
+                        )
+                    },
+                },
+            })
             this.debugLatencyService.measure({
                 id: contextPayload.id,
                 description: "Sign transaction successfully",
@@ -114,7 +147,7 @@ export class OpenPositionTaskSignService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     taskIndex,
                     taskType: TaskType.OpenPosition,
                     stepIndex: activeStep,
@@ -127,7 +160,7 @@ export class OpenPositionTaskSignService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     taskIndex,
                     taskType: TaskType.OpenPosition,
                     stepIndex: activeStep,
@@ -135,7 +168,20 @@ export class OpenPositionTaskSignService {
                     metadata: job.metadata,
                 }
             )
-            throw error
+            // rollback to prepared
+            await this.jobStepService.rollbackToPrepared(
+                {
+                    jobId: job.id,
+                    taskIndex,
+                }
+            )
+            // measure the latency
+            this.debugLatencyService.measure(
+                {
+                    id: contextPayload.id,
+                    description: "Rollback to prepared successful",
+                }
+            )
         }
     }
 }

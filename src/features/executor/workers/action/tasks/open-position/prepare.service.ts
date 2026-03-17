@@ -28,14 +28,17 @@ import {
     JobTaskService 
 } from "../../update"
 import {
-    envConfig,
-} from "@modules/env"
-import {
     DebugContextService,
 } from "../debug-context.service"
 import {
     DebugLatencyService,
 } from "@modules/debug"
+import {
+    RetryService 
+} from "@modules/mixin"
+import {
+    envConfig 
+} from "@modules/env"
 
 /**
  * Service for the Open Position Task PREPARE step.
@@ -49,6 +52,7 @@ export class OpenPositionTaskPrepareService {
         private readonly jobTaskService: JobTaskService,
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
+        private readonly retryService: RetryService,
     ) { }
 
     /**
@@ -85,27 +89,54 @@ export class OpenPositionTaskPrepareService {
                 id: contextPayload.id,
                 description: "Heartbeat sent successfully",
             })
+            // check retries
             const retries = job.tasks?.[taskIndex]?.retries ?? 0
-            if (retries >= envConfig().executor.workers.job.prepareMaxAttempts) {
+            const maxAttempts = envConfig().executor.workers.job.prepare.maxAttempts
+            if (retries >= maxAttempts) {
                 throw new JobFailureException({
                     originalError: new ActionJobTaskPrepareMaxAttemptsException({
-                        maxAttempts: envConfig().executor.workers.job.prepareMaxAttempts,
+                        maxAttempts,
                         botId: bot.id,
                         jobId: job.id,
                         metadata: job.metadata,
-                        type: TaskType.OpenPosition,
+                        jobType,
+                        taskType: TaskType.OpenPosition,
+                        taskIndex,
                     }),
                     strategy: JobFailureStrategy.Fatal,
                 })
             }
-            const prepareResult =
-                await this.openPositionActionService.prepare(
-                    {
-                        bot,
-                        liquidityPool,
-                        state,
+            const prepareResult = await this.retryService.retry({
+                action: async () => {
+                    return await this.openPositionActionService.prepare(
+                        {
+                            bot,
+                            liquidityPool,
+                            state,
+                        },
+                    )
+                },
+                options: {
+                    retries: envConfig().executor.workers.job.prepare.maxAttempts,
+                    minTimeout: envConfig().executor.workers.job.prepare.minTimeout,
+                    maxTimeout: envConfig().executor.workers.job.prepare.maxTimeout,
+                    onFailedAttempt: async (context) => {
+                        // log the failed attempt
+                        this.winstonService.log(
+                            WinstonLog.ActionJobPrepareFailedAttempt,
+                            {
+                                botId: bot.id,
+                                jobId: job.id,
+                                jobType,
+                                taskIndex,
+                                taskType: TaskType.OpenPosition,
+                                metadata: job.metadata,
+                                attemptsMade: context.attemptNumber,
+                            }
+                        )
                     },
-                )
+                },
+            })
             this.debugLatencyService.measure({
                 id: contextPayload.id,
                 description: "Prepare open position transaction successfully",
@@ -125,7 +156,7 @@ export class OpenPositionTaskPrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     txCount: prepareResult.prepareTxs.length,
                     metadata: job.metadata,
                     taskIndex,
@@ -133,29 +164,26 @@ export class OpenPositionTaskPrepareService {
                 }
             )
         } catch (error) {
+            // log the failed task
             this.winstonService.log(
                 WinstonLog.ActiveJobTaskPreparedFailed,
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.OpenPosition,
                     metadata: job.metadata,
                 }
             )
-            const prepareProcessingRetries = job.tasks[taskIndex].prepareProcessingRetries ?? 0
-            if (prepareProcessingRetries >= envConfig().executor.workers.job.txPrepareProcessingMaxRetries) {
-                throw new JobFailureException({
+            // throw prepare failed exception
+            throw new JobFailureException(
+                {
                     originalError: error,
                     strategy: JobFailureStrategy.Fatal,
-                })
-            }
-            await this.jobTaskService.updatePrepareProcessingRetries({
-                jobId: job.id,
-                taskIndex,
-            })
+                }
+            )
         }
     }
 }

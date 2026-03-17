@@ -41,6 +41,9 @@ import {
 import {
     DebugLatencyService,
 } from "@modules/debug"
+import {
+    RetryService
+} from "@modules/mixin"
 
 /**
  * Service for the Reconcile Balance Task EXECUTE step.
@@ -55,6 +58,7 @@ export class ReconcileBalanceTaskExecuteService {
         private readonly jobStepService: JobStepService,
         private readonly winstonService: WinstonService,
         private readonly debugContextService: DebugContextService,
+        private readonly retryService: RetryService,
         private readonly debugLatencyService: DebugLatencyService,
     ) { }
 
@@ -75,10 +79,6 @@ export class ReconcileBalanceTaskExecuteService {
         })
         const stepIndex = job.tasks[taskIndex].activeStep ?? 0
         const step = job.tasks[taskIndex].steps?.[stepIndex]
-        const executeRetries = step?.executeRetries ?? 0
-        const executeMaxRetries = envConfig().executor.workers.job.txExecuteMaxRetries
-        const signRetries = step?.signRetries ?? 0
-        const signMaxRetries = envConfig().executor.workers.job.txSignMaxRetries
         try {
             await this.sendHeartbeatService.process({
                 bot,
@@ -101,14 +101,39 @@ export class ReconcileBalanceTaskExecuteService {
                     strategy: JobFailureStrategy.Fatal,
                 })
             }
-            const executeResult =
-                await this.balanceActionService.executeReconcileBalanceTransaction({
-                    bot,
-                    txCheck: true,
-                    stimulate:
+            const executeResult = await this.retryService.retry(
+                {
+                    action: async () => {
+                        return await this.balanceActionService.executeReconcileBalanceTransaction({
+                            bot,
+                            txCheck: true,
+                            stimulate:
                         envConfig().executor.runtime.operation.reconcileBalance.stimulate,
-                    signedTx: this.superJson.parse<SignedTx>(signedTx),
-                })
+                            signedTx: this.superJson.parse<SignedTx>(signedTx),
+                        })
+                    },
+                    options: {
+                        retries: envConfig().executor.workers.job.execute.maxAttempts,
+                        minTimeout: envConfig().executor.workers.job.execute.minTimeout,
+                        maxTimeout: envConfig().executor.workers.job.execute.maxTimeout,
+                        onFailedAttempt: async (context) => {
+                            this.winstonService.log(
+                                WinstonLog.ActionJobTaskStepExecuteFailedAttempt,
+                                {
+                                    botId: bot.id,
+                                    jobId: job.id,
+                                    jobType,
+                                    taskIndex,
+                                    taskType: TaskType.ReconcileBalance,
+                                    stepIndex,
+                                    metadata: job.metadata,
+                                    attemptsMade: context.attemptNumber,
+                                }
+                            )
+                        },
+                    }
+                }
+            )
             this.debugLatencyService.measure({
                 id: contextPayload.id,
                 description: "Reconcile balance transaction executed successfully",
@@ -129,7 +154,7 @@ export class ReconcileBalanceTaskExecuteService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     taskIndex,
                     taskType: TaskType.ReconcileBalance,
                     stepIndex,
@@ -142,7 +167,7 @@ export class ReconcileBalanceTaskExecuteService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     taskIndex,
                     taskType: TaskType.ReconcileBalance,
                     stepIndex,
@@ -152,46 +177,19 @@ export class ReconcileBalanceTaskExecuteService {
             )
             // If tx execution failed with a fatal RPC error, rollback to Sign and record failure atomically.
             if (error instanceof RpcClientFatalException) {
-                // if execute retries is less than execute max retries, increment the execute retries
-                if (executeRetries < (executeMaxRetries - 1)) {
-                    // update execute retries
-                    await this.jobStepService.updateExecuteRetries({
+                await this.jobStepService.rollbackToPrepared(
+                    {
                         jobId: job.id,
-                        taskType: TaskType.ReconcileBalance,
                         taskIndex,
-                        stepIndex,
-                    })
-                    this.debugLatencyService.measure({
-                        id: contextPayload.id,
-                        description: "Execute retries incremented successfully",
-                    })
-                    return
-                }
-                // if tx failure index is greater than or equal to max attempts, throw a job failure exception
-                if (signRetries < (signMaxRetries - 1)) {
-                    await this.jobStepService.rollbackToSign({
-                        jobId: job.id,
-                        taskType: TaskType.ReconcileBalance,
-                        taskIndex,
-                        stepIndex,
-                        error,
-                    })
-                    this.debugLatencyService.measure({
-                        id: contextPayload.id,
-                        description: "Rollback to sign successful",
-                    })
-                }
-                // rollback to prepared
-                await this.jobStepService.rollbackToPrepared({
-                    jobId: job.id,
-                    taskIndex,
-                })
+                    }
+                )
                 this.debugLatencyService.measure({
                     id: contextPayload.id,
                     description: "Rollback to prepared successful",
                 })
                 return
             }
+            throw error
         }
     }
 }

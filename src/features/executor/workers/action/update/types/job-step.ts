@@ -50,10 +50,6 @@ export interface RollbackToPreparedParams {
      * The session to use for the operation.
      */
     session?: ClientSession
-    /**
-     * Whether to increment the sign processing retries.
-     */
-    incrementSignProcessingRetries?: boolean
 }
 
 /**

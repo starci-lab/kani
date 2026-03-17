@@ -281,7 +281,7 @@ export class ClosePositionTaskConfirmService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     metadata: job.metadata,
                     taskIndex,
                     taskType: TaskType.ClosePosition,
@@ -293,10 +293,11 @@ export class ClosePositionTaskConfirmService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     taskIndex,
                     taskType: TaskType.ClosePosition,
                     error: error.message,
+                    metadata: job.metadata,
                 }
             )
             throw error

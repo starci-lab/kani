@@ -63,6 +63,9 @@ import {
 import {
     AsyncService 
 } from "@modules/mixin"
+import {
+    RetryService
+} from "@modules/mixin"
 /**
  * Service to process the WITHDRAW TASK CONFIRM step.
  */
@@ -89,6 +92,7 @@ export class WithdrawTaskConfirmService implements OnModuleInit {
         private readonly balanceFetcherService: BalanceFetcherService,
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
+        private readonly retryService: RetryService,
     ) {}
     /**
      * Initialize the Axios instance for the interface.
@@ -179,7 +183,7 @@ export class WithdrawTaskConfirmService implements OnModuleInit {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     metadata: job.metadata,
                     taskIndex,
                     taskType: TaskType.Withdraw,
@@ -252,7 +256,7 @@ export class WithdrawTaskConfirmService implements OnModuleInit {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.Withdraw,

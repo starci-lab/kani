@@ -36,6 +36,9 @@ import {
 import {
     DebugLatencyService,
 } from "@modules/debug"
+import {
+    RetryService
+} from "@modules/mixin"
 
 /**
  * Service for the Close Position Task PREPARE step.
@@ -49,6 +52,7 @@ export class ClosePositionTaskPrepareService {
         private readonly jobTaskService: JobTaskService,
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
+        private readonly retryService: RetryService,
     ) { }
 
     /**
@@ -86,25 +90,53 @@ export class ClosePositionTaskPrepareService {
                 description: "Heartbeat sent successfully",
             })
             const retries = job.tasks?.[taskIndex]?.retries ?? 0
-            if (retries >= envConfig().executor.workers.job.prepareMaxAttempts) {
+            const maxAttempts = envConfig().executor.workers.job.prepare.maxAttempts
+            if (retries >= maxAttempts) {
                 throw new JobFailureException({
                     originalError: new ActionJobTaskPrepareMaxAttemptsException({
-                        maxAttempts: envConfig().executor.workers.job.prepareMaxAttempts,
+                        maxAttempts,
                         botId: bot.id,
                         jobId: job.id,
                         metadata: job.metadata,
-                        type: TaskType.ClosePosition,
+                        jobType,
+                        taskType: TaskType.ClosePosition,
+                        taskIndex,
                     }),
                     strategy: JobFailureStrategy.Fatal,
                 })
             }
             const prepareResult =
-                await this.closePositionActionService.prepare(
-                    {
-                        bot,
-                        liquidityPool,
-                        state,
+                await this.retryService.retry({
+                    action: async () => {
+                        return await this.closePositionActionService.prepare(
+                            {
+                                bot,
+                                liquidityPool,
+                                state,
+                            },
+                        )
                     },
+                    options: {
+                        retries: envConfig().executor.workers.job.prepare.maxAttempts,
+                        minTimeout: envConfig().executor.workers.job.prepare.minTimeout,
+                        maxTimeout: envConfig().executor.workers.job.prepare.maxTimeout,
+                        onFailedAttempt: async (context) => {
+                        // log the failed attempt
+                            this.winstonService.log(
+                                WinstonLog.ActionJobPrepareFailedAttempt,
+                                {
+                                    botId: bot.id,
+                                    jobId: job.id,
+                                    jobType,
+                                    taskIndex,
+                                    taskType: TaskType.ClosePosition,
+                                    metadata: job.metadata,
+                                    attemptsMade: context.attemptNumber,
+                                }
+                            )
+                        },
+                    },
+                }
                 )
             this.debugLatencyService.measure({
                 id: contextPayload.id,
@@ -125,7 +157,7 @@ export class ClosePositionTaskPrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     txCount: prepareResult.prepareTxs.length,
                     metadata: job.metadata,
                     taskIndex,
@@ -138,24 +170,19 @@ export class ClosePositionTaskPrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.ClosePosition,
                     metadata: job.metadata,
                 }
             )
-            const prepareProcessingRetries = job.tasks[taskIndex].prepareProcessingRetries ?? 0
-            if (prepareProcessingRetries >= envConfig().executor.workers.job.txPrepareProcessingMaxRetries) {
-                throw new JobFailureException({
+            throw new JobFailureException(
+                {
                     originalError: error,
                     strategy: JobFailureStrategy.Fatal,
-                })
-            }
-            await this.jobTaskService.updatePrepareProcessingRetries({
-                jobId: job.id,
-                taskIndex,
-            })
+                }
+            )
         }
     }
 }

@@ -1,6 +1,7 @@
 import type {
     LiquidityPoolId, 
-    TaskType
+    TaskType,
+    JobType
 } from "@modules/databases"
 import {
     AbstractException, AbstractExceptionMetadata 
@@ -15,7 +16,10 @@ export interface ActionJobTasktxExecuteMaxAttemptsExceptionMetadata extends Abst
     jobId: string
     liquidityPoolId?: LiquidityPoolId
     metadata?: unknown
-    type: TaskType
+    jobType: JobType
+    taskType: TaskType
+    taskIndex: number
+
 }
 
 export class ActionJobTasktxExecuteMaxAttemptsException extends AbstractException {
@@ -26,7 +30,9 @@ export class ActionJobTasktxExecuteMaxAttemptsException extends AbstractExceptio
             botId,
             jobId,
             metadata,
-            type,
+            jobType,
+            taskType,
+            taskIndex,
         }: ActionJobTasktxExecuteMaxAttemptsExceptionMetadata
     ) {
         super(
@@ -37,7 +43,9 @@ export class ActionJobTasktxExecuteMaxAttemptsException extends AbstractExceptio
                 botId,
                 jobId,
                 metadata,
-                type,
+                jobType,
+                taskType,
+                taskIndex,
                 originalError,
             }
         )
@@ -52,7 +60,9 @@ export interface ActionJobTaskPrepareMaxAttemptsExceptionMetadata extends Abstra
     botId: string  
     jobId: string
     metadata?: unknown
-    type: TaskType
+    jobType: JobType
+    taskType: TaskType
+    taskIndex: number
 }
 
 export class ActionJobTaskPrepareMaxAttemptsException extends AbstractException {
@@ -63,7 +73,9 @@ export class ActionJobTaskPrepareMaxAttemptsException extends AbstractException 
             botId,
             jobId,
             metadata,
-            type,
+            jobType,
+            taskType,
+            taskIndex,
         }: ActionJobTaskPrepareMaxAttemptsExceptionMetadata
     ) {
         super(
@@ -74,7 +86,9 @@ export class ActionJobTaskPrepareMaxAttemptsException extends AbstractException 
                 botId,
                 jobId,
                 metadata,
-                type,
+                jobType,
+                taskType,
+                taskIndex,
                 originalError,
             }
         )

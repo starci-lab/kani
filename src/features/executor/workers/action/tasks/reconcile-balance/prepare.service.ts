@@ -47,8 +47,8 @@ import {
     DebugLatencyService 
 } from "@modules/debug"
 import {
-    JobStepService
-} from "../../update"
+    RetryService
+} from "@modules/mixin"
 @Injectable()
 export class ReconcileBalanceTaskPrepareService {
     constructor(
@@ -62,7 +62,7 @@ export class ReconcileBalanceTaskPrepareService {
         private readonly jobTaskService: JobTaskService,
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
-        private readonly jobStepService: JobStepService,
+        private readonly retryService: RetryService,
     ) { }
 
     /**
@@ -105,14 +105,17 @@ export class ReconcileBalanceTaskPrepareService {
             })
             // we check if the task has reached the maximum number of attempts
             const retries = job.tasks?.[taskIndex]?.retries ?? 0
-            if (retries >= envConfig().executor.workers.job.prepareMaxAttempts) {
+            const maxAttempts = envConfig().executor.workers.job.prepare.maxAttempts
+            if (retries >= maxAttempts) {
                 throw new JobFailureException({
                     originalError: new ActionJobTaskPrepareMaxAttemptsException({
-                        maxAttempts: envConfig().executor.workers.job.prepareMaxAttempts,
+                        maxAttempts,
                         botId: bot.id,
                         jobId: job.id,
                         metadata: job.metadata,
-                        type: TaskType.ReconcileBalance,
+                        jobType,
+                        taskType: TaskType.ReconcileBalance,
+                        taskIndex,
                     }),
                     strategy: JobFailureStrategy.Fatal,
                 })
@@ -184,7 +187,7 @@ export class ReconcileBalanceTaskPrepareService {
                     {
                         botId: bot.id,
                         jobId: job.id,
-                        type: jobType,
+                        jobType,
                         txCount: 0,
                         metadata: job.metadata,
                         taskIndex,
@@ -194,8 +197,10 @@ export class ReconcileBalanceTaskPrepareService {
                 return
             }
             // determine swap steps
-            const { swapSteps, quoteRatioResult } =
-            await this.balanceActionService.determineReconcileBalancePlan(
+            const { 
+                swapSteps, 
+                quoteRatioResult 
+            } = await this.balanceActionService.determineReconcileBalancePlan(
                 {
                     bot,
                     targetBalanceAmount,
@@ -268,10 +273,35 @@ export class ReconcileBalanceTaskPrepareService {
                 }
             }
             // 6) Prepare transactions
-            const prepareResult = await this.balanceActionService.prepareReconcileBalanceTransaction(
+            const prepareResult = await this.retryService.retry(
                 {
-                    bot,
-                    tokenInputs,
+                    action: async () => {
+                        return await this.balanceActionService.prepareReconcileBalanceTransaction(
+                            {
+                                bot,
+                                tokenInputs,
+                            }
+                        )
+                    },
+                    options: {
+                        retries: envConfig().executor.workers.job.prepare.maxAttempts,
+                        minTimeout: envConfig().executor.workers.job.prepare.minTimeout,
+                        maxTimeout: envConfig().executor.workers.job.prepare.maxTimeout,
+                        onFailedAttempt: async (context) => {
+                            this.winstonService.log(
+                                WinstonLog.ActionJobPrepareFailedAttempt,
+                                {
+                                    botId: bot.id,
+                                    jobId: job.id,
+                                    jobType,
+                                    taskIndex,
+                                    taskType: TaskType.ReconcileBalance,
+                                    metadata: job.metadata,
+                                    attemptsMade: context.attemptNumber,
+                                }
+                            )
+                        },
+                    },
                 }
             )
             // measure the latency
@@ -297,7 +327,7 @@ export class ReconcileBalanceTaskPrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     txCount: prepareResult.prepareTxs.length,
                     metadata: job.metadata,
                     taskIndex,
@@ -311,27 +341,20 @@ export class ReconcileBalanceTaskPrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    type: jobType,
+                    jobType,
                     error: error.message,
                     taskIndex,
                     taskType: TaskType.ReconcileBalance,
                     metadata: job.metadata,
                 }
             )
-            // if sign failed, check the number of sign retries
-            const prepareProcessingRetries = job.tasks[taskIndex].prepareProcessingRetries ?? 0
-            if (prepareProcessingRetries >= envConfig().executor.workers.job.txPrepareProcessingMaxRetries) {
-                throw new JobFailureException({
+            // throw prepare failed exception
+            throw new JobFailureException(
+                {
                     originalError: error,
                     strategy: JobFailureStrategy.Fatal,
-                })
-            } else {
-                // increment the prepare processing retries
-                await this.jobTaskService.updatePrepareProcessingRetries({
-                    jobId: job.id,
-                    taskIndex,
-                })
-            }
+                }
+            )
         }
     }
 }

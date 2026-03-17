@@ -171,26 +171,8 @@ export class JobStepService {
             jobId,
             taskIndex,
             session,
-            incrementSignProcessingRetries,
         }: RollbackToPreparedParams
     ): Promise<void> {
-        const stepUpdateFields: Record<string, unknown> = {
-            signRetries: 0,
-            executeRetries: 0,
-        }
-        if (incrementSignProcessingRetries) {
-            stepUpdateFields.signProcessingRetries = {
-                $add: [
-                    {
-                        $ifNull: [
-                            "$$s.signProcessingRetries",
-                            0,
-                        ],
-                    },
-                    1,
-                ],
-            }
-        }
         const query = async (clientSession?: ClientSession) => {
             const updatedJobResult = await this.connection
                 .model<JobSchema>(JobSchema.name)
@@ -219,7 +201,6 @@ export class JobStepService {
                                                         "$$t",
                                                         {
                                                             initialized: false,
-      
                                                             // increment task-level retries
                                                             retries: {
                                                                 $add: [{
@@ -227,23 +208,6 @@ export class JobStepService {
                                                                         0] 
                                                                 },
                                                                 1],
-                                                            },
-      
-                                                            // reset step retries; optionally increment signProcessingRetries per step
-                                                            steps: {
-                                                                $map: {
-                                                                    input: {
-                                                                        $ifNull: ["$$t.steps",
-                                                                            []] 
-                                                                    },
-                                                                    as: "s",
-                                                                    in: {
-                                                                        $mergeObjects: [
-                                                                            "$$s",
-                                                                            stepUpdateFields,
-                                                                        ],
-                                                                    },
-                                                                },
                                                             },
                                                         },
                                                     ],

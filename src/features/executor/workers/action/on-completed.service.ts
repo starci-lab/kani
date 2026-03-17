@@ -62,7 +62,7 @@ export class OnCompletedService {
         }: OnCompletedParams
     ): Promise<void> {
         // clear the withdraw cache if the job is a withdraw job
-        if (payload.type === JobType.Withdraw) {
+        if (payload.jobType === JobType.Withdraw) {
             await this.cacheService.del(
                 {
                     key: CacheKey.Withdraw,
@@ -126,7 +126,7 @@ export class OnCompletedService {
             {
                 botId: bot.id,
                 jobId: job.id,
-                type: payload.type,
+                jobType: payload.jobType,
                 metadata: job.metadata,
             }
         )
