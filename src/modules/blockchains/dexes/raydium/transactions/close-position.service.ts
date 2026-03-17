@@ -134,7 +134,7 @@ export class ClosePositionInstructionService {
             instructions: createAtaAInstructions,
             endInstructions: closeAtaAInstructions,
             ataAddress: ataAAddress,
-        } = await this.ataInstructionService.getOrCreateAtaInstructions({
+        } = await this.ataInstructionService.createIdempotentAtaInstructions({
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
@@ -150,7 +150,7 @@ export class ClosePositionInstructionService {
             instructions: createAtaBInstructions,
             endInstructions: closeAtaBInstructions,
             ataAddress: ataBAddress,
-        } = await this.ataInstructionService.getOrCreateAtaInstructions({
+        } = await this.ataInstructionService.createIdempotentAtaInstructions({
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,

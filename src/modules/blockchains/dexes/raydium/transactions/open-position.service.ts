@@ -116,7 +116,7 @@ export class OpenPositionInstructionService {
             instructions: createAtaAInstructions,
             endInstructions: closeAtaAInstructions,
             ataAddress: ataAAddress,
-        } = await this.ataInstructionService.getOrCreateAtaInstructions({
+        } = await this.ataInstructionService.createIdempotentAtaInstructions({
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
@@ -132,7 +132,7 @@ export class OpenPositionInstructionService {
             instructions: createAtaBInstructions,
             endInstructions: closeAtaBInstructions,
             ataAddress: ataBAddress,
-        } = await this.ataInstructionService.getOrCreateAtaInstructions({
+        } = await this.ataInstructionService.createIdempotentAtaInstructions({
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
@@ -144,13 +144,10 @@ export class OpenPositionInstructionService {
         if (closeAtaBInstructions?.length) {
             endInstructions.push(...closeAtaBInstructions)
         }
-        const {
-            ataAddress,
-        } = await this.ataInstructionService.getOrCreateAtaInstructions({
+        const ataAddress = await this.ataInstructionService.getAta({
             tokenMint: address(mintKeyPair.publicKey.toBase58()),
             ownerAddress: address(bot.accountAddress),
             is2022Token: true,
-            pdaOnly: true,
         })
         const tickArrayLowerStartIndex = this.tickArrayService.getArrayStartIndex(
             tickLower, 

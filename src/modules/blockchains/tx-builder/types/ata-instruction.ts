@@ -57,6 +57,19 @@ export interface CreateIdempotentAtaInstructionsParams {
 
 /** Result of create idempotent ATA instructions: instructions and ATA address. */
 export interface CreateIdempotentAtaInstructionsResult {
-    instructions: Array<Instruction>
+    instructions?: Array<Instruction>
+    endInstructions?: Array<Instruction>
+    ataAddress: Address
+}
+
+/** Params for getting the ATA address for a given token mint and owner address. */
+export interface GetAtaAddressParams {
+    tokenMint: Address
+    ownerAddress: Address
+    is2022Token?: boolean
+}
+
+/** Result of get ATA address: ATA address. */
+export interface GetAtaAddressResult {
     ataAddress: Address
 }

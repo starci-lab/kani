@@ -51,7 +51,8 @@ import {
     GetOrCreateAtaInstructionsParams,
     GetOrCreateAtaInstructionsResult,
     CreateIdempotentAtaInstructionsParams,
-    CreateIdempotentAtaInstructionsResult
+    CreateIdempotentAtaInstructionsResult,
+    GetAtaAddressParams
 } from "../types"
 import {
     WSOL_MINT_ADDRESS 
@@ -300,6 +301,14 @@ export class AtaInstructionService {
         }
     }
 
+    /**
+     * Creates a with seed address.
+     *
+     * @param fromAddress - From address
+     * @param seed - Seed
+     * @param programAddress - Program address
+     * @returns With seed address
+     */
     private createWithSeed(
         fromAddress: Address,
         seed: string,
@@ -312,5 +321,32 @@ export class AtaInstructionService {
         ])
         const publicKeyBytes = sha256(buffer)
         return address(new PublicKey(publicKeyBytes).toBase58())
+    }
+ 
+    /**
+     * Gets the ATA address for a given token mint and owner address.
+     *
+     * @param tokenMint - Token mint
+     * @param ownerAddress - Owner address
+     * @param is2022Token - Whether the token is a 2022 token
+     * @returns ATA address
+     */
+    async getAta({
+        tokenMint,
+        ownerAddress,
+        is2022Token = false,
+    }: GetAtaAddressParams): Promise<Address> {
+        const tokenProgram = is2022Token
+            ? TOKEN_2022_PROGRAM_ADDRESS
+            : TOKEN_PROGRAM_ADDRESS
+        const _findAssociatedTokenPda = is2022Token
+            ? findToken2022AssociatedTokenPda
+            : findAssociatedTokenPda
+        const [ataAddress] = await _findAssociatedTokenPda({
+            mint: tokenMint,
+            owner: ownerAddress,
+            tokenProgram,
+        })
+        return ataAddress
     }
 }

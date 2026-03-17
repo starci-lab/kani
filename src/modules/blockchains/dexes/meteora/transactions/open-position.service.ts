@@ -140,7 +140,8 @@ export class OpenPositionInstructionService {
         )
         const { 
             ataAddress: ataAAddress, 
-            instructions: createAtaAInstructions 
+            instructions: createAtaAInstructions,
+            endInstructions: closeAtaAInstructions,
         } = await this.ataInstructionService.createIdempotentAtaInstructions({
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
@@ -150,9 +151,13 @@ export class OpenPositionInstructionService {
         if (createAtaAInstructions?.length) {
             instructions.push(...createAtaAInstructions)
         }
+        if (closeAtaAInstructions?.length) {
+            endInstructions.push(...closeAtaAInstructions)
+        }
         const { 
             ataAddress: ataBAddress, 
-            instructions: createAtaBInstructions 
+            instructions: createAtaBInstructions,
+            endInstructions: closeAtaBInstructions,
         } = await this.ataInstructionService.createIdempotentAtaInstructions({
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
@@ -161,6 +166,9 @@ export class OpenPositionInstructionService {
         })
         if (createAtaBInstructions?.length) {
             instructions.push(...createAtaBInstructions)
+        }
+        if (closeAtaBInstructions?.length) {
+            endInstructions.push(...closeAtaBInstructions)
         }
         const { pda: eventAuthorityPda } = await this.eventAuthorityService.getPda({
             programAddress: address(metadata.programAddress),

@@ -70,7 +70,7 @@ export class TransferInstructionService {
         const {
             ataAddress: sourceAtaAddress,
             instructions: createAtaInstructions,
-        } = await this.ataInstructionService.getOrCreateAtaInstructions({
+        } = await this.ataInstructionService.createIdempotentAtaInstructions({
             ownerAddress: fromAddress,
             tokenMint: address(token.tokenAddress),
             is2022Token: token.is2022Token,
@@ -82,7 +82,7 @@ export class TransferInstructionService {
         const {
             ataAddress: destinationAtaAddress,
             instructions: transferAtaInstructions,
-        } = await this.ataInstructionService.getOrCreateAtaInstructions({
+        } = await this.ataInstructionService.createIdempotentAtaInstructions({
             ownerAddress: toAddress,
             tokenMint: address(token.tokenAddress),
             is2022Token: token.is2022Token,
