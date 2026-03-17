@@ -24,7 +24,8 @@ import {
     SignedTxNotFoundException,
 } from "@modules/exceptions"
 import {
-    JobFailureStrategy
+    JobFailureStrategy,
+    sleep,
 } from "@modules/common"
 import {
     envConfig
@@ -184,6 +185,7 @@ export class TransferFeesTaskExecuteService {
                     id: contextPayload.id,
                     description: "Rollback to prepared successful",
                 })
+                await sleep(envConfig().executor.workers.job.execute.retryDelay)
                 return
             }
             throw error

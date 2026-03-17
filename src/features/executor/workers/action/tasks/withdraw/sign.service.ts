@@ -39,7 +39,9 @@ import {
 import {
     TransactionSignedFailedException 
 } from "@modules/exceptions"
-
+import {
+    sleep 
+} from "@modules/common"
 /**
  * Service for the WITHDRAW TASK SIGN step.
  */
@@ -164,6 +166,7 @@ export class WithdrawTaskSignService {
                     id: contextPayload.id,
                     description: "Rollback to prepared successful",
                 })
+                await sleep(envConfig().executor.workers.job.sign.retryDelay)
                 return
             }
             throw error

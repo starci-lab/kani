@@ -40,6 +40,9 @@ import {
 import {
     TransactionSignedFailedException 
 } from "@modules/exceptions"
+import { 
+    sleep 
+} from "@modules/common"
 /**
  * Service for the Close Position Task SIGN step.
  */
@@ -179,6 +182,7 @@ export class ClosePositionTaskSignService {
                     id: contextPayload.id,
                     description: "Rollback to prepared successful",
                 })
+                await sleep(envConfig().executor.workers.job.sign.retryDelay)
                 return
             }
             throw error

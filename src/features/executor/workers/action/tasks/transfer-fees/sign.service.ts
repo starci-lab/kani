@@ -40,7 +40,9 @@ import {
 import {
     TransactionSignedFailedException 
 } from "@modules/exceptions"
-
+import {
+    sleep 
+} from "@modules/common"
 /**
  * Service for the Transfer Fees Task SIGN step.
  */
@@ -164,6 +166,7 @@ export class TransferFeesTaskSignService {
                     id: contextPayload.id,
                     description: "Rollback to prepared successful",
                 })
+                await sleep(envConfig().executor.workers.job.sign.retryDelay)
                 return
             }
             throw error

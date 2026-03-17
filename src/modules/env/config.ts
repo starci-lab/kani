@@ -637,6 +637,9 @@ export const envConfig = () => ({
                     maxTimeout: parseEnvMs({
                         key: "EXECUTOR_WORKERS_JOB_PREPARE_MAX_TIMEOUT", defaultValue: "5s"
                     }),
+                    retryDelay: parseEnvMs({
+                        key: "EXECUTOR_WORKERS_JOB_PREPARE_RETRY_DELAY", defaultValue: "1s"
+                    }),
                 },
                 sign: {
                     maxAttempts: parseEnvInt({
@@ -648,6 +651,9 @@ export const envConfig = () => ({
                     maxTimeout: parseEnvMs({
                         key: "EXECUTOR_WORKERS_JOB_SIGN_MAX_TIMEOUT", defaultValue: "5s"
                     }),
+                    retryDelay: parseEnvMs({
+                        key: "EXECUTOR_WORKERS_JOB_SIGN_RETRY_DELAY", defaultValue: "1s"
+                    }),
                 },
                 execute: {
                     maxAttempts: parseEnvInt({
@@ -658,6 +664,9 @@ export const envConfig = () => ({
                     }),
                     maxTimeout: parseEnvMs({
                         key: "EXECUTOR_WORKERS_JOB_EXECUTE_MAX_TIMEOUT", defaultValue: "5s"
+                    }),
+                    retryDelay: parseEnvMs({
+                        key: "EXECUTOR_WORKERS_JOB_EXECUTE_RETRY_DELAY", defaultValue: "1s"
                     }),
                 },
             },

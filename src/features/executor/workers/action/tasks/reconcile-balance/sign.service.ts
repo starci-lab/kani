@@ -39,6 +39,9 @@ import {
 import {
     TransactionSignedFailedException 
 } from "@modules/exceptions"
+import {
+    sleep 
+} from "@modules/common"
 /**
  * Service for the Reconcile Balance Task SIGN step.
  */
@@ -172,6 +175,7 @@ export class ReconcileBalanceTaskSignService {
                     id: contextPayload.id,
                     description: "Rollback to prepared successful",
                 })
+                await sleep(envConfig().executor.workers.job.sign.retryDelay)
                 return
             }
             throw error

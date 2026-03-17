@@ -26,6 +26,9 @@ import {
     JobFailureStrategy 
 } from "@modules/common"
 import {
+    sleep 
+} from "@modules/common"
+import {
     envConfig 
 } from "@modules/env"
 import {
@@ -178,6 +181,7 @@ export class WithdrawTaskExecuteService {
                     id: contextPayload.id,
                     description: "Rollback to prepared successful",
                 })
+                await sleep(envConfig().executor.workers.job.execute.retryDelay)
                 return
             }
 

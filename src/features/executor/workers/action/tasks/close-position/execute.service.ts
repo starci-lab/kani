@@ -27,6 +27,7 @@ import {
 } from "@modules/env"
 import {
     JobFailureStrategy,
+    sleep,
 } from "@modules/common"
 import {
     WinstonService,
@@ -192,6 +193,7 @@ export class ClosePositionTaskExecuteService {
                     id: contextPayload.id,
                     description: "Rollback to prepared successful",
                 })
+                await sleep(envConfig().executor.workers.job.execute.retryDelay)
                 return
             }
             throw error

@@ -200,14 +200,6 @@ export class JobStepService {
                                                         "$$t",
                                                         {
                                                             initialized: false,
-                                                            // increment task-level retries
-                                                            retries: {
-                                                                $add: [{
-                                                                    $ifNull: ["$$t.retries",
-                                                                        0] 
-                                                                },
-                                                                1],
-                                                            },
                                                         },
                                                     ],
                                                 },
@@ -230,9 +222,9 @@ export class JobStepService {
             await clientSession.withTransaction(async (clientSession) => {
                 await query(clientSession)
             })
-        } else {
-            await query(session)
+            return
         }
+        await query(session)
     }
 
     /**
@@ -286,8 +278,9 @@ export class JobStepService {
     }
 
     /**
-     * Sets the step's executeResult, advances task activeStep by 1, and resets step retries
-     * (executeRetries, signRetries, signProcessingRetries) to 0.
+     * Sets the step's executeResult, advances task activeStep by 1, and resets step retries to 0.
+     * @param params - The parameters for setting the step's execute result and advancing the step type to Execute.
+     * @returns A promise that resolves when the step's execute result is set and the step type is advanced to Execute.
      */
     async setStepExecuteResultAndAdvance({
         jobId,

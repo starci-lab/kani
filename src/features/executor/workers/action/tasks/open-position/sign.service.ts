@@ -40,7 +40,9 @@ import {
 import {
     TransactionSignedFailedException 
 } from "@modules/exceptions"
-
+import {
+    sleep 
+} from "@modules/common"
 /**
  * Service for the Open Position Task SIGN step.
  */
@@ -187,6 +189,7 @@ export class OpenPositionTaskSignService {
                         description: "Rollback to prepared successful",
                     }
                 )
+                await sleep(envConfig().executor.workers.job.sign.retryDelay)
                 return
             }
             throw error

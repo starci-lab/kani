@@ -29,6 +29,7 @@ import {
 } from "@modules/env"
 import {
     JobFailureStrategy,
+    sleep,
 } from "@modules/common"
 import {
     JobStepService,
@@ -199,6 +200,7 @@ export class OpenPositionTaskExecuteService {
                     id: contextPayload.id,
                     description: "Rollback to prepared successful",
                 })
+                await sleep(envConfig().executor.workers.job.execute.retryDelay)
                 return
             }
             throw error

@@ -14,7 +14,6 @@ import {
 import {
     UpsertPreparedTaskParams,
     UpsertPreparedResult,
-    UpdatePrepareProcessingRetriesParams,
 } from "./types"
 import {
     Injectable 
@@ -155,7 +154,7 @@ export class JobTaskService {
                     },
                 )
             // Ensure job exists (and ideally the update is applied)
-            assert(result.matchedCount > 0)
+            assert(result.modifiedCount > 0)
         }
         if (!session) {
             const clientSession = await this.connection.startSession()
@@ -165,49 +164,5 @@ export class JobTaskService {
         } else {
             await query(session)
         }
-    }
-
-    /**
-     * Increments the prepare processing retries for a task.
-     * @param params - The parameters (jobId, taskIndex, optional session).
-     */
-    async updatePrepareProcessingRetries({
-        jobId,
-        taskIndex,
-        session,
-    }: UpdatePrepareProcessingRetriesParams): Promise<void> {
-        const query = async (clientSession?: ClientSession): Promise<void> => {
-            const result = await this.connection
-                .model<JobSchema>(JobSchema.name)
-                .updateOne(
-                    {
-                        _id: jobId,
-                    },
-                    {
-                        $inc: {
-                            "tasks.$[task].prepareProcessingRetries": 1,
-                        },
-                    },
-                    {
-                        arrayFilters: [
-                            {
-                                "task.index": taskIndex,
-                            },
-                        ],
-                        session: clientSession,
-                    },
-                )
-            assert(result.modifiedCount > 0)
-        }
-        if (!session) {
-            const clientSession = await this.connection.startSession()
-            await clientSession.withTransaction(
-                async (session) => {
-                    await query(session)
-                }
-            )
-            return
-        }
-        await query(session)
     }
 }
