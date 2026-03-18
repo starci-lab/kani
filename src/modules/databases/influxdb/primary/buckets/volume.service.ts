@@ -107,15 +107,13 @@ export class PrimaryInfluxdbVolumeBucketService {
                 database: envConfig().databases.influxdb.primary.database,
             })
         }
-        const time = this.dayjsService.now().subtract(intervalMs,
-            "millisecond").toDate().getTime()
         // build the SQL query
         const sql = `
         SELECT id, cex_id, volume, time
         FROM volume
         WHERE id = $id
         AND cex_id = $cexId
-        AND time >= $time
+        AND time >= now() - interval '${intervalMs} ms'
         ORDER BY time ASC
       `
         return this.influxdbClient.query(
@@ -125,7 +123,6 @@ export class PrimaryInfluxdbVolumeBucketService {
                 params: {
                     id,
                     cexId,
-                    time
                 },
             }
         ) as AsyncIterableIterator<VolumePoint>

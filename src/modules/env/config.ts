@@ -901,6 +901,11 @@ export const envConfig = () => ({
                 }),
             },
         },
+        indicators: {
+            interval: parseEnvMs({
+                key: "SOCKET_IO_INDICATORS_INTERVAL", defaultValue: "5s"
+            }),
+        },
     },
     /** Quote ratio thresholds: safe range (no swap) and expected range after swap. */
     quote: {

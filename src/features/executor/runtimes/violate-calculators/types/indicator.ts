@@ -1,4 +1,5 @@
 import {
+    IndicatorRecord,
     IndicatorStatus,
 } from "@modules/cache"
 
@@ -18,6 +19,10 @@ export interface PricePctIndicatorMetadata {
 
 export interface IndicatorResult<T> {
     /**
+     * The id of the indicator.
+     */
+    id: string
+    /**
      * The status of the indicator.
      */
     status: IndicatorStatus
@@ -29,6 +34,10 @@ export interface IndicatorResult<T> {
      * The metadata of the indicator.
      */
     metadata: T
+    /**
+     * The records of the indicator.
+     */
+    records: Array<IndicatorRecord>
 }
 
 /**

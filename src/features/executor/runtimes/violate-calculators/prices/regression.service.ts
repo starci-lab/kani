@@ -189,23 +189,38 @@ export class RegressionCalculatorService {
         if (this.opService.evaluateGroup(values,
             triggerThresholds)) {
             return { 
+                id: violateIndicator.id,
                 status: IndicatorStatus.Trigger, 
                 timeWindowMs, 
-                metadata 
+                metadata,
+                records: relativePricePoints.map((point) => ({
+                    time: point.time,
+                    value: point.price,
+                })),
             }
         }
         if (this.opService.evaluateGroup(values,
             reentryThresholds)) {
             return { 
+                id: violateIndicator.id,
                 status: IndicatorStatus.Reentry, 
                 timeWindowMs, 
-                metadata 
+                metadata,
+                records: relativePricePoints.map((point) => ({
+                    time: point.time,
+                    value: point.price,
+                })),
             }
         }
         return {
+            id: violateIndicator.id,
             status: IndicatorStatus.NoAction,
             timeWindowMs,
             metadata,
+            records: relativePricePoints.map((point) => ({
+                time: point.time,
+                value: point.price,
+            })),
         }
     }
 }

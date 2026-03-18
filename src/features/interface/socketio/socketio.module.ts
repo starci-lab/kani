@@ -13,6 +13,9 @@ import {
 import {
     CallbackModule 
 } from "./callback"
+import {
+    IndicatorsModule 
+} from "./indicators"
 
 @Module({
     imports: [
@@ -27,6 +30,11 @@ import {
             }
         ),
         CallbackModule.register(
+            {
+                isGlobal: true,
+            }
+        ),
+        IndicatorsModule.register(
             {
                 isGlobal: true,
             }

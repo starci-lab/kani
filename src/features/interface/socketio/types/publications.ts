@@ -1,5 +1,6 @@
 import type {
     DynamicLiquidityPoolInfoCacheResult,
+    ViolateIndicatorResultEntry,
 } from "@modules/cache"
 import {
     ReceivedToken 
@@ -28,4 +29,9 @@ export interface PublicationConfirmWithdrawalEventPayload {
     botId: string
     txHashes: Array<string>
     receivedTokens: Array<ReceivedToken>
+}
+
+/** Event payload for indicators publication. */
+export interface PublicationIndicatorsEventPayload {
+    entries: Array<ViolateIndicatorResultEntry>
 }

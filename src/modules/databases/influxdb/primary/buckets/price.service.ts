@@ -106,15 +106,13 @@ export class PrimaryInfluxdbPriceBucketService {
                 database: envConfig().databases.influxdb.primary.database,
             })
         }
-        const time = this.dayjsService.now().subtract(intervalMs,
-            "millisecond").toDate().getTime()
         // build the SQL query
         const sql = `
         SELECT id, cex_id, price, time
         FROM price
         WHERE id = $id
         AND cex_id = $cexId
-        AND time >= $time
+        AND time >= now() - interval '${intervalMs} ms'
         ORDER BY time ASC
       `
         // InfluxDB 3 client supports params in recent versions; if yours doesn't,
@@ -126,7 +124,6 @@ export class PrimaryInfluxdbPriceBucketService {
                 params: {
                     id,
                     cexId,
-                    time
                 },
             }
         ) as AsyncIterableIterator<PricePoint>

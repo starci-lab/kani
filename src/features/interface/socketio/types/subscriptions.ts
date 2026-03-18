@@ -13,3 +13,8 @@ export interface SubscribePricesEventPayload {
 export interface SubscribeConfirmWithdrawalEventPayload {
     botId: string
 }
+
+/** Event payload for subscribing to violate indicators (by bot id). */
+export interface SubscribeIndicatorsEventPayload {
+    botId: string
+}

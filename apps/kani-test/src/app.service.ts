@@ -84,7 +84,6 @@ export class AppService implements OnModuleInit {
                 showObjectChanges: true,
             },
         })
-        console.log(result)
         return result
     }
 }

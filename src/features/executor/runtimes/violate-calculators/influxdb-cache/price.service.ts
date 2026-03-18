@@ -129,8 +129,11 @@ export class InfluxdbPriceCacheService implements OnApplicationBootstrap {
             "millisecond").toDate().getTime()
         const endMs = now.toDate().getTime()
 
-        const entry = this.storage.get(this.getKey(tokenId,
-            cexId))
+        const entry = this.storage.get(
+            this.getKey(tokenId,
+                cexId
+            )
+        )
         const points = entry?.points ?? []
         const influxdbPricePoints = points.filter(
             (point) => point.time >= startMs && point.time <= endMs,

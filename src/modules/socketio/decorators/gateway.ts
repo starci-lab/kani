@@ -8,6 +8,7 @@ import {
 export const PRICE_NAMESPACE = "price"
 export const DYNAMIC_LIQUIDITY_POOL_INFO_NAMESPACE = "dynamic-liquidity-pool-info"
 export const CALLBACK_NAMESPACE = "callback"
+export const INDICATORS_NAMESPACE = "indicators"
 
 export const PriceWebSocketGateway = () => WebSocketGateway(
     {
@@ -32,6 +33,16 @@ export const DynamicLiquidityPoolInfoWebSocketGateway = () => WebSocketGateway(
 export const CallbackWebSocketGateway = () => WebSocketGateway(
     {
         namespace: CALLBACK_NAMESPACE,
+        transports: ["websocket",
+            "polling"],
+        cors: createCorsOptions(),
+        perMessageDeflate: true,
+    }
+)
+
+export const IndicatorsWebSocketGateway = () => WebSocketGateway(
+    {
+        namespace: INDICATORS_NAMESPACE,
         transports: ["websocket",
             "polling"],
         cors: createCorsOptions(),

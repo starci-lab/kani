@@ -65,9 +65,10 @@ export class RelativePriceBuilderService {
                 snapshotMs: now.toDate().getTime(),
             }),
         ])
+
         return this.buildRelativeSeriesInterpolated(
-            pricePointsA,
             pricePointsB,
+            pricePointsA,
         )
     }
 

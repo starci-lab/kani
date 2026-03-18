@@ -62,6 +62,5 @@ export class FeesTestService implements OnApplicationBootstrap {
             bot,
             liquidityPool,
         })
-        console.log(result)
     }
 }
