@@ -3,10 +3,8 @@ import type {
 } from "@modules/blockchains"
 import type {
     LiquidityPoolSchema,
+    TransactionType,
 } from "@modules/databases"
-import type {
-    TransactionType
-} from "@modules/exceptions"
 import type {
     SuiEvent
 } from "@mysten/sui/client"

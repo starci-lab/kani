@@ -11,7 +11,8 @@ import {
     SignClosePositionResult,
 } from "../types"
 import {
-    PrimaryMemoryStorageService
+    PrimaryMemoryStorageService,
+    TransactionType,
 } from "@modules/databases"
 import {
     ClosePositionInstructionService
@@ -19,7 +20,6 @@ import {
 import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
-    TransactionType,
 } from "@modules/exceptions"
 import {
     SolanaTxService,

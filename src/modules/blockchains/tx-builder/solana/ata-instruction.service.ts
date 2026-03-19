@@ -157,6 +157,7 @@ export class AtaInstructionService {
      * const { instructions, ataAddress } = await service.createIdempotentAtaInstructions({ tokenMint, ownerAddress, amount })
      */
     async createIdempotentAtaInstructions({
+        feePayer,
         tokenMint,
         ownerAddress,
         is2022Token = false,
@@ -168,6 +169,7 @@ export class AtaInstructionService {
                 is2022Token,
                 amount,
                 pdaOnly: false,
+                feePayer,
             })
         }
         const tokenProgram = is2022Token
@@ -188,7 +190,7 @@ export class AtaInstructionService {
             instructions: [
                 _getCreateAssociatedTokenIdempotentInstruction({
                     ata: ataAddress,
-                    payer: createNoopSigner(ownerAddress),
+                    payer: createNoopSigner(feePayer ?? ownerAddress),
                     owner: ownerAddress,
                     mint: tokenMint,
                     tokenProgram,
@@ -208,6 +210,7 @@ export class AtaInstructionService {
      * const { instructions, endInstructions, ataAddress } = await service.createWSolAccountInstructions({ ownerAddress, amount })
      */
     async createWSolAccountInstructions({
+        feePayer,
         ownerAddress,
         is2022Token = false,
         amount,
@@ -252,7 +255,7 @@ export class AtaInstructionService {
                     seed,
                     amount: lamports.toNumber(),
                     base: ownerAddress,
-                    payer: createNoopSigner(ownerAddress),
+                    payer: createNoopSigner(feePayer ?? ownerAddress),
                     space,
                     programAddress,
                 }),

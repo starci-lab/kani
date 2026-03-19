@@ -68,29 +68,22 @@ export class TransferInstructionService {
         }
         const instructions: Array<Instruction> = []
         const {
-            ataAddress: sourceAtaAddress,
-            instructions: createAtaInstructions,
-        } = await this.ataInstructionService.createIdempotentAtaInstructions({
-            ownerAddress: fromAddress,
-            tokenMint: address(token.tokenAddress),
-            is2022Token: token.is2022Token,
-        })
-        if (createAtaInstructions?.length) {
-            instructions.push(...createAtaInstructions)
-        }
-
-        const {
             ataAddress: destinationAtaAddress,
             instructions: transferAtaInstructions,
         } = await this.ataInstructionService.createIdempotentAtaInstructions({
             ownerAddress: toAddress,
             tokenMint: address(token.tokenAddress),
             is2022Token: token.is2022Token,
+            feePayer: fromAddress,
+        })
+        const sourceAtaAddress = await this.ataInstructionService.getAta({
+            tokenMint: address(token.tokenAddress),
+            ownerAddress: fromAddress,
+            is2022Token: token.is2022Token,
         })
         if (transferAtaInstructions?.length) {
             instructions.push(...transferAtaInstructions)
         }
-
         const _getTransferInstruction = token.is2022Token
             ? getTransferInstruction2022
             : getTransferInstruction

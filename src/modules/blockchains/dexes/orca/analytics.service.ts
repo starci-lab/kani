@@ -27,7 +27,9 @@ import {
     sleep
 } from "@modules/common"
 import {
-    AsyncService, DayjsService, JitterService, ReadinessWatcherFactoryService
+    AsyncService, 
+    DayjsService, 
+    ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
     envConfig
@@ -63,7 +65,6 @@ export class OrcaAnalyticsService implements OnModuleInit, OnApplicationBootstra
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
-        private readonly jitterService: JitterService,
         private readonly winstonService: WinstonService,
     ) {}
 
@@ -117,12 +118,19 @@ export class OrcaAnalyticsService implements OnModuleInit, OnApplicationBootstra
                         return
                     }
                     const { stats, tvlUsdc, liquidity } = item
-                    const { fees, volume, yieldOverTvl } = stats["24h"]
+                    const { fees, volume, rewards } = stats["24h"]
+                    const fees24H = new Decimal(fees).div(tvlUsdc).mul(365)
+                    const rewards24H = new Decimal(rewards ?? 0).div(tvlUsdc).mul(365)
+                    const total24H = fees24H.add(rewards24H)
                     const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
                         fee24H: fees.toString(),
                         volume24H: volume.toString(),
                         tvl: tvlUsdc.toString(),
-                        apr24H: new Decimal(yieldOverTvl).mul(365).toString(),
+                        apr24H: {
+                            fees: fees24H.toString(),
+                            rewards: rewards24H.toString(),
+                            total: total24H.toString(),
+                        },
                         snapshotAt,
                         liquidity: liquidity.toString(),
                     }
@@ -147,9 +155,6 @@ export class OrcaAnalyticsService implements OnModuleInit, OnApplicationBootstra
 
     @Interval(envConfig().dexes.orca.interval.analytics)
     async handleAnalyticsUpdateInterval() {
-        await this.jitterService.delayWithJitter(
-            envConfig().dexes.orca.interval.analytics
-        )
         const chunks = Array.from(this.liquidityPoolMap.values()).reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = Math.floor(index / 10)

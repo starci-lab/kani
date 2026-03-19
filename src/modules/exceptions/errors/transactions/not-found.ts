@@ -2,7 +2,6 @@
  * Transaction not-found exceptions.
  * Errors related to missing transaction events.
  */
-
 import type {
     AbstractExceptionMetadata 
 } from "../abstract"
@@ -10,11 +9,9 @@ import {
     AbstractException 
 } from "../abstract"
 import type {
-    LiquidityPoolId 
+    LiquidityPoolId,
+    TransactionType
 } from "@modules/databases"
-import type {
-    TransactionType 
-} from "../../enums"
 
 /** Thrown when transaction event is not found */
 export interface TransactionEventNotFoundExceptionMetadata extends AbstractExceptionMetadata {

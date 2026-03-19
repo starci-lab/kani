@@ -29,7 +29,6 @@ import {
 import {
     AsyncService,
     DayjsService,
-    JitterService,
     ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
@@ -66,7 +65,6 @@ export class RaydiumAnalyticsService implements OnModuleInit, OnApplicationBoots
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
-        private readonly jitterService: JitterService,
         private readonly winstonService: WinstonService,
     ) { }
 
@@ -102,6 +100,10 @@ export class RaydiumAnalyticsService implements OnModuleInit, OnApplicationBoots
         )
     }
 
+    /**
+     * Sets the analytics data for a batch of liquidity pools.
+     * @param liquidityPools - Array of liquidity pool schemas
+     */
     private async setBatchPoolAnalytics(
         liquidityPools: Array<LiquidityPoolSchema>,
     ) {
@@ -127,7 +129,15 @@ export class RaydiumAnalyticsService implements OnModuleInit, OnApplicationBoots
                         fee24H: day.volume.toString(),
                         volume24H: day.volumeQuote.toString(),
                         tvl: tvl.toString(),
-                        apr24H: new Decimal(day.apr).div(365).div(100).toString(),
+                        apr24H: {
+                            fees: new Decimal(day.feeApr).div(100).toString(),
+                            rewards: new Decimal(
+                                day.rewardApr.reduce(
+                                    (acc, curr) => acc + curr,
+                                    0)
+                            ).div(100).toString(),
+                            total: new Decimal(day.apr).div(100).toString(),
+                        },
                         snapshotAt,
                         liquidity: tvl.toString(),
                     }
@@ -154,9 +164,6 @@ export class RaydiumAnalyticsService implements OnModuleInit, OnApplicationBoots
      */
     @Interval(envConfig().dexes.raydium.interval.analytics)
     async handleAnalyticsUpdateInterval(): Promise<void> {
-        await this.jitterService.delayWithJitter(
-            envConfig().dexes.raydium.interval.analytics
-        )
         const chunks = Array.from(this.liquidityPoolMap.values()).reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = Math.floor(index / 10)

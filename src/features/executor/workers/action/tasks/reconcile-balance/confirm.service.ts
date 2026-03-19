@@ -10,7 +10,8 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
-    TaskType
+    TaskType,
+    TransactionType
 } from "@modules/databases"
 import {
     Connection 
@@ -20,7 +21,9 @@ import {
 } from "../../send-heartbeat.service"
 import {
     BalanceSnapshotService,
-    BalanceFetcherService
+    BalanceFetcherService,
+    TransactionSnapshotService,
+    SignedTx
 } from "@modules/blockchains"
 import BN from "bn.js"
 import {
@@ -38,6 +41,10 @@ import {
 import {
     DebugLatencyService,
 } from "@modules/debug"
+import {
+    InjectSuperJson
+} from "@modules/mixin"
+import SuperJSON from "superjson"
 
 @Injectable()
 export class ReconcileBalanceTaskConfirmService {
@@ -50,6 +57,9 @@ export class ReconcileBalanceTaskConfirmService {
         private readonly balanceFetcherService: BalanceFetcherService,
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
+        private readonly transactionSnapshotService: TransactionSnapshotService,
     ) { }
 
     /**
@@ -87,6 +97,7 @@ export class ReconcileBalanceTaskConfirmService {
                 description: "Heartbeat sent successfully",
             })
             const stepCount = job.tasks[taskIndex].stepCount
+            const signedTxs = (job.tasks[taskIndex].steps ?? []).map((step) => this.superJson.parse<SignedTx>(step.signedTx ?? ""))
             let targetBalanceAmount = new BN(0)
             let quoteBalanceAmount = new BN(0)
             let gasBalanceAmount = new BN(0)
@@ -118,6 +129,18 @@ export class ReconcileBalanceTaskConfirmService {
                                     targetBalanceAmount,
                                     quoteBalanceAmount,
                                     gasBalanceAmount,
+                                    session: clientSession,
+                                }
+                            )
+                        }
+                        // add the transaction records
+                        for (const signedTx of signedTxs) {
+                            await this.transactionSnapshotService.addTransactionRecord(
+                                {
+                                    bot,
+                                    txHash: signedTx.txHash,
+                                    chainId: bot.chainId,
+                                    type: TransactionType.ReconcileBalance,
                                     session: clientSession,
                                 }
                             )

@@ -10,7 +10,6 @@ import {
     SignWithdrawTransactionResult,
 } from "../types"
 import {
-    TransactionType,
     TokenNotFoundException,
     TransactionNotFoundException,
     OutputCoinNotFoundException,
@@ -18,6 +17,7 @@ import {
 import {
     TokenId,
     PrimaryMemoryStorageService,
+    TransactionType,
 } from "@modules/databases"
 import {
     Transaction,

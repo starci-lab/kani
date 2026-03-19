@@ -15,6 +15,7 @@ import {
 } from "../../types"
 import { 
     PrimaryMemoryStorageService,
+    TransactionType,
 } from "@modules/databases"
 import { 
     ClosePositionInstructionService, 
@@ -22,7 +23,6 @@ import {
 import { 
     ActivePositionNotFoundException,
     InvalidPoolTokensException, 
-    TransactionType,
 }from "@modules/exceptions"
 import {
     SolanaFetchService,

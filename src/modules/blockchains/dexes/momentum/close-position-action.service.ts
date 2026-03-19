@@ -18,13 +18,15 @@ import {
 } from "./transactions"
 import { 
     ActivePositionNotFoundException,
-    TransactionType,
 } from "@modules/exceptions"
+import {
+    TransactionType,
+} from "@modules/databases"
 import {
     SuiExecuteService,
     SuiFetchService,
     SuiStimulateService,
-    SuiTxService
+    SuiTxService,
 } from "../../clients"
 import {
     ChainId 

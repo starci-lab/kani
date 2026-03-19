@@ -42,12 +42,19 @@ export interface DynamicDlmmLiquidityPoolInfoCacheResult extends SnapshotCacheRe
     rewards: Array<DynamicDlmmRewardInfo>
 }
 
+/** APR breakdown for pool analytics. */
+export interface AprBreakdown {
+    fees: string
+    rewards: string
+    total: string
+}
+
 /** Pool analytics cache result. */
 export interface PoolAnalyticsCacheResult extends SnapshotCacheResult {
     fee24H: string
     volume24H: string
     tvl: string
-    apr24H: string
+    apr24H: AprBreakdown
     liquidity: string
 }
 

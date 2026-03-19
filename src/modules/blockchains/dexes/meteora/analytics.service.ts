@@ -1,5 +1,5 @@
 import {
-    AxiosService 
+    AxiosService
 } from "@modules/axios"
 import {
     DexId,
@@ -12,14 +12,14 @@ import {
     OnModuleInit,
 } from "@nestjs/common"
 import {
-    AxiosInstance 
+    AxiosInstance
 } from "axios"
-import { 
-    CacheKey, 
+import {
+    CacheKey,
     CacheService
 } from "@modules/cache"
 import {
-    Interval 
+    Interval
 } from "@nestjs/schedule"
 import {
     createObjectId,
@@ -28,7 +28,6 @@ import {
 import {
     AsyncService,
     DayjsService,
-    JitterService,
     ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
@@ -41,9 +40,7 @@ import {
 import {
     PoolAnalyticsResult
 } from "./types"
-import {
-    Decimal
-} from "decimal.js"
+import Decimal from "decimal.js"
 
 /**
  * Fetches and caches Meteora pool analytics (fees, volume, TVL, APR) from Meteora API.
@@ -54,7 +51,7 @@ import {
  */
 @Injectable()
 export class MeteoraAnalyticsService implements OnModuleInit, OnApplicationBootstrap {
-    private readonly url = "https://dlmm-api.meteora.ag/pair/all_by_groups"
+    private readonly url = "https://dlmm.datapi.meteora.ag/pools"
     private liquidityPoolMap: Map<string, LiquidityPoolSchema> = new Map()
     private axios: AxiosInstance
 
@@ -65,9 +62,8 @@ export class MeteoraAnalyticsService implements OnModuleInit, OnApplicationBoots
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
-        private readonly jitterService: JitterService,
         private readonly winstonService: WinstonService,
-    ) {}
+    ) { }
 
     /**
      * Starts the analytics update interval on application bootstrap.
@@ -83,7 +79,7 @@ export class MeteoraAnalyticsService implements OnModuleInit, OnApplicationBoots
         await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
         const key = "meteora-analytics"
         this.axios = this.axiosService.create({
-            key 
+            key
         })
         const liquidityPools = Array.from(
             this.primaryMemoryStorageService.liquidityPoolMap.values())
@@ -91,10 +87,12 @@ export class MeteoraAnalyticsService implements OnModuleInit, OnApplicationBoots
                 (liquidityPool) => liquidityPool.dex.toString() === createObjectId(DexId.Meteora).toString(),
             )
         this.liquidityPoolMap = new Map(
-            liquidityPools.map((liquidityPool) => [liquidityPool.id,
+            liquidityPools.map((liquidityPool) => [
+                liquidityPool.id,
                 liquidityPool
             ]
-            ))
+            )
+        )
     }
 
     /**
@@ -104,30 +102,38 @@ export class MeteoraAnalyticsService implements OnModuleInit, OnApplicationBoots
      */
     private async setBatchPoolAnalytics(liquidityPools: Array<LiquidityPoolSchema>): Promise<void> {
         const baseURL = new URL(this.url)
-        for (const liquidityPool of liquidityPools) {
-            baseURL.searchParams.append("include_pool_token_pairs",
-                liquidityPool.displayId)
-        }
+        baseURL.searchParams.append("filter_by",
+            `pool_address=[${liquidityPools.map(liquidityPool => liquidityPool.poolAddress).join("|")}]`
+        )
         const { data } = await this.axios.get<PoolAnalyticsResult>(baseURL.toString())
         const promises: Array<Promise<void>> = []
         const snapshotAt = this.dayjsService.now()
-        for (const group of data.groups) {
-            for (const pair of group.pairs) {
-                promises.push(
-                    (async () => {
+        for (const pool of data.data) {
+            promises.push(
+                (async () => {
+                    try {
                         const liquidityPool = liquidityPools.find(
-                            (liquidityPool) => liquidityPool.poolAddress === pair.address,
+                            (liquidityPool) => liquidityPool.poolAddress === pool.address,
                         )
                         if (!liquidityPool || !liquidityPool.displayId) {
                             return
                         }
+                        const fee24H = pool.fees["24h"] ?? 0
+                        const volume24H = pool.volume["24h"] ?? 0
+                        const apr24H = new Decimal(pool.apr).mul(365).div(100)
+                        const farmApr24H = new Decimal(pool.farm_apr).mul(365).div(100) 
+                        const totalApr24H = apr24H.add(farmApr24H)
                         const poolAnalyticsCacheResult = {
-                            fee24H: pair.fees_24h.toString(),
-                            volume24H: pair.trade_volume_24h.toString(),
-                            tvl: pair.liquidity.toString(),
-                            apr24H: new Decimal(pair.apr).div(100).toString(),
+                            fee24H: fee24H.toString(),
+                            volume24H: volume24H.toString(),
+                            tvl: pool.tvl.toString(),
+                            apr24H: {
+                                fees: apr24H.toString(),
+                                rewards: farmApr24H.toString(),
+                                total: totalApr24H.toString(),
+                            },
                             snapshotAt,
-                            liquidity: pair.liquidity.toString(),
+                            liquidity: pool.tvl.toString(),
                         }
                         await this.cacheService.set(
                             {
@@ -142,21 +148,21 @@ export class MeteoraAnalyticsService implements OnModuleInit, OnApplicationBoots
                                 liquidityPoolId: liquidityPool.displayId,
                             }
                         )
-                    })(),
-                )
-            }
-        }  
+                    } catch (error) {
+                        console.error(error)
+                        throw error
+                    }
+                })(),
+            )
+        }
         await this.asyncService.allIgnoreError(promises)
     }
-    
+
     /**
      * Runs on interval: chunks pools by 10, fetches and caches analytics per chunk.
      */
     @Interval(envConfig().dexes.meteora.interval.analytics)
     async handleAnalyticsUpdateInterval(): Promise<void> {
-        await this.jitterService.delayWithJitter(
-            envConfig().dexes.meteora.interval.analytics
-        )
         const chunks = Array.from(this.liquidityPoolMap.values()).reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = Math.floor(index / 10)
@@ -177,4 +183,3 @@ export class MeteoraAnalyticsService implements OnModuleInit, OnApplicationBoots
     }
 }
 
-  

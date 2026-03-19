@@ -4,10 +4,8 @@ import type {
 import type {
     LiquidityPoolId,
     TokenId,
+    TransactionType
 } from "@modules/databases"
-import type {
-    TransactionType 
-} from "@modules/exceptions"
 
 export interface ClosePositionTransactionExecutedMessage {
     botId: string

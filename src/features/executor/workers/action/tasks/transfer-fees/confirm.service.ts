@@ -11,7 +11,8 @@ import {
 import {
     InjectPrimaryMongoose,
     JobSchema,
-    TaskType
+    TaskType,
+    TransactionType
 } from "@modules/databases"
 import {
     Connection
@@ -28,9 +29,10 @@ import {
     SendHeartbeatService
 } from "../../send-heartbeat.service"
 import {
-    ExecuteWithdrawTransactionResult,
     PrepareTransferFeesTransactionResult,
-    TransferFeesSnapshotService
+    TransferFeesSnapshotService,
+    TransactionSnapshotService,
+    SignedTx
 } from "@modules/blockchains"
 import {
     InjectSuperJson
@@ -59,6 +61,7 @@ export class TransferFeesTaskConfirmService {
         private readonly superJson: SuperJSON,
         private readonly debugContextService: DebugContextService,
         private readonly debugLatencyService: DebugLatencyService,
+        private readonly transactionSnapshotService: TransactionSnapshotService,
     ) {}
 
     /**
@@ -133,24 +136,29 @@ export class TransferFeesTaskConfirmService {
                         )
                         const feeTargetAmount = prepareResult?.feeAmountTarget ?? new BN(0)
                         const feeQuoteAmount = prepareResult?.feeAmountQuote ?? new BN(0)
-                        const feeTransferTxHashes = task.steps
-                            .map((step) => {
-                                const exec = step?.executeResult
-                                    ? this.superJson.parse<ExecuteWithdrawTransactionResult>(step.executeResult)
-                                    : null
-                                return exec?.txHash
-                            })
-                            .filter((txHash): txHash is string => Boolean(txHash))
+                        const signedTxs = (task.steps ?? []).map((step) => this.superJson.parse<SignedTx>(step.signedTx ?? ""))
                         await this.transferFeesSnapshotService.updateTransferFeesRecord(
                             {
                                 botId: bot.id,
                                 positionId,
                                 feeTargetAmount,
                                 feeQuoteAmount,
-                                feeTransferTxHashes,
+                                feeTransferTxHashes: signedTxs.map((signedTx) => signedTx.txHash),
                                 session: clientSession,
                             }
                         )
+                        // add the transaction records
+                        for (const signedTx of signedTxs) {
+                            await this.transactionSnapshotService.addTransactionRecord(
+                                {
+                                    bot,
+                                    txHash: signedTx.txHash,
+                                    chainId: bot.chainId,
+                                    type: TransactionType.TransferFees,
+                                    session: clientSession,
+                                }
+                            )
+                        }
                         if (envConfig().executor.runtime.operation?.transferFees?.stimulate) {
                             throw new ActionJobStimulateMongoSessionException({
                                 botId: bot.id,

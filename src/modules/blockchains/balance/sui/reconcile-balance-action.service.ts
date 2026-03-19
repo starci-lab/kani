@@ -10,10 +10,12 @@ import {
     SignReconcileBalanceTransactionResult,
 } from "../types"
 import {
-    TransactionType,
     TransactionNotFoundException,
     OutputCoinNotFoundException,
 } from "@modules/exceptions"
+import {
+    TransactionType,
+} from "@modules/databases"
 import {
     Transaction,
 } from "@mysten/sui/transactions"

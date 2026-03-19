@@ -10,11 +10,9 @@ import {
     AbstractException
 } from "../abstract"
 import type {
+    TransactionType,
     LiquidityPoolId
 } from "@modules/databases"
-import type {
-    TransactionType
-} from "../../enums"
 import type {
     ChainId
 } from "@modules/common"

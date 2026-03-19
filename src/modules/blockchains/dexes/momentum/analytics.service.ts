@@ -19,7 +19,6 @@ import {
 import {
     AsyncService,
     DayjsService,
-    JitterService,
     ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
@@ -41,9 +40,7 @@ import {
 import {
     LiquidityPoolsApiResult
 } from "./types"
-import {
-    Decimal 
-} from "decimal.js"
+import Decimal from "decimal.js"
 
 /**
  * Fetches and caches Momentum pool analytics (fees, volume, TVL, APR) from Momentum API.
@@ -65,7 +62,6 @@ export class MomentumAnalyticsService implements OnModuleInit, OnApplicationBoot
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
-        private readonly jitterService: JitterService,
         private readonly winstonService: WinstonService,
     ) {}
 
@@ -118,7 +114,11 @@ export class MomentumAnalyticsService implements OnModuleInit, OnApplicationBoot
                     }
                     const {
                         fees24h,
-                        aprBreakdown: { total },
+                        aprBreakdown: { 
+                            total,
+                            fee,
+                            rewards
+                        },
                         volume24h,
                         tvl,
                         liquidity,
@@ -127,7 +127,12 @@ export class MomentumAnalyticsService implements OnModuleInit, OnApplicationBoot
                         fee24H: fees24h.toString(),
                         volume24H: volume24h.toString(),
                         tvl: tvl.toString(),
-                        apr24H: new Decimal(total).div(365).div(100).toString(),
+                        apr24H: {
+                            fees: new Decimal(fee).div(100).toString(),
+                            rewards: rewards.map(reward => new Decimal(reward.apr).div(100)).reduce((acc, curr) => acc.add(curr),
+                                new Decimal(0)).toString(),
+                            total: new Decimal(total).div(100).toString(),
+                        },
                         snapshotAt,
                         liquidity: liquidity.toString(),
                     }
@@ -155,9 +160,6 @@ export class MomentumAnalyticsService implements OnModuleInit, OnApplicationBoot
      */
     @Interval(envConfig().dexes.momentum.interval.analytics)
     async handleAnalyticsUpdateInterval(): Promise<void> {
-        await this.jitterService.delayWithJitter(
-            envConfig().dexes.momentum.interval.analytics
-        )
         await this.asyncService.safeRun(async () => {
             await this.setAllPoolAnalytics()
         })

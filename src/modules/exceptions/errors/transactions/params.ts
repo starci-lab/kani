@@ -5,11 +5,9 @@ import {
     AbstractException 
 } from "../abstract"
 import type {
-    LiquidityPoolId 
+    LiquidityPoolId,
+    TransactionType
 } from "@modules/databases"
-import type {
-    TransactionType 
-} from "../../enums"
 
 /** Thrown when transaction is not found in params */
 export interface MissingSolanaTxParamExceptionMetadata

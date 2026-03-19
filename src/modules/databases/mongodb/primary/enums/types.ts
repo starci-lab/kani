@@ -82,6 +82,7 @@ export enum TransactionType {
     ClosePosition = "closePosition",
     ReconcileBalance = "reconcileBalance",
     Withdraw = "withdraw",
+    TransferFees = "transferFees",
 }
 
 export const GraphQLTypeTransactionType = createEnumType(TransactionType)
@@ -103,6 +104,9 @@ registerEnumType(
             },
             [TransactionType.Withdraw]: {
                 description: "The withdraw transaction"
+            },
+            [TransactionType.TransferFees]: {
+                description: "The transfer fees transaction"
             }
         }
     }

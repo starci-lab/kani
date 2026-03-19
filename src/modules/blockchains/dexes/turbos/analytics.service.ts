@@ -21,7 +21,9 @@ import {
     sleep
 } from "@modules/common"
 import {
-    AsyncService, DayjsService, JitterService, ReadinessWatcherFactoryService
+    AsyncService, 
+    DayjsService, 
+    ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
     envConfig
@@ -39,9 +41,7 @@ import {
 import {
     TurbosPool
 } from "./types"
-import {
-    Decimal
-} from "decimal.js"
+import Decimal from "decimal.js"
 
 /**
  * Fetches and caches Turbos pool analytics (fees, volume, TVL, APR) from Turbos API.
@@ -63,7 +63,6 @@ export class TurbosAnalyticsService implements OnModuleInit, OnApplicationBootst
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
-        private readonly jitterService: JitterService,
         private readonly winstonService: WinstonService,
     ) { }
 
@@ -129,7 +128,11 @@ export class TurbosAnalyticsService implements OnModuleInit, OnApplicationBootst
                         fee24H: item.fee_24h_usd.toString(),
                         volume24H: item.volume_24h_usd.toString(),
                         tvl: item.liquidity_usd.toString(),
-                        apr24H: new Decimal(item.apr).div(item.apr_percent).toString(),
+                        apr24H: {
+                            fees: new Decimal(item.fee_apr).div(100).toString(),
+                            rewards: new Decimal(item.reward_apr).div(100).toString(),
+                            total: new Decimal(item.apr).div(100).toString(),
+                        },
                         liquidity: item.liquidity_usd.toString(),
                     }
                     await this.cacheService.set(
@@ -156,9 +159,6 @@ export class TurbosAnalyticsService implements OnModuleInit, OnApplicationBootst
      */
     @Interval(envConfig().dexes.turbos.interval.analytics)
     async handleAnalyticsUpdateInterval(): Promise<void> {
-        await this.jitterService.delayWithJitter(
-            envConfig().dexes.turbos.interval.analytics
-        )
         const chunks = Array.from(this.liquidityPoolMap.values()).reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = Math.floor(index / 10)

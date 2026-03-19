@@ -13,14 +13,16 @@ import {
     SignOpenPositionResult,
 } from "../types"
 import {
-    DexId, OrcaPositionMetadata, PrimaryMemoryStorageService
+    DexId, 
+    OrcaPositionMetadata, 
+    PrimaryMemoryStorageService,
+    TransactionType,
 } from "@modules/databases"
 import {
     InvalidPoolTokensException,
     BalanceSnapshotsNotFoundException,
     MissingPositionIdParamException,
     LiquidityPoolClmmStateNotFoundException,
-    TransactionType,
     RangeTierNotConfiguredException,
 } from "@modules/exceptions"
 import {

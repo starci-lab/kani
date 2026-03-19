@@ -2,11 +2,9 @@ import type {
     SignedTx
 } from "@modules/blockchains"
 import type {
-    LiquidityPoolId
-} from "@modules/databases"
-import type {
+    LiquidityPoolId,
     TransactionType
-} from "@modules/exceptions"
+} from "@modules/databases"
 
 /** Minimal bot shape required for Solana stimulate (exception context). */
 export interface StimulateSolanaBot {

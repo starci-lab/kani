@@ -23,9 +23,6 @@ import {
     ExactlyTwoTokensRequiredException 
 } from "@modules/exceptions"
 import {
-    PositionAssociateService 
-} from "@modules/databases"
-import {
     CacheKey, CacheService 
 } from "@modules/cache"
 import Decimal from "decimal.js"
@@ -34,7 +31,6 @@ import Decimal from "decimal.js"
 export class LiquidityPoolsService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly positionAssociateService: PositionAssociateService,
         private readonly asyncService: AsyncService,
         private readonly validateService: ValidateService,
         private readonly paginateService: PaginateService,
@@ -168,11 +164,11 @@ export class LiquidityPoolsService {
                 liquidityPools = liquidityPools.sort(
                     (prev, next) =>
                         asc
-                            ? new Decimal(prev.analytics?.apr24H ?? 0)
-                                .sub(new Decimal(next.analytics?.apr24H ?? 0))
+                            ? new Decimal(prev.analytics?.apr24H?.total ?? 0)
+                                .sub(new Decimal(next.analytics?.apr24H?.total ?? 0))
                                 .toNumber()
-                            : new Decimal(next.analytics?.apr24H ?? 0)
-                                .sub(new Decimal(prev.analytics?.apr24H ?? 0))
+                            : new Decimal(next.analytics?.apr24H?.total ?? 0)
+                                .sub(new Decimal(prev.analytics?.apr24H?.total ?? 0))
                                 .toNumber(),
                 )
                 break

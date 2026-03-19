@@ -40,6 +40,33 @@ import {
     LiquidityPoolDlmmStateSchema, LiquidityPoolDlmmStateSchemaClass 
 } from "./liquidity-pool-dlmm-state.schema"
 
+/** APR breakdown for pool analytics. */
+@ObjectType({
+    description: "APR breakdown for pool analytics.",
+})
+export class AprBreakdown {
+    // fees APR
+    @Field(
+        () => String,
+        {
+            description: "Fees generated in the last 24 hours.",
+        })
+        fees: string
+    // rewards APR
+    @Field(
+        () => String,
+        {
+            description: "Rewards generated in the last 24 hours.",
+        })
+        rewards: string
+    // total APR
+    @Field(
+        () => String,
+        {
+            description: "Total APR generated in the last 24 hours.",
+        })
+        total: string
+}
 /**
  * GraphQL response type for the dynamic liquidity pools query.
  */
@@ -48,33 +75,35 @@ import {
         "GraphQL response object for fetching dynamic liquidity pool info.",
 })
 export class GraphQLLiquidityPoolAnalytics {
+    // volume24H
     @Field(
         () => String,
         {
             description: "Trading volume in the last 24 hours.",
         })
         volume24H: string
-
+    // fees24H
     @Field(
         () => String,
         {
             description: "Fees generated in the last 24 hours.",
         })
         fees24H: string
-
+    // apr24H
     @Field(
-        () => String,
+        () => AprBreakdown,
         {
             description: "APR calculated over the last 24 hours.",
         })
-        apr24H: string
-
+        apr24H: AprBreakdown
+    // tvl
     @Field(
         () => String,
         {
             description: "Total value locked (TVL) of the pool.",
         })
         tvl: string
+    // liquidity
     @Field(
         () => String,
         {
@@ -83,6 +112,7 @@ export class GraphQLLiquidityPoolAnalytics {
         liquidity: string
 }
 
+/** Liquidity pool schema. */
 @Schema({
     timestamps: true,
     collection: "liquidity_pools",

@@ -29,7 +29,6 @@ import {
 import {
     AsyncService,
     DayjsService,
-    JitterService,
 } from "@modules/mixin"
 import {
     envConfig 
@@ -44,6 +43,7 @@ import {
 import {
     ReadinessWatcherFactoryService
 } from "@modules/mixin"
+import Decimal from "decimal.js"
 
 /**
  * Service responsible for fetching and caching Cetus DEX analytics data.
@@ -69,7 +69,6 @@ export class CetusAnalyticsService implements OnModuleInit, OnApplicationBootstr
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
-        private readonly jitterService: JitterService,
         private readonly winstonService: WinstonService,
     ) {}
 
@@ -156,13 +155,20 @@ export class CetusAnalyticsService implements OnModuleInit, OnApplicationBootstr
                     
                     // extract analytics data from API response
                     const { tvl, totalApr: apr } = item
-                    const { fee, vol } = item.stats[0]
-                    
+                    const { fee, vol, apr: feesApr } = item.stats[0]
+                    const rewardsApr = item.miningRewarders.reduce(
+                        (acc, rewarder) => acc + new Decimal(rewarder.apr).toNumber(),
+                        0
+                    )
                     const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
                         fee24H: fee.toString(),
                         volume24H: vol.toString(),
                         tvl: tvl.toString(),
-                        apr24H: apr.toString(),
+                        apr24H: {
+                            fees: feesApr.toString(),
+                            rewards: rewardsApr.toString(),
+                            total: apr.toString(),
+                        },
                         snapshotAt,
                         liquidity: tvl.toString(),
                     }
@@ -193,10 +199,6 @@ export class CetusAnalyticsService implements OnModuleInit, OnApplicationBootstr
      */
     @Interval(envConfig().dexes.cetus.interval.analytics)
     async handleAnalyticsUpdateInterval(): Promise<void> {
-        // add jitter to the interval
-        await this.jitterService.delayWithJitter(
-            envConfig().dexes.cetus.interval.analytics
-        )
         // split pools into chunks of 10 for batch processing
         const chunks = Array.from(this.liquidityPoolMap.values()).reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {

@@ -22,7 +22,8 @@ import {
     BotSchema,
     DexId,
     PrimaryMemoryStorageService,
-    LiquidityPoolSchema
+    LiquidityPoolSchema,
+    TransactionType,
 } from "@modules/databases"
 import {
     OpenPositionTxbService 
@@ -34,7 +35,6 @@ import {
     InvalidPoolTokensException, 
     BalanceSnapshotsNotFoundException,
     TransactionEventNotFoundException,
-    TransactionType,
     LiquidityPoolClmmStateNotFoundException,
     RangeTierNotConfiguredException,
 } from "@modules/exceptions"

@@ -22,7 +22,6 @@ import {
 import {
     AsyncService,
     DayjsService,
-    JitterService,
     ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
@@ -45,7 +44,7 @@ import {
     GetClmmPoolDetailRootResult
 } from "./types"
 import {
-    Decimal 
+    Decimal
 } from "decimal.js"
 
 /**
@@ -68,7 +67,6 @@ export class FlowXAnalyticsService implements OnModuleInit, OnApplicationBootstr
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
-        private readonly jitterService: JitterService,
         private readonly winstonService: WinstonService,
     ) { }
 
@@ -178,11 +176,18 @@ export class FlowXAnalyticsService implements OnModuleInit, OnApplicationBootstr
                     if (!liquidityPool || !liquidityPool.displayId) {
                         return
                     }
+                    const feeApr = new Decimal(item.stats.fee24H).div(item.stats.totalLiquidityInUSD).mul(365)
+                    const apr = new Decimal(item.stats.apr).div(100)
+                    const rewardApr = apr.sub(feeApr)
                     const poolAnalyticsCacheResult = {
                         fee24H: item.stats.fee24H.toString(),
                         volume24H: item.stats.volume24H.toString(),
                         tvl: item.stats.totalLiquidityInUSD.toString(),
-                        apr24H: new Decimal(item.stats.apr).div(365).div(100).toString(),
+                        apr24H: {
+                            fees: feeApr.toString(),
+                            rewards: rewardApr.toString(),
+                            total: apr.toString(),
+                        },
                         snapshotAt,
                         liquidity: item.stats.totalLiquidityInUSD.toString(),
                     }
@@ -210,9 +215,6 @@ export class FlowXAnalyticsService implements OnModuleInit, OnApplicationBootstr
      */
     @Interval(envConfig().dexes.flowx.interval.analytics)
     async handleAnalyticsUpdateInterval(): Promise<void> {
-        await this.jitterService.delayWithJitter(
-            envConfig().dexes.flowx.interval.analytics
-        )
         const chunks = Array.from(this.liquidityPoolMap.values()).reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = Math.floor(index / 10)

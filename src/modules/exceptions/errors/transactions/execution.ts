@@ -10,11 +10,9 @@ import {
     AbstractException 
 } from "../abstract"
 import type {
+    TransactionType,
     LiquidityPoolId 
 } from "@modules/databases"
-import type {
-    TransactionType 
-} from "../../enums"
 
 /** Thrown when transaction execution fails on-chain */
 export interface TransactionExecutionFailedExceptionMetadata extends AbstractExceptionMetadata {

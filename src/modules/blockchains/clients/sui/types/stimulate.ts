@@ -1,7 +1,5 @@
 import type {
-    TransactionType
-} from "@modules/exceptions"
-import type {
+    TransactionType,
     BotSchema,
     LiquidityPoolSchema
 } from "@modules/databases"

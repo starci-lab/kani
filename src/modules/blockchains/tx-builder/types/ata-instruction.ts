@@ -21,6 +21,7 @@ export interface GetOrCreateAtaInstructionsResult {
 
 /** Params for creating a wrapped SOL (WSOL) account and instructions. */
 export interface CreateWSolAccountInstructionsParams {
+    feePayer?: Address
     ownerAddress: Address
     is2022Token?: boolean
     amount: BN
@@ -53,6 +54,7 @@ export interface CreateIdempotentAtaInstructionsParams {
     ownerAddress: Address
     is2022Token?: boolean
     amount?: BN
+    feePayer?: Address
 }
 
 /** Result of create idempotent ATA instructions: instructions and ATA address. */

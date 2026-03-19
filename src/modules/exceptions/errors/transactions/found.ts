@@ -5,11 +5,9 @@ import {
     AbstractException 
 } from "../abstract"
 import type {
-    LiquidityPoolId 
+    LiquidityPoolId,
+    TransactionType
 } from "@modules/databases"
-import type {
-    TransactionType 
-} from "../../enums"
 
 /** Metadata when transaction is not found in blockchain. */
 export interface TransactionNotFoundInBlockchainExceptionMetadata extends AbstractExceptionMetadata {

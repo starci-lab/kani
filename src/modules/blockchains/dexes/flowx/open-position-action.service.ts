@@ -17,7 +17,9 @@ import {
 } from "../../types"
 import BN from "bn.js"
 import {
-    DexId, PrimaryMemoryStorageService 
+    DexId, 
+    PrimaryMemoryStorageService,
+    TransactionType,
 } from "@modules/databases"
 import {
     OpenPositionTxbService 
@@ -29,7 +31,6 @@ import {
     InvalidPoolTokensException,
     BalanceSnapshotsNotFoundException,
     TransactionEventNotFoundException,
-    TransactionType,
     LiquidityPoolClmmStateNotFoundException,
     SlippageToleranceExceededException,
     RangeTierNotConfiguredException,
