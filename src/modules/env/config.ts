@@ -581,7 +581,7 @@ export const envConfig = () => ({
                 price: {
                     storeIntervalMs: parseEnvMs({
                         key: "EXECUTOR_RUNTIME_INFLUXDB_CACHE_PRICE_STORE_INTERVAL_MS",
-                        defaultValue: "100ms",
+                        defaultValue: "1s",
                     }),
                     intervalMs: parseEnvMs({
                         key: "EXECUTOR_RUNTIME_INFLUXDB_CACHE_PRICE_INTERVAL_MS",
@@ -591,7 +591,7 @@ export const envConfig = () => ({
                 volume: {
                     storeIntervalMs: parseEnvMs({
                         key: "EXECUTOR_RUNTIME_INFLUXDB_CACHE_VOLUME_STORE_INTERVAL_MS",
-                        defaultValue: "100ms",
+                        defaultValue: "1s",
                     }),
                     intervalMs: parseEnvMs({
                         key: "EXECUTOR_RUNTIME_INFLUXDB_CACHE_VOLUME_INTERVAL_MS",
@@ -964,6 +964,22 @@ export const envConfig = () => ({
             },
         },
         ttl: {
+            activePriceCex: parseEnvMs({
+                key: "CACHE_TTL_ACTIVE_PRICE_CEX",
+                defaultValue: "100years"
+            }),
+            activeVolumeCex: parseEnvMs({
+                key: "CACHE_TTL_ACTIVE_VOLUME_CEX",
+                defaultValue: "100years"
+            }),
+            cexTokenPriceUpdated: parseEnvMs({
+                key: "CACHE_TTL_CEX_TOKEN_PRICE_UPDATED",
+                defaultValue: "100years"
+            }),
+            cexTokenVolumeUpdated: parseEnvMs({
+                key: "CACHE_TTL_CEX_TOKEN_VOLUME_UPDATED",
+                defaultValue: "100years"
+            }),
             rotationBotAssignments: parseEnvMs({
                 key: "CACHE_TTL_ROTATION_BOT_ASSIGNMENTS",
                 defaultValue: "100years"
@@ -1010,14 +1026,6 @@ export const envConfig = () => ({
                     defaultValue: "100years"
                 }
             ),
-            cexTokenPriceUpdated: parseEnvMs({
-                key: "CACHE_TTL_CEX_TOKEN_PRICE_UPDATED",
-                defaultValue: "100years"
-            }),
-            cexTokenVolumeUpdated: parseEnvMs({
-                key: "CACHE_TTL_CEX_TOKEN_VOLUME_UPDATED",
-                defaultValue: "100years"
-            }),
             violateIndicatorResults: parseEnvMs({
                 key: "CACHE_TTL_VIOLATE_INDICATOR_RESULTS",
                 defaultValue: "100years"
@@ -1642,18 +1650,18 @@ export const envConfig = () => ({
             resources: {
                 limits: {
                     cpu: parseEnvString({
-                        key: "KANI_EXECUTOR_RESOURCES_LIMITS_CPU", defaultValue: "4096m"
+                        key: "KANI_EXECUTOR_RESOURCES_LIMITS_CPU", defaultValue: "768m"
                     }),
                     memory: parseEnvString({
-                        key: "KANI_EXECUTOR_RESOURCES_LIMITS_MEMORY", defaultValue: "16384Mi"
+                        key: "KANI_EXECUTOR_RESOURCES_LIMITS_MEMORY", defaultValue: "1536Mi"
                     }),
                 },
                 requests: {
                     cpu: parseEnvString({
-                        key: "KANI_EXECUTOR_RESOURCES_REQUESTS_CPU", defaultValue: "256m"
+                        key: "KANI_EXECUTOR_RESOURCES_REQUESTS_CPU", defaultValue: "128m"
                     }),
                     memory: parseEnvString({
-                        key: "KANI_EXECUTOR_RESOURCES_REQUESTS_MEMORY", defaultValue: "512Mi"
+                        key: "KANI_EXECUTOR_RESOURCES_REQUESTS_MEMORY", defaultValue: "256Mi"
                     }),
                 },
             },

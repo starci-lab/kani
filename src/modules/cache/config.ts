@@ -82,17 +82,17 @@ export const configMap = {
         cacheResult: true,
     },
     [CacheKey.ActivePriceCex]: {
-        ttl: 0,
+        ttl: envConfig().cache.ttl.activePriceCex,
         cacheResult: {
         } as ActiveCexCacheResult,
     },
     [CacheKey.ActiveVolumeCex]: {
-        ttl: 0,
+        ttl: envConfig().cache.ttl.activeVolumeCex,
         cacheResult: {
         } as ActiveCexCacheResult,
     },
     [CacheKey.CexTokenPriceUpdated]: {
-        ttl: 0,
+        ttl: envConfig().cache.ttl.cexTokenPriceUpdated,
         cacheResult: {
         } as CexTokenPriceCacheResult,
     },
