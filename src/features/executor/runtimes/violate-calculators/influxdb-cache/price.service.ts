@@ -17,6 +17,7 @@ import type {
 import {
     AsyncService,
     DayjsService,
+    JitterService,
 } from "@modules/mixin"
 import {
     Interval 
@@ -24,7 +25,7 @@ import {
 import {
     PriceService 
 } from "@modules/blockchains"
-import {
+import {    
     TokenNotFoundException 
 } from "@modules/exceptions"
 
@@ -40,6 +41,7 @@ export class InfluxdbPriceCacheService implements OnApplicationBootstrap {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly dayjsService: DayjsService,
         private readonly priceService: PriceService,
+        private readonly jitterService: JitterService,
     ) {}
     /**
      * Bootstrap the price cache service.
@@ -70,6 +72,7 @@ export class InfluxdbPriceCacheService implements OnApplicationBootstrap {
     async storePoints(token: TokenSchema): Promise<void> {
         const promises = token.trackedCexIds.map(
             async (cexId) => {
+                await this.jitterService.delayWithJitter(envConfig().executor.runtime.influxdbCache.price.storeIntervalMs)
                 const pricePoints = await this.primaryInfluxdbPriceBucketService.queryPromise(
                     {
                         id: token.id,
@@ -89,7 +92,8 @@ export class InfluxdbPriceCacheService implements OnApplicationBootstrap {
                         points: pricePoints,
                     },
                 )
-            })
+            }
+        )
         await this.asyncService.allIgnoreError(promises)
     }
 
