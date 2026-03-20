@@ -8,6 +8,7 @@ import {
     PrimaryMemoryStorageService,
     AppVersion,
     ExecutorSchema,
+    LiquidityPoolSchema,
 } from "@modules/databases"
 import {
     MountStorageService,
@@ -95,8 +96,12 @@ export class CreateBotV2Service {
         if (!liquidityPoolIds || liquidityPoolIds.length === 0) { 
             liquidityPoolIds = _
                 .chain(
-                    Array.from(this.primaryMemoryStorageService.liquidityPoolMap.values()).filter(
-                        (p) => p.chainId === chainId,
+                    Array.from(
+                        this.primaryMemoryStorageService.liquidityPoolMap.values()
+                    ).filter(
+                        (liquidityPool): liquidityPool is NonNullable<LiquidityPoolSchema> => liquidityPool != null
+                    ).filter(
+                        (liquidityPool) => liquidityPool.chainId === chainId,
                     ),
                 )
                 .filter(
@@ -129,7 +134,7 @@ export class CreateBotV2Service {
         // retrieve the liquidity pools from the cache
         const liquidityPools = liquidityPoolIds
             .map((id) => this.primaryMemoryStorageService.liquidityPoolMap.get(id))
-            .filter((p): p is NonNullable<typeof p> => p != null)
+            .filter((liquidityPool): liquidityPool is NonNullable<LiquidityPoolSchema> => liquidityPool != null)
             // create the signer
         const { keyPair, keyQuorum } = await this.privyCoreService.createSigner()
         // create the wallet

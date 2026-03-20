@@ -454,7 +454,7 @@ export const envConfig = () => ({
                 key: "EXECUTOR_INTERVAL_LOAD", defaultValue: "10s"
             }),
             rotate: parseEnvMs({
-                key: "EXECUTOR_INTERVAL_ROTATE", defaultValue: "10s"
+                key: "EXECUTOR_INTERVAL_ROTATE", defaultValue: "5m"
             }),
 
         },
@@ -677,7 +677,7 @@ export const envConfig = () => ({
         priceWindow: {
             storage: {
                 queryIntervalMs: parseEnvMs({
-                    key: "INSPECTOR_PRICE_WINDOW_STORAGE_QUERY_INTERVAL_MS", defaultValue: "250ms"
+                    key: "INSPECTOR_PRICE_WINDOW_STORAGE_QUERY_INTERVAL_MS", defaultValue: "1s"
                 }),
             },
             builder: {
